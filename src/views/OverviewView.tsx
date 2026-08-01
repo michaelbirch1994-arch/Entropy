@@ -5,7 +5,8 @@ import { Swords, Shield, Crown, Activity, Droplet, Zap, Target, Flame } from "lu
 
 const ACCENT_STYLES = {
   amber: {
-    border: "border-amber-500/20 hover:border-amber-500/40",
+    border: "border-amber-500/30 hover:border-amber-500/50",
+    glow: "shadow-[0_0_50px_-12px_rgba(245,158,11,0.35)]",
     heading: "text-amber-500",
     circle: "border-amber-500/50 bg-amber-500/10",
     crown: "text-amber-400",
@@ -15,7 +16,8 @@ const ACCENT_STYLES = {
     scoreVal: "text-amber-400",
   },
   teal: {
-    border: "border-teal-500/20 hover:border-teal-500/40",
+    border: "border-teal-500/30 hover:border-teal-500/50",
+    glow: "shadow-[0_0_50px_-12px_rgba(20,184,166,0.35)]",
     heading: "text-teal-500",
     circle: "border-teal-500/50 bg-teal-500/10",
     crown: "text-teal-400",
@@ -72,7 +74,7 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label }: {
   };
 
   return (
-    <div className={`bg-[#0a101f]/90 border rounded-2xl p-5 shadow-xl transition-all duration-300 flex flex-col ${a.border}`}>
+    <div className={`bg-[#0a101f]/55 backdrop-blur-md border rounded-2xl p-5 transition-all duration-300 flex flex-col ${a.border} ${a.glow}`}>
       <div className={`flex items-center gap-2 ${a.heading} text-[11px] font-black uppercase tracking-widest mb-4`}>
         {accent === "amber" ? <Swords className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
         {label}
