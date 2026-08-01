@@ -53,7 +53,7 @@ function parseReport(text: string, labelForError: string): WvWReport {
     !("stats" in data)
   ) {
     throw new Error(
-      `${labelForError} does not look like an AxiBridge WvW report (missing meta/stats).`,
+      `${labelForError} does not look like a WvW report (missing meta/stats).`,
     );
   }
   return data as WvWReport;
