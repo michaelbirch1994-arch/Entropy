@@ -8,9 +8,12 @@ import {
   ExternalLink,
   Swords,
   Eye,
+  Layers,
 } from "lucide-react";
 import { isRawLogFile, uploadRawLogToDpsReport, fetchDpsReportJson, parseDpsReportPermalink } from "../../utils/dpsReport";
 import { summarizeRawFight, type RawFightSummary, type RawFightLog } from "../../types/rawFight";
+import { buildReportFromFights } from "../../lib/buildReportFromFights";
+import { useReport } from "../../store/ReportContext";
 import RawFightViewer from "./RawFightViewer";
 
 interface QueueItem {
@@ -23,6 +26,7 @@ interface QueueItem {
 }
 
 export default function RawLogImporter() {
+  const { setReport } = useReport();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [queue, setQueue] = useState<QueueItem[]>([]);
@@ -30,9 +34,39 @@ export default function RawLogImporter() {
   const [linkError, setLinkError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [viewing, setViewing] = useState<QueueItem | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [combining, setCombining] = useState(false);
+  const [combineError, setCombineError] = useState<string | null>(null);
 
   function updateItem(key: string, patch: Partial<QueueItem>) {
     setQueue((prev) => prev.map((i) => (i.key === key ? { ...i, ...patch } : i)));
+  }
+
+  function toggleSelected(key: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  async function handleCombine() {
+    const fights = queue
+      .filter((i) => selected.has(i.key) && i.status === "done" && i.summary && i.raw)
+      .map((i) => ({ summary: i.summary!, raw: i.raw! }));
+    if (fights.length === 0) return;
+    setCombining(true);
+    setCombineError(null);
+    try {
+      const report = buildReportFromFights(fights);
+      await setReport(report);
+      setSelected(new Set());
+    } catch (e) {
+      setCombineError(e instanceof Error ? e.message : "Failed to combine fights into a report.");
+    } finally {
+      setCombining(false);
+    }
   }
 
   async function processFile(file: File) {
@@ -105,8 +139,8 @@ export default function RawLogImporter() {
           <p className="text-[11px] text-slate-500 leading-relaxed">
             Drop raw <span className="font-mono text-slate-400">.zevtc</span>/<span className="font-mono text-slate-400">.evtc</span> files
             or paste dps.report links below. Each fight is uploaded straight to dps.report for parsing, then pulled back
-            in and rendered right here with Entropy's own squad breakdown — combining multiple fights into one full raid
-            report (MVPs, leaderboards, etc.) is a separate step Entropy doesn't do yet.
+            in and shown here — click a finished fight to view its squad breakdown, or select several and combine them
+            into a full raid report (MVPs, leaderboards, roster) using Entropy's own dashboard.
           </p>
 
           <div
@@ -167,9 +201,32 @@ export default function RawLogImporter() {
           )}
 
           {queue.length > 0 && (
-            <ul className="space-y-1.5">
+            <>
+              {selected.size > 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2">
+                  <span className="text-[11px] font-semibold text-amber-300">
+                    {selected.size} fight{selected.size === 1 ? "" : "s"} selected
+                  </span>
+                  <button
+                    onClick={handleCombine}
+                    disabled={combining}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/15 border border-amber-500/40 text-amber-300 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-amber-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {combining ? <Loader2 className="w-3 h-3 animate-spin" /> : <Layers className="w-3 h-3" />}
+                    Combine into report
+                  </button>
+                </div>
+              )}
+              {combineError && (
+                <div className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/5 px-3 py-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-rose-300/90">{combineError}</p>
+                </div>
+              )}
+              <ul className="space-y-1.5">
               {queue.map((item) => {
                 const isDone = item.status === "done" && item.summary && item.raw;
+                const isSelected = selected.has(item.key);
                 return (
                   <li
                     key={item.key}
@@ -177,11 +234,20 @@ export default function RawLogImporter() {
                     tabIndex={isDone ? 0 : undefined}
                     onClick={isDone ? () => setViewing(item) : undefined}
                     onKeyDown={isDone ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setViewing(item); } } : undefined}
-                    className={`flex items-center justify-between gap-3 bg-white/[0.02] border border-white/[0.05] rounded-lg px-3 py-2 transition-colors ${
-                      isDone ? "cursor-pointer hover:border-amber-500/30 hover:bg-amber-500/[0.04]" : ""
-                    }`}
+                    className={`flex items-center justify-between gap-3 bg-white/[0.02] border rounded-lg px-3 py-2 transition-colors ${
+                      isSelected ? "border-amber-500/40 bg-amber-500/[0.05]" : "border-white/[0.05]"
+                    } ${isDone ? "cursor-pointer hover:border-amber-500/30 hover:bg-amber-500/[0.04]" : ""}`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
+                      {isDone && (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelected(item.key)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-3.5 h-3.5 flex-shrink-0 accent-amber-500 cursor-pointer"
+                        />
+                      )}
                       {item.status === "uploading" || item.status === "fetching" ? (
                         <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin flex-shrink-0" />
                       ) : item.status === "done" ? (
@@ -230,7 +296,8 @@ export default function RawLogImporter() {
                   </li>
                 );
               })}
-            </ul>
+              </ul>
+            </>
           )}
         </div>
       )}
