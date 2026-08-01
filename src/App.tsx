@@ -86,8 +86,8 @@ function NoReportState() {
           EN
         </div>
         <div className="text-center">
-          <h1 className="text-2xl font-black tracking-wider text-slate-100 uppercase font-display">Entropy</h1>
-          <p className="text-sm text-slate-500 mt-1 font-medium">WvW Raid Analytics Platform</p>
+          <h1 className="entropy-wordmark text-4xl font-black tracking-[0.15em] text-white uppercase font-display">Entropy</h1>
+          <p className="text-sm text-slate-500 mt-2 font-medium">WvW Raid Analytics Platform</p>
         </div>
       </div>
 
@@ -156,6 +156,7 @@ function ReportShell() {
         <div className="entropy-nebula entropy-nebula-1" />
         <div className="entropy-nebula entropy-nebula-2" />
         <div className="entropy-nebula entropy-nebula-3" />
+        <div className="entropy-nebula entropy-nebula-4" />
       </div>
 
       {/* Only show sidebar when a report is loaded */}
@@ -164,7 +165,7 @@ function ReportShell() {
       <main className="flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar">
         {/* Header - only when report is active */}
         {report && (
-          <header className="border-b border-amber-500/10 bg-black/40 backdrop-blur-xl sticky top-0 z-30 px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+          <header className="border-b border-amber-500/10 bg-black/30 backdrop-blur-xl sticky top-0 z-30 px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="text-amber-500">{viewIcon}</span>
