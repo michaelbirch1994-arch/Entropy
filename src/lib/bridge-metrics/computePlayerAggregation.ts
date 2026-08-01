@@ -1,15 +1,15 @@
 
 import { getPlayerCleanses, getPlayerStrips, getPlayerOutgoingInterrupts, getPlayerDamageTaken, getPlayerBreakbarDamage, getPlayerBlocked, getPlayerEvaded, getPlayerMissed, getTargetStatTotal, resolveCommanderDistance, getVindicatorDodgeCasts } from './dashboardMetrics';
 import { applySquadStabilityGeneration as applyStabilityGeneration, computeDownContribution as getPlayerDownContribution, computeSquadHealing as getPlayerSquadHealing, computeSquadBarrier as getPlayerSquadBarrier, computeOutgoingCrowdControl as getPlayerOutgoingCrowdControl } from './combatMetrics';
-import { Player } from './dpsReportTypes';
-import { DisruptionMethod } from './metricsSettings';
+import type { Player } from './dpsReportTypes';
+import type { DisruptionMethod } from './metricsSettings';
 import { buildConditionIconMap, computeOutgoingConditions, normalizeConditionLabel, resolveBuffMetaById, resolveConditionNameFromEntry } from './conditionsMetrics';
 import { NON_DAMAGING_CONDITIONS, OFFENSE_METRICS, DEFENSE_METRICS, SUPPORT_METRICS } from './statsMetrics';
 import { isResUtilitySkill } from './resUtility';
-import { PlayerSkillDamageEntry, PlayerHealingSkillEntry } from './aggregationTypes';
+import type { PlayerSkillDamageEntry, PlayerHealingSkillEntry } from './aggregationTypes';
 import { PROFESSION_COLORS } from './professionUtils';
 import { resolveFightTimestamp } from './timestampUtils';
-import { PlayerRoleClassification } from './roles';
+import type { PlayerRoleClassification } from './roles';
 import { partitionSquadPlayers } from './playerIdentity';
 
 export interface PlayerStats {

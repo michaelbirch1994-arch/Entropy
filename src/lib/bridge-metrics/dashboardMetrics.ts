@@ -1,6 +1,6 @@
-import { Player } from './dpsReportTypes';
+import type { Player } from './dpsReportTypes';
 import { computeDownContribution, computeOutgoingCrowdControl, computeSquadBarrier, computeSquadHealing, resolveDisruptionValue } from './combatMetrics';
-import { DisruptionMethod, DEFAULT_DISRUPTION_METHOD } from './metricsSettings';
+import { type DisruptionMethod, DEFAULT_DISRUPTION_METHOD } from './metricsSettings';
 
 export const getPlayerDamage = (player: Player) =>
     player.dpsAll?.[0]?.damage || 0;
