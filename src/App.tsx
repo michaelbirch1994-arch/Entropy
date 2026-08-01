@@ -1,0 +1,231 @@
+import { useState, useMemo } from "react";
+import Sidebar, { VIEW_ICONS } from "./components/layout/Sidebar";
+import { ReportProvider, useReport } from "./store/ReportContext";
+import OverviewView from "./views/OverviewView";
+import KdrView from "./views/KdrView";
+import FightBreakdownView from "./views/FightBreakdownView";
+import TopPlayersView from "./views/TopPlayersView";
+import TopSkillsView from "./views/TopSkillsView";
+import ClassesView from "./views/ClassesView";
+import MapDistributionView from "./views/MapDistributionView";
+import CommanderStatsView from "./views/CommanderStatsView";
+import SquadStatsView from "./views/SquadStatsView";
+import CompositionView from "./views/CompositionView";
+import OffensiveView from "./views/OffensiveView";
+import DefensiveView from "./views/DefensiveView";
+import RosterView from "./views/RosterView";
+import { Activity, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, Link2, Upload, X } from "lucide-react";
+import UploadCard from "./components/ui/UploadCard";
+
+const VIEW_TITLES: Record<string, string> = {
+  overview: "Overview",
+  kdr: "KDR",
+  "fight-breakdown": "Fight Breakdown",
+  "top-players": "Top Players",
+  "top-skills": "Top Skills",
+  classes: "Classes",
+  "map-distribution": "Map Distribution",
+  "commander-stats": "Commander Stats",
+  "squad-stats": "Squad Stats",
+  composition: "Composition",
+  offensive: "Offensive Stats",
+  defensive: "Defensive Stats",
+  roster: "Roster Intel",
+};
+
+function ReportRouter({ activeView }: { activeView: string }) {
+  switch (activeView) {
+    case "overview": return <OverviewView />;
+    case "kdr": return <KdrView />;
+    case "fight-breakdown": return <FightBreakdownView />;
+    case "top-players": return <TopPlayersView />;
+    case "top-skills": return <TopSkillsView />;
+    case "classes": return <ClassesView />;
+    case "map-distribution": return <MapDistributionView />;
+    case "commander-stats": return <CommanderStatsView />;
+    case "squad-stats": return <SquadStatsView />;
+    case "composition": return <CompositionView />;
+    case "offensive": return <OffensiveView />;
+    case "defensive": return <DefensiveView />;
+    case "roster": return <RosterView />;
+    default: return <OverviewView />;
+  }
+}
+
+function LoadingState() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
+      <div className="w-12 h-12 rounded-full border-2 border-amber-500/30 border-t-amber-400 animate-spin" />
+      <div className="text-sm font-semibold tracking-wide text-amber-300/80">Loading report...</div>
+    </div>
+  );
+}
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-4 px-6">
+      <div className="w-14 h-14 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center">
+        <AlertCircle className="w-7 h-7 text-rose-400" />
+      </div>
+      <div className="text-center">
+        <h2 className="text-lg font-bold text-slate-100">Failed to load report</h2>
+        <p className="text-sm text-slate-400 mt-1 font-mono">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+function NoReportState() {
+  const { index, uploadReport, loadFromUrl, error, loading } = useReport();
+  const entries = index?.entries ?? [];
+  return (
+    <div className="flex flex-col items-center justify-center min-h-full gap-8 px-6 py-16">
+      {/* Branding */}
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-700 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-amber-500/20 border border-amber-400/30">
+          AX
+        </div>
+        <div className="text-center">
+          <h1 className="text-2xl font-black tracking-wider text-slate-100 uppercase font-display">AxiBridge</h1>
+          <p className="text-sm text-slate-500 mt-1 font-medium">WvW Raid Analytics Platform</p>
+        </div>
+      </div>
+
+      {/* Import card */}
+      <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
+
+      {/* Available reports */}
+      {entries.length > 0 && (
+        <div className="w-full max-w-lg space-y-2">
+          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <Link2 className="w-3.5 h-3.5" /> Available Reports
+          </div>
+          {entries.slice(0, 8).map((e) => (
+            <a
+              key={e.id}
+              href={`?report=${e.id}`}
+              className="flex items-center justify-between bg-white/[0.03] border border-amber-500/10 hover:border-amber-500/30 rounded-xl px-4 py-3 transition-all group"
+            >
+              <div>
+                <div className="text-sm font-bold text-slate-200 group-hover:text-amber-400 transition-colors">{e.title}</div>
+                <div className="text-[10px] text-slate-500 font-mono">{e.dateLabel}</div>
+              </div>
+              <div className="flex items-center gap-3 text-[10px] font-mono text-slate-500">
+                <span>{e.summary.avgSquadSize}v{e.summary.avgEnemySize}</span>
+                <Activity className="w-3.5 h-3.5 text-slate-600 group-hover:text-amber-400 transition-colors" />
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* Supported formats info */}
+      <div className="flex items-center gap-6 text-[10px] text-slate-600 font-mono">
+        <span className="flex items-center gap-1.5"><FileQuestion className="w-3 h-3" /> report.json</span>
+        <span className="flex items-center gap-1.5"><Link2 className="w-3 h-3" /> DPS.report URLs</span>
+        <span className="flex items-center gap-1.5"><Activity className="w-3 h-3" /> ?report= links</span>
+      </div>
+    </div>
+  );
+}
+
+function ReportShell() {
+  const { report, loading, error, source, clearReport } = useReport();
+  const [activeView, setActiveView] = useState("overview");
+
+  const headerInfo = useMemo(() => {
+    if (!report) return null;
+    return {
+      title: report.meta.title,
+      dateLabel: report.meta.dateLabel,
+      version: report.meta.appVersion,
+    };
+  }, [report]);
+
+  const viewTitle = VIEW_TITLES[activeView] ?? "Overview";
+  const viewIcon = VIEW_ICONS[activeView] ?? <Activity className="w-4 h-4" />;
+
+  // When no report loaded yet (and not in the middle of initial load), show Import Center
+  const showImport = !report && !loading && !error;
+  const showLoading = loading && !report;
+  const showError = !loading && !report && !!error;
+
+  return (
+    <div className="flex h-screen w-full text-slate-100 overflow-hidden">
+      <div className="entropy-bg">
+        <div className="entropy-nebula entropy-nebula-1" />
+        <div className="entropy-nebula entropy-nebula-2" />
+        <div className="entropy-nebula entropy-nebula-3" />
+      </div>
+
+      {/* Only show sidebar when a report is loaded */}
+      {report && <Sidebar activeView={activeView} setActiveView={setActiveView} />}
+
+      <main className="flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar">
+        {/* Header - only when report is active */}
+        {report && (
+          <header className="border-b border-amber-500/10 bg-black/40 backdrop-blur-xl sticky top-0 z-30 px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-amber-500">{viewIcon}</span>
+                <div>
+                  <h1 className="text-lg font-black tracking-wider text-slate-100 uppercase font-display">{viewTitle}</h1>
+                  <p className="text-xs text-amber-400/80 font-medium tracking-wide">
+                    {headerInfo?.title} - {headerInfo?.dateLabel}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {source && (
+                  <span
+                    className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border ${
+                      source === "upload"
+                        ? "text-amber-400 border-amber-500/30 bg-amber-500/5"
+                        : "text-sky-400 border-sky-500/30 bg-sky-500/5"
+                    }`}
+                  >
+                    {source === "upload" ? <Upload className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
+                    {source === "upload" ? "Uploaded" : "Shared link"}
+                  </span>
+                )}
+                <button
+                  onClick={clearReport}
+                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-rose-500/30 bg-black/30 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  Clear
+                </button>
+                {headerInfo && (
+                  <div className="flex items-center gap-3 text-xs font-mono text-slate-500 bg-black/30 px-4 py-2 rounded-xl border border-white/[0.06]">
+                    <span>v{headerInfo.version}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </header>
+        )}
+
+        {/* Content */}
+        <div className={report ? "p-6" : "flex items-center justify-center min-h-full"}>
+          {showLoading ? (
+            <LoadingState />
+          ) : showError ? (
+            <ErrorState message={error!} />
+          ) : showImport ? (
+            <NoReportState />
+          ) : report ? (
+            <ReportRouter activeView={activeView} />
+          ) : null}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ReportProvider>
+      <ReportShell />
+    </ReportProvider>
+  );
+}
