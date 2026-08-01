@@ -16,6 +16,8 @@ import DefensiveView from "./views/DefensiveView";
 import RosterView from "./views/RosterView";
 import { Activity, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, Link2, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
+import EntropyLogo from "./components/ui/EntropyLogo";
+import RawLogImporter from "./components/ui/RawLogImporter";
 
 const VIEW_TITLES: Record<string, string> = {
   overview: "Overview",
@@ -82,8 +84,8 @@ function NoReportState() {
     <div className="flex flex-col items-center justify-center min-h-full gap-8 px-6 py-16">
       {/* Branding */}
       <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-700 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-amber-500/20 border border-amber-400/30">
-          EN
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-700/20 flex items-center justify-center text-amber-400 shadow-[0_0_30px_-6px_rgba(245,158,11,0.5)] border border-amber-400/30">
+          <EntropyLogo size={34} />
         </div>
         <div className="text-center">
           <h1 className="entropy-wordmark text-4xl font-black tracking-[0.15em] text-white uppercase font-display">Entropy</h1>
@@ -93,6 +95,9 @@ function NoReportState() {
 
       {/* Import card */}
       <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
+
+      {/* Raw log importer (dps.report / .zevtc) */}
+      <RawLogImporter />
 
       {/* Available reports */}
       {entries.length > 0 && (
