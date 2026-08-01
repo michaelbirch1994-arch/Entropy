@@ -54,3 +54,74 @@ export function summarizeRawFight(log: RawFightLog, permalink?: string): RawFigh
     commander: commander ? commander.name : null,
   };
 }
+
+// --- Per-player detail, for rendering a single fight inside Entropy's own
+// viewer (RawFightViewer) instead of just linking out to dps.report. ---
+//
+// Elite Insights reports most per-player metrics as arrays indexed by
+// "phase" (phase 0 is always the full fight). We only need phase 0 here
+// since Entropy shows one fight at a time, not a phase-by-phase breakdown.
+
+export interface RawFightPlayerDetail {
+  account: string;
+  name: string;
+  profession: string;
+  group: number;
+  notInSquad: boolean;
+  hasCommanderTag: boolean;
+  dps: number;
+  damage: number;
+  condiDamage: number;
+  powerDamage: number;
+  damageTaken: number;
+  downCount: number;
+  deadCount: number;
+  resurrects: number;
+  cleanses: number;
+  strips: number;
+  distToCom: number;
+}
+
+function n(v: unknown): number {
+  return typeof v === "number" && Number.isFinite(v) ? v : 0;
+}
+
+function firstPhase(v: unknown): Record<string, unknown> {
+  return Array.isArray(v) && v.length > 0 && typeof v[0] === "object" && v[0] !== null
+    ? (v[0] as Record<string, unknown>)
+    : {};
+}
+
+/** Extracts a flat per-player stat row from raw Elite Insights player objects (phase 0 / full fight). */
+export function extractFightPlayers(log: RawFightLog): RawFightPlayerDetail[] {
+  const rawPlayers = (log.players ?? []) as unknown as Record<string, unknown>[];
+
+  return rawPlayers.map((p) => {
+    const dps = firstPhase(p.dpsAll);
+    const def = firstPhase(p.defenses);
+    const sup = firstPhase(p.support);
+    const stats = firstPhase(p.statsAll);
+    const account = typeof p.account === "string" ? p.account : "Unknown.0000";
+    const name = typeof p.name === "string" && p.name ? p.name : account;
+
+    return {
+      account,
+      name,
+      profession: typeof p.profession === "string" ? p.profession : "Unknown",
+      group: n(p.group),
+      notInSquad: !!p.notInSquad,
+      hasCommanderTag: !!p.hasCommanderTag,
+      dps: n(dps.dps),
+      damage: n(dps.damage),
+      condiDamage: n(dps.condiDamage),
+      powerDamage: n(dps.powerDamage),
+      damageTaken: n(def.damageTaken),
+      downCount: n(def.downCount),
+      deadCount: n(def.deadCount),
+      resurrects: n(sup.resurrects),
+      cleanses: n(sup.condiCleanse),
+      strips: n(sup.boonStrips),
+      distToCom: n(stats.distToCom),
+    };
+  });
+}
