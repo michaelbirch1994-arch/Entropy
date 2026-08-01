@@ -25,7 +25,7 @@ export default function Panel({
 }: PanelProps) {
   return (
     <section
-      className={`bg-white/[0.03] border border-amber-500/10 rounded-2xl shadow-xl backdrop-blur-sm transition-all duration-300 hover:border-amber-500/20 ${className}`}
+      className={`bg-[#0a0e1f]/50 border border-amber-500/10 rounded-2xl shadow-[0_8px_40px_-16px_rgba(0,0,0,0.6)] backdrop-blur-md transition-all duration-300 hover:border-amber-500/25 ${className}`}
     >
       {title && (
         <header className="flex items-center justify-between border-b border-amber-500/8 px-5 py-3.5">
