@@ -12,6 +12,7 @@ import {
   Map as MapIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import EntropyLogo from "../ui/EntropyLogo";
 
 interface SidebarProps {
   activeView: string;
@@ -94,8 +95,8 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
       {/* Brand */}
       <div className="p-5 border-b border-amber-500/10 sticky top-0 bg-black/45 backdrop-blur-md z-10">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-700 flex items-center justify-center text-white font-black text-xs shadow-lg shadow-amber-500/20 border border-amber-400/30">
-            EN
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-700/20 flex items-center justify-center text-amber-400 shadow-[0_0_16px_-3px_rgba(245,158,11,0.5)] border border-amber-400/30">
+            <EntropyLogo size={20} />
           </div>
           <div>
             <h1 className="entropy-wordmark text-sm font-black tracking-widest text-white uppercase font-display">Entropy</h1>
