@@ -83,10 +83,10 @@ function NoReportState() {
       {/* Branding */}
       <div className="flex flex-col items-center gap-4">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-700 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-amber-500/20 border border-amber-400/30">
-          AX
+          EN
         </div>
         <div className="text-center">
-          <h1 className="text-2xl font-black tracking-wider text-slate-100 uppercase font-display">AxiBridge</h1>
+          <h1 className="text-2xl font-black tracking-wider text-slate-100 uppercase font-display">Entropy</h1>
           <p className="text-sm text-slate-500 mt-1 font-medium">WvW Raid Analytics Platform</p>
         </div>
       </div>
