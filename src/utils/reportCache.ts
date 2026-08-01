@@ -9,7 +9,7 @@ const STORE = "reports";
 const ACTIVE_KEY = "active";
 const DB_VERSION = 1;
 
-export type ReportSource = "url" | "upload";
+export type ReportSource = "url" | "upload" | "raw";
 
 export interface CachedReport {
   id: string;
