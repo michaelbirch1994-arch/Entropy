@@ -18,6 +18,8 @@ interface ReportContextValue {
   source: ReportSource | null;
   uploadReport: (file: File) => Promise<void>;
   loadFromUrl: (url: string) => Promise<void>;
+  /** Loads an already-built report object directly (e.g. combined from raw fights). */
+  setReport: (report: WvWReport) => Promise<void>;
   clearReport: () => Promise<void>;
 }
 
@@ -30,6 +32,7 @@ const ReportContext = createContext<ReportContextValue>({
   source: null,
   uploadReport: async () => {},
   loadFromUrl: async () => {},
+  setReport: async () => {},
   clearReport: async () => {},
 });
 
@@ -65,7 +68,7 @@ function reportCacheId(report: WvWReport, source: ReportSource): string {
 }
 
 export function ReportProvider({ children }: { children: ReactNode }) {
-  const [report, setReport] = useState<WvWReport | null>(null);
+  const [report, setReportState] = useState<WvWReport | null>(null);
   const [index, setIndex] = useState<ReportIndex | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +95,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
           if (!res.ok) throw new Error(`Report not found (${res.status})`);
           const data = parseReport(await res.text(), `Report ${id}`);
           if (cancelled) return;
-          setReport(data);
+          setReportState(data);
           setSource("url");
           setLoading(false);
           void putActiveReport({
@@ -108,10 +111,10 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         const cached = await getActiveReport();
         if (cancelled) return;
         if (cached) {
-          setReport(cached.report);
+          setReportState(cached.report);
           setSource(cached.source);
         } else {
-          setReport(null);
+          setReportState(null);
           setSource(null);
         }
         setLoading(false);
@@ -133,7 +136,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     try {
       const text = await file.text();
       const data = parseReport(text, file.name);
-      setReport(data);
+      setReportState(data);
       setSource("upload");
       setReportId(null);
       setLoading(false);
@@ -157,7 +160,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
       if (!res.ok) throw new Error(`Failed to fetch report (${res.status})`);
       const text = await res.text();
       const data = parseReport(text, url);
-      setReport(data);
+      setReportState(data);
       setSource("url");
       setReportId(null);
       setLoading(false);
@@ -174,8 +177,28 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setReport = useCallback(async (data: WvWReport) => {
+    setLoading(true);
+    setError(null);
+    try {
+      setReportState(data);
+      setSource("raw");
+      setReportId(null);
+      setLoading(false);
+      await putActiveReport({
+        id: reportCacheId(data, "raw"),
+        source: "raw",
+        savedAt: Date.now(),
+        report: data,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load combined report");
+      setLoading(false);
+    }
+  }, []);
+
   const clearReport = useCallback(async () => {
-    setReport(null);
+    setReportState(null);
     setSource(null);
     setReportId(null);
     setError(null);
@@ -194,6 +217,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         source,
         uploadReport,
         loadFromUrl,
+        setReport,
         clearReport,
       }}
     >
