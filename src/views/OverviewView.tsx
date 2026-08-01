@@ -1,0 +1,179 @@
+import { useReport } from "../store/ReportContext";
+import { fmtCompact, fmtNum, fmtFixed, profChip } from "../utils/format";
+import type { MvpCard, MvpTopStat } from "../types/report";
+import { Swords, Shield, Crown, Activity, Droplet, Zap, Target, Flame } from "lucide-react";
+
+const ACCENT_STYLES = {
+  amber: {
+    border: "border-amber-500/20 hover:border-amber-500/40",
+    heading: "text-amber-500",
+    circle: "border-amber-500/50 bg-amber-500/10",
+    crown: "text-amber-400",
+    reason: "text-amber-400",
+    statVal: "text-amber-400",
+    scoreLbl: "text-amber-500/70",
+    scoreVal: "text-amber-400",
+  },
+  teal: {
+    border: "border-teal-500/20 hover:border-teal-500/40",
+    heading: "text-teal-500",
+    circle: "border-teal-500/50 bg-teal-500/10",
+    crown: "text-teal-400",
+    reason: "text-teal-400",
+    statVal: "text-teal-400",
+    scoreLbl: "text-teal-500/70",
+    scoreVal: "text-teal-400",
+  },
+} as const;
+
+function MvpBlock({ mvp, silver, bronze, accent = "amber", label }: {
+  mvp: MvpCard;
+  silver: MvpCard;
+  bronze: MvpCard;
+  accent: "amber" | "teal";
+  label: string;
+}) {
+  const a = ACCENT_STYLES[accent];
+  const score = mvp.score ?? 0;
+  const topStats: MvpTopStat[] = mvp.topStats ?? [];
+
+  const renderMedal = (card: MvpCard, medal: "silver" | "bronze") => {
+    const vals = [
+      { l: "Down Contrib", v: fmtCompact(card.downContrib) },
+      { l: "Cleanses", v: fmtNum(card.cleanses) },
+      { l: "Strips", v: fmtNum(card.strips) },
+      { l: "Healing", v: fmtCompact(card.healing) },
+      { l: "Participation", v: String(card.logsJoined ?? 0) },
+    ].slice(0, 2);
+    return (
+      <div className={medal === "bronze" ? "border-l border-slate-800/60 pl-4" : ""}>
+        <span className={`text-[10px] font-black uppercase tracking-wider ${medal === "silver" ? "text-slate-300" : "text-amber-600"} block mb-1`}>
+          {medal === "silver" ? "Silver" : "Bronze"}
+        </span>
+        <div className="flex items-center gap-2 mb-2">
+          <div className={`w-5 h-5 rounded-sm flex items-center justify-center border text-[10px] ${profChip(card.profession)}`}>
+            {card.profession.charAt(0)}
+          </div>
+          <div>
+            <p className="text-xs font-bold text-slate-200 leading-none">{card.account}</p>
+            <p className="text-[9px] text-slate-500 mt-0.5">{card.profession}</p>
+          </div>
+        </div>
+        <div className="space-y-1">
+          {vals.map((s) => (
+            <div key={s.l} className="flex justify-between items-center text-[9px] font-mono bg-slate-900/30 px-1.5 py-0.5 rounded">
+              <span className="text-slate-500">{s.l}</span>
+              <span className="text-slate-300">{s.v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className={`bg-[#0a101f]/90 border rounded-2xl p-5 shadow-xl transition-all duration-300 flex flex-col ${a.border}`}>
+      <div className={`flex items-center gap-2 ${a.heading} text-[11px] font-black uppercase tracking-widest mb-4`}>
+        {accent === "amber" ? <Swords className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+        {label}
+      </div>
+
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex gap-4">
+          <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center ${a.circle}`}>
+            <Crown className={`w-7 h-7 ${a.crown}`} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-black text-slate-100">{mvp.account}</h3>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${profChip(mvp.profession)}`}>
+                {mvp.profession}
+              </span>
+            </div>
+            {mvp.reason && (
+              <div className={`${a.reason} text-xs font-semibold mt-1 italic`}>&#9733; "{mvp.reason}"</div>
+            )}
+            <div className="mt-3 space-y-1.5 w-48">
+              {topStats.slice(0, 3).map((ts: MvpTopStat) => (
+                <div key={ts.name} className="flex justify-between items-center text-[10px] font-mono bg-slate-900/50 px-2 py-1 rounded border border-slate-800">
+                  <span className="text-slate-400">{ts.name}</span>
+                  <span className={`${a.statVal} font-bold`}>{ts.val}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="text-right">
+          <span className={`text-[10px] ${a.scoreLbl} font-bold uppercase tracking-wider block mb-1`}>{label}</span>
+          <span className={`text-4xl font-black ${a.scoreVal} leading-none`}>{fmtFixed(score, 1)}</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mt-auto pt-4 border-t border-slate-800/60">
+        {renderMedal(silver, "silver")}
+        {renderMedal(bronze, "bronze")}
+      </div>
+    </div>
+  );
+}
+
+export default function OverviewView() {
+  const { report } = useReport();
+  if (!report) return null;
+  const s = report.stats;
+
+  const perSecCards = [
+    { label: "Down Contrib /s", value: fmtFixed(s.maxDownContrib.value / (s.maxDownContrib.count || 1)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, accent: "text-slate-100" },
+    { label: "Healing /s", value: fmtFixed(s.maxHealing.value / (s.maxHealing.count || 1)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, accent: "text-slate-100" },
+    { label: "Barrier /s", value: fmtFixed(s.maxBarrier.value / (s.maxBarrier.count || 1)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, accent: "text-slate-100" },
+    { label: "Cleanses /s", value: fmtFixed(s.maxCleanses.value / (s.maxCleanses.count || 1)), icon: <Droplet className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, accent: "text-slate-100" },
+    { label: "Strips /s", value: fmtFixed(s.maxStrips.value / (s.maxStrips.count || 1)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, accent: "text-slate-100" },
+    { label: "Stability Gen /s", value: fmtFixed(s.maxStab.value / (s.maxStab.count || 1)), icon: <Shield className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxStab.player, count: s.maxStab.count, accent: "text-slate-100" },
+    { label: "CC /s", value: fmtFixed(s.maxCC.value / (s.maxCC.count || 1)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, accent: "text-slate-100" },
+    { label: "Interrupts /s", value: fmtFixed(s.maxInterrupts.value / (s.maxInterrupts.count || 1)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, accent: "text-slate-100" },
+  ];
+
+  return (
+    <div className="space-y-6 animate-view pb-12">
+      {/* Top stats banner */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-slate-800/60 rounded-2xl overflow-hidden border border-slate-800/80">
+        {[
+          { label: "Allied Downs", value: s.totalSquadDowns, color: "text-slate-100" },
+          { label: "Allied Deaths", value: s.totalSquadDeaths, color: "text-slate-100" },
+          { label: "Enemy Downs", value: s.totalEnemyDowns, color: "text-slate-100" },
+          { label: "Enemy Deaths", value: s.totalEnemyDeaths, color: "text-slate-100" },
+        ].map((b) => (
+          <div key={b.label} className="text-center bg-[#0a101f] py-4">
+            <span className={`text-3xl font-black font-mono ${b.color}`}>{fmtNum(b.value)}</span>
+            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mt-1">{b.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* MVP cards */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <MvpBlock mvp={s.offensiveMvp} silver={s.offensiveSilver} bronze={s.offensiveBronze} accent="amber" label="Offensive MVP" />
+        <MvpBlock mvp={s.defensiveMvp} silver={s.defensiveSilver} bronze={s.defensiveBronze} accent="teal" label="Defensive MVP" />
+      </div>
+
+      {/* Metrics grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {perSecCards.map((c) => (
+          <div key={c.label} className="bg-[#0a101f]/90 border border-slate-800/80 p-4 rounded-2xl shadow-lg hover:border-slate-700 transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                {c.icon}
+                {c.label}
+              </div>
+              <div className="text-2xl font-black font-mono text-slate-100">{c.value}</div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-slate-800/60 flex justify-between items-center text-[10px]">
+              <span className="text-sky-400 font-bold truncate">{c.player}</span>
+              <span className="text-slate-500 font-mono">{c.count} logs</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
