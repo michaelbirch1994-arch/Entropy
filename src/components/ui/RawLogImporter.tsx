@@ -7,15 +7,18 @@ import {
   CircleCheck as CheckCircle2,
   ExternalLink,
   Swords,
+  Eye,
 } from "lucide-react";
 import { isRawLogFile, uploadRawLogToDpsReport, fetchDpsReportJson, parseDpsReportPermalink } from "../../utils/dpsReport";
-import { summarizeRawFight, type RawFightSummary } from "../../types/rawFight";
+import { summarizeRawFight, type RawFightSummary, type RawFightLog } from "../../types/rawFight";
+import RawFightViewer from "./RawFightViewer";
 
 interface QueueItem {
   key: string;
   label: string;
   status: "pending" | "uploading" | "fetching" | "done" | "error";
   summary?: RawFightSummary;
+  raw?: RawFightLog;
   errorMsg?: string;
 }
 
@@ -26,6 +29,7 @@ export default function RawLogImporter() {
   const [linkValue, setLinkValue] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [viewing, setViewing] = useState<QueueItem | null>(null);
 
   function updateItem(key: string, patch: Partial<QueueItem>) {
     setQueue((prev) => prev.map((i) => (i.key === key ? { ...i, ...patch } : i)));
@@ -38,7 +42,7 @@ export default function RawLogImporter() {
       const uploaded = await uploadRawLogToDpsReport(file);
       updateItem(key, { status: "fetching" });
       const json = await fetchDpsReportJson(uploaded.permalink);
-      updateItem(key, { status: "done", summary: summarizeRawFight(json, uploaded.permalink) });
+      updateItem(key, { status: "done", summary: summarizeRawFight(json, uploaded.permalink), raw: json });
     } catch (e) {
       updateItem(key, { status: "error", errorMsg: e instanceof Error ? e.message : "Upload failed" });
     }
@@ -49,7 +53,7 @@ export default function RawLogImporter() {
     setQueue((prev) => [{ key, label, status: "fetching" }, ...prev]);
     try {
       const json = await fetchDpsReportJson(permalink);
-      updateItem(key, { status: "done", summary: summarizeRawFight(json, permalink) });
+      updateItem(key, { status: "done", summary: summarizeRawFight(json, permalink), raw: json });
     } catch (e) {
       updateItem(key, { status: "error", errorMsg: e instanceof Error ? e.message : "Failed to load" });
     }
@@ -100,9 +104,9 @@ export default function RawLogImporter() {
         <div className="space-y-3 mt-2">
           <p className="text-[11px] text-slate-500 leading-relaxed">
             Drop raw <span className="font-mono text-slate-400">.zevtc</span>/<span className="font-mono text-slate-400">.evtc</span> files
-            or paste dps.report links below. Each fight is uploaded straight to dps.report for parsing and shown as a
-            per-fight summary here — combining multiple fights into one full raid report (MVPs, leaderboards, etc.) is
-            a separate step Entropy doesn't do yet.
+            or paste dps.report links below. Each fight is uploaded straight to dps.report for parsing, then pulled back
+            in and rendered right here with Entropy's own squad breakdown — combining multiple fights into one full raid
+            report (MVPs, leaderboards, etc.) is a separate step Entropy doesn't do yet.
           </p>
 
           <div
@@ -164,53 +168,75 @@ export default function RawLogImporter() {
 
           {queue.length > 0 && (
             <ul className="space-y-1.5">
-              {queue.map((item) => (
-                <li
-                  key={item.key}
-                  className="flex items-center justify-between gap-3 bg-white/[0.02] border border-white/[0.05] rounded-lg px-3 py-2"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {item.status === "uploading" || item.status === "fetching" ? (
-                      <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin flex-shrink-0" />
-                    ) : item.status === "done" ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                    ) : (
-                      <AlertCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-200 truncate">
-                        {item.summary?.fightName ?? item.label}
-                      </p>
-                      {item.status === "uploading" && <p className="text-[10px] text-slate-500">Uploading to dps.report...</p>}
-                      {item.status === "fetching" && <p className="text-[10px] text-slate-500">Fetching parsed log...</p>}
-                      {item.status === "error" && <p className="text-[10px] text-rose-400">{item.errorMsg}</p>}
-                      {item.status === "done" && item.summary && (
-                        <p className="text-[10px] text-slate-500 font-mono">
-                          {item.summary.duration} - {item.summary.squadSize} in squad
-                          {item.summary.commander ? ` - Cmdr ${item.summary.commander}` : ""}
-                          {" - "}
-                          <span className={item.summary.success ? "text-emerald-400" : "text-rose-400"}>
-                            {item.summary.success ? "Success" : "Failed"}
-                          </span>
-                        </p>
+              {queue.map((item) => {
+                const isDone = item.status === "done" && item.summary && item.raw;
+                return (
+                  <li
+                    key={item.key}
+                    role={isDone ? "button" : undefined}
+                    tabIndex={isDone ? 0 : undefined}
+                    onClick={isDone ? () => setViewing(item) : undefined}
+                    onKeyDown={isDone ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setViewing(item); } } : undefined}
+                    className={`flex items-center justify-between gap-3 bg-white/[0.02] border border-white/[0.05] rounded-lg px-3 py-2 transition-colors ${
+                      isDone ? "cursor-pointer hover:border-amber-500/30 hover:bg-amber-500/[0.04]" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      {item.status === "uploading" || item.status === "fetching" ? (
+                        <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin flex-shrink-0" />
+                      ) : item.status === "done" ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
                       )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-200 truncate">
+                          {item.summary?.fightName ?? item.label}
+                        </p>
+                        {item.status === "uploading" && <p className="text-[10px] text-slate-500">Uploading to dps.report...</p>}
+                        {item.status === "fetching" && <p className="text-[10px] text-slate-500">Fetching parsed log...</p>}
+                        {item.status === "error" && <p className="text-[10px] text-rose-400">{item.errorMsg}</p>}
+                        {item.status === "done" && item.summary && (
+                          <p className="text-[10px] text-slate-500 font-mono">
+                            {item.summary.duration} - {item.summary.squadSize} in squad
+                            {item.summary.commander ? ` - Cmdr ${item.summary.commander}` : ""}
+                            {" - "}
+                            <span className={item.summary.success ? "text-emerald-400" : "text-rose-400"}>
+                              {item.summary.success ? "Success" : "Failed"}
+                            </span>
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  {item.status === "done" && item.summary?.permalink && (
-                    <a
-                      href={`https://dps.report/${item.summary.permalink}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex-shrink-0 text-amber-400/70 hover:text-amber-400 transition-colors"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  )}
-                </li>
-              ))}
+                    {isDone && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="hidden sm:flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-amber-400/80">
+                          <Eye className="w-3 h-3" /> View
+                        </span>
+                        {item.summary?.permalink && (
+                          <a
+                            href={`https://dps.report/${item.summary.permalink}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Open on dps.report"
+                            className="text-amber-400/50 hover:text-amber-400 transition-colors"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
+      )}
+
+      {viewing && viewing.summary && viewing.raw && (
+        <RawFightViewer summary={viewing.summary} log={viewing.raw} onClose={() => setViewing(null)} />
       )}
     </div>
   );
