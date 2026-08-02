@@ -12,6 +12,7 @@
 // see THIRD_PARTY_NOTICES.md and the "Phase 2 full parity" scoping note.
 
 import { computePlayerAggregation, type PlayerStats } from './bridge-metrics/computePlayerAggregation';
+import { buildBoonTables, type BoonTable } from './bridge-metrics/boonGeneration';
 import { classifyPlayerRoles } from './bridge-metrics/classifyPlayerRoles';
 import { getProfessionColor } from './bridge-metrics/professionUtils';
 import { parseReplayData } from './parseReplayData';
@@ -1207,6 +1208,15 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     mechanics: computeMechanicsTimeline(fights),
     topHealingSkills: computeTopHealingSkills(fights),
     deathRecaps: computeDeathRecaps(fights),
+    // Self- vs. group- vs. squad-generation split for stacking/non-stacking
+    // boons - reuses AxiBridge's vendored boonGeneration engine as-is, reading
+    // player.selfBuffs/groupBuffs/squadBuffs straight from the raw log (each
+    // an array of { id, buffData: [{ generation, wasted }] }, confirmed
+    // against EI's JsonPlayer.SelfBuffs / GroupBuffs / SquadBuffs JSON doc).
+    // Answers "is this support actually generating this boon, or just
+    // standing near someone who is" - dps.report shows this as its own
+    // Buff Generation tab, distinct from the uptime tables in Buffs.
+    buffGeneration: buildBoonTables(fights.map((f) => ({ details: f.raw }))).boonTables,
     offensiveAvgMvpScore: offensiveScores.avgScore,
     defensiveAvgMvpScore: defensiveScores.avgScore,
     avgMvpScore: (offensiveScores.avgScore + defensiveScores.avgScore) / 2,
