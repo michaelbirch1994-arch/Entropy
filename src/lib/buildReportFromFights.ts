@@ -874,19 +874,30 @@ function computeDeathRecaps(fights: FightInput[]): DeathRecapEntry[] {
 
     for (const p of players) {
       if (p.notInSquad) continue;
-      const recap = p.deathRecap as RawRecap | undefined;
-      if (!recap || (!recap.toDown?.length && !recap.toKill?.length)) continue;
+      // EI's JsonPlayer.DeathRecap is a *list* (List<JsonDeathRecap>), not a
+      // single object - a player can die and get revived more than once in
+      // the same fight, and each death gets its own entry. Treating it as a
+      // bare object (as this used to do) meant `.toDown`/`.toKill` were
+      // always undefined, so every death was silently skipped and this tab
+      // was empty for every report. Iterate the array so multi-death fights
+      // surface one card per death, not just the first/last.
+      const recaps = (p.deathRecap ?? []) as RawRecap[];
+      if (!Array.isArray(recaps)) continue;
 
-      out.push({
-        account: typeof p.account === 'string' ? p.account : 'Unknown',
-        profession: typeof p.profession === 'string' ? p.profession : 'Unknown',
-        characterName: typeof p.name === 'string' ? p.name : 'Unknown',
-        fightName,
-        fightIndex,
-        deathTimeMs: Number(recap.deathTime) || 0,
-        toDown: (recap.toDown ?? []).map(resolveHit).sort((a, b) => a.time - b.time),
-        toKill: (recap.toKill ?? []).map(resolveHit).sort((a, b) => a.time - b.time),
-      });
+      for (const recap of recaps) {
+        if (!recap || (!recap.toDown?.length && !recap.toKill?.length)) continue;
+
+        out.push({
+          account: typeof p.account === 'string' ? p.account : 'Unknown',
+          profession: typeof p.profession === 'string' ? p.profession : 'Unknown',
+          characterName: typeof p.name === 'string' ? p.name : 'Unknown',
+          fightName,
+          fightIndex,
+          deathTimeMs: Number(recap.deathTime) || 0,
+          toDown: (recap.toDown ?? []).map(resolveHit).sort((a, b) => a.time - b.time),
+          toKill: (recap.toKill ?? []).map(resolveHit).sort((a, b) => a.time - b.time),
+        });
+      }
     }
   });
 
