@@ -19,14 +19,30 @@ export default function DpsGraphView() {
 
   const fight = data?.fights[fightIdx];
 
+  // Underlying data is cumulative damage per second (a running total), which
+  // only ever goes up and to the right - not useful for spotting when DPS
+  // actually spiked or dropped. Convert to instantaneous DPS via a rolling
+  // window diff instead: rate at second i = damage gained over the last
+  // WINDOW_SEC seconds, divided by however much of that window has elapsed.
+  const WINDOW_SEC = 5;
+  const toDpsSeries = (points: number[]): number[] =>
+    points.map((_, i) => {
+      const start = Math.max(0, i - WINDOW_SEC);
+      const span = i - start;
+      if (span <= 0) return 0;
+      return (points[i] - points[start]) / span;
+    });
+
   const chartData = useMemo(() => {
     if (!fight) return [];
     const len = fight.squad.length;
     const compared = fight.players.filter((p) => compareAccounts.includes(p.account));
+    const squadDps = toDpsSeries(fight.squad);
+    const comparedDps = compared.map((p) => ({ account: p.account, dps: toDpsSeries(p.points) }));
     const rows: Record<string, number>[] = [];
     for (let i = 0; i < len; i++) {
-      const row: Record<string, number> = { t: i, squad: fight.squad[i] };
-      compared.forEach((p) => { row[p.account] = i < p.points.length ? p.points[i] : p.points[p.points.length - 1] ?? 0; });
+      const row: Record<string, number> = { t: i, squad: squadDps[i] ?? 0 };
+      comparedDps.forEach(({ account, dps }) => { row[account] = i < dps.length ? dps[i] : dps[dps.length - 1] ?? 0; });
       rows.push(row);
     }
     return rows;
@@ -79,10 +95,10 @@ export default function DpsGraphView() {
 
       {fight && (
         <Panel
-          title="Cumulative Damage Over Time"
-          subtitle="Squad total damage across the fight - select players below to compare their individual lines"
+          title="DPS Over Time"
+          subtitle={`Squad DPS across the fight (${WINDOW_SEC}s rolling window) - select players below to compare their individual lines`}
           icon={<LineChartIcon className="w-3.5 h-3.5" />}
-          action={`peak ${fmtNum(fight.squad[fight.squad.length - 1] ?? 0)}`}
+          action={`peak ${fmtNum(Math.max(0, ...chartData.map((r) => r.squad ?? 0)))} dps`}
         >
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
