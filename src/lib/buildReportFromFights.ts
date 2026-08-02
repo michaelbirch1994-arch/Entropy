@@ -8,9 +8,8 @@
 // Deliberately out of scope for this pass (left as empty defaults so the
 // interface stays satisfied without crashing any view): per-fight breakdown
 // table, commander stats, boon generation tables/leaderboards, map/timeline
-// data, replay data. These require porting additional non-portable AxiBridge
-// modules — see THIRD_PARTY_NOTICES.md and the "Phase 2 full parity" scoping
-// note.
+// data. These require porting additional non-portable AxiBridge modules —
+// see THIRD_PARTY_NOTICES.md and the "Phase 2 full parity" scoping note.
 
 import { computePlayerAggregation, type PlayerStats } from './bridge-metrics/computePlayerAggregation';
 import { classifyPlayerRoles } from './bridge-metrics/classifyPlayerRoles';
@@ -30,6 +29,9 @@ import type {
   BoonUptimeColumn,
   BoonUptimeRow,
   TopSkill,
+  DamageModifierData,
+  RotationsData,
+  DpsGraphData,
 } from '../types/report';
 
 export interface FightInput {
@@ -223,21 +225,52 @@ const BOON_PRIORITY = [
   'Vigor', 'Aegis', 'Stability', 'Swiftness', 'Resistance', 'Resolution',
 ];
 
-function computeBoonUptimes(fights: FightInput[], playerEntries: PlayerStats[]): BoonUptimeData {
-  const buffMeta = new Map<number, { name: string; icon?: string }>();
-  const acc = new Map<string, Map<number, { sum: number; count: number }>>();
+// EI classifies every buff on its HTML tables with one of these values
+// (GW2EIJSON.JsonLog.BuffDesc.Classification, confirmed against the EI JSON
+// doc) - this is exactly the same grouping dps.report uses for its Buffs
+// sub-tabs (Boons / Offensive Buffs / Support Buffs / Defensive Buffs /
+// Conditions / Gear Buffs / Debuffs / Nourishments / Enhancements / Other
+// Consumables / Personal Buffs, the last of which maps to EI's "Other").
+const BUFF_CLASSIFICATIONS: Record<string, string> = {
+  Boon: 'Boons',
+  Condition: 'Conditions',
+  Offensive: 'Offensive Buffs',
+  Defensive: 'Defensive Buffs',
+  Support: 'Support Buffs',
+  Debuff: 'Debuffs',
+  Gear: 'Gear Buffs',
+  Enhancement: 'Enhancements',
+  Nourishment: 'Nourishments',
+  'Other Consumable': 'Other Consumables',
+  Other: 'Personal Buffs',
+};
+
+// Computes an uptime table (like computeBoonUptimes used to, single-category)
+// for every EI buff classification in one pass over the fights, so the Buffs
+// view can offer the full set of dps.report-style tabs instead of just Boons.
+function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerStats[]): Record<string, BoonUptimeData> {
+  const buffMetaByClass = new Map<string, Map<number, { name: string; icon?: string }>>();
+  const accByClass = new Map<string, Map<string, Map<number, { sum: number; count: number }>>>();
   const groupByAccount = new Map<string, number>();
+
+  for (const cls of Object.keys(BUFF_CLASSIFICATIONS)) {
+    buffMetaByClass.set(cls, new Map());
+    accByClass.set(cls, new Map());
+  }
 
   for (const f of fights) {
     const raw = f.raw as Record<string, unknown>;
     const buffMap = (raw.buffMap ?? {}) as Record<string, { name?: string; icon?: string; classification?: string }>;
+    const idToClass = new Map<number, string>();
     for (const key of Object.keys(buffMap)) {
       const def = buffMap[key];
-      if (def && def.classification === 'Boon') {
+      const cls = def?.classification;
+      if (def && cls && BUFF_CLASSIFICATIONS[cls]) {
         const id = Number(key.replace(/^b/, ''));
-        if (Number.isFinite(id) && !buffMeta.has(id)) {
-          buffMeta.set(id, { name: def.name || `Boon ${id}`, icon: def.icon });
-        }
+        if (!Number.isFinite(id)) continue;
+        idToClass.set(id, cls);
+        const meta = buffMetaByClass.get(cls)!;
+        if (!meta.has(id)) meta.set(id, { name: def.name || `Buff ${id}`, icon: def.icon });
       }
     }
 
@@ -248,15 +281,18 @@ function computeBoonUptimes(fights: FightInput[], playerEntries: PlayerStats[]):
       if (!account) continue;
       if (typeof p.group === 'number') groupByAccount.set(account, p.group);
 
-      let accMap = acc.get(account);
-      if (!accMap) { accMap = new Map(); acc.set(account, accMap); }
-
       const buffUptimes = (p.buffUptimes ?? []) as Array<{ id?: number; buffData?: Array<{ uptime?: number }> }>;
       for (const entry of buffUptimes) {
         const id = Number(entry?.id);
         if (!Number.isFinite(id)) continue;
+        const cls = idToClass.get(id);
+        if (!cls) continue;
         const uptime = Number(entry?.buffData?.[0]?.uptime);
         if (!Number.isFinite(uptime)) continue;
+
+        const accMapByAccount = accByClass.get(cls)!;
+        let accMap = accMapByAccount.get(account);
+        if (!accMap) { accMap = new Map(); accMapByAccount.set(account, accMap); }
         const cur = accMap.get(id) || { sum: 0, count: 0 };
         cur.sum += uptime;
         cur.count += 1;
@@ -265,41 +301,241 @@ function computeBoonUptimes(fights: FightInput[], playerEntries: PlayerStats[]):
     }
   }
 
-  const columns: BoonUptimeColumn[] = Array.from(buffMeta.entries())
-    .map(([id, meta]) => ({ id, name: meta.name, icon: meta.icon }))
-    .sort((a, b) => {
-      const ai = BOON_PRIORITY.indexOf(a.name);
-      const bi = BOON_PRIORITY.indexOf(b.name);
-      if (ai === -1 && bi === -1) return a.name.localeCompare(b.name);
-      if (ai === -1) return 1;
-      if (bi === -1) return -1;
-      return ai - bi;
-    });
+  const result: Record<string, BoonUptimeData> = {};
+  for (const cls of Object.keys(BUFF_CLASSIFICATIONS)) {
+    const buffMeta = buffMetaByClass.get(cls)!;
+    const acc = accByClass.get(cls)!;
 
+    const columns: BoonUptimeColumn[] = Array.from(buffMeta.entries())
+      .map(([id, meta]) => ({ id, name: meta.name, icon: meta.icon }))
+      .sort((a, b) => {
+        const ai = BOON_PRIORITY.indexOf(a.name);
+        const bi = BOON_PRIORITY.indexOf(b.name);
+        if (ai === -1 && bi === -1) return a.name.localeCompare(b.name);
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      });
+    const columnIds = new Set(columns.map((c) => c.id));
+
+    const rows: BoonUptimeRow[] = playerEntries
+      .filter((s) => s.account && s.account !== 'Unknown')
+      .map((s) => {
+        const accMap = acc.get(s.account);
+        const uptimes: Record<number, number> = {};
+        if (accMap) {
+          accMap.forEach((v, id) => {
+            if (columnIds.has(id)) uptimes[id] = v.count > 0 ? v.sum / v.count : 0;
+          });
+        }
+        return {
+          account: s.account,
+          profession: s.profession,
+          professionList: s.professionList ?? [],
+          group: groupByAccount.get(s.account) ?? 0,
+          logsJoined: s.logsJoined,
+          uptimes,
+        };
+      })
+      .filter((row) => Object.keys(row.uptimes).length > 0)
+      .sort((a, b) => a.group - b.group || a.account.localeCompare(b.account));
+
+    result[BUFF_CLASSIFICATIONS[cls]] = { columns, rows };
+  }
+
+  return result;
+}
+
+// Per-player damage-modifier (traits/sigils/runes/food that add or gate bonus
+// damage) breakdown, mirroring dps.report's "Damage Modifiers" tab. Reads
+// straight from EI's raw player.damageModifiers[] (phase 0 = full fight) and
+// raw.damageModMap for names/icons (confirmed against the EI JSON doc:
+// JsonPlayer.DamageModifiers / JsonLog.DamageModMap / DamageModDesc).
+function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
+  type ModItem = { hitCount?: number; totalHitCount?: number; damageGain?: number; totalDamage?: number };
+  type ModEntry = { id?: number; damageModifiers?: ModItem[] };
+
+  const modMeta = new Map<number, { name: string; icon?: string }>();
+  const totals = new Map<number, number>();
+  const accRows = new Map<string, { profession: string; professionList: string[]; group: number; values: Map<number, { damage: number; hits: number }> }>();
+
+  for (const f of fights) {
+    const raw = f.raw as Record<string, unknown>;
+    const modMap = (raw.damageModMap ?? {}) as Record<string, { name?: string; icon?: string; incoming?: boolean }>;
+    const idToDesc = new Map<number, { name?: string; icon?: string; incoming?: boolean }>();
+    for (const key of Object.keys(modMap)) {
+      const id = Number(key.replace(/^d/, ''));
+      if (!Number.isFinite(id)) continue;
+      idToDesc.set(id, modMap[key]);
+    }
+
+    const players = (raw.players ?? []) as Record<string, unknown>[];
+    for (const p of players) {
+      if (p.notInSquad) continue;
+      const account = typeof p.account === 'string' ? p.account : null;
+      if (!account) continue;
+
+      let row = accRows.get(account);
+      if (!row) {
+        row = { profession: String(p.profession || 'Unknown'), professionList: [], group: Number(p.group) || 0, values: new Map() };
+        accRows.set(account, row);
+      }
+
+      const mods = (p.damageModifiers ?? []) as ModEntry[];
+      for (const entry of mods) {
+        const id = Number(entry?.id);
+        if (!Number.isFinite(id)) continue;
+        const desc = idToDesc.get(id);
+        if (desc?.incoming) continue;
+        const item = entry.damageModifiers?.[0];
+        if (!item) continue;
+        const damage = Number(item.damageGain) || 0;
+        const hits = Number(item.totalHitCount) || 0;
+        if (damage === 0 && hits === 0) continue;
+
+        if (!modMeta.has(id)) modMeta.set(id, { name: desc?.name || `Modifier ${id}`, icon: desc?.icon });
+        totals.set(id, (totals.get(id) || 0) + damage);
+
+        const cur = row.values.get(id) || { damage: 0, hits: 0 };
+        cur.damage += damage;
+        cur.hits += hits;
+        row.values.set(id, cur);
+      }
+    }
+  }
+
+  const columns: DamageModifierData['columns'] = Array.from(modMeta.entries())
+    .map(([id, meta]) => ({ id, name: meta.name, icon: meta.icon }))
+    .sort((a, b) => (totals.get(b.id) || 0) - (totals.get(a.id) || 0))
+    .slice(0, 24);
   const columnIds = new Set(columns.map((c) => c.id));
 
-  const rows: BoonUptimeRow[] = playerEntries
-    .filter((s) => s.account && s.account !== 'Unknown')
-    .map((s) => {
-      const accMap = acc.get(s.account);
-      const uptimes: Record<number, number> = {};
-      if (accMap) {
-        accMap.forEach((v, id) => {
-          if (columnIds.has(id)) uptimes[id] = v.count > 0 ? v.sum / v.count : 0;
-        });
-      }
-      return {
-        account: s.account,
-        profession: s.profession,
-        professionList: s.professionList ?? [],
-        group: groupByAccount.get(s.account) ?? 0,
-        logsJoined: s.logsJoined,
-        uptimes,
-      };
+  const rows: DamageModifierData['rows'] = Array.from(accRows.entries())
+    .map(([account, row]) => {
+      const values: Record<number, { damage: number; hits: number }> = {};
+      row.values.forEach((v, id) => {
+        if (columnIds.has(id)) values[id] = v;
+      });
+      return { account, profession: row.profession, professionList: row.professionList, group: row.group, values };
     })
+    .filter((row) => Object.keys(row.values).length > 0)
     .sort((a, b) => a.group - b.group || a.account.localeCompare(b.account));
 
   return { columns, rows };
+}
+
+// Per-fight skill-cast timeline (dps.report's "Rotations" tab). Reads
+// player.rotation[] = [{ id, skills: [{castTime, duration, ...}] }] straight
+// from the raw log (confirmed against EI's JsonRotation/JsonSkill JSON doc).
+function computeRotations(fights: FightInput[]): RotationsData {
+  type SkillCast = { castTime?: number; duration?: number };
+  type RotEntry = { id?: number; skills?: SkillCast[] };
+
+  const skillMeta: Record<number, { name: string; icon?: string }> = {};
+  const fightRows: RotationsData['fights'] = [];
+
+  fights.forEach((f, idx) => {
+    const raw = f.raw as Record<string, unknown>;
+    const skillMap = (raw.skillMap ?? {}) as Record<string, { name?: string; icon?: string }>;
+    for (const key of Object.keys(skillMap)) {
+      const id = Number(key.replace(/^s/, ''));
+      const def = skillMap[key];
+      if (Number.isFinite(id) && def?.name && !skillMeta[id]) {
+        skillMeta[id] = { name: def.name, icon: def.icon };
+      }
+    }
+
+    const durationMs = Number(raw.durationMS) || 0;
+    if (durationMs <= 0) return;
+
+    const players = (raw.players ?? []) as Record<string, unknown>[];
+    const rotPlayers: RotationsData['fights'][number]['players'] = [];
+    for (const p of players) {
+      if (p.notInSquad) continue;
+      const account = typeof p.account === 'string' ? p.account : null;
+      if (!account) continue;
+      const rotation = (p.rotation ?? []) as RotEntry[];
+      const casts: { skillId: number; castTime: number; duration: number }[] = [];
+      for (const entry of rotation) {
+        const skillId = Number(entry?.id);
+        if (!Number.isFinite(skillId)) continue;
+        for (const skill of entry.skills ?? []) {
+          const castTime = Number(skill?.castTime) || 0;
+          casts.push({ skillId, castTime, duration: Number(skill?.duration) || 0 });
+        }
+      }
+      if (casts.length === 0) continue;
+      casts.sort((a, b) => a.castTime - b.castTime);
+      rotPlayers.push({
+        account,
+        profession: String(p.profession || 'Unknown'),
+        professionList: [],
+        casts,
+      });
+    }
+
+    if (rotPlayers.length > 0) {
+      fightRows.push({
+        fightId: f.summary.permalink || `${f.summary.fightName}-${idx}`,
+        fightName: f.summary.fightName || `Fight ${idx + 1}`,
+        durationMs,
+        players: rotPlayers,
+      });
+    }
+  });
+
+  return { skillMeta, fights: fightRows };
+}
+
+// Per-fight cumulative-damage-over-time series (dps.report's "Graph" tab).
+// Reads player.damage1S[phase][second] straight from the raw log (confirmed
+// against EI's JsonActor.Damage1S JSON doc - phase 0 = full fight, one
+// cumulative int per second of the fight).
+function computeDpsGraph(fights: FightInput[]): DpsGraphData {
+  const fightRows: DpsGraphData['fights'] = [];
+
+  fights.forEach((f, idx) => {
+    const raw = f.raw as Record<string, unknown>;
+    const durationMs = Number(raw.durationMS) || 0;
+    if (durationMs <= 0) return;
+
+    const players = (raw.players ?? []) as Record<string, unknown>[];
+    const series: DpsGraphData['fights'][number]['players'] = [];
+    let maxLen = 0;
+
+    for (const p of players) {
+      if (p.notInSquad) continue;
+      const account = typeof p.account === 'string' ? p.account : null;
+      if (!account) continue;
+      const damage1S = (p.damage1S ?? []) as number[][];
+      const points = (damage1S[0] ?? []).map((v) => Number(v) || 0);
+      if (points.length === 0) continue;
+      maxLen = Math.max(maxLen, points.length);
+      series.push({ account, profession: String(p.profession || 'Unknown'), points });
+    }
+
+    if (series.length === 0) return;
+
+    const squad = new Array(maxLen).fill(0);
+    for (const s of series) {
+      let last = 0;
+      for (let i = 0; i < maxLen; i++) {
+        const v = i < s.points.length ? s.points[i] : last;
+        last = v;
+        squad[i] += v;
+      }
+    }
+
+    fightRows.push({
+      fightId: f.summary.permalink || `${f.summary.fightName}-${idx}`,
+      fightName: f.summary.fightName || `Fight ${idx + 1}`,
+      durationMs,
+      squad,
+      players: series,
+    });
+  });
+
+  return { fights: fightRows };
 }
 
 // Aggregates per-skill outgoing/incoming damage across all fights, straight from
@@ -461,6 +697,8 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     damageTaken: createLB('damageTaken', false),
   };
 
+  const buffCategoryUptimes = computeBuffCategoryUptimes(fights, playerEntries);
+
   // Role classification (boon tables intentionally empty for this pass — full
   // boon-generation ingestion is out of scope; see module header).
   const roleMap = classifyPlayerRoles(playerEntries, []);
@@ -597,7 +835,11 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     commanderStats: { rows: [] },
     roleClassifications,
     attendanceData,
-    boonUptimes: computeBoonUptimes(fights, playerEntries),
+    boonUptimes: buffCategoryUptimes['Boons'] ?? { columns: [], rows: [] },
+    buffCategoryUptimes,
+    damageModifiers: computeDamageModifiers(fights),
+    rotations: computeRotations(fights),
+    dpsGraph: computeDpsGraph(fights),
     offensiveAvgMvpScore: offensiveScores.avgScore,
     defensiveAvgMvpScore: defensiveScores.avgScore,
     avgMvpScore: (offensiveScores.avgScore + defensiveScores.avgScore) / 2,
