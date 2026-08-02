@@ -3,17 +3,27 @@ import { useReport } from "../store/ReportContext";
 import { fmtCompact, fmtNum } from "../utils/format";
 import type { TopSkill, TopHealingSource } from "../types/report";
 import { Zap, ArrowDownLeft, Flame, Trophy, HeartPulse } from "lucide-react";
+import { useCachedImage } from "../hooks/useCachedImage";
 
 type SortKey = "damage" | "downContribution" | "hits";
 type Tab = "outgoing" | "incoming" | "healing";
 
-// Wraps the skill/buff icon <img> with a graceful fallback: if the external
-// render.guildwars2.com (or wiki/imgur) request is blocked - e.g. by an ad
-// blocker or privacy extension treating a cross-origin image load inside a
-// sandboxed preview iframe as trackable content - this swaps to the numbered
-// badge instead of leaving a broken-image icon on screen.
+// Wraps the skill/buff icon with a graceful fallback. Every icon on this
+// page was showing its numbered badge at once (not just a few broken ones),
+// which pointed to something blocking the whole render.guildwars2.com host
+// rather than bad per-skill data - most likely the StackBlitz preview
+// iframe's img-src CSP, possibly compounded by ad blockers/privacy
+// extensions treating a cross-origin image load as trackable content.
+//
+// Fix: download the icon via fetch() (useCachedImage) and point the <img> at
+// the resulting blob: URL instead of the remote host directly. fetch() is
+// governed by connect-src rather than img-src, and a blob: URL is
+// same-origin by construction, so this sidesteps an img-src-only CSP
+// restriction. If the underlying request is blocked outright (e.g. a
+// network-level ad-blocker rule), the fetch fails the same way the old
+// direct <img> load did, and we still fall back to the numbered badge.
 function SkillIcon({ src, index }: { src?: string; index: number }) {
-  const [failed, setFailed] = useState(false);
+  const { src: blobSrc, failed } = useCachedImage(src);
   if (!src || failed) {
     return (
       <div className="w-9 h-9 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-[10px] font-bold text-slate-400 font-mono">
@@ -21,14 +31,15 @@ function SkillIcon({ src, index }: { src?: string; index: number }) {
       </div>
     );
   }
+  if (!blobSrc) {
+    return <div className="w-9 h-9 rounded-lg bg-slate-800/40 border border-slate-700/50 animate-pulse" />;
+  }
   return (
     <img
-      src={src}
+      src={blobSrc}
       alt=""
-      referrerPolicy="no-referrer"
       className="w-9 h-9 rounded-lg border border-slate-700/50"
       loading="lazy"
-      onError={() => setFailed(true)}
     />
   );
 }
