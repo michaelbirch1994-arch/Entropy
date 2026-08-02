@@ -34,6 +34,7 @@ import type {
   RotationsData,
   DpsGraphData,
   SynergyInsight,
+  MechanicsData,
 } from '../types/report';
 
 export interface FightInput {
@@ -360,7 +361,16 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
   const modMeta = new Map<number, { name: string; icon?: string; description?: string; nonMultiplier: boolean; isCounter: boolean }>();
   const totals = new Map<number, number>();
   const playerSets = new Map<number, Set<string>>();
-  const accRows = new Map<string, { profession: string; professionList: string[]; group: number; values: Map<number, { damage: number; hits: number }> }>();
+  // Keyed by "account||profession", not just account: in a combined WvW
+  // report the same squad member can appear on different classes across
+  // different fights (very common - people swap builds/relics/alts between
+  // pulls). Keying by account alone would merge those into one row and show
+  // a class with traits/relics it can never actually run (e.g. a Warrior
+  // row lit up for a Guardian-only trait, or several mutually-exclusive
+  // relics "active" at once) just because the same account played other
+  // classes in other fights. One row per account+class keeps every row's
+  // modifiers honest to the class actually shown.
+  const rowsByKey = new Map<string, { account: string; profession: string; professionList: string[]; group: number; values: Map<number, { damage: number; hits: number }> }>();
 
   for (const f of fights) {
     const raw = f.raw as Record<string, unknown>;
@@ -377,11 +387,13 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
       if (p.notInSquad) continue;
       const account = typeof p.account === 'string' ? p.account : null;
       if (!account) continue;
+      const profession = String(p.profession || 'Unknown');
+      const rowKey = `${account}||${profession}`;
 
-      let row = accRows.get(account);
+      let row = rowsByKey.get(rowKey);
       if (!row) {
-        row = { profession: String(p.profession || 'Unknown'), professionList: [], group: Number(p.group) || 0, values: new Map() };
-        accRows.set(account, row);
+        row = { account, profession, professionList: [], group: Number(p.group) || 0, values: new Map() };
+        rowsByKey.set(rowKey, row);
       }
 
       const mods = (p.damageModifiers ?? []) as ModEntry[];
@@ -431,16 +443,16 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
     .slice(0, 24);
   const columnIds = new Set(columns.map((c) => c.id));
 
-  const rows: DamageModifierData['rows'] = Array.from(accRows.entries())
-    .map(([account, row]) => {
+  const rows: DamageModifierData['rows'] = Array.from(rowsByKey.values())
+    .map((row) => {
       const values: Record<number, { damage: number; hits: number }> = {};
       row.values.forEach((v, id) => {
         if (columnIds.has(id)) values[id] = v;
       });
-      return { account, profession: row.profession, professionList: row.professionList, group: row.group, values };
+      return { account: row.account, profession: row.profession, professionList: row.professionList, group: row.group, values };
     })
     .filter((row) => Object.keys(row.values).length > 0)
-    .sort((a, b) => a.group - b.group || a.account.localeCompare(b.account));
+    .sort((a, b) => a.group - b.group || a.account.localeCompare(b.account) || a.profession.localeCompare(b.profession));
 
   return { columns, rows };
 }
@@ -656,6 +668,85 @@ function computeReplayFights(fights: FightInput[]) {
     });
   });
   return rows;
+}
+
+function severityRank(sev: string): number {
+  const m = /Sev(\d)/.exec(sev);
+  return m ? Number(m[1]) : 0;
+}
+
+// Per-fight boss/encounter mechanic event markers (dps.report's "Mechanics"
+// tab). Reads raw.mechanics[] = [{ name, fullName, description, severity,
+// mechanicsData: [{ time, actor, id, instid, weight }] }] straight from the
+// raw log (confirmed against EI's JsonLog.Mechanics / JsonMechanics /
+// JsonMechanic JSON doc - JsonMechanic.Id is the species id of the actor
+// that triggered the event, 0 meaning the actor was a player). Player
+// events are resolved to a squad account via the fight's own player list
+// (matched on character name, the only identifier the mechanic event
+// carries).
+function computeMechanicsTimeline(fights: FightInput[]): MechanicsData {
+  type RawMechanicEvent = { time?: number; actor?: string; id?: number; instid?: number; weight?: number };
+  type RawMechanic = { name?: string; fullName?: string; description?: string; severity?: string; mechanicsData?: RawMechanicEvent[] };
+
+  const fightRows: MechanicsData['fights'] = [];
+
+  fights.forEach((f, idx) => {
+    const raw = f.raw as Record<string, unknown>;
+    const durationMs = Number(raw.durationMS) || 0;
+    if (durationMs <= 0) return;
+
+    const rawMechanics = (raw.mechanics ?? []) as RawMechanic[];
+    if (!Array.isArray(rawMechanics) || rawMechanics.length === 0) return;
+
+    const players = (raw.players ?? []) as Record<string, unknown>[];
+    const nameToAccount = new Map<string, string>();
+    for (const p of players) {
+      const name = typeof p.name === 'string' ? p.name : null;
+      const account = typeof p.account === 'string' ? p.account : null;
+      if (name && account) nameToAccount.set(name, account);
+    }
+
+    const mechanics: MechanicsData['fights'][number]['mechanics'] = [];
+    rawMechanics.forEach((m, mIdx) => {
+      const data = Array.isArray(m.mechanicsData) ? m.mechanicsData : [];
+      if (data.length === 0) return;
+      const events = data
+        .map((e) => {
+          const actor = typeof e.actor === 'string' && e.actor ? e.actor : 'Unknown';
+          const isPlayer = Number(e.id) === 0;
+          const account = isPlayer ? nameToAccount.get(actor) : undefined;
+          return { time: Number(e.time) || 0, actor, account, isPlayer };
+        })
+        .sort((a, b) => a.time - b.time);
+
+      mechanics.push({
+        key: `${m.name ?? 'mech'}-${mIdx}`,
+        def: {
+          name: m.name || `Mechanic ${mIdx + 1}`,
+          fullName: m.fullName || m.name || `Mechanic ${mIdx + 1}`,
+          description: m.description,
+          severity: m.severity || 'Sev0',
+        },
+        events,
+      });
+    });
+
+    if (mechanics.length === 0) return;
+    // Most severe, most frequent mechanics first so the panel opens on the
+    // interesting stuff instead of an alphabetical wall.
+    mechanics.sort(
+      (a, b) => severityRank(b.def.severity) - severityRank(a.def.severity) || b.events.length - a.events.length
+    );
+
+    fightRows.push({
+      fightId: f.summary.permalink || `${f.summary.fightName}-${idx}`,
+      fightName: f.summary.fightName || `Fight ${idx + 1}`,
+      durationMs,
+      mechanics,
+    });
+  });
+
+  return { fights: fightRows };
 }
 
 // Automated squad-composition/performance insight flags, computed entirely
@@ -967,6 +1058,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     dpsGraph: computeDpsGraph(fights),
     replayFights: computeReplayFights(fights),
     synergyInsights: computeSynergyInsights(playerEntries, buffCategoryUptimes, roleClassifications, totalSquadKills, totalSquadDeaths, avgSquadSize),
+    mechanics: computeMechanicsTimeline(fights),
     offensiveAvgMvpScore: offensiveScores.avgScore,
     defensiveAvgMvpScore: defensiveScores.avgScore,
     avgMvpScore: (offensiveScores.avgScore + defensiveScores.avgScore) / 2,
