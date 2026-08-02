@@ -81,8 +81,7 @@ function ErrorState({ message }: { message: string }) {
 }
 
 function NoReportState() {
-  const { index, uploadReport, loadFromUrl, error, loading } = useReport();
-  const entries = index?.entries ?? [];
+  const { uploadReport, loadFromUrl, error, loading } = useReport();
   return (
     <div className="flex flex-col items-center justify-center min-h-full gap-8 px-6 py-16">
       {/* Branding */}
@@ -101,31 +100,6 @@ function NoReportState() {
 
       {/* Raw log importer (dps.report / .zevtc) */}
       <RawLogImporter />
-
-      {/* Available reports */}
-      {entries.length > 0 && (
-        <div className="w-full max-w-lg space-y-2">
-          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            <Link2 className="w-3.5 h-3.5" /> Available Reports
-          </div>
-          {entries.slice(0, 8).map((e) => (
-            <a
-              key={e.id}
-              href={`?report=${e.id}`}
-              className="flex items-center justify-between bg-white/[0.03] border border-amber-500/10 hover:border-amber-500/30 rounded-xl px-4 py-3 transition-all group"
-            >
-              <div>
-                <div className="text-sm font-bold text-slate-200 group-hover:text-amber-400 transition-colors">{e.title}</div>
-                <div className="text-[10px] text-slate-500 font-mono">{e.dateLabel}</div>
-              </div>
-              <div className="flex items-center gap-3 text-[10px] font-mono text-slate-500">
-                <span>{e.summary.avgSquadSize}v{e.summary.avgEnemySize}</span>
-                <Activity className="w-3.5 h-3.5 text-slate-600 group-hover:text-amber-400 transition-colors" />
-              </div>
-            </a>
-          ))}
-        </div>
-      )}
 
       {/* Supported formats info */}
       <div className="flex items-center gap-6 text-[10px] text-slate-600 font-mono">
