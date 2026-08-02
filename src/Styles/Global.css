@@ -5,16 +5,31 @@
   color-scheme: dark;
 }
 
+html {
+  background: #05040a;
+}
+
 html,
 body,
 #root {
   height: 100%;
   margin: 0;
-  background: #05040a;
   color: #e2e8f0;
   font-family: "Inter", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* body/#root must stay transparent so .entropy-bg (position: fixed;
+   z-index: -1) can show through. Since body/#root are non-positioned,
+   a solid background-color on them paints ABOVE negative-z-index
+   descendants in the same stacking context, hiding .entropy-bg
+   entirely. Only html's background gets the special "canvas" painting
+   behavior that sits beneath everything, including negative z-index
+   content, so it's the only safe place for the solid fallback color. */
+body,
+#root {
+  background: transparent;
 }
 
 .font-display {
