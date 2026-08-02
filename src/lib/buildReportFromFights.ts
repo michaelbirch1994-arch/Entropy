@@ -616,6 +616,19 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
         skillMeta.set(id, { name: def.name, icon: def.icon });
       }
     }
+    // totalDamageDist/totalDamageTaken entries aren't limited to true "skill" casts -
+    // condition damage ticks (bleeding, poison, burning, etc.) are attributed to the
+    // condition's buff id, which only exists in buffMap, not skillMap. Without this
+    // fallback those ticks show up unnamed as "Skill 736" (Bleeding), "Skill 723"
+    // (Poison), and so on, with no icon.
+    const buffMap = (raw.buffMap ?? {}) as Record<string, { name?: string; icon?: string }>;
+    for (const key of Object.keys(buffMap)) {
+      const def = buffMap[key];
+      const id = Number(key.replace(/^b/, ''));
+      if (Number.isFinite(id) && def?.name && !skillMeta.has(id)) {
+        skillMeta.set(id, { name: def.name, icon: def.icon });
+      }
+    }
 
     const players = (raw.players ?? []) as Record<string, unknown>[];
     for (const p of players) {
