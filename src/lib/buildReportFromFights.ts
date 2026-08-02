@@ -35,6 +35,7 @@ import type {
   DpsGraphData,
   SynergyInsight,
   MechanicsData,
+  TopHealingSource,
 } from '../types/report';
 
 export interface FightInput {
@@ -677,6 +678,67 @@ function computeReplayFights(fights: FightInput[]) {
   return rows;
 }
 
+// Top outgoing healing sources squad-wide, by skill or trait/buff, mirroring
+// dps.report's healing distribution breakdown - this is what makes something
+// like a Reaper's "Life Siphon" (a directly-cast skill) or "Replenishing
+// Despair" (a trait that converts damage dealt into self-healing) show up as
+// a quantified line instead of disappearing into an undifferentiated total.
+// Reads player.extHealingStats.totalHealingDist[phase 0] = [{ totalHealing,
+// hits, id, indirectHealing }] straight from the raw log (confirmed against
+// EI's EXTJsonPlayerHealingStats.TotalHealingDist / EXTJsonHealingDist JSON
+// doc - indirectHealing=true means id is a buff/trait id, looked up in
+// buffMap; false means id is a real skill id, looked up in skillMap). This
+// extension data is only present when the log was recorded with arcdps's
+// healing addon active - the same precondition HealingPlayer.hasHealAddon
+// already flags elsewhere in this file.
+function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
+  type HealDistEntry = { totalHealing?: number; hits?: number; id?: number; indirectHealing?: boolean };
+
+  const totals = new Map<string, { id: number; healing: number; hits: number; isTrait: boolean }>();
+  const nameMeta = new Map<string, { name: string; icon?: string }>();
+
+  for (const f of fights) {
+    const raw = f.raw as Record<string, unknown>;
+    const skillMap = (raw.skillMap ?? {}) as Record<string, { name?: string; icon?: string }>;
+    const buffMap = (raw.buffMap ?? {}) as Record<string, { name?: string; icon?: string }>;
+    const players = (raw.players ?? []) as Record<string, unknown>[];
+
+    for (const p of players) {
+      if (p.notInSquad) continue;
+      const ext = p.extHealingStats as Record<string, unknown> | undefined;
+      const dist = (ext?.totalHealingDist as HealDistEntry[][] | undefined)?.[0];
+      if (!Array.isArray(dist)) continue;
+
+      for (const entry of dist) {
+        const id = Number(entry?.id);
+        if (!Number.isFinite(id)) continue;
+        const isTrait = !!entry?.indirectHealing;
+        const healing = Number(entry?.totalHealing) || 0;
+        const hits = Number(entry?.hits) || 0;
+        if (healing === 0 && hits === 0) continue;
+
+        const key = `${isTrait ? 'b' : 's'}${id}`;
+        if (!nameMeta.has(key)) {
+          const def = isTrait ? buffMap[`b${id}`] : skillMap[`s${id}`];
+          nameMeta.set(key, { name: def?.name || `${isTrait ? 'Trait' : 'Skill'} ${id}`, icon: def?.icon });
+        }
+        const cur = totals.get(key) || { id, healing: 0, hits: 0, isTrait };
+        cur.healing += healing;
+        cur.hits += hits;
+        totals.set(key, cur);
+      }
+    }
+  }
+
+  return Array.from(totals.entries())
+    .map(([key, v]) => {
+      const meta = nameMeta.get(key);
+      return { id: v.id, name: meta?.name || `Source ${v.id}`, icon: meta?.icon, healing: v.healing, hits: v.hits, isTrait: v.isTrait };
+    })
+    .sort((a, b) => b.healing - a.healing)
+    .slice(0, 25);
+}
+
 function severityRank(sev: string): number {
   const m = /Sev(\d)/.exec(sev);
   return m ? Number(m[1]) : 0;
@@ -1066,6 +1128,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     replayFights: computeReplayFights(fights),
     synergyInsights: computeSynergyInsights(playerEntries, buffCategoryUptimes, roleClassifications, totalSquadKills, totalSquadDeaths, avgSquadSize),
     mechanics: computeMechanicsTimeline(fights),
+    topHealingSkills: computeTopHealingSkills(fights),
     offensiveAvgMvpScore: offensiveScores.avgScore,
     defensiveAvgMvpScore: defensiveScores.avgScore,
     avgMvpScore: (offensiveScores.avgScore + defensiveScores.avgScore) / 2,
