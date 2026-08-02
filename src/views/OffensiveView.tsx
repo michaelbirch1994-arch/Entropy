@@ -76,7 +76,11 @@ function numVal(row: Row, key: SortKey): number {
   if (key === "critRate") return row.critRate;
   if (key === "flankRate") return row.flankRate;
   if (key === "glanceRate") return row.glanceRate;
-  return row.offenseTotals[key as keyof typeof row.offenseTotals] as number;
+  // offenseTotals is a sparse Record<string, number> - a metric that never
+  // fired for this player (e.g. 0 boon strips) has no key at all, not a 0.
+  // Guard every lookup so one sparse player can't turn a whole column's
+  // sort into NaN-driven nonsense.
+  return (row.offenseTotals[key as keyof typeof row.offenseTotals] as number) ?? 0;
 }
 
 function ChartTooltip({ active, payload, unit }: { active?: boolean; payload?: { name: string; value: number }[]; unit: string }) {
@@ -108,7 +112,7 @@ export default function OffensiveView() {
       };
       return {
         ...p,
-        dps: secs > 0 ? p.offenseTotals.damage / secs : 0,
+        dps: secs > 0 ? (p.offenseTotals.damage ?? 0) / secs : 0,
         critRate: pct("criticalRate"),
         flankRate: pct("flankingRate"),
         glanceRate: pct("glanceRate"),
@@ -140,29 +144,32 @@ export default function OffensiveView() {
   }
   if (!report) return null;
 
-  const totalDamage = rows.reduce((a, r) => a + r.offenseTotals.damage, 0);
-  const totalStrips = rows.reduce((a, r) => a + r.offenseTotals.boonStrips, 0);
-  const totalCC = rows.reduce((a, r) => a + r.offenseTotals.appliedCrowdControl, 0);
-  const totalDown = rows.reduce((a, r) => a + r.offenseTotals.downContribution, 0);
+  // offenseTotals is sparse - see the comment on numVal() above. Every read
+  // here is guarded with `?? 0` so one player missing a key can't turn a
+  // summary card, chart, or the dmgPct bar into NaN/blank for the whole page.
+  const totalDamage = rows.reduce((a, r) => a + (r.offenseTotals.damage ?? 0), 0);
+  const totalStrips = rows.reduce((a, r) => a + (r.offenseTotals.boonStrips ?? 0), 0);
+  const totalCC = rows.reduce((a, r) => a + (r.offenseTotals.appliedCrowdControl ?? 0), 0);
+  const totalDown = rows.reduce((a, r) => a + (r.offenseTotals.downContribution ?? 0), 0);
 
   const top5Dmg = [...rows]
-    .sort((a, b) => b.offenseTotals.damage - a.offenseTotals.damage)
+    .sort((a, b) => (b.offenseTotals.damage ?? 0) - (a.offenseTotals.damage ?? 0))
     .slice(0, 5)
     .map((r) => ({
       name: r.account.split(".")[0],
-      value: r.offenseTotals.damage,
+      value: r.offenseTotals.damage ?? 0,
       dps: Math.round(r.dps),
     }));
 
   const top5Strips = [...rows]
-    .sort((a, b) => b.offenseTotals.boonStrips - a.offenseTotals.boonStrips)
+    .sort((a, b) => (b.offenseTotals.boonStrips ?? 0) - (a.offenseTotals.boonStrips ?? 0))
     .slice(0, 5)
     .map((r) => ({
       name: r.account.split(".")[0],
-      value: r.offenseTotals.boonStrips,
+      value: r.offenseTotals.boonStrips ?? 0,
     }));
 
-  const maxDamage = Math.max(...sorted.map((r) => r.offenseTotals.damage), 1);
+  const maxDamage = Math.max(...sorted.map((r) => r.offenseTotals.damage ?? 0), 1);
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) {
@@ -264,7 +271,7 @@ export default function OffensiveView() {
             </thead>
             <tbody className="divide-y divide-slate-800/30 font-mono">
               {sorted.map((p, i) => {
-                const dmgPct = (p.offenseTotals.damage / maxDamage) * 100;
+                const dmgPct = ((p.offenseTotals.damage ?? 0) / maxDamage) * 100;
                 return (
                   <tr key={p.account} className={`transition-colors hover:bg-blue-950/20 ${i % 2 === 1 ? "bg-slate-900/20" : ""}`}>
                     {/* Subgroup - data has no group field, show neutral */}
@@ -285,14 +292,14 @@ export default function OffensiveView() {
                     {/* Damage + inline bar */}
                     <td className="p-2.5 text-right relative">
                       <div className="absolute inset-y-0 left-2 right-2 my-1.5 rounded bg-orange-500/10" style={{ width: `${dmgPct}%`, maxWidth: "calc(100% - 1rem)" }} />
-                      <span className="relative text-slate-200 font-semibold">{fmtCompact(p.offenseTotals.damage)}</span>
+                      <span className="relative text-slate-200 font-semibold">{fmtCompact(p.offenseTotals.damage ?? 0)}</span>
                     </td>
                     {/* DPS */}
                     <td className="p-2.5 text-right text-orange-400 font-bold">{fmtFixedGrouped(p.dps, 0)}</td>
                     {/* Target/Cleave -> directDmg proxy */}
-                    <td className="p-2.5 text-right text-slate-300">{fmtCompact(p.offenseTotals.directDmg)}</td>
+                    <td className="p-2.5 text-right text-slate-300">{fmtCompact(p.offenseTotals.directDmg ?? 0)}</td>
                     {/* Down contrib */}
-                    <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.offenseTotals.downContribution)}</td>
+                    <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.offenseTotals.downContribution ?? 0)}</td>
                     {/* Crit % */}
                     <td className="p-2.5 text-right text-rose-400">{fmtFixed(p.critRate, 1)}%</td>
                     {/* Flank % */}
@@ -300,13 +307,13 @@ export default function OffensiveView() {
                     {/* Glance % */}
                     <td className="p-2.5 text-right text-slate-400">{fmtFixed(p.glanceRate, 1)}%</td>
                     {/* Interrupts */}
-                    <td className="p-2.5 text-right text-cyan-400">{fmtNum(p.offenseTotals.interrupts)}</td>
+                    <td className="p-2.5 text-right text-cyan-400">{fmtNum(p.offenseTotals.interrupts ?? 0)}</td>
                     {/* Invulned (times the enemy target was invulnerable to this player's hits) */}
-                    <td className="p-2.5 text-right text-slate-400">{fmtNum(p.offenseTotals.invulned)}</td>
+                    <td className="p-2.5 text-right text-slate-400">{fmtNum(p.offenseTotals.invulned ?? 0)}</td>
                     {/* Strips */}
-                    <td className="p-2.5 text-right text-amber-400">{fmtNum(p.offenseTotals.boonStrips)}</td>
+                    <td className="p-2.5 text-right text-amber-400">{fmtNum(p.offenseTotals.boonStrips ?? 0)}</td>
                     {/* Kills */}
-                    <td className="p-2.5 text-right text-emerald-400">{p.offenseTotals.killed}</td>
+                    <td className="p-2.5 text-right text-emerald-400">{fmtNum(p.offenseTotals.killed ?? 0)}</td>
                   </tr>
                 );
               })}
