@@ -2,11 +2,34 @@ import type { Player } from './dpsReportTypes';
 import { computeDownContribution, computeOutgoingCrowdControl, computeSquadBarrier, computeSquadHealing, resolveDisruptionValue } from './combatMetrics';
 import { type DisruptionMethod, DEFAULT_DISRUPTION_METHOD } from './metricsSettings';
 
+// player.dpsAll[0] (EI's "All" column) sums damage against every hostile agent
+// touched, including siege/NPCs/gates/dolyaks that never became a full tracked
+// "Target" - dps.report's own detailed WvW reports show this as a separate,
+// larger "All" total next to the real player-vs-player "Target" total. Sum
+// dpsTargets (one entry per tracked target, same field shape as dpsAll[0])
+// instead so these match dps.report/TopStats' player-vs-player numbers. Falls
+// back to dpsAll when a log has no per-target breakdown at all (e.g. small
+// WvW skirmishes where EI collapses everything into one "Enemy Players" bucket).
+const sumDpsTargetsField = (player: Player, field: string): number | null => {
+    const dpsTargets = (player as any).dpsTargets;
+    if (!Array.isArray(dpsTargets) || dpsTargets.length === 0) return null;
+    let total = 0;
+    let sawEntry = false;
+    for (const phasesArr of dpsTargets) {
+        const entry = phasesArr && phasesArr[0];
+        if (!entry) continue;
+        sawEntry = true;
+        const v = Number((entry as any)[field]);
+        if (Number.isFinite(v)) total += v;
+    }
+    return sawEntry ? total : null;
+};
+
 export const getPlayerDamage = (player: Player) =>
-    player.dpsAll?.[0]?.damage || 0;
+    sumDpsTargetsField(player, 'damage') ?? (player.dpsAll?.[0]?.damage || 0);
 
 export const getPlayerDps = (player: Player) =>
-    player.dpsAll?.[0]?.dps || 0;
+    sumDpsTargetsField(player, 'dps') ?? (player.dpsAll?.[0]?.dps || 0);
 
 export const getPlayerCleanses = (player: Player) =>
     (player.support?.[0]?.condiCleanse || 0) + (player.support?.[0]?.condiCleanseSelf || 0);

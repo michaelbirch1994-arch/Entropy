@@ -968,7 +968,29 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
 
         // Offense
         const statsAll = p.statsAll?.[0];
-        const dpsAll = p.dpsAll?.[0];
+        // dpsAll (EI's "All" column) sums damage against literally every hostile
+        // agent the player touched, including siege/NPCs/gates/dolyaks that never
+        // became a full tracked "Target" - dps.report's own detailed WvW reports
+        // show this as a separate, larger "All" total next to the real "Target"
+        // total. Build the "Target" equivalent by summing dpsTargets (one entry
+        // per tracked target, same shape as dpsAll[0]) instead, so totals match
+        // what dps.report/TopStats call player-vs-player damage. Falls back to
+        // dpsAll when a log has no per-target breakdown at all.
+        const dpsAll = (() => {
+            if (!Array.isArray(p.dpsTargets) || p.dpsTargets.length === 0) return p.dpsAll?.[0];
+            const agg: Record<string, number> = {};
+            let sawEntry = false;
+            p.dpsTargets.forEach((phasesArr: any) => {
+                const entry = phasesArr && phasesArr[0];
+                if (!entry) return;
+                sawEntry = true;
+                Object.keys(entry).forEach((key) => {
+                    const v = Number((entry as any)[key]);
+                    if (Number.isFinite(v)) agg[key] = (agg[key] || 0) + v;
+                });
+            });
+            return sawEntry ? agg : p.dpsAll?.[0];
+        })();
         const support = p.support?.[0];
         OFFENSE_METRICS.forEach(m => {
             if (m.id === 'downContributionPercent' || m.id === 'downContribution' || m.id === 'boonStrips') return;
