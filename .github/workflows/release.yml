@@ -46,7 +46,11 @@ jobs:
           node-version: 20
 
       - name: Install frontend dependencies
-        run: npm ci
+        # npm install, not ci - package-lock.json wasn't regenerated when the
+        # Tauri deps were added to package.json in this dev environment (no
+        # npm registry access here to run a real `npm install`), same reason
+        # ci.yml uses install instead of ci.
+        run: npm install
 
       - name: Build and release
         uses: tauri-apps/tauri-action@v0
