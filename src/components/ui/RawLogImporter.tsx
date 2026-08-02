@@ -85,9 +85,9 @@ export default function RawLogImporter() {
     });
   }
 
-  async function handleCombine() {
-    const fights = queue
-      .filter((i) => selected.has(i.key) && i.status === "done" && i.summary && i.raw)
+  async function combineFights(items: QueueItem[]) {
+    const fights = items
+      .filter((i) => i.status === "done" && i.summary && i.raw)
       .map((i) => ({ summary: i.summary!, raw: i.raw! }));
     if (fights.length === 0) return;
     setCombining(true);
@@ -101,6 +101,16 @@ export default function RawLogImporter() {
     } finally {
       setCombining(false);
     }
+  }
+
+  async function handleCombine() {
+    await combineFights(queue.filter((i) => selected.has(i.key)));
+  }
+
+  const doneItems = queue.filter((i) => i.status === "done" && i.summary && i.raw);
+
+  async function handleCombineAll() {
+    await combineFights(doneItems);
   }
 
   async function viewFullReport(item: QueueItem) {
@@ -439,15 +449,35 @@ export default function RawLogImporter() {
 
           {queue.length > 0 && (
             <>
+              {doneItems.length >= 2 && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] px-3 py-2.5">
+                  <div>
+                    <p className="text-[11px] font-semibold text-emerald-300">
+                      {doneItems.length} fights finished parsing
+                    </p>
+                    <p className="text-[10px] text-slate-500">Combine every one into a single raid report - no need to select anything below.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleCombineAll()}
+                    disabled={combining}
+                    className="relative z-10 flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-500/25 active:bg-emerald-500/35 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {combining ? <Loader2 className="w-3 h-3 animate-spin" /> : <Layers className="w-3 h-3" />}
+                    Combine All ({doneItems.length})
+                  </button>
+                </div>
+              )}
               {selected.size > 0 && (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2">
                   <span className="text-[11px] font-semibold text-amber-300">
                     {selected.size} fight{selected.size === 1 ? "" : "s"} selected
                   </span>
                   <button
-                    onClick={handleCombine}
+                    type="button"
+                    onClick={() => void handleCombine()}
                     disabled={combining}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/15 border border-amber-500/40 text-amber-300 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-amber-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="relative z-10 flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/15 border border-amber-500/40 text-amber-300 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-amber-500/25 active:bg-amber-500/35 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {combining ? <Loader2 className="w-3 h-3 animate-spin" /> : <Layers className="w-3 h-3" />}
                     Combine into report
