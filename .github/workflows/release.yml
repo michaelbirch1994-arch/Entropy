@@ -4,6 +4,16 @@ name: Release desktop builds
 # attaches the installers to a GitHub Release. Triggered by pushing a tag
 # like "v0.1.0" - GitHub's own runners have Rust preinstalled, so this is
 # how installers get built without anyone needing a local Rust toolchain.
+#
+# TAURI_SIGNING_PRIVATE_KEY / TAURI_SIGNING_PRIVATE_KEY_PASSWORD (below) are
+# what let the auto-updater work: every build gets signed with the app's
+# private key, and the desktop app verifies that signature against the
+# public key baked into tauri.conf.json before installing an update. These
+# must be added as repo secrets (Settings > Secrets and variables > Actions)
+# - see .github/workflows/generate-signing-key.yml for how the keypair was
+# generated. Builds still succeed without them, they just won't produce
+# signed updater artifacts (the updater feature silently has nothing to
+# find), so this isn't a hard requirement, just a silent feature gap.
 on:
   push:
     tags:
@@ -63,6 +73,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Entropy ${{ github.ref_name }}"
