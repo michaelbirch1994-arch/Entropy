@@ -12,7 +12,14 @@ export interface BuffGenerationEntry {
     id: number;
     buffData?: Array<{
         generation?: number;
+        // EI's own two flavors of "this application didn't (fully) help":
+        // `wasted` = reapplied before it needed to be (buff was still fully
+        // up/at duration from an earlier application - redundant refresh).
+        // `overstack` = applied but discarded because the target was already
+        // at the effect's stack/intensity cap from any source - true
+        // overcapping, distinct from a wasted refresh.
         wasted?: number;
+        overstack?: number;
     }>;
 }
 
@@ -24,7 +31,7 @@ export interface BoonRow {
     numFights: number;
     groupSupported: number;
     squadSupported: number;
-    categories: Record<Exclude<BoonCategory, 'totalBuffs'>, { generationMs: number; wastedMs: number }>;
+    categories: Record<Exclude<BoonCategory, 'totalBuffs'>, { generationMs: number; wastedMs: number; overstackMs: number }>;
 }
 
 export interface BoonTable {
@@ -63,6 +70,7 @@ const computeGenerationMs = (
     stacking: boolean,
     generation: number,
     wasted: number,
+    overstack: number,
     durationMs: number,
     groupCount: number,
     squadCount: number,
@@ -70,19 +78,21 @@ const computeGenerationMs = (
     const count = CATEGORY_COUNT[category](groupCount, squadCount);
 
     if (!count || !durationMs) {
-        return { generationMs: 0, wastedMs: 0 };
+        return { generationMs: 0, wastedMs: 0, overstackMs: 0 };
     }
 
     if (stacking) {
         return {
             generationMs: generation * durationMs * count,
             wastedMs: wasted * durationMs * count,
+            overstackMs: overstack * durationMs * count,
         };
     }
 
     return {
         generationMs: (generation / 100) * durationMs * count,
         wastedMs: (wasted / 100) * durationMs * count,
+        overstackMs: (overstack / 100) * durationMs * count,
     };
 };
 
@@ -103,11 +113,13 @@ export const computeBoonMetrics = (
         ? {
             generationMs: selfData.generationMs + squadData.generationMs,
             wastedMs: selfData.wastedMs + squadData.wastedMs,
+            overstackMs: selfData.overstackMs + squadData.overstackMs,
         }
         : row.categories[category];
 
     const generationMs = sourceData.generationMs;
     const wastedMs = sourceData.wastedMs;
+    const overstackMs = sourceData.overstackMs;
 
     let denom = 1;
     if (category === 'groupBuffs') {
@@ -120,6 +132,7 @@ export const computeBoonMetrics = (
 
     let uptimeRaw = 0;
     let wastedRaw = 0;
+    let overstackRaw = 0;
 
     if (category === 'selfBuffs') {
         uptimeRaw = stacking
@@ -128,14 +141,19 @@ export const computeBoonMetrics = (
         wastedRaw = stacking
             ? safeDiv(wastedMs, activeTimeMs)
             : safeDiv(wastedMs, activeTimeMs) * 100;
+        overstackRaw = stacking
+            ? safeDiv(overstackMs, activeTimeMs)
+            : safeDiv(overstackMs, activeTimeMs) * 100;
     } else {
         const base = safeDiv(generationMs, activeTimeMs) / (denom || 1);
         const wastedBase = safeDiv(wastedMs, activeTimeMs) / (denom || 1);
+        const overstackBase = safeDiv(overstackMs, activeTimeMs) / (denom || 1);
         uptimeRaw = stacking ? base : base * 100;
         wastedRaw = stacking ? wastedBase : wastedBase * 100;
+        overstackRaw = stacking ? overstackBase : overstackBase * 100;
     }
 
-    return { generationMs, wastedMs, uptimeRaw, wastedRaw };
+    return { generationMs, wastedMs, overstackMs, uptimeRaw, wastedRaw, overstackRaw };
 };
 
 export const getBoonMetricValue = (
@@ -155,6 +173,15 @@ export const getBoonMetricValue = (
     }
     return uptimeRaw;
 };
+
+// "Reapplication" (redundant refresh before the buff needed it) and
+// "overcap/overstacking" (applied past the effect's stack cap) - both
+// represent generation that didn't help anyone, just for different reasons.
+export const getBoonWastedValue = (row: BoonRow, category: BoonCategory, stacking: boolean) =>
+    computeBoonMetrics(row, category, stacking).wastedRaw;
+
+export const getBoonOverstackValue = (row: BoonRow, category: BoonCategory, stacking: boolean) =>
+    computeBoonMetrics(row, category, stacking).overstackRaw;
 
 export const formatBoonMetricDisplay = (
     row: BoonRow,
@@ -266,16 +293,18 @@ export const buildBoonTables = (logs: Array<{ details?: any }>, splitPlayersByCl
                     const stacking = meta?.stacking ?? false;
                     const generation = buff.buffData?.[0]?.generation ?? 0;
                     const wasted = buff.buffData?.[0]?.wasted ?? 0;
-                    const { generationMs, wastedMs } = computeGenerationMs(
+                    const overstack = buff.buffData?.[0]?.overstack ?? 0;
+                    const { generationMs, wastedMs, overstackMs } = computeGenerationMs(
                         category,
                         stacking,
                         generation,
                         wasted,
+                        overstack,
                         durationMs,
                         groupCount,
                         squadCount,
                     );
-                    if (!generationMs && !wastedMs) return;
+                    if (!generationMs && !wastedMs && !overstackMs) return;
 
                     if (!boonMeta.has(boonId)) {
                         boonMeta.set(boonId, meta || {});
@@ -283,14 +312,15 @@ export const buildBoonTables = (logs: Array<{ details?: any }>, splitPlayersByCl
 
                     if (!agg.boons[boonId]) {
                         agg.boons[boonId] = {
-                            selfBuffs: { generationMs: 0, wastedMs: 0 },
-                            groupBuffs: { generationMs: 0, wastedMs: 0 },
-                            squadBuffs: { generationMs: 0, wastedMs: 0 },
+                            selfBuffs: { generationMs: 0, wastedMs: 0, overstackMs: 0 },
+                            groupBuffs: { generationMs: 0, wastedMs: 0, overstackMs: 0 },
+                            squadBuffs: { generationMs: 0, wastedMs: 0, overstackMs: 0 },
                         };
                     }
 
                     agg.boons[boonId][category].generationMs += generationMs;
                     agg.boons[boonId][category].wastedMs += wastedMs;
+                    agg.boons[boonId][category].overstackMs += overstackMs;
                 });
             });
         });
