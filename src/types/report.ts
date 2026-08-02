@@ -301,6 +301,27 @@ export interface RoleClassification {
   factors: RoleFactor[];
 }
 
+export interface BoonUptimeColumn {
+  id: number;
+  name: string;
+  icon?: string;
+}
+
+export interface BoonUptimeRow {
+  account: string;
+  profession: string;
+  professionList: string[];
+  group: number;
+  logsJoined: number;
+  /** boon id -> average % uptime (0-100) across the fights this player joined. */
+  uptimes: Record<number, number>;
+}
+
+export interface BoonUptimeData {
+  columns: BoonUptimeColumn[];
+  rows: BoonUptimeRow[];
+}
+
 export interface ReportStats {
   total: number;
   wins: number;
@@ -353,6 +374,8 @@ export interface ReportStats {
   commanderStats: { rows: CommanderRow[] };
   roleClassifications: RoleClassification[];
   attendanceData: { account: string; characterNames: string[]; combatTimeMs: number; squadTimeMs: number; classTimes: { profession: string; timeMs: number }[] }[];
+  /** Only populated for reports built from raw logs (RawLogImporter); absent on classic AxiBridge report.json files. */
+  boonUptimes?: BoonUptimeData;
   offensiveAvgMvpScore: number;
   defensiveAvgMvpScore: number;
   avgMvpScore: number;
