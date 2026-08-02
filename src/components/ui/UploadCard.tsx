@@ -99,7 +99,7 @@ export default function UploadCard({ onFile, onUrl, error, loading }: UploadCard
             or <span className="text-amber-400 font-semibold cursor-pointer">click to browse</span>
           </p>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-600 mt-2 bg-white/[0.02] px-3 py-1.5 rounded-lg border border-white/[0.04]">
+        <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-500 mt-2 bg-white/[0.02] px-3 py-1.5 rounded-lg border border-white/[0.04]">
           <FileJson className="w-3.5 h-3.5 text-amber-500/50" />
           <span>AxiBridge report.json format</span>
         </div>
@@ -115,7 +115,7 @@ export default function UploadCard({ onFile, onUrl, error, loading }: UploadCard
       {/* URL input */}
       {onUrl && (
         <>
-          <div className="flex items-center gap-3 text-[10px] text-slate-600 uppercase font-bold tracking-widest">
+          <div className="flex items-center gap-3 text-[10px] text-slate-500 uppercase font-bold tracking-widest">
             <div className="flex-1 h-px bg-amber-500/10" />
             or paste a URL
             <div className="flex-1 h-px bg-amber-500/10" />
@@ -130,7 +130,7 @@ export default function UploadCard({ onFile, onUrl, error, loading }: UploadCard
                 onChange={(e) => { setUrlValue(e.target.value); setUrlError(null); }}
                 onKeyDown={(e) => { if (e.key === "Enter") handleUrlSubmit(); }}
                 placeholder="http://127.0.0.1:8080/combined_report.json"
-                className="w-full bg-white/[0.03] border border-amber-500/10 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 transition-all"
+                className="w-full bg-white/[0.03] border border-amber-500/10 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-200 placeholder:text-slate-500 outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 transition-all"
               />
             </div>
             <button

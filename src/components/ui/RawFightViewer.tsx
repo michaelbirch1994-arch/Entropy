@@ -167,7 +167,7 @@ export default function RawFightViewer({ summary, log, onClose }: RawFightViewer
                   ))}
                   {sorted.length === 0 && (
                     <tr>
-                      <td colSpan={10} className="px-3 py-6 text-center text-slate-600">
+                      <td colSpan={10} className="px-3 py-6 text-center text-slate-500">
                         No squad player stats found in this log.
                       </td>
                     </tr>
@@ -176,7 +176,7 @@ export default function RawFightViewer({ summary, log, onClose }: RawFightViewer
               </table>
             </div>
           </Panel>
-          <p className="text-[10px] text-slate-600 mt-3 text-center">
+          <p className="text-[10px] text-slate-500 mt-3 text-center">
             Parsed directly from Elite Insights via dps.report &mdash; not yet combined with other fights into a full raid report.
           </p>
         </div>

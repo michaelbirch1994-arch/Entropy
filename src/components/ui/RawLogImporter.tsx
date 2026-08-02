@@ -385,7 +385,7 @@ export default function RawLogImporter() {
               )}
             </div>
           ) : (
-            <p className="text-[10px] text-slate-600 italic">
+            <p className="text-[10px] text-slate-500 italic">
               Local folder auto-import needs a Chromium-based browser (Chrome/Edge).
             </p>
           )}
@@ -428,7 +428,7 @@ export default function RawLogImporter() {
                 onChange={(e) => { setLinkValue(e.target.value); setLinkError(null); }}
                 onKeyDown={(e) => { if (e.key === "Enter") handleLinkSubmit(); }}
                 placeholder="https://dps.report/..."
-                className="w-full bg-white/[0.03] border border-amber-500/10 rounded-lg pl-8 pr-3 py-2 text-xs text-slate-200 placeholder:text-slate-600 outline-none focus:border-amber-500/40 transition-all"
+                className="w-full bg-white/[0.03] border border-amber-500/10 rounded-lg pl-8 pr-3 py-2 text-xs text-slate-200 placeholder:text-slate-500 outline-none focus:border-amber-500/40 transition-all"
               />
             </div>
             <button

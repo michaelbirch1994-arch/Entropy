@@ -57,7 +57,7 @@ export default function FightReplay({ log, onClose }: { log: RawFightLog; onClos
         {!data ? (
           <div className="py-16 text-center">
             <p className="text-sm text-slate-400">Replay data isn't available for this fight.</p>
-            <p className="text-[11px] text-slate-600 mt-1">The parsed log didn't include per-tick position data.</p>
+            <p className="text-[11px] text-slate-500 mt-1">The parsed log didn't include per-tick position data.</p>
           </div>
         ) : (
           <>
@@ -123,7 +123,7 @@ export default function FightReplay({ log, onClose }: { log: RawFightLog; onClos
               </select>
             </div>
 
-            <p className="text-[10px] text-slate-600 mt-3 flex items-center gap-2">
+            <p className="text-[10px] text-slate-500 mt-3 flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-amber-500" /> Squad
               <span className="inline-block w-2 h-2 rounded-full bg-slate-500 ml-2" /> Ally / non-squad
               <span className="inline-block w-2 h-2 rounded-full border border-rose-500 ml-2" /> Downed
