@@ -49,7 +49,7 @@ export function fmtPerSec(value: number, activeMs: number): number {
 // Guardian (blue), Warrior (orange), Revenant (green), Engineer (teal),
 // Ranger (green), Thief (brown), Elementalist (red), Necromancer (green),
 // Mesmer (pink). Elite specs inherit.
-const PROFESSION_FAMILY: Record<string, string> = {
+export const PROFESSION_FAMILY: Record<string, string> = {
   // Guardian
   Guardian: "guardian", Dragonhunter: "guardian", Firebrand: "guardian", Willbender: "guardian", Luminary: "guardian",
   // Warrior
