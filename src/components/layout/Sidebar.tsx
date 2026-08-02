@@ -44,18 +44,36 @@ const MENU: NavSection[] = [
       { id: "overview", label: "Overview" },
       { id: "kdr", label: "KDR" },
       { id: "fight-breakdown", label: "Fight Breakdown" },
+      { id: "classes", label: "Classes" },
+      { id: "map-distribution", label: "Map Distribution" },
+    ],
+  },
+  {
+    title: "PLAYERS & SKILLS",
+    icon: <Swords className="w-4 h-4" />,
+    items: [
       { id: "top-players", label: "Top Players" },
       { id: "top-skills", label: "Top Skills" },
-      { id: "buffs", label: "Buffs" },
-      { id: "damage-modifiers", label: "Damage Modifiers" },
       { id: "rotations", label: "Rotations" },
+      { id: "damage-modifiers", label: "Damage Modifiers" },
+    ],
+  },
+  {
+    title: "BUFFS",
+    icon: <Sparkles className="w-4 h-4" />,
+    items: [
+      { id: "buffs", label: "Buffs" },
+      { id: "buff-generation", label: "Buff Generation" },
+    ],
+  },
+  {
+    title: "COMBAT LOG",
+    icon: <Film className="w-4 h-4" />,
+    items: [
       { id: "dps-graph", label: "DPS Graph" },
       { id: "fight-replay", label: "Fight Replay" },
       { id: "mechanics", label: "Mechanics Timeline" },
       { id: "death-recap", label: "Death Recap" },
-      { id: "buff-generation", label: "Buff Generation" },
-      { id: "classes", label: "Classes" },
-      { id: "map-distribution", label: "Map Distribution" },
     ],
   },
   {
