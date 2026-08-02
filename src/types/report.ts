@@ -392,6 +392,16 @@ export interface DpsGraphData {
   fights: DpsGraphFight[];
 }
 
+// --- Fight Replay (per-fight 2D scrubbable positions, promoted to a first-
+// class dashboard page instead of only being reachable from the upload
+// queue before a report is combined) ---
+
+export interface ReplayFightEntry {
+  fightId: string;
+  fightName: string;
+  data: import('../lib/parseReplayData').ReplayData;
+}
+
 export interface ReportStats {
   total: number;
   wins: number;
@@ -454,6 +464,8 @@ export interface ReportStats {
   rotations?: RotationsData;
   /** Per-fight cumulative damage-over-time series. Raw-log reports only. */
   dpsGraph?: DpsGraphData;
+  /** Per-fight 2D scrubbable position replays (only for fights whose parse included combat replay data). Raw-log reports only. */
+  replayFights?: ReplayFightEntry[];
   offensiveAvgMvpScore: number;
   defensiveAvgMvpScore: number;
   avgMvpScore: number;
