@@ -14,6 +14,7 @@
 import { computePlayerAggregation, type PlayerStats } from './bridge-metrics/computePlayerAggregation';
 import { classifyPlayerRoles } from './bridge-metrics/classifyPlayerRoles';
 import { getProfessionColor } from './bridge-metrics/professionUtils';
+import { parseReplayData } from './parseReplayData';
 import type { RawFightLog, RawFightSummary } from '../types/rawFight';
 import type {
   WvWReport,
@@ -620,6 +621,23 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
   return { topSkills: toTopSkills(outgoing), topIncomingSkills: toTopSkills(incoming) };
 }
 
+// Per-fight 2D scrubbable replay data, promoted into the combined report so
+// Fight Replay is a first-class sidebar page instead of only being reachable
+// via a small icon on individual upload-queue rows before a report exists.
+function computeReplayFights(fights: FightInput[]) {
+  const rows: { fightId: string; fightName: string; data: NonNullable<ReturnType<typeof parseReplayData>> }[] = [];
+  fights.forEach((f, idx) => {
+    const data = parseReplayData(f.raw);
+    if (!data) return;
+    rows.push({
+      fightId: f.summary.permalink || `${f.summary.fightName}-${idx}`,
+      fightName: f.summary.fightName || `Fight ${idx + 1}`,
+      data,
+    });
+  });
+  return rows;
+}
+
 export function buildReportFromFights(fights: FightInput[]): WvWReport {
   if (fights.length === 0) throw new Error('No fights to combine.');
 
@@ -840,6 +858,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     damageModifiers: computeDamageModifiers(fights),
     rotations: computeRotations(fights),
     dpsGraph: computeDpsGraph(fights),
+    replayFights: computeReplayFights(fights),
     offensiveAvgMvpScore: offensiveScores.avgScore,
     defensiveAvgMvpScore: defensiveScores.avgScore,
     avgMvpScore: (offensiveScores.avgScore + defensiveScores.avgScore) / 2,
@@ -875,7 +894,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
       dateLabel,
       generatedAt: new Date().toISOString(),
       appVersion: 'entropy-raw-v1',
-      trimmedSections: ['fightBreakdown', 'commanderStats', 'mapData', 'timelineData', 'boonTables', 'replayFights'],
+      trimmedSections: ['fightBreakdown', 'commanderStats', 'mapData', 'timelineData', 'boonTables'],
     },
     stats,
   };
