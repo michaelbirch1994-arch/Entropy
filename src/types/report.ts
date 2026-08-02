@@ -1,5 +1,7 @@
 // Types matching the AxiBridge WvW report.json structure.
 
+import type { BoonTable } from "../lib/bridge-metrics/boonGeneration";
+
 export interface ReportGuild {
   id: string;
   name: string | null;
@@ -578,6 +580,8 @@ export interface ReportStats {
   topHealingSkills?: TopHealingSource[];
   /** Per-death damage breakdown (what actually killed each player, and what put them down first) for every squad death across all fights. Raw-log reports only. */
   deathRecaps?: DeathRecapEntry[];
+  /** Self- vs. group- vs. squad-generation split for every boon, per player. Distinct from buffCategoryUptimes (which shows what a player *had*, not what they *generated*). Raw-log reports only. */
+  buffGeneration?: BoonTable[];
   offensiveAvgMvpScore: number;
   defensiveAvgMvpScore: number;
   avgMvpScore: number;
