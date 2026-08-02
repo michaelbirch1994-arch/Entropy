@@ -7,6 +7,32 @@ import { Zap, ArrowDownLeft, Flame, Trophy, HeartPulse } from "lucide-react";
 type SortKey = "damage" | "downContribution" | "hits";
 type Tab = "outgoing" | "incoming" | "healing";
 
+// Wraps the skill/buff icon <img> with a graceful fallback: if the external
+// render.guildwars2.com (or wiki/imgur) request is blocked - e.g. by an ad
+// blocker or privacy extension treating a cross-origin image load inside a
+// sandboxed preview iframe as trackable content - this swaps to the numbered
+// badge instead of leaving a broken-image icon on screen.
+function SkillIcon({ src, index }: { src?: string; index: number }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return (
+      <div className="w-9 h-9 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-[10px] font-bold text-slate-400 font-mono">
+        {index + 1}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      referrerPolicy="no-referrer"
+      className="w-9 h-9 rounded-lg border border-slate-700/50"
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function TabRow({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   return (
     <div className="flex items-center gap-2">
@@ -80,13 +106,7 @@ export default function TopSkillsView() {
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    {hs.icon ? (
-                      <img src={hs.icon} alt="" className="w-9 h-9 rounded-lg border border-slate-700/50" loading="lazy" />
-                    ) : (
-                      <div className="w-9 h-9 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-[10px] font-bold text-slate-400 font-mono">
-                        {i + 1}
-                      </div>
-                    )}
+                    <SkillIcon src={hs.icon} index={i} />
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-bold text-slate-100">{hs.name}</span>
@@ -167,13 +187,7 @@ export default function TopSkillsView() {
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
-                {sk.icon ? (
-                  <img src={sk.icon} alt="" className="w-9 h-9 rounded-lg border border-slate-700/50" loading="lazy" />
-                ) : (
-                  <div className="w-9 h-9 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-[10px] font-bold text-slate-400 font-mono">
-                    {i + 1}
-                  </div>
-                )}
+                <SkillIcon src={sk.icon} index={i} />
                 <div>
                   <div className="text-sm font-bold text-slate-100">{sk.name}</div>
                   <div className="text-[10px] text-slate-500 font-mono">{fmtNum(sk.hits)} hits</div>
