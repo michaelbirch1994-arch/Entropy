@@ -1,0 +1,42 @@
+name: Generate updater signing key
+
+# One-off workflow that generates the Ed25519 keypair Tauri's updater uses
+# to sign and verify releases. Deliberately not wired to any push/tag
+# trigger - only runs when manually triggered from the Actions tab, since
+# running it again generates a *different* key and would invalidate updates
+# for anyone who already has the old public key baked into their app.
+#
+# The private key is uploaded as a build artifact (a private, authenticated
+# download - never printed to these logs, never committed to the repo) so
+# it never appears in plaintext anywhere public. Only the public key (safe
+# to share) is printed to this run's summary. After running this:
+#   1. Download the "signing-key" artifact from this run's Summary page.
+#   2. Open entropy-signing.key inside it in a text editor, copy the contents.
+#   3. Go to Settings > Secrets and variables > Actions > New repository
+#      secret, name it TAURI_SIGNING_PRIVATE_KEY, paste the key contents in.
+#   4. Add a second secret named TAURI_SIGNING_PRIVATE_KEY_PASSWORD with an
+#      empty value (this key is generated with no password).
+#   5. Copy the public key printed in this run's summary into
+#      src-tauri/tauri.conf.json's plugins.updater.pubkey field, replacing
+#      the placeholder value there.
+on:
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate keypair
+        run: |
+          npx --yes @tauri-apps/cli@latest signer generate --ci -p "" -w ./entropy-signing.key -f
+          echo "## Public key (safe to share - paste into tauri.conf.json)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat ./entropy-signing.key.pub >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload private key as artifact (never logged, never committed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: signing-key
+          path: entropy-signing.key
+          retention-days: 7
