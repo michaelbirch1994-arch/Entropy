@@ -143,7 +143,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
                   {section.title}
                 </div>
                 <ChevronDown
-                  className={`w-3.5 h-3.5 transition-transform duration-300 ${isOpen ? "rotate-180 text-amber-500" : "text-slate-600"}`}
+                  className={`w-3.5 h-3.5 transition-transform duration-300 ${isOpen ? "rotate-180 text-amber-500" : "text-slate-500"}`}
                 />
               </button>
 
@@ -179,7 +179,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-amber-500/10 text-[10px] text-slate-600 font-mono text-center">
+      <div className="p-4 border-t border-amber-500/10 text-[10px] text-slate-500 font-mono text-center">
         Entropy
       </div>
     </aside>
