@@ -498,6 +498,21 @@ export interface DeathRecapEntry {
   toKill: DeathRecapHit[];
 }
 
+export interface FightHighlight {
+  /** Stable category key (e.g. "blowout", "toughest", "longest", "outnumbered", "flawless", "mvp-moment") - not a display label. */
+  id: string;
+  title: string;
+  /** Pre-written one-liner with the real numbers already filled in - no further formatting needed by the view. */
+  description: string;
+  fightName: string;
+  fightIndex: number;
+  timestamp: number;
+  /** Only set for player-attributed highlights like MVP Moment. */
+  account?: string;
+  profession?: string;
+  value?: number;
+}
+
 export interface TopHealingSource {
   id: number;
   name: string;
@@ -582,6 +597,8 @@ export interface ReportStats {
   deathRecaps?: DeathRecapEntry[];
   /** Self- vs. group- vs. squad-generation split for every boon, per player. Distinct from buffCategoryUptimes (which shows what a player *had*, not what they *generated*). Raw-log reports only. */
   buffGeneration?: BoonTable[];
+  /** Auto-generated standout-moment cards (biggest blowout, toughest fight, longest engagement, etc.), one set per report. Raw-log reports only. */
+  fightHighlights?: FightHighlight[];
   offensiveAvgMvpScore: number;
   defensiveAvgMvpScore: number;
   avgMvpScore: number;
