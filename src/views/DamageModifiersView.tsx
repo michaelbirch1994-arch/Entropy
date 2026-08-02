@@ -84,7 +84,8 @@ export default function DamageModifiersView() {
             "has this trait/sigil active." A dash means it never fired for them this session; the raw combat log
             doesn't include full gear/trait loadouts, so a dash usually means they don't run it, but could also mean
             the condition just never came up in these fights. Hover a column header for its full description and how
-            many of the tracked players triggered it.
+            many of the tracked players triggered it. If someone played more than one class across the combined
+            fights, they get one row per class - so their traits/relics/sigils never mix between builds.
           </p>
         </div>
 
@@ -121,7 +122,7 @@ export default function DamageModifiersView() {
             <tbody>
               {rows.map((row, i) => (
                 <tr
-                  key={row.account}
+                  key={`${row.account}-${row.profession}`}
                   className={`border-b border-slate-800/40 hover:bg-white/[0.02] transition-colors ${i % 2 === 0 ? "bg-white/[0.01]" : ""}`}
                 >
                   <td className="px-4 py-2.5 font-semibold text-slate-200 sticky left-0 bg-[#0a0e1f]/95 whitespace-nowrap">
