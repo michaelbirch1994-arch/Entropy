@@ -76,7 +76,7 @@ kbd {
   z-index: -1;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 130% 90% at 50% -10%, rgba(14, 19, 48, 0.55) 0%, rgba(7, 10, 28, 0.65) 45%, rgba(2, 1, 6, 0.85) 100%),
+    radial-gradient(ellipse 130% 90% at 50% -10%, rgba(14, 19, 48, 0.1) 0%, rgba(7, 10, 28, 0.2) 45%, rgba(2, 1, 6, 0.45) 100%),
     url("/images/nebula-bg.jpg") center 30% / cover no-repeat;
   background-color: #05040a;
 }
