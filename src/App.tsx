@@ -88,29 +88,31 @@ function ErrorState({ message }: { message: string }) {
 function NoReportState() {
   const { uploadReport, loadFromUrl, error, loading } = useReport();
   return (
-    <div className="flex flex-col items-center justify-center min-h-full gap-8 px-6 py-16">
-      {/* Branding */}
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-700/20 flex items-center justify-center text-amber-400 shadow-[0_0_30px_-6px_rgba(245,158,11,0.5)] border border-amber-400/30">
-          <EntropyLogo size={34} />
+    <div className="flex flex-col items-center justify-center min-h-full px-6 py-16">
+      <div className="w-full max-w-lg flex flex-col items-center gap-8 rounded-[2rem] border border-white/[0.06] bg-black/45 backdrop-blur-xl shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] px-8 py-10">
+        {/* Branding */}
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-700/20 flex items-center justify-center text-amber-400 shadow-[0_0_30px_-6px_rgba(245,158,11,0.5)] border border-amber-400/30">
+            <EntropyLogo size={34} />
+          </div>
+          <div className="text-center">
+            <EntropyWordmarkReveal className="entropy-wordmark text-4xl font-black tracking-[0.15em] text-white uppercase font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]" />
+            <p className="text-sm text-slate-300 mt-2 font-medium drop-shadow-[0_1px_6px_rgba(0,0,0,0.8)]">WvW Raid Analytics Platform</p>
+          </div>
         </div>
-        <div className="text-center">
-          <EntropyWordmarkReveal className="entropy-wordmark text-4xl font-black tracking-[0.15em] text-white uppercase font-display" />
-          <p className="text-sm text-slate-500 mt-2 font-medium">WvW Raid Analytics Platform</p>
+
+        {/* Import card */}
+        <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
+
+        {/* Raw log importer (dps.report / .zevtc) */}
+        <RawLogImporter />
+
+        {/* Supported formats info */}
+        <div className="flex items-center gap-6 text-[10px] text-slate-400 font-mono">
+          <span className="flex items-center gap-1.5"><FileQuestion className="w-3 h-3" /> report.json</span>
+          <span className="flex items-center gap-1.5"><Link2 className="w-3 h-3" /> DPS.report URLs</span>
+          <span className="flex items-center gap-1.5"><Activity className="w-3 h-3" /> ?report= links</span>
         </div>
-      </div>
-
-      {/* Import card */}
-      <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
-
-      {/* Raw log importer (dps.report / .zevtc) */}
-      <RawLogImporter />
-
-      {/* Supported formats info */}
-      <div className="flex items-center gap-6 text-[10px] text-slate-600 font-mono">
-        <span className="flex items-center gap-1.5"><FileQuestion className="w-3 h-3" /> report.json</span>
-        <span className="flex items-center gap-1.5"><Link2 className="w-3 h-3" /> DPS.report URLs</span>
-        <span className="flex items-center gap-1.5"><Activity className="w-3 h-3" /> ?report= links</span>
       </div>
     </div>
   );
