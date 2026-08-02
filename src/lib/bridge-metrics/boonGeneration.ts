@@ -435,13 +435,14 @@ export const getPlayerBoonGenerationMs = (
     const buffs = (player?.[category] || []) as BuffGenerationEntry[];
     const target = buffs.find((buff) => buff.id === boonId);
     if (!target) {
-        return { generationMs: 0, wastedMs: 0 };
+        return { generationMs: 0, wastedMs: 0, overstackMs: 0 };
     }
 
     const meta = buffMap[toBoonId(boonId)];
     const stacking = meta?.stacking ?? false;
     const generation = target.buffData?.[0]?.generation ?? 0;
     const wasted = target.buffData?.[0]?.wasted ?? 0;
+    const overstack = target.buffData?.[0]?.overstack ?? 0;
 
-    return computeGenerationMs(category, stacking, generation, wasted, durationMs, groupCount, squadCount);
+    return computeGenerationMs(category, stacking, generation, wasted, overstack, durationMs, groupCount, squadCount);
 };
