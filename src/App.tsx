@@ -16,6 +16,7 @@ import CompositionView from "./views/CompositionView";
 import OffensiveView from "./views/OffensiveView";
 import DefensiveView from "./views/DefensiveView";
 import RosterView from "./views/RosterView";
+import PlayerProfilesView from "./views/PlayerProfilesView";
 import { Activity, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, Link2, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
@@ -37,6 +38,7 @@ const VIEW_TITLES: Record<string, string> = {
   offensive: "Offensive Stats",
   defensive: "Defensive Stats",
   roster: "Roster Intel",
+  "player-profiles": "Player Profiles",
 };
 
 function ReportRouter({ activeView }: { activeView: string }) {
@@ -55,6 +57,7 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "offensive": return <OffensiveView />;
     case "defensive": return <DefensiveView />;
     case "roster": return <RosterView />;
+    case "player-profiles": return <PlayerProfilesView />;
     default: return <OverviewView />;
   }
 }
