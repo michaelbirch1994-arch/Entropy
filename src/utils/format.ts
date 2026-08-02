@@ -19,6 +19,14 @@ export function fmtFixed(n: number | string | undefined | null, digits: number =
   return v.toFixed(digits);
 }
 
+/** Like fmtFixed, but with thousands separators (e.g. 22319.00 -> "22,319.00"). */
+export function fmtFixedGrouped(n: number | string | undefined | null, digits: number = 2): string {
+  if (n === undefined || n === null) return "—";
+  const v = typeof n === "string" ? parseFloat(n) : n;
+  if (Number.isNaN(v)) return "—";
+  return v.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
 export function fmtPct(n: number | undefined | null, digits = 0): string {
   if (n === undefined || n === null || Number.isNaN(n)) return "—";
   return `${n.toFixed(digits)}%`;
