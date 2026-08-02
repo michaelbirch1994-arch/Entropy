@@ -1007,8 +1007,12 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
   const total = fights.length;
   const avgSquadSize = total > 0 ? Math.round(totalSquadSizeAccum / total) : 0;
   const avgEnemies = total > 0 ? Math.round(totalEnemiesAccum / total) : 0;
-  const squadKDR = totalSquadDeaths > 0 ? (totalSquadKills / totalSquadDeaths).toFixed(2) : totalSquadKills > 0 ? '∞' : '0.00';
-  const enemyKDR = totalEnemyDeaths > 0 ? (totalEnemyKills / totalEnemyDeaths).toFixed(2) : totalEnemyKills > 0 ? '∞' : '0.00';
+  // Real numbers, not pre-formatted strings - ReportStats declares these as
+  // `number` (consumers like generateFightRecap.ts do actual arithmetic on
+  // them: `s.squadKDR / s.enemyKDR`). Formatting to 2 decimals / "∞" is a
+  // display concern, handled by fmtFixed at render time.
+  const squadKDR = totalSquadDeaths > 0 ? totalSquadKills / totalSquadDeaths : totalSquadKills > 0 ? Infinity : 0;
+  const enemyKDR = totalEnemyDeaths > 0 ? totalEnemyKills / totalEnemyDeaths : totalEnemyKills > 0 ? Infinity : 0;
 
   // Resolve primary profession per player (most time played), matching upstream.
   const playerEntries: PlayerStats[] = Array.from(playerStats.values()).map((stat) => {
