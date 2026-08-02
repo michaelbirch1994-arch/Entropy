@@ -15,6 +15,7 @@ import {
   Clock,
   LineChart as LineChartIcon,
   Film,
+  Crosshair,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import EntropyLogo from "../ui/EntropyLogo";
@@ -49,6 +50,7 @@ const MENU: NavSection[] = [
       { id: "rotations", label: "Rotations" },
       { id: "dps-graph", label: "DPS Graph" },
       { id: "fight-replay", label: "Fight Replay" },
+      { id: "mechanics", label: "Mechanics Timeline" },
       { id: "classes", label: "Classes" },
       { id: "map-distribution", label: "Map Distribution" },
     ],
