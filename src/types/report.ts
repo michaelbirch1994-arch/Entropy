@@ -328,6 +328,13 @@ export interface DamageModifierColumn {
   id: number;
   name: string;
   icon?: string;
+  /** From EI's DamageModDesc.NonMultiplier: false (the common case) means the value is a real, already-realized
+   * damage gain from this modifier. True means the value is total damage done while the effect was active
+   * (not the gain itself - the multiplier isn't known from the log). */
+  nonMultiplier: boolean;
+  /** From EI's DamageModDesc.IsCounter: true means the value is damage done while some condition held,
+   * used as an informational count rather than a damage gain. */
+  isCounter: boolean;
 }
 
 export interface DamageModifierRow {
@@ -395,6 +402,16 @@ export interface DpsGraphData {
 // --- Fight Replay (per-fight 2D scrubbable positions, promoted to a first-
 // class dashboard page instead of only being reachable from the upload
 // queue before a report is combined) ---
+
+// --- Squad synergy auditing (automated insight flags computed from data
+// Entropy already has - boon uptime, role classification, K/D) ---
+
+export interface SynergyInsight {
+  id: string;
+  severity: 'good' | 'info' | 'warn' | 'critical';
+  title: string;
+  detail: string;
+}
 
 export interface ReplayFightEntry {
   fightId: string;
@@ -466,6 +483,8 @@ export interface ReportStats {
   dpsGraph?: DpsGraphData;
   /** Per-fight 2D scrubbable position replays (only for fights whose parse included combat replay data). Raw-log reports only. */
   replayFights?: ReplayFightEntry[];
+  /** Automated squad-composition/performance insight flags. Raw-log reports only. */
+  synergyInsights?: SynergyInsight[];
   offensiveAvgMvpScore: number;
   defensiveAvgMvpScore: number;
   avgMvpScore: number;
