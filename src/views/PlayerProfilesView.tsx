@@ -3,7 +3,8 @@ import { motion } from "framer-motion";
 import Panel from "../components/ui/Panel";
 import { Users, Swords, Trophy, Sparkles } from "lucide-react";
 import { getAllProfiles, topClass, type PlayerProfile } from "../lib/playerProfileStore";
-import { fmtCompact, fmtFixedGrouped, fmtNum, profChip, profIcon } from "../utils/format";
+import { fmtCompact, fmtFixedGrouped, fmtNum, profChip } from "../utils/format";
+import ProfessionIcon from "../components/ui/ProfessionIcon";
 
 type SortKey = "totalDamage" | "totalFightsJoined" | "bestDps" | "totalHealing" | "offensiveMvpCount";
 
@@ -96,7 +97,7 @@ export default function PlayerProfilesView() {
                         <td className="p-2.5">
                           {main ? (
                             <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(main)}`}>
-                              {profIcon(main) && <img src={profIcon(main)} alt={main} className="w-3.5 h-3.5 rounded-sm" />}
+                              <ProfessionIcon profession={main} className="w-3.5 h-3.5" />
                               {main}
                             </span>
                           ) : (
