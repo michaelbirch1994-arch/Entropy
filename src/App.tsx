@@ -30,6 +30,8 @@ import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
 import RawLogImporter from "./components/ui/RawLogImporter";
 import EntropyWordmarkReveal from "./components/ui/EntropyWordmarkReveal";
+import UpdateToast from "./components/ui/UpdateToast";
+import { useAutoUpdater } from "./utils/useAutoUpdater";
 
 const VIEW_TITLES: Record<string, string> = {
   overview: "Overview",
@@ -249,9 +251,15 @@ function ReportShell() {
 }
 
 export default function App() {
+  // Runs once per launch, no-op outside the desktop app - see
+  // src/utils/useAutoUpdater.ts for why this checks on startup only
+  // instead of polling.
+  const updateState = useAutoUpdater();
+
   return (
     <ReportProvider>
       <ReportShell />
+      <UpdateToast {...updateState} />
     </ReportProvider>
   );
 }
