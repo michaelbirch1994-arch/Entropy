@@ -2,6 +2,31 @@ import { useReport } from "../store/ReportContext";
 import { profChip, fmtNum } from "../utils/format";
 import Panel from "../components/ui/Panel";
 import { Percent } from "lucide-react";
+import type { DamageModifierColumn } from "../types/report";
+
+function kindOf(c: DamageModifierColumn): "gain" | "underEffect" | "counter" {
+  if (c.isCounter) return "counter";
+  if (c.nonMultiplier) return "underEffect";
+  return "gain";
+}
+
+const KIND_LABEL: Record<string, string> = {
+  gain: "Damage gained",
+  underEffect: "Damage under effect",
+  counter: "Damage while condition met",
+};
+
+const KIND_COLOR: Record<string, string> = {
+  gain: "text-amber-400",
+  underEffect: "text-sky-400",
+  counter: "text-slate-400",
+};
+
+const KIND_DOT: Record<string, string> = {
+  gain: "bg-amber-500",
+  underEffect: "bg-sky-500",
+  counter: "bg-slate-500",
+};
 
 export default function DamageModifiersView() {
   const { report } = useReport();
@@ -35,29 +60,47 @@ export default function DamageModifiersView() {
     <div className="space-y-5 animate-view pb-12">
       <Panel
         title="Damage Modifiers"
-        subtitle="Bonus damage each player gained from traits, sigils, runes and skill-based modifiers - summed across every fight"
+        subtitle="Per-trait/sigil/rune contribution to each player's damage - summed across every fight. See legend for what each number actually means."
         icon={<Percent className="w-3.5 h-3.5" />}
         action={`${rows.length} players`}
         bodyClassName="p-0"
       >
-        <div className="overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 pt-4 pb-1 text-[10px] text-slate-500">
+          {(["gain", "underEffect", "counter"] as const).map((k) => (
+            <span key={k} className="flex items-center gap-1.5">
+              <span className={`inline-block w-2 h-2 rounded-full ${KIND_DOT[k]}`} />
+              <span className={KIND_COLOR[k]}>{KIND_LABEL[k]}</span>
+              <span className="text-slate-600">
+                {k === "gain" && "- real, already-realized extra damage from this modifier"}
+                {k === "underEffect" && "- total damage while active, not the gain itself (multiplier not in the log)"}
+                {k === "counter" && "- informational, not a damage gain"}
+              </span>
+            </span>
+          ))}
+        </div>
+
+        <div className="overflow-x-auto mt-3">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500">
                 <th className="text-left font-bold px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">Player</th>
                 <th className="text-left font-bold px-2 py-3">Class</th>
-                {columns.map((c) => (
-                  <th key={c.id} className="text-center font-bold px-2 py-3 min-w-[72px]" title={c.name}>
-                    <div className="flex flex-col items-center gap-1">
-                      {c.icon ? (
-                        <img src={c.icon} alt={c.name} className="w-4 h-4 rounded-sm" loading="lazy" />
-                      ) : (
-                        <span className="w-4 h-4" />
-                      )}
-                      <span className="normal-case font-semibold text-slate-400 text-center leading-tight">{c.name}</span>
-                    </div>
-                  </th>
-                ))}
+                {columns.map((c) => {
+                  const kind = kindOf(c);
+                  return (
+                    <th key={c.id} className="text-center font-bold px-2 py-3 min-w-[72px]" title={`${c.name} - ${KIND_LABEL[kind]}`}>
+                      <div className="flex flex-col items-center gap-1">
+                        {c.icon ? (
+                          <img src={c.icon} alt={c.name} className="w-4 h-4 rounded-sm" loading="lazy" />
+                        ) : (
+                          <span className="w-4 h-4" />
+                        )}
+                        <span className="normal-case font-semibold text-slate-400 text-center leading-tight">{c.name}</span>
+                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${KIND_DOT[kind]}`} />
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -76,10 +119,11 @@ export default function DamageModifiersView() {
                   </td>
                   {columns.map((c) => {
                     const v = row.values[c.id];
+                    const kind = kindOf(c);
                     return (
                       <td key={c.id} className="text-center px-2 py-2.5 font-mono">
                         {v ? (
-                          <span className="font-bold text-amber-400">{fmtNum(v.damage)}</span>
+                          <span className={`font-bold ${KIND_COLOR[kind]}`}>{fmtNum(v.damage)}</span>
                         ) : (
                           <span className="text-slate-700">-</span>
                         )}

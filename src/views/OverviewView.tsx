@@ -5,6 +5,7 @@ import type { MvpCard, MvpTopStat } from "../types/report";
 import { Swords, Shield, Crown, Activity, Droplet, Zap, Target, Flame } from "lucide-react";
 import { generateFightRecap } from "../lib/generateFightRecap";
 import RecapPanel from "../components/ui/RecapPanel";
+import SynergyPanel from "../components/ui/SynergyPanel";
 
 const ACCENT_STYLES = {
   amber: {
@@ -158,6 +159,9 @@ export default function OverviewView() {
     <div className="space-y-6 animate-view pb-12">
       {/* AI-style recap */}
       <RecapPanel recap={recap} />
+
+      {/* Automated squad synergy insights */}
+      {s.synergyInsights && <SynergyPanel insights={s.synergyInsights} />}
 
       {/* Top stats banner */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-slate-800/60 rounded-2xl overflow-hidden border border-slate-800/80">
