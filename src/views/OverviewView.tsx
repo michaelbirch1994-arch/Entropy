@@ -1,5 +1,5 @@
 import { useReport } from "../store/ReportContext";
-import { fmtCompact, fmtNum, fmtFixed, profChip } from "../utils/format";
+import { fmtCompact, fmtNum, fmtFixed, fmtFixedGrouped, profChip } from "../utils/format";
 import type { MvpCard, MvpTopStat } from "../types/report";
 import { Swords, Shield, Crown, Activity, Droplet, Zap, Target, Flame } from "lucide-react";
 
@@ -125,14 +125,14 @@ export default function OverviewView() {
   const s = report.stats;
 
   const perSecCards = [
-    { label: "Down Contrib /s", value: fmtFixed(s.maxDownContrib.value / (s.maxDownContrib.count || 1)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, accent: "text-slate-100" },
-    { label: "Healing /s", value: fmtFixed(s.maxHealing.value / (s.maxHealing.count || 1)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, accent: "text-slate-100" },
-    { label: "Barrier /s", value: fmtFixed(s.maxBarrier.value / (s.maxBarrier.count || 1)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, accent: "text-slate-100" },
-    { label: "Cleanses /s", value: fmtFixed(s.maxCleanses.value / (s.maxCleanses.count || 1)), icon: <Droplet className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, accent: "text-slate-100" },
-    { label: "Strips /s", value: fmtFixed(s.maxStrips.value / (s.maxStrips.count || 1)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, accent: "text-slate-100" },
-    { label: "Stability Gen /s", value: fmtFixed(s.maxStab.value / (s.maxStab.count || 1)), icon: <Shield className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxStab.player, count: s.maxStab.count, accent: "text-slate-100" },
-    { label: "CC /s", value: fmtFixed(s.maxCC.value / (s.maxCC.count || 1)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, accent: "text-slate-100" },
-    { label: "Interrupts /s", value: fmtFixed(s.maxInterrupts.value / (s.maxInterrupts.count || 1)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, accent: "text-slate-100" },
+    { label: "Down Contrib /s", value: fmtFixedGrouped(s.maxDownContrib.value / (s.maxDownContrib.count || 1)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, accent: "text-slate-100" },
+    { label: "Healing /s", value: fmtFixedGrouped(s.maxHealing.value / (s.maxHealing.count || 1)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, accent: "text-slate-100" },
+    { label: "Barrier /s", value: fmtFixedGrouped(s.maxBarrier.value / (s.maxBarrier.count || 1)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, accent: "text-slate-100" },
+    { label: "Cleanses /s", value: fmtFixedGrouped(s.maxCleanses.value / (s.maxCleanses.count || 1)), icon: <Droplet className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, accent: "text-slate-100" },
+    { label: "Strips /s", value: fmtFixedGrouped(s.maxStrips.value / (s.maxStrips.count || 1)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, accent: "text-slate-100" },
+    { label: "Stability Gen /s", value: fmtFixedGrouped(s.maxStab.value / (s.maxStab.count || 1)), icon: <Shield className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxStab.player, count: s.maxStab.count, accent: "text-slate-100" },
+    { label: "CC /s", value: fmtFixedGrouped(s.maxCC.value / (s.maxCC.count || 1)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, accent: "text-slate-100" },
+    { label: "Interrupts /s", value: fmtFixedGrouped(s.maxInterrupts.value / (s.maxInterrupts.count || 1)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, accent: "text-slate-100" },
   ];
 
   return (

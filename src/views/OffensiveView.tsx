@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
-import { fmtNum, fmtCompact, fmtFixed, profChip } from "../utils/format";
+import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped, profChip } from "../utils/format";
 import type { OffensePlayer } from "../types/report";
 import {
   BarChart,
@@ -257,7 +257,7 @@ export default function OffensiveView() {
                       <span className="relative text-slate-200 font-semibold">{fmtCompact(p.offenseTotals.damage)}</span>
                     </td>
                     {/* DPS */}
-                    <td className="p-2.5 text-right text-orange-400 font-bold">{fmtFixed(p.dps, 0)}</td>
+                    <td className="p-2.5 text-right text-orange-400 font-bold">{fmtFixedGrouped(p.dps, 0)}</td>
                     {/* Target/Cleave -> directDmg proxy */}
                     <td className="p-2.5 text-right text-slate-300">{fmtCompact(p.offenseTotals.directDmg)}</td>
                     {/* Down contrib */}

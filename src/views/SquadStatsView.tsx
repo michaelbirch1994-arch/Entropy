@@ -1,7 +1,7 @@
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
-import { fmtNum, fmtCompact, fmtFixed } from "../utils/format";
+import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped } from "../utils/format";
 import { Users, Swords, Shield, Heart, Zap, Target } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } from "../utils/chartTheme";
@@ -81,7 +81,7 @@ export default function SquadStatsView() {
                     <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
                     <td className="p-2.5 text-slate-400">{p.profession}</td>
                     <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.offenseTotals.damage)}</td>
-                    <td className="p-2.5 text-right text-slate-200 font-bold">{fmtFixed(dps, 0)}</td>
+                    <td className="p-2.5 text-right text-slate-200 font-bold">{fmtFixedGrouped(dps, 0)}</td>
                     <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.offenseTotals.downContribution)}</td>
                     <td className="p-2.5 text-right text-emerald-400">{heal ? fmtCompact(heal.healingTotals.healing) : "—"}</td>
                     <td className="p-2.5 text-right text-cyan-400">{sup ? fmtNum(sup.supportTotals.condiCleanse) : "—"}</td>
