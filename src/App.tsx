@@ -24,6 +24,7 @@ import ReplayView from "./views/ReplayView";
 import MechanicsView from "./views/MechanicsView";
 import DeathRecapView from "./views/DeathRecapView";
 import BuffGenerationView from "./views/BuffGenerationView";
+import HighlightsView from "./views/HighlightsView";
 import { Activity, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, Link2, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
@@ -53,6 +54,7 @@ const VIEW_TITLES: Record<string, string> = {
   mechanics: "Mechanics Timeline",
   "death-recap": "Death Recap",
   "buff-generation": "Buff Generation",
+  highlights: "Highlights",
 };
 
 function ReportRouter({ activeView }: { activeView: string }) {
@@ -79,6 +81,7 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "mechanics": return <MechanicsView />;
     case "death-recap": return <DeathRecapView />;
     case "buff-generation": return <BuffGenerationView />;
+    case "highlights": return <HighlightsView />;
     default: return <OverviewView />;
   }
 }
