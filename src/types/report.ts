@@ -467,6 +467,20 @@ export interface MechanicsData {
   fights: MechanicsFight[];
 }
 
+// --- Top Healing Sources (outgoing healing by skill/trait, including
+// buff-triggered conversion heals like Replenishing Despair or a direct
+// skill cast like Life Siphon) ---
+
+export interface TopHealingSource {
+  id: number;
+  name: string;
+  icon?: string;
+  healing: number;
+  hits: number;
+  /** True when this source is a trait/buff-triggered conversion heal (EI's IndirectHealing) rather than a directly-cast skill. */
+  isTrait: boolean;
+}
+
 export interface ReportStats {
   total: number;
   wins: number;
@@ -535,6 +549,8 @@ export interface ReportStats {
   synergyInsights?: SynergyInsight[];
   /** Per-fight boss/encounter mechanic event markers. Raw-log reports only. */
   mechanics?: MechanicsData;
+  /** Top outgoing healing sources by skill/trait, squad-wide. Only populated when the log was recorded with the healing addon active. Raw-log reports only. */
+  topHealingSkills?: TopHealingSource[];
   offensiveAvgMvpScore: number;
   defensiveAvgMvpScore: number;
   avgMvpScore: number;
