@@ -13,12 +13,14 @@ import {
   Folder,
   RefreshCw,
   X,
+  Film,
 } from "lucide-react";
 import { isRawLogFile, uploadRawLogToDpsReport, fetchDpsReportJson, parseDpsReportPermalink } from "../../utils/dpsReport";
 import { summarizeRawFight, type RawFightSummary, type RawFightLog } from "../../types/rawFight";
 import { buildReportFromFights } from "../../lib/buildReportFromFights";
 import { useReport } from "../../store/ReportContext";
 import RawFightViewer from "./RawFightViewer";
+import FightReplay from "./FightReplay";
 import {
   isFolderWatchSupported,
   pickLogFolder,
@@ -51,6 +53,7 @@ export default function RawLogImporter() {
   const [linkError, setLinkError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [viewing, setViewing] = useState<QueueItem | null>(null);
+  const [replaying, setReplaying] = useState<QueueItem | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [combining, setCombining] = useState(false);
   const [combineError, setCombineError] = useState<string | null>(null);
@@ -536,6 +539,14 @@ export default function RawLogImporter() {
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setReplaying(item); }}
+                          title="Replay (scrubbable 2D positions, if available)"
+                          className="text-slate-500 hover:text-amber-400 transition-colors"
+                        >
+                          <Film className="w-3.5 h-3.5" />
+                        </button>
                         {item.summary?.permalink && (
                           <a
                             href={`https://dps.report/${item.summary.permalink}`}
@@ -561,6 +572,9 @@ export default function RawLogImporter() {
 
       {viewing && viewing.summary && viewing.raw && (
         <RawFightViewer summary={viewing.summary} log={viewing.raw} onClose={() => setViewing(null)} />
+      )}
+      {replaying && replaying.raw && (
+        <FightReplay log={replaying.raw} onClose={() => setReplaying(null)} />
       )}
     </div>
   );
