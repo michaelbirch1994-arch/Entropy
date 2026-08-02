@@ -8,9 +8,9 @@
 // WKWebView on macOS, WebKitGTK on Linux) so that API is Windows-only there
 // too - same limitation as a regular browser. Tauri's Rust-backed fs/dialog
 // plugins don't depend on the webview engine at all, so this version works
-// identically on every platform, and the picked folder path is durable -
-// no per-origin permission re-grant dance, no risk of a browser silently
-// invalidating a stale handle across restarts.
+// identically on every platform, and the picked folder path itself is
+// durable across restarts (just a string in localStorage) - no OS-level
+// permission dialog to re-show.
 //
 // One behavioral difference from the web version worth knowing about:
 // scanForLogFiles() here eagerly reads full file bytes for every matched
@@ -22,6 +22,7 @@
 // readFile() for genuinely-new files right before upload.
 import { open } from "@tauri-apps/plugin-dialog";
 import { readDir, readFile, stat } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 
 const PATH_KEY = "entropy-native-log-folder";
 const SEEN_FILES_KEY = "entropy-seen-log-files";
@@ -37,10 +38,25 @@ export function isFolderWatchSupported(): boolean {
   return true; // always available inside the packaged desktop app
 }
 
+// Tauri v2 denies fs access to any path outside a handful of built-in scoped
+// base directories (AppData, Home, Documents, ...) by default, and an
+// arcdps cbtlogs folder can live anywhere - a different drive, a Steam
+// library, a custom GW2 install path. There's no way to pre-authorize an
+// arbitrary runtime-picked path via a static capability file, so this calls
+// a small Rust command (grant_folder_scope, src-tauri/src/main.rs) that
+// extends the fs plugin's scope for exactly this directory, recursively.
+// That scope lives in memory only and does NOT persist across app restarts,
+// which is why this is also called from checkPermission() below on every
+// mount-restore/reconnect, not just the initial pick.
+async function grantScope(path: string): Promise<void> {
+  await invoke("grant_folder_scope", { path });
+}
+
 // Opens the native OS folder picker and persists the chosen path.
 export async function pickLogFolder(): Promise<string> {
   const selected = await open({ directory: true, title: "Select your arcdps cbtlogs folder" });
   if (!selected || Array.isArray(selected)) throw new Error("No folder selected");
+  await grantScope(selected);
   localStorage.setItem(PATH_KEY, selected);
   return selected;
 }
@@ -49,11 +65,19 @@ export async function getSavedFolderHandle(): Promise<string | null> {
   return localStorage.getItem(PATH_KEY);
 }
 
-// Tauri's fs access is granted at the OS/app-capability level rather than
-// per-directory like the browser's handle permissions - if we have a saved
-// path at all, we can read it. No separate grant/re-grant flow needed.
-export async function checkPermission(_handle: string, _requestIfNeeded: boolean): Promise<boolean> {
-  return true;
+// Tauri's fs scope grants are in-memory only and reset every app launch, so
+// a folder picked in a previous session needs its scope re-granted before
+// we can read it again - this is called on mount-restore and on manual
+// "Reconnect", and doubles as the actual permission check: if the directory
+// no longer exists or can't be granted, this returns false and the UI falls
+// back to the "needs-permission" state instead of failing silently later.
+export async function checkPermission(handle: string, _requestIfNeeded: boolean): Promise<boolean> {
+  try {
+    await grantScope(handle);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function clearFolderHandle(): Promise<void> {
