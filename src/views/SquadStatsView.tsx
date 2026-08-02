@@ -11,13 +11,19 @@ export default function SquadStatsView() {
   if (!report) return null;
   const s = report.stats;
 
-  // Aggregate squad totals from player arrays
-  const totalDamage = s.offensePlayers.reduce((a, p) => a + p.offenseTotals.damage, 0);
-  const totalDownContrib = s.offensePlayers.reduce((a, p) => a + p.offenseTotals.downContribution, 0);
-  const totalHealing = s.healingPlayers.reduce((a, p) => a + p.healingTotals.healing, 0);
-  const totalBarrier = s.healingPlayers.reduce((a, p) => a + p.healingTotals.barrier, 0);
-  const totalCleanses = s.supportPlayers.reduce((a, p) => a + p.supportTotals.condiCleanse, 0);
-  const totalStrips = s.supportPlayers.reduce((a, p) => a + p.supportTotals.boonStrips, 0);
+  // Aggregate squad totals from player arrays. healingTotals is a sparse
+  // Record<string, number> - a player who did zero outgoing healing/barrier
+  // this session (e.g. a pure-DPS build) never gets a 'healing'/'barrier' key
+  // written at all, so it's `undefined` rather than 0. A bare `a + p.x` turns
+  // into `a + undefined` -> NaN for the *entire* reduce the moment one such
+  // player is hit, which is why these totals were rendering as "-". `?? 0`
+  // guards every field the same way, in case any of them end up sparse too.
+  const totalDamage = s.offensePlayers.reduce((a, p) => a + (p.offenseTotals.damage ?? 0), 0);
+  const totalDownContrib = s.offensePlayers.reduce((a, p) => a + (p.offenseTotals.downContribution ?? 0), 0);
+  const totalHealing = s.healingPlayers.reduce((a, p) => a + (p.healingTotals.healing ?? 0), 0);
+  const totalBarrier = s.healingPlayers.reduce((a, p) => a + (p.healingTotals.barrier ?? 0), 0);
+  const totalCleanses = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.condiCleanse ?? 0), 0);
+  const totalStrips = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.boonStrips ?? 0), 0);
 
   const topDps = [...s.offensePlayers]
     .map((p) => ({ account: p.account, profession: p.profession, dps: p.offenseTotals.damage / (p.totalFightMs / 1000) }))
@@ -83,7 +89,7 @@ export default function SquadStatsView() {
                     <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.offenseTotals.damage)}</td>
                     <td className="p-2.5 text-right text-slate-200 font-bold">{fmtFixedGrouped(dps, 0)}</td>
                     <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.offenseTotals.downContribution)}</td>
-                    <td className="p-2.5 text-right text-emerald-400">{heal ? fmtCompact(heal.healingTotals.healing) : "—"}</td>
+                    <td className="p-2.5 text-right text-emerald-400">{heal ? fmtCompact(heal.healingTotals.healing ?? 0) : "—"}</td>
                     <td className="p-2.5 text-right text-cyan-400">{sup ? fmtNum(sup.supportTotals.condiCleanse) : "—"}</td>
                     <td className="p-2.5 text-right text-amber-400">{sup ? fmtNum(sup.supportTotals.boonStrips) : "—"}</td>
                     <td className="p-2.5 text-right text-slate-500">{s.generalPlayers.find((g) => g.account === p.account)?.logsJoined ?? "—"}</td>

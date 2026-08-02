@@ -13,11 +13,16 @@ export default function DefensiveView() {
   if (!report) return null;
   const s = report.stats;
 
-  const totalCleanses = s.supportPlayers.reduce((a, p) => a + p.supportTotals.condiCleanse, 0);
-  const totalStrips = s.supportPlayers.reduce((a, p) => a + p.supportTotals.boonStrips, 0);
-  const totalRes = s.supportPlayers.reduce((a, p) => a + p.supportTotals.resurrects, 0);
-  const totalHealing = s.healingPlayers.reduce((a, p) => a + p.healingTotals.healing, 0);
-  const totalBarrier = s.healingPlayers.reduce((a, p) => a + p.healingTotals.barrier, 0);
+  // healingTotals/supportTotals are sparse Record<string, number> maps - a
+  // player who never did a given thing this session (e.g. zero barrier from
+  // a pure-DPS build) has no key for it at all (`undefined`, not 0), so an
+  // unguarded `a + p.x` turns the whole reduce into NaN the moment it hits
+  // one. `?? 0` guards every field the same way `damageTaken` already was.
+  const totalCleanses = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.condiCleanse ?? 0), 0);
+  const totalStrips = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.boonStrips ?? 0), 0);
+  const totalRes = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.resurrects ?? 0), 0);
+  const totalHealing = s.healingPlayers.reduce((a, p) => a + (p.healingTotals.healing ?? 0), 0);
+  const totalBarrier = s.healingPlayers.reduce((a, p) => a + (p.healingTotals.barrier ?? 0), 0);
   const totalDamageTaken = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
 
   return (
@@ -71,7 +76,7 @@ export default function DefensiveView() {
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">
                 {[...s.supportPlayers]
-                  .sort((a, b) => b.supportTotals.condiCleanse - a.supportTotals.condiCleanse)
+                  .sort((a, b) => (b.supportTotals.condiCleanse ?? 0) - (a.supportTotals.condiCleanse ?? 0))
                   .map((p, i) => (
                     <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
                       <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
@@ -111,7 +116,7 @@ export default function DefensiveView() {
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">
                 {[...s.healingPlayers]
-                  .sort((a, b) => b.healingTotals.healing - a.healingTotals.healing)
+                  .sort((a, b) => (b.healingTotals.healing ?? 0) - (a.healingTotals.healing ?? 0))
                   .map((p, i) => (
                     <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
                       <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
