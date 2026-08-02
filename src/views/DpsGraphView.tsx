@@ -43,7 +43,7 @@ export default function DpsGraphView() {
           empty={
             <div className="py-10 text-center text-sm text-slate-500">
               No damage-over-time data available for this report.
-              <p className="text-[11px] text-slate-600 mt-1">
+              <p className="text-[11px] text-slate-500 mt-1">
                 Only populated for reports built from raw dps.report / .zevtc imports.
               </p>
             </div>
@@ -92,7 +92,7 @@ export default function DpsGraphView() {
                 <YAxis tickFormatter={(v) => fmtNum(v)} stroke="#475569" fontSize={10} width={56} />
                 <Tooltip
                   labelFormatter={(v) => `t=${fmtClock(Number(v))}`}
-                  formatter={(v: number, name: string) => [fmtNum(v), name === "squad" ? "Squad" : name]}
+                  formatter={(v, name) => [fmtNum(Number(v)), name === "squad" ? "Squad" : String(name)]}
                   contentStyle={{ background: "#0a0e1f", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, fontSize: 11 }}
                 />
                 {compareAccounts.length > 0 && <Legend wrapperStyle={{ fontSize: 10 }} />}
