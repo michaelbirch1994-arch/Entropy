@@ -426,6 +426,45 @@ export interface ReplayFightEntry {
   data: import('../lib/parseReplayData').ReplayData;
 }
 
+// --- Mechanics Timeline (per-fight boss/encounter mechanic markers, like
+// dps.report's Mechanics tab) ---
+
+export interface MechanicDef {
+  name: string;
+  fullName: string;
+  description?: string;
+  /** EI's raw severity bucket, "Sev0" (informational) through "Sev4" (most severe). */
+  severity: string;
+}
+
+export interface MechanicEvent {
+  /** Milliseconds into the fight. */
+  time: number;
+  /** Character/actor name straight from the log. */
+  actor: string;
+  /** Resolved squad player account, when the actor matched a tracked player by character name. */
+  account?: string;
+  /** From EI's species id being 0 - true when the actor that triggered this event was a player. */
+  isPlayer: boolean;
+}
+
+export interface MechanicTimelineEntry {
+  key: string;
+  def: MechanicDef;
+  events: MechanicEvent[];
+}
+
+export interface MechanicsFight {
+  fightId: string;
+  fightName: string;
+  durationMs: number;
+  mechanics: MechanicTimelineEntry[];
+}
+
+export interface MechanicsData {
+  fights: MechanicsFight[];
+}
+
 export interface ReportStats {
   total: number;
   wins: number;
@@ -492,6 +531,8 @@ export interface ReportStats {
   replayFights?: ReplayFightEntry[];
   /** Automated squad-composition/performance insight flags. Raw-log reports only. */
   synergyInsights?: SynergyInsight[];
+  /** Per-fight boss/encounter mechanic event markers. Raw-log reports only. */
+  mechanics?: MechanicsData;
   offensiveAvgMvpScore: number;
   defensiveAvgMvpScore: number;
   avgMvpScore: number;
