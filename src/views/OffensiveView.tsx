@@ -31,12 +31,24 @@ type SortKey =
   | "downContribution"
   | "boonStrips"
   | "killed"
+  | "critRate"
+  | "flankRate"
+  | "glanceRate"
+  | "interrupts"
+  | "invulned"
   | "account";
 
 type SortDir = "asc" | "desc";
 
 interface Row extends OffensePlayer {
   dps: number;
+  // EI's "criticalRate"/"flankingRate"/"glanceRate" fields are actually raw
+  // hit counts, not percentages - offenseRateWeights carries the matching
+  // denominator (critable / connected direct-damage hit count) so the real
+  // percent is count/denom, computed once here rather than re-derived per cell.
+  critRate: number;
+  flankRate: number;
+  glanceRate: number;
 }
 
 const COLUMNS: {
@@ -49,6 +61,11 @@ const COLUMNS: {
   { key: "dps", label: "DPS", align: "right" },
   { key: "directDmg", label: "Target/Cleave", align: "right" },
   { key: "downContribution", label: "Down Contrib", align: "right" },
+  { key: "critRate", label: "Crit %", align: "right" },
+  { key: "flankRate", label: "Flank %", align: "right" },
+  { key: "glanceRate", label: "Glance %", align: "right" },
+  { key: "interrupts", label: "Interrupts", align: "right" },
+  { key: "invulned", label: "Invulned", align: "right" },
   { key: "boonStrips", label: "Strips", align: "right" },
   { key: "killed", label: "Kills", align: "right" },
 ];
@@ -56,6 +73,9 @@ const COLUMNS: {
 function numVal(row: Row, key: SortKey): number {
   if (key === "account") return 0;
   if (key === "dps") return row.dps;
+  if (key === "critRate") return row.critRate;
+  if (key === "flankRate") return row.flankRate;
+  if (key === "glanceRate") return row.glanceRate;
   return row.offenseTotals[key as keyof typeof row.offenseTotals] as number;
 }
 
@@ -81,7 +101,18 @@ export default function OffensiveView() {
     if (!report) return [];
     return report.stats.offensePlayers.map((p) => {
       const secs = p.totalFightMs / 1000;
-      return { ...p, dps: secs > 0 ? p.offenseTotals.damage / secs : 0 };
+      const weights = p.offenseRateWeights ?? {};
+      const pct = (id: "criticalRate" | "flankingRate" | "glanceRate") => {
+        const denom = weights[id] || 0;
+        return denom > 0 ? ((p.offenseTotals[id] ?? 0) / denom) * 100 : 0;
+      };
+      return {
+        ...p,
+        dps: secs > 0 ? p.offenseTotals.damage / secs : 0,
+        critRate: pct("criticalRate"),
+        flankRate: pct("flankingRate"),
+        glanceRate: pct("glanceRate"),
+      };
     });
   }, [report]);
 
@@ -262,6 +293,16 @@ export default function OffensiveView() {
                     <td className="p-2.5 text-right text-slate-300">{fmtCompact(p.offenseTotals.directDmg)}</td>
                     {/* Down contrib */}
                     <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.offenseTotals.downContribution)}</td>
+                    {/* Crit % */}
+                    <td className="p-2.5 text-right text-rose-400">{fmtFixed(p.critRate, 1)}%</td>
+                    {/* Flank % */}
+                    <td className="p-2.5 text-right text-fuchsia-400">{fmtFixed(p.flankRate, 1)}%</td>
+                    {/* Glance % */}
+                    <td className="p-2.5 text-right text-slate-400">{fmtFixed(p.glanceRate, 1)}%</td>
+                    {/* Interrupts */}
+                    <td className="p-2.5 text-right text-cyan-400">{fmtNum(p.offenseTotals.interrupts)}</td>
+                    {/* Invulned (times the enemy target was invulnerable to this player's hits) */}
+                    <td className="p-2.5 text-right text-slate-400">{fmtNum(p.offenseTotals.invulned)}</td>
                     {/* Strips */}
                     <td className="p-2.5 text-right text-amber-400">{fmtNum(p.offenseTotals.boonStrips)}</td>
                     {/* Kills */}

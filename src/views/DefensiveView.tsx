@@ -37,7 +37,7 @@ export default function DefensiveView() {
         {([
           { k: "support", l: "Support" },
           { k: "healing", l: "Healing" },
-          { k: "defense", l: "Damage Taken" },
+          { k: "defense", l: "Defensive Stats" },
         ] as { k: Tab; l: string }[]).map((t) => (
           <button
             key={t.k}
@@ -134,7 +134,7 @@ export default function DefensiveView() {
       )}
 
       {tab === "defense" && (
-        <Panel title="Damage Taken" icon={<Shield className="w-4 h-4" />} accent="text-rose-400" bodyClassName="p-0">
+        <Panel title="Defensive Stats" icon={<Shield className="w-4 h-4" />} accent="text-rose-400" bodyClassName="p-0">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left text-xs">
               <thead>
@@ -146,6 +146,12 @@ export default function DefensiveView() {
                   <th className="p-2.5 text-right">Power Dmg</th>
                   <th className="p-2.5 text-right">Condi Dmg</th>
                   <th className="p-2.5 text-right">Hits</th>
+                  <th className="p-2.5 text-right" title="Damage absorbed by barrier">Barrier Absorbed</th>
+                  <th className="p-2.5 text-right" title="Number of dodges">Dodges</th>
+                  <th className="p-2.5 text-right" title="Number of times was invulnerable to damage">Invulned</th>
+                  <th className="p-2.5 text-right" title="Number of times interrupted">Interrupted</th>
+                  <th className="p-2.5 text-right">Downs</th>
+                  <th className="p-2.5 text-right">Deaths</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">
@@ -164,6 +170,12 @@ export default function DefensiveView() {
                       <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.defenseTotals.powerDamageTaken)}</td>
                       <td className="p-2.5 text-right text-fuchsia-400">{fmtCompact(p.defenseTotals.conditionDamageTaken)}</td>
                       <td className="p-2.5 text-right text-slate-400">{fmtNum(p.defenseTotals.damageTakenCount)}</td>
+                      <td className="p-2.5 text-right text-teal-400">{fmtCompact(p.defenseTotals.damageBarrier ?? 0)}</td>
+                      <td className="p-2.5 text-right text-cyan-400">{fmtNum(p.defenseTotals.dodgeCount ?? 0)}</td>
+                      <td className="p-2.5 text-right text-sky-400">{fmtNum(p.defenseTotals.invulnedCount ?? 0)}</td>
+                      <td className="p-2.5 text-right text-purple-400">{fmtNum(p.defenseTotals.interruptedCount ?? 0)}</td>
+                      <td className="p-2.5 text-right text-amber-400">{fmtNum(p.defenseTotals.downCount ?? 0)}</td>
+                      <td className="p-2.5 text-right text-slate-300">{fmtNum(p.defenseTotals.deadCount ?? 0)}</td>
                     </tr>
                   ))}
               </tbody>
