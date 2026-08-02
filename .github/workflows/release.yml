@@ -12,6 +12,13 @@ on:
 
 jobs:
   release:
+    # GitHub's default GITHUB_TOKEN permissions for a repo are read-only
+    # unless a workflow explicitly asks for more - without this, tauri-action
+    # can build the installer fine but fails at the last step ("Resource not
+    # accessible by integration") because it can't create/attach to a
+    # GitHub Release, which needs contents: write.
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
