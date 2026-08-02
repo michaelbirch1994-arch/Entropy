@@ -68,4 +68,14 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
   it('never crashes building death recaps even with no deaths in a short log', () => {
     expect(Array.isArray(report.stats.deathRecaps)).toBe(true);
   });
+
+  it('builds fight highlights with real, non-empty descriptions', () => {
+    const highlights = report.stats.fightHighlights;
+    expect(Array.isArray(highlights)).toBe(true);
+    for (const h of highlights ?? []) {
+      expect(h.title).toBeTruthy();
+      expect(h.description).toBeTruthy();
+      expect(h.fightName).toBeTruthy();
+    }
+  });
 });
