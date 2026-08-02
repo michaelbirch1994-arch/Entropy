@@ -251,7 +251,9 @@ export interface ClassSlice {
 
 export interface TopSkill {
   name: string;
-  icon: number;
+  /** Icon image URL from EI's skillMap, when available; falls back to a numeric badge in the UI when absent. */
+  icon?: string;
+  id: number;
   damage: number;
   hits: number;
   downContribution: number;
