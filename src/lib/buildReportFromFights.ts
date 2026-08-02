@@ -304,21 +304,30 @@ function computeBoonUptimes(fights: FightInput[], playerEntries: PlayerStats[]):
 
 // Aggregates per-skill outgoing/incoming damage across all fights, straight from
 // Elite Insights' raw totalDamageDist / totalDamageTaken breakdowns (phase 0 =
-// full fight). Down-contribution isn't tracked per-skill in the raw log, so it's
-// left at 0 here (unlike AxiBridge's report.json, which computes it separately).
+// full fight). Each totalDamageDist entry also carries a per-skill
+// `downContribution` field (the same field the vendored bridge-metrics code
+// reads for the player-level total in combatMetrics.ts) - down contribution is
+// an outgoing-damage concept, so it's only accumulated for outgoing skills.
 function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topIncomingSkills: TopSkill[] } {
   const skillMeta = new Map<number, { name: string; icon?: string }>();
-  const outgoing = new Map<number, { damage: number; hits: number }>();
-  const incoming = new Map<number, { damage: number; hits: number }>();
+  const outgoing = new Map<number, { damage: number; hits: number; downContribution: number }>();
+  const incoming = new Map<number, { damage: number; hits: number; downContribution: number }>();
 
-  function accumulate(target: Map<number, { damage: number; hits: number }>, id: number, damage: number, hits: number) {
-    const cur = target.get(id) || { damage: 0, hits: 0 };
+  function accumulate(
+    target: Map<number, { damage: number; hits: number; downContribution: number }>,
+    id: number,
+    damage: number,
+    hits: number,
+    downContribution: number
+  ) {
+    const cur = target.get(id) || { damage: 0, hits: 0, downContribution: 0 };
     cur.damage += damage;
     cur.hits += hits;
+    cur.downContribution += downContribution;
     target.set(id, cur);
   }
 
-  type DistEntry = { id?: number; totalDamage?: number; connectedHits?: number; hits?: number };
+  type DistEntry = { id?: number; totalDamage?: number; connectedHits?: number; hits?: number; downContribution?: number };
 
   for (const f of fights) {
     const raw = f.raw as Record<string, unknown>;
@@ -341,8 +350,9 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
         if (!Number.isFinite(id)) continue;
         const dmg = Number(entry?.totalDamage) || 0;
         const hits = Number(entry?.connectedHits ?? entry?.hits) || 0;
-        if (dmg === 0 && hits === 0) continue;
-        accumulate(outgoing, id, dmg, hits);
+        const downContrib = Number(entry?.downContribution) || 0;
+        if (dmg === 0 && hits === 0 && downContrib === 0) continue;
+        accumulate(outgoing, id, dmg, hits, downContrib);
       }
 
       const inDist = (p.totalDamageTaken ?? []) as DistEntry[][];
@@ -352,19 +362,19 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
         const dmg = Number(entry?.totalDamage) || 0;
         const hits = Number(entry?.connectedHits ?? entry?.hits) || 0;
         if (dmg === 0 && hits === 0) continue;
-        accumulate(incoming, id, dmg, hits);
+        accumulate(incoming, id, dmg, hits, 0);
       }
     }
   }
 
-  function toTopSkills(map: Map<number, { damage: number; hits: number }>): TopSkill[] {
+  function toTopSkills(map: Map<number, { damage: number; hits: number; downContribution: number }>): TopSkill[] {
     return Array.from(map.entries())
       .map(([id, v]) => ({
         name: skillMeta.get(id)?.name ?? `Skill ${id}`,
         icon: id,
         damage: v.damage,
         hits: v.hits,
-        downContribution: 0,
+        downContribution: v.downContribution,
       }))
       .filter((s) => s.damage > 0 || s.hits > 0)
       .sort((a, b) => b.damage - a.damage)
