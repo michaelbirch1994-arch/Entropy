@@ -24,13 +24,20 @@ export default function DefensiveView() {
   const totalHealing = s.healingPlayers.reduce((a, p) => a + (p.healingTotals.healing ?? 0), 0);
   const totalBarrier = s.healingPlayers.reduce((a, p) => a + (p.healingTotals.barrier ?? 0), 0);
   const totalDamageTaken = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
+  // Barrier absorbed (damageBarrier) is an incoming/defensive stat - damage
+  // that never landed because a barrier ate it - distinct from "Total
+  // Barrier" above (barrier the player *generated* for others). Both are
+  // effectively healing in the sense that they're HP the squad didn't lose,
+  // so surface this one alongside Total Healing/Total Barrier too.
+  const totalBarrierAbsorbed = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageBarrier ?? 0), 0);
 
   return (
     <div className="space-y-5 animate-view pb-12">
       {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
         <StatCard label="Total Healing" value={fmtCompact(totalHealing)} icon={<Heart className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
         <StatCard label="Total Barrier" value={fmtCompact(totalBarrier)} icon={<Shield className="w-3.5 h-3.5 text-teal-400" />} accent="text-teal-400" />
+        <StatCard label="Barrier Absorbed" value={fmtCompact(totalBarrierAbsorbed)} icon={<Shield className="w-3.5 h-3.5 text-teal-300" />} accent="text-teal-300" />
         <StatCard label="Cleanses" value={fmtNum(totalCleanses)} icon={<Droplet className="w-3.5 h-3.5 text-cyan-400" />} accent="text-cyan-400" />
         <StatCard label="Boon Strips" value={fmtNum(totalStrips)} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
         <StatCard label="Resurrects" value={fmtNum(totalRes)} icon={<Wind className="w-3.5 h-3.5 text-sky-400" />} accent="text-sky-400" />
