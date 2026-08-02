@@ -1,13 +1,15 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
-  "description": "Capability for Entropy's main window. Grants the native dialog (folder picker) and the specific fs read commands the local arcdps log auto-import feature needs. Without this file Tauri v2 denies ALL plugin commands by default - this was the root cause of Connect Folder silently failing to do anything.",
+  "description": "Capability for Entropy's main window. Grants the native dialog (folder picker), the specific fs read commands the local arcdps log auto-import feature needs, and the updater/process commands the auto-update-on-launch feature needs (check for a new release, download+install it, and restart into it).",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "dialog:default",
     "fs:allow-read-dir",
     "fs:allow-read-file",
-    "fs:allow-stat"
+    "fs:allow-stat",
+    "updater:default",
+    "process:default"
   ]
 }
