@@ -31,7 +31,7 @@ import {
   loadSeenFileKeys,
   saveSeenFileKeys,
   fileKey,
-} from "../../utils/folderWatcher";
+} from "../../utils/folderWatcherFacade";
 
 const AUTO_IMPORT_POLL_MS = 20000;
 
