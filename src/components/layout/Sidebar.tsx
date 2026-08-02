@@ -131,9 +131,9 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   const toggle = (title: string) => setExpanded(expanded === title ? null : title);
 
   return (
-    <aside className="w-60 flex-shrink-0 border-r border-amber-500/10 bg-black/35 backdrop-blur-xl h-full flex flex-col shadow-[4px_0_40px_rgba(0,0,0,0.5)] z-40 overflow-y-auto custom-scrollbar">
+    <aside className="w-60 flex-shrink-0 border-r border-amber-500/10 bg-black/50 backdrop-blur-xl h-full flex flex-col shadow-[4px_0_40px_rgba(0,0,0,0.5)] z-40 overflow-y-auto custom-scrollbar">
       {/* Brand */}
-      <div className="p-5 border-b border-amber-500/10 sticky top-0 bg-black/45 backdrop-blur-md z-10">
+      <div className="p-5 border-b border-amber-500/10 sticky top-0 bg-black/60 backdrop-blur-md z-10">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-700/20 flex items-center justify-center text-amber-400 shadow-[0_0_16px_-3px_rgba(245,158,11,0.5)] border border-amber-400/30">
             <EntropyLogo size={20} />
