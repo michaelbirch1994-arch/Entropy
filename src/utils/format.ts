@@ -91,3 +91,23 @@ export function profChip(profession: string): string {
   const s = profStyle(profession);
   return `${s.bg} ${s.text} ${s.border}`;
 }
+
+// Real GW2 base-profession icons (from api.guildwars2.com/v2/professions).
+// Elite specs map down to their base profession family via PROFESSION_FAMILY.
+export const PROFESSION_ICONS: Record<string, string> = {
+  guardian: "https://render.guildwars2.com/file/C32BE61FC55C962524624F643897ECF1A9C80462/156634.png",
+  warrior: "https://render.guildwars2.com/file/0A97E13F29B3597A447EEC04A09BE5BD699A2250/156643.png",
+  revenant: "https://render.guildwars2.com/file/7C9309BE7A2A48C6A9FBCC70CC1EBEBFD7593C05/961390.png",
+  engineer: "https://render.guildwars2.com/file/5CCB361F44CCC7256132405D31E3A24DACCF440A/156632.png",
+  ranger: "https://render.guildwars2.com/file/49B10316B424F4E20139EB5E51ADCF24A8724E9B/156640.png",
+  thief: "https://render.guildwars2.com/file/F9EC00E23F630D6DB20CDA985592EC010E2A5705/156641.png",
+  elementalist: "https://render.guildwars2.com/file/77B793123251931AFF9FCA24C07E0F704BC4DA49/156630.png",
+  necro: "https://render.guildwars2.com/file/AE56F8670807B87CF6EEE3FC7E6CB9710959E004/156638.png",
+  mesmer: "https://render.guildwars2.com/file/E43730AD49A903C3A1B4F27E41DE04EA51A775EC/156636.png",
+  default: "",
+};
+
+export function profIcon(profession: string): string {
+  const fam = PROFESSION_FAMILY[profession] ?? "default";
+  return PROFESSION_ICONS[fam] ?? "";
+}
