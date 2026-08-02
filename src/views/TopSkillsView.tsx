@@ -167,9 +167,13 @@ export default function TopSkillsView() {
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-[10px] font-bold text-slate-400 font-mono">
-                  {sk.icon || i + 1}
-                </div>
+                {sk.icon ? (
+                  <img src={sk.icon} alt="" className="w-9 h-9 rounded-lg border border-slate-700/50" loading="lazy" />
+                ) : (
+                  <div className="w-9 h-9 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-[10px] font-bold text-slate-400 font-mono">
+                    {i + 1}
+                  </div>
+                )}
                 <div>
                   <div className="text-sm font-bold text-slate-100">{sk.name}</div>
                   <div className="text-[10px] text-slate-500 font-mono">{fmtNum(sk.hits)} hits</div>
