@@ -17,6 +17,7 @@ import {
   Film,
   Crosshair,
   Skull,
+  Star,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import EntropyLogo from "../ui/EntropyLogo";
@@ -70,6 +71,7 @@ const MENU: NavSection[] = [
     title: "COMBAT LOG",
     icon: <Film className="w-4 h-4" />,
     items: [
+      { id: "highlights", label: "Highlights" },
       { id: "dps-graph", label: "DPS Graph" },
       { id: "fight-replay", label: "Fight Replay" },
       { id: "mechanics", label: "Mechanics Timeline" },
@@ -219,6 +221,7 @@ export const VIEW_ICONS: Record<string, ReactNode> = {
   "dps-graph": <LineChartIcon className="w-4 h-4" />,
   "fight-replay": <Film className="w-4 h-4" />,
   mechanics: <Crosshair className="w-4 h-4" />,
+  highlights: <Star className="w-4 h-4" />,
   "death-recap": <Skull className="w-4 h-4" />,
   "buff-generation": <Sparkles className="w-4 h-4" />,
   classes: <Layers className="w-4 h-4" />,
