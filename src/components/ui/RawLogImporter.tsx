@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import {
   UploadCloud,
   Link,
@@ -10,12 +10,28 @@ import {
   Eye,
   Layers,
   Trophy,
+  Folder,
+  RefreshCw,
+  X,
 } from "lucide-react";
 import { isRawLogFile, uploadRawLogToDpsReport, fetchDpsReportJson, parseDpsReportPermalink } from "../../utils/dpsReport";
 import { summarizeRawFight, type RawFightSummary, type RawFightLog } from "../../types/rawFight";
 import { buildReportFromFights } from "../../lib/buildReportFromFights";
 import { useReport } from "../../store/ReportContext";
 import RawFightViewer from "./RawFightViewer";
+import {
+  isFolderWatchSupported,
+  pickLogFolder,
+  getSavedFolderHandle,
+  checkPermission,
+  clearFolderHandle,
+  scanForLogFiles,
+  loadSeenFileKeys,
+  saveSeenFileKeys,
+  fileKey,
+} from "../../utils/folderWatcher";
+
+const AUTO_IMPORT_POLL_MS = 20000;
 
 interface QueueItem {
   key: string;
@@ -40,6 +56,18 @@ export default function RawLogImporter() {
   const [combineError, setCombineError] = useState<string | null>(null);
   const [viewingFullReportKey, setViewingFullReportKey] = useState<string | null>(null);
   const [fullReportError, setFullReportError] = useState<string | null>(null);
+
+  // Local arcdps log-folder auto-import
+  const folderSupported = isFolderWatchSupported();
+  const [folderName, setFolderName] = useState<string | null>(null);
+  const [folderStatus, setFolderStatus] = useState<"idle" | "connecting" | "watching" | "needs-permission" | "error">("idle");
+  const [folderError, setFolderError] = useState<string | null>(null);
+  const [autoImportedCount, setAutoImportedCount] = useState(0);
+  const [lastScanAt, setLastScanAt] = useState<Date | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const folderHandleRef = useRef<any>(null);
+  const seenKeysRef = useRef<Set<string>>(loadSeenFileKeys());
+  const scanningRef = useRef(false);
 
   function updateItem(key: string, patch: Partial<QueueItem>) {
     setQueue((prev) => prev.map((i) => (i.key === key ? { ...i, ...patch } : i)));
@@ -110,6 +138,104 @@ export default function RawLogImporter() {
     }
   }
 
+  async function runFolderScan() {
+    const handle = folderHandleRef.current;
+    if (!handle || scanningRef.current) return;
+    scanningRef.current = true;
+    try {
+      const found = await scanForLogFiles(handle);
+      const fresh = found.filter((f) => !seenKeysRef.current.has(fileKey(f)));
+      for (const f of fresh) {
+        seenKeysRef.current.add(fileKey(f));
+        void processFile(f.file);
+        setAutoImportedCount((n) => n + 1);
+      }
+      if (fresh.length > 0) saveSeenFileKeys(seenKeysRef.current);
+      setLastScanAt(new Date());
+      setFolderStatus("watching");
+      setFolderError(null);
+    } catch (e) {
+      setFolderError(e instanceof Error ? e.message : "Failed to scan log folder.");
+    } finally {
+      scanningRef.current = false;
+    }
+  }
+
+  async function connectFolder() {
+    setFolderStatus("connecting");
+    setFolderError(null);
+    try {
+      const handle = await pickLogFolder();
+      folderHandleRef.current = handle;
+      setFolderName(handle.name ?? "log folder");
+      // Mark everything currently in the folder as "seen" so we only auto-import
+      // NEW logs going forward, not the entire backlog.
+      const existing = await scanForLogFiles(handle);
+      existing.forEach((f) => seenKeysRef.current.add(fileKey(f)));
+      saveSeenFileKeys(seenKeysRef.current);
+      setLastScanAt(new Date());
+      setFolderStatus("watching");
+    } catch (e) {
+      // AbortError = user closed the picker without choosing a folder; not a real error.
+      if (e instanceof Error && e.name === "AbortError") {
+        setFolderStatus("idle");
+      } else {
+        setFolderStatus("error");
+        setFolderError(e instanceof Error ? e.message : "Couldn't connect to that folder.");
+      }
+    }
+  }
+
+  async function reconnectFolder() {
+    const handle = folderHandleRef.current;
+    if (!handle) return connectFolder();
+    setFolderStatus("connecting");
+    const granted = await checkPermission(handle, true);
+    if (granted) {
+      setFolderStatus("watching");
+      void runFolderScan();
+    } else {
+      setFolderStatus("needs-permission");
+    }
+  }
+
+  async function disconnectFolder() {
+    await clearFolderHandle();
+    folderHandleRef.current = null;
+    setFolderName(null);
+    setFolderStatus("idle");
+    setAutoImportedCount(0);
+    setLastScanAt(null);
+  }
+
+  // On mount: silently resume watching a previously-connected folder if the
+  // browser still remembers granting us permission - no picker/prompt needed.
+  useEffect(() => {
+    if (!folderSupported) return;
+    (async () => {
+      const handle = await getSavedFolderHandle();
+      if (!handle) return;
+      folderHandleRef.current = handle;
+      setFolderName(handle.name ?? "log folder");
+      const granted = await checkPermission(handle, false);
+      if (granted) {
+        setFolderStatus("watching");
+        void runFolderScan();
+      } else {
+        setFolderStatus("needs-permission");
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Poll for new files while actively watching a connected folder.
+  useEffect(() => {
+    if (folderStatus !== "watching") return;
+    const id = window.setInterval(() => void runFolderScan(), AUTO_IMPORT_POLL_MS);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [folderStatus]);
+
   function handleFiles(files: FileList | null) {
     if (!files) return;
     const valid: File[] = [];
@@ -159,6 +285,97 @@ export default function RawLogImporter() {
             in and shown here — click a finished fight for its full report (MVP cards, leaderboards, class/role
             breakdowns) on Entropy's own dashboard, or select several and combine them into one combined raid report.
           </p>
+
+          {folderSupported ? (
+            <div className="rounded-xl border border-amber-500/10 bg-white/[0.02] px-3.5 py-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  <Folder className="w-3.5 h-3.5" />
+                  Auto-import from local folder
+                </span>
+                {folderStatus === "watching" && (
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Watching
+                  </span>
+                )}
+              </div>
+
+              {folderStatus === "idle" && (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Connect your <span className="font-mono text-slate-400">arcdps.cbtlogs</span> folder once, and Entropy
+                    will auto-upload new fights while this tab is open.
+                  </p>
+                  <button
+                    onClick={() => void connectFolder()}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-amber-500/20 transition-all"
+                  >
+                    <Folder className="w-3 h-3" />
+                    Connect Folder
+                  </button>
+                </div>
+              )}
+
+              {folderStatus === "connecting" && (
+                <p className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Waiting for folder permission...
+                </p>
+              )}
+
+              {folderStatus === "watching" && (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[11px] text-slate-500 font-mono truncate">
+                    {folderName}
+                    {lastScanAt ? ` - last checked ${lastScanAt.toLocaleTimeString()}` : ""}
+                    {autoImportedCount > 0 ? ` - ${autoImportedCount} auto-imported` : ""}
+                  </p>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => void runFolderScan()}
+                      title="Scan now"
+                      className="text-slate-500 hover:text-amber-400 transition-colors"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => void disconnectFolder()}
+                      title="Disconnect folder"
+                      className="text-slate-500 hover:text-rose-400 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {folderStatus === "needs-permission" && (
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[11px] text-amber-300/90 leading-relaxed">
+                    Permission for <span className="font-mono">{folderName}</span> needs to be re-confirmed.
+                  </p>
+                  <button
+                    onClick={() => void reconnectFolder()}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-amber-500/20 transition-all"
+                  >
+                    <Folder className="w-3 h-3" />
+                    Reconnect
+                  </button>
+                </div>
+              )}
+
+              {folderStatus === "error" && folderError && (
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-rose-300/90">{folderError}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-[10px] text-slate-600 italic">
+              Local folder auto-import needs a Chromium-based browser (Chrome/Edge).
+            </p>
+          )}
 
           <div
             role="button"
