@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Sidebar, { VIEW_ICONS } from "./components/layout/Sidebar";
 import { ReportProvider, useReport } from "./store/ReportContext";
 import OverviewView from "./views/OverviewView";
@@ -19,6 +20,7 @@ import { Activity, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion,
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
 import RawLogImporter from "./components/ui/RawLogImporter";
+import EntropyWordmarkReveal from "./components/ui/EntropyWordmarkReveal";
 
 const VIEW_TITLES: Record<string, string> = {
   overview: "Overview",
@@ -90,7 +92,7 @@ function NoReportState() {
           <EntropyLogo size={34} />
         </div>
         <div className="text-center">
-          <h1 className="entropy-wordmark text-4xl font-black tracking-[0.15em] text-white uppercase font-display">Entropy</h1>
+          <EntropyWordmarkReveal className="entropy-wordmark text-4xl font-black tracking-[0.15em] text-white uppercase font-display" />
           <p className="text-sm text-slate-500 mt-2 font-medium">WvW Raid Analytics Platform</p>
         </div>
       </div>
@@ -195,9 +197,21 @@ function ReportShell() {
           ) : showError ? (
             <ErrorState message={error!} />
           ) : showImport ? (
-            <NoReportState />
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+              <NoReportState />
+            </motion.div>
           ) : report ? (
-            <ReportRouter activeView={activeView} />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeView}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+              >
+                <ReportRouter activeView={activeView} />
+              </motion.div>
+            </AnimatePresence>
           ) : null}
         </div>
       </main>
