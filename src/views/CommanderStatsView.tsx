@@ -8,7 +8,23 @@ export default function CommanderStatsView() {
   const { report } = useReport();
   if (!report) return null;
   const s = report.stats;
-  const rows = s.commanderStats.rows;
+  const rows = s.commanderStats?.rows ?? [];
+
+  if (rows.length === 0) {
+    return (
+      <div className="space-y-5 animate-view pb-12">
+        <Panel title="Commander Stats" icon={<Crown className="w-4 h-4" />} accent="text-sky-400">
+          <div className="py-10 text-center text-sm text-slate-400">
+            No commander stats available for this report.
+            <p className="text-[11px] text-slate-600 mt-1">
+              This section isn't computed yet for reports built from raw .zevtc / dps.report imports - only for
+              full AxiBridge report.json uploads.
+            </p>
+          </div>
+        </Panel>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 animate-view pb-12">
