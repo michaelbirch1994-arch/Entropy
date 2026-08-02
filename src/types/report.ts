@@ -473,6 +473,29 @@ export interface MechanicsData {
 // buff-triggered conversion heals like Replenishing Despair or a direct
 // skill cast like Life Siphon) ---
 
+export interface DeathRecapHit {
+  id: number;
+  name: string;
+  icon?: string;
+  isIndirect: boolean;
+  src: string;
+  damage: number;
+  time: number;
+}
+
+export interface DeathRecapEntry {
+  account: string;
+  profession: string;
+  characterName: string;
+  fightName: string;
+  fightIndex: number;
+  deathTimeMs: number;
+  /** Damaging events between entering combat and going down (empty if the player died outright without ever being downed). */
+  toDown: DeathRecapHit[];
+  /** Damaging events between going down and the final death blow. */
+  toKill: DeathRecapHit[];
+}
+
 export interface TopHealingSource {
   id: number;
   name: string;
@@ -553,6 +576,8 @@ export interface ReportStats {
   mechanics?: MechanicsData;
   /** Top outgoing healing sources by skill/trait, squad-wide. Only populated when the log was recorded with the healing addon active. Raw-log reports only. */
   topHealingSkills?: TopHealingSource[];
+  /** Per-death damage breakdown (what actually killed each player, and what put them down first) for every squad death across all fights. Raw-log reports only. */
+  deathRecaps?: DeathRecapEntry[];
   offensiveAvgMvpScore: number;
   defensiveAvgMvpScore: number;
   avgMvpScore: number;
