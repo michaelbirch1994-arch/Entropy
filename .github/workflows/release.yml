@@ -14,6 +14,17 @@ name: Release desktop builds
 # generated. Builds still succeed without them, they just won't produce
 # signed updater artifacts (the updater feature silently has nothing to
 # find), so this isn't a hard requirement, just a silent feature gap.
+#
+# Beyond updater signing, this workflow also attaches two extra layers of
+# protection for anyone downloading a release directly (not through the
+# updater): a GitHub build provenance attestation per installer (proves a
+# given binary was built by *this* repo's CI from a specific commit, not
+# tampered with or substituted after the fact - verifiable with
+# `gh attestation verify`), and a SHA-256 checksums file per platform, for
+# anyone who wants to verify their download without trusting the updater
+# flow or GitHub's TLS alone. Both steps are non-blocking (continue-on-error)
+# so a hiccup in either one can never take down the actual installer upload,
+# which is the part that has to keep working.
 on:
   push:
     tags:
@@ -26,21 +37,29 @@ jobs:
     # unless a workflow explicitly asks for more - without this, tauri-action
     # can build the installer fine but fails at the last step ("Resource not
     # accessible by integration") because it can't create/attach to a
-    # GitHub Release, which needs contents: write.
+    # GitHub Release, which needs contents: write. attestations: write and
+    # id-token: write are what let actions/attest-build-provenance sign a
+    # provenance statement for each installer.
     permissions:
       contents: write
+      attestations: write
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: "macos-latest"
             args: "--target aarch64-apple-darwin"
+            name: "macos-arm64"
           - platform: "macos-latest"
             args: "--target x86_64-apple-darwin"
+            name: "macos-x64"
           - platform: "ubuntu-22.04"
             args: ""
+            name: "linux-x64"
           - platform: "windows-latest"
             args: ""
+            name: "windows-x64"
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -82,3 +101,43 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Attest build provenance
+        # Cryptographically ties each installer back to this exact commit
+        # and Actions run, so anyone who downloads a release can confirm it
+        # was actually built by this repo's CI and not substituted or
+        # tampered with after the fact. continue-on-error because this is a
+        # transparency nice-to-have, not something that should ever block a
+        # release from going out if the glob below misses on some platform.
+        uses: actions/attest-build-provenance@v1
+        continue-on-error: true
+        with:
+          subject-path: |
+            src-tauri/target/**/release/bundle/**/*.exe
+            src-tauri/target/**/release/bundle/**/*.msi
+            src-tauri/target/**/release/bundle/**/*.dmg
+            src-tauri/target/**/release/bundle/**/*.AppImage
+            src-tauri/target/**/release/bundle/**/*.deb
+            src-tauri/target/**/release/bundle/**/*.rpm
+            src-tauri/target/**/release/bundle/**/*.tar.gz
+
+      - name: Publish SHA-256 checksums
+        # A plain integrity check anyone can run by hand (sha256sum) without
+        # needing to trust the updater signature flow or GitHub's TLS. Also
+        # continue-on-error for the same reason as the attestation step above.
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -eu
+          out="checksums-${{ matrix.name }}.txt"
+          : > "$out"
+          find src-tauri/target -type f \( \
+              -name '*.exe' -o -name '*.msi' -o -name '*.dmg' -o \
+              -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' -o \
+              -name '*.tar.gz' \) -path '*/release/bundle/*' -print0 \
+            | xargs -0 sha256sum >> "$out" || true
+          if [ -s "$out" ]; then
+            gh release upload "${{ github.ref_name }}" "$out" --clobber
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
