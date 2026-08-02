@@ -73,6 +73,11 @@ const MENU: NavSection[] = [
     icon: <Users className="w-4 h-4" />,
     items: [{ id: "roster", label: "Roster Intel" }],
   },
+  {
+    title: "CAREER",
+    icon: <Trophy className="w-4 h-4" />,
+    items: [{ id: "player-profiles", label: "Player Profiles" }],
+  },
 ];
 
 function findSectionForView(viewId: string): string | null {
@@ -186,4 +191,5 @@ export const VIEW_ICONS: Record<string, ReactNode> = {
   offensive: <Zap className="w-4 h-4" />,
   defensive: <Shield className="w-4 h-4" />,
   roster: <Users className="w-4 h-4" />,
+  "player-profiles": <Trophy className="w-4 h-4" />,
 };
