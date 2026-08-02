@@ -38,6 +38,7 @@ import type {
   MechanicsData,
   TopHealingSource,
   DeathRecapEntry,
+  FightHighlight,
 } from '../types/report';
 
 export interface FightInput {
@@ -896,6 +897,155 @@ function computeDeathRecaps(fights: FightInput[]): DeathRecapEntry[] {
   return out;
 }
 
+// Auto-generated "standout moment" cards, one per fight-night, scored from
+// per-fight combat data that's otherwise only visible if you dig through
+// Fight Breakdown / Death Recap manually. Reads straight from each raw EI
+// log rather than the (currently-unpopulated-for-raw-logs) fightBreakdown
+// table, following the same per-fight-iteration pattern as
+// computeDeathRecaps/computeRotations above.
+//
+// Field provenance (confirmed against EI's JsonPlayer / JsonGameplayStatsAll
+// / JsonDefensesAll doxygen docs):
+// - player.statsAll[phase].killed / .downed - enemies killed/downed by this player.
+// - player.statsAll[phase].downContribution - % of the squad's total down
+//   contribution attributed to this player (0-100), used for MVP Moment.
+// - player.defenses[phase].downCount / .deadCount - how many times this
+//   player themselves went down/died.
+function computeFightHighlights(fights: FightInput[]): FightHighlight[] {
+  type RawPlayer = {
+    account?: string;
+    profession?: string;
+    notInSquad?: boolean;
+    defenses?: Array<{ downCount?: number; deadCount?: number }>;
+    statsAll?: Array<{ killed?: number; downed?: number; downContribution?: number }>;
+  };
+
+  const perFight = fights.map((f, i) => {
+    const raw = f.raw as Record<string, unknown>;
+    const players = (raw.players ?? []) as RawPlayer[];
+    const squad = players.filter((p) => !p.notInSquad);
+
+    let alliesDown = 0;
+    let alliesDead = 0;
+    let enemyKills = 0;
+    let enemyDowns = 0;
+    let topDownContrib = { account: '', profession: '', value: 0 };
+
+    for (const p of squad) {
+      const def = p.defenses?.[0];
+      const stats = p.statsAll?.[0];
+      alliesDown += Number(def?.downCount) || 0;
+      alliesDead += Number(def?.deadCount) || 0;
+      enemyKills += Number(stats?.killed) || 0;
+      enemyDowns += Number(stats?.downed) || 0;
+      const dc = Number(stats?.downContribution) || 0;
+      if (dc > topDownContrib.value) {
+        topDownContrib = { account: p.account || 'Unknown', profession: p.profession || 'Unknown', value: dc };
+      }
+    }
+
+    const durationMs = Number(raw.durationMS) || 0;
+    const success = !!raw.success;
+    const squadCount = squad.length;
+    const enemyCount = Math.max(players.length - squadCount, 0);
+    const fightName = f.summary.fightName || `Fight ${i + 1}`;
+    const timestamp = Date.parse((raw.timeStartStd as string) ?? '') || 0;
+    const kdr = alliesDead > 0 ? enemyKills / alliesDead : enemyKills > 0 ? Infinity : 0;
+
+    return { i, fightName, timestamp, durationMs, success, squadCount, enemyCount, alliesDown, alliesDead, enemyKills, enemyDowns, kdr, topDownContrib };
+  }).filter((f) => f.squadCount > 0);
+
+  if (perFight.length === 0) return [];
+
+  const highlights: FightHighlight[] = [];
+  const wins = perFight.filter((f) => f.success && f.enemyKills > 0);
+  const losses = perFight.filter((f) => !f.success);
+
+  if (wins.length > 0) {
+    const best = wins.reduce((a, b) => (b.kdr > a.kdr ? b : a));
+    highlights.push({
+      id: 'blowout',
+      title: 'Biggest Blowout',
+      description: `${best.enemyKills} enemy kills for just ${best.alliesDead} losses in ${best.fightName} - a ${Number.isFinite(best.kdr) ? best.kdr.toFixed(1) : '∞'}:1 trade.`,
+      fightName: best.fightName,
+      fightIndex: best.i,
+      timestamp: best.timestamp,
+    });
+  }
+
+  const toughLosses = losses.filter((f) => f.alliesDead > 0);
+  if (toughLosses.length > 0) {
+    const worst = toughLosses.reduce((a, b) => (b.alliesDead > a.alliesDead ? b : a));
+    highlights.push({
+      id: 'toughest',
+      title: 'Toughest Fight',
+      description: `Lost ${worst.alliesDead} of ${worst.squadCount} squad members in ${worst.fightName} against ${worst.enemyCount} enemies.`,
+      fightName: worst.fightName,
+      fightIndex: worst.i,
+      timestamp: worst.timestamp,
+    });
+  }
+
+  const longest = perFight.reduce((a, b) => (b.durationMs > a.durationMs ? b : a));
+  if (longest.durationMs > 0) {
+    const mins = Math.floor(longest.durationMs / 60000);
+    const secs = Math.round((longest.durationMs % 60000) / 1000);
+    highlights.push({
+      id: 'longest',
+      title: 'Longest Engagement',
+      description: `${longest.fightName} ran ${mins}m ${secs}s - the longest fight of the night.`,
+      fightName: longest.fightName,
+      fightIndex: longest.i,
+      timestamp: longest.timestamp,
+    });
+  }
+
+  const outnumberedWins = wins.filter((f) => f.enemyCount > f.squadCount);
+  if (outnumberedWins.length > 0) {
+    const best = outnumberedWins.reduce((a, b) => (b.enemyCount / b.squadCount > a.enemyCount / a.squadCount ? b : a));
+    highlights.push({
+      id: 'outnumbered',
+      title: 'Outnumbered and Won',
+      description: `${best.squadCount} squad members took down ${best.enemyCount} enemies in ${best.fightName}.`,
+      fightName: best.fightName,
+      fightIndex: best.i,
+      timestamp: best.timestamp,
+    });
+  }
+
+  const flawless = wins.filter((f) => f.alliesDown === 0);
+  if (flawless.length > 0) {
+    const best = flawless.reduce((a, b) => (b.enemyKills > a.enemyKills ? b : a));
+    highlights.push({
+      id: 'flawless',
+      title: 'Flawless Victory',
+      description: `${best.enemyKills} enemy kills in ${best.fightName} without a single squad member going down.`,
+      fightName: best.fightName,
+      fightIndex: best.i,
+      timestamp: best.timestamp,
+    });
+  }
+
+  const mvpCandidates = perFight.filter((f) => f.topDownContrib.value > 0);
+  if (mvpCandidates.length > 0) {
+    const best = mvpCandidates.reduce((a, b) => (b.topDownContrib.value > a.topDownContrib.value ? b : a));
+    highlights.push({
+      id: 'mvp-moment',
+      title: 'MVP Moment',
+      description: `${best.topDownContrib.account} put up ${best.topDownContrib.value.toFixed(1)}% of the squad's down contribution in ${best.fightName} - the single best individual performance of the night.`,
+      fightName: best.fightName,
+      fightIndex: best.i,
+      timestamp: best.timestamp,
+      account: best.topDownContrib.account,
+      profession: best.topDownContrib.profession,
+      value: best.topDownContrib.value,
+    });
+  }
+
+  highlights.sort((a, b) => a.timestamp - b.timestamp);
+  return highlights;
+}
+
 // Automated squad-composition/performance insight flags, computed entirely
 // from data Entropy already derives elsewhere (boon uptime, role
 // classification, K/D) - the kind of "what should we fix next raid" read
@@ -1212,6 +1362,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     mechanics: computeMechanicsTimeline(fights),
     topHealingSkills: computeTopHealingSkills(fights),
     deathRecaps: computeDeathRecaps(fights),
+    fightHighlights: computeFightHighlights(fights),
     // Self- vs. group- vs. squad-generation split for stacking/non-stacking
     // boons - reuses AxiBridge's vendored boonGeneration engine as-is, reading
     // player.selfBuffs/groupBuffs/squadBuffs straight from the raw log (each
