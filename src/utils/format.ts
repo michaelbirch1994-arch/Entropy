@@ -16,6 +16,7 @@ export function fmtFixed(n: number | string | undefined | null, digits: number =
   if (n === undefined || n === null) return "—";
   const v = typeof n === "string" ? parseFloat(n) : n;
   if (Number.isNaN(v)) return "—";
+  if (!Number.isFinite(v)) return "∞";
   return v.toFixed(digits);
 }
 
