@@ -37,7 +37,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "PLACEHOLDER_WILL_BE_REPLACED_ONCE_SIGNING_KEY_IS_GENERATED",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUyQzJFQjQwNjZBNjM1NgpSV1JXWTJvR3RDNHNEaE05cU5heXVrUUl5T1FhR3YrMDJuTk9pemZiblZJNzBHamFHUVl1cXAzZwo=",
       "endpoints": [
         "https://github.com/michaelbirch1994-arch/Entropy/releases/latest/download/latest.json"
       ],
