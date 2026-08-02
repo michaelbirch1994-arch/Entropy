@@ -36,6 +36,8 @@ export interface MaxStat {
   value: number;
   player: string;
   count: number;
+  /** Total tracked time (ms) the leading player was active across the fights behind `value`, for computing a true per-second rate instead of a per-fight average. */
+  totalMs?: number;
   profession: string;
   professionList: string[];
 }
