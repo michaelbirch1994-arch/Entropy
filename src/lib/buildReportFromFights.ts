@@ -36,6 +36,7 @@ import type {
   SynergyInsight,
   MechanicsData,
   TopHealingSource,
+  DeathRecapEntry,
 } from '../types/report';
 
 export interface FightInput {
@@ -832,6 +833,68 @@ function computeMechanicsTimeline(fights: FightInput[]): MechanicsData {
   return { fights: fightRows };
 }
 
+// Per-death damage breakdown (dps.report's "Death Recap" panel). Reads
+// player.deathRecap = { deathTime, toDown: [...], toKill: [...] } straight
+// from the raw log (confirmed against EI's JsonPlayer.DeathRecap /
+// JsonDeathRecap / JsonDeathRecapDamageItem JSON doc - toDown covers hits
+// from combat-entry to going down, toKill covers hits from down to the
+// final blow; each item's id is a skill id unless indirectDamage is true,
+// in which case it's a buff id, same s/b-prefixed lookup convention as
+// elsewhere in this file). Only present for players who actually died -
+// most players in most fights won't have one.
+function computeDeathRecaps(fights: FightInput[]): DeathRecapEntry[] {
+  type RawHit = { id?: number; indirectDamage?: boolean; src?: string; damage?: number; time?: number };
+  type RawRecap = { deathTime?: number; toDown?: RawHit[]; toKill?: RawHit[] };
+
+  const out: DeathRecapEntry[] = [];
+
+  fights.forEach((f, fightIndex) => {
+    const raw = f.raw as Record<string, unknown>;
+    const skillMap = (raw.skillMap ?? {}) as Record<string, { name?: string; icon?: string }>;
+    const buffMap = (raw.buffMap ?? {}) as Record<string, { name?: string; icon?: string }>;
+    const players = (raw.players ?? []) as Record<string, unknown>[];
+    const fightName = f.summary.fightName || `Fight ${fightIndex + 1}`;
+
+    function resolveHit(h: RawHit) {
+      const id = Number(h.id);
+      const isIndirect = !!h.indirectDamage;
+      const def = isIndirect ? buffMap[`b${id}`] : skillMap[`s${id}`];
+      return {
+        id: Number.isFinite(id) ? id : 0,
+        name: def?.name || `${isIndirect ? 'Buff' : 'Skill'} ${id}`,
+        icon: def?.icon,
+        isIndirect,
+        src: h.src || 'Unknown',
+        damage: Number(h.damage) || 0,
+        time: Number(h.time) || 0,
+      };
+    }
+
+    for (const p of players) {
+      if (p.notInSquad) continue;
+      const recap = p.deathRecap as RawRecap | undefined;
+      if (!recap || (!recap.toDown?.length && !recap.toKill?.length)) continue;
+
+      out.push({
+        account: typeof p.account === 'string' ? p.account : 'Unknown',
+        profession: typeof p.profession === 'string' ? p.profession : 'Unknown',
+        characterName: typeof p.name === 'string' ? p.name : 'Unknown',
+        fightName,
+        fightIndex,
+        deathTimeMs: Number(recap.deathTime) || 0,
+        toDown: (recap.toDown ?? []).map(resolveHit).sort((a, b) => a.time - b.time),
+        toKill: (recap.toKill ?? []).map(resolveHit).sort((a, b) => a.time - b.time),
+      });
+    }
+  });
+
+  // Most recent deaths first within a report is less useful than grouping by
+  // fight, then chronologically within the fight - matches how someone would
+  // actually review "what killed us" fight by fight.
+  out.sort((a, b) => a.fightIndex - b.fightIndex || a.deathTimeMs - b.deathTimeMs);
+  return out;
+}
+
 // Automated squad-composition/performance insight flags, computed entirely
 // from data Entropy already derives elsewhere (boon uptime, role
 // classification, K/D) - the kind of "what should we fix next raid" read
@@ -1143,6 +1206,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     synergyInsights: computeSynergyInsights(playerEntries, buffCategoryUptimes, roleClassifications, totalSquadKills, totalSquadDeaths, avgSquadSize),
     mechanics: computeMechanicsTimeline(fights),
     topHealingSkills: computeTopHealingSkills(fights),
+    deathRecaps: computeDeathRecaps(fights),
     offensiveAvgMvpScore: offensiveScores.avgScore,
     defensiveAvgMvpScore: defensiveScores.avgScore,
     avgMvpScore: (offensiveScores.avgScore + defensiveScores.avgScore) / 2,
