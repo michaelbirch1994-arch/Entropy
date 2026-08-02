@@ -322,6 +322,76 @@ export interface BoonUptimeData {
   rows: BoonUptimeRow[];
 }
 
+// --- Damage Modifiers (Buffs > Damage Modifiers, like dps.report) ---
+
+export interface DamageModifierColumn {
+  id: number;
+  name: string;
+  icon?: string;
+}
+
+export interface DamageModifierRow {
+  account: string;
+  profession: string;
+  professionList: string[];
+  group: number;
+  /** modifier id -> { damage gained (or damage-under-effect for non-multiplicative mods), hits under the effect } */
+  values: Record<number, { damage: number; hits: number }>;
+}
+
+export interface DamageModifierData {
+  columns: DamageModifierColumn[];
+  rows: DamageModifierRow[];
+}
+
+// --- Rotations (per-fight skill cast timeline, like dps.report's Rotations tab) ---
+
+export interface RotationCast {
+  skillId: number;
+  castTime: number;
+  duration: number;
+}
+
+export interface RotationPlayer {
+  account: string;
+  profession: string;
+  professionList: string[];
+  casts: RotationCast[];
+}
+
+export interface RotationFight {
+  fightId: string;
+  fightName: string;
+  durationMs: number;
+  players: RotationPlayer[];
+}
+
+export interface RotationsData {
+  skillMeta: Record<number, { name: string; icon?: string }>;
+  fights: RotationFight[];
+}
+
+// --- DPS Graph (per-fight cumulative damage over time, like dps.report's Graph tab) ---
+
+export interface DpsGraphPlayerSeries {
+  account: string;
+  profession: string;
+  points: number[];
+}
+
+export interface DpsGraphFight {
+  fightId: string;
+  fightName: string;
+  durationMs: number;
+  /** Cumulative squad damage, one point per second. */
+  squad: number[];
+  players: DpsGraphPlayerSeries[];
+}
+
+export interface DpsGraphData {
+  fights: DpsGraphFight[];
+}
+
 export interface ReportStats {
   total: number;
   wins: number;
@@ -376,6 +446,14 @@ export interface ReportStats {
   attendanceData: { account: string; characterNames: string[]; combatTimeMs: number; squadTimeMs: number; classTimes: { profession: string; timeMs: number }[] }[];
   /** Only populated for reports built from raw logs (RawLogImporter); absent on classic AxiBridge report.json files. */
   boonUptimes?: BoonUptimeData;
+  /** Uptime tables for every EI buff classification (Boon, Condition, Offensive, Defensive, Support, Debuff, Gear, Enhancement, Nourishment, Other Consumable, Other), keyed by classification name. Raw-log reports only. */
+  buffCategoryUptimes?: Record<string, BoonUptimeData>;
+  /** Per-player damage modifier (trait/sigil/rune) contribution table. Raw-log reports only. */
+  damageModifiers?: DamageModifierData;
+  /** Per-fight skill cast timelines. Raw-log reports only. */
+  rotations?: RotationsData;
+  /** Per-fight cumulative damage-over-time series. Raw-log reports only. */
+  dpsGraph?: DpsGraphData;
   offensiveAvgMvpScore: number;
   defensiveAvgMvpScore: number;
   avgMvpScore: number;
