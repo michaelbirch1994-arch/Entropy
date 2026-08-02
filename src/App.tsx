@@ -22,6 +22,7 @@ import RotationsView from "./views/RotationsView";
 import DpsGraphView from "./views/DpsGraphView";
 import ReplayView from "./views/ReplayView";
 import MechanicsView from "./views/MechanicsView";
+import DeathRecapView from "./views/DeathRecapView";
 import { Activity, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, Link2, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
@@ -49,6 +50,7 @@ const VIEW_TITLES: Record<string, string> = {
   "dps-graph": "DPS Graph",
   "fight-replay": "Fight Replay",
   mechanics: "Mechanics Timeline",
+  "death-recap": "Death Recap",
 };
 
 function ReportRouter({ activeView }: { activeView: string }) {
@@ -73,6 +75,7 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "dps-graph": return <DpsGraphView />;
     case "fight-replay": return <ReplayView />;
     case "mechanics": return <MechanicsView />;
+    case "death-recap": return <DeathRecapView />;
     default: return <OverviewView />;
   }
 }
