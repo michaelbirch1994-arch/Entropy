@@ -328,6 +328,8 @@ export interface DamageModifierColumn {
   id: number;
   name: string;
   icon?: string;
+  /** EI's own description of the trait/sigil/rune/skill this modifier represents (DamageModDesc.Description). */
+  description?: string;
   /** From EI's DamageModDesc.NonMultiplier: false (the common case) means the value is a real, already-realized
    * damage gain from this modifier. True means the value is total damage done while the effect was active
    * (not the gain itself - the multiplier isn't known from the log). */
@@ -335,6 +337,11 @@ export interface DamageModifierColumn {
   /** From EI's DamageModDesc.IsCounter: true means the value is damage done while some condition held,
    * used as an informational count rather than a damage gain. */
   isCounter: boolean;
+  /** How many of the tracked players triggered this modifier at least once - a rough read on how many were
+   * actually running the trait/sigil/rune behind it (raw combat logs don't include full gear/trait builds,
+   * only what measurably fired, so a 0 here doesn't prove a player *isn't* running it - just that it never
+   * triggered for them this session). */
+  playersWithIt: number;
 }
 
 export interface DamageModifierRow {
