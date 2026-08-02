@@ -10,6 +10,7 @@ import {
   Trophy,
   Layers,
   Map as MapIcon,
+  Sparkles,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import EntropyLogo from "../ui/EntropyLogo";
@@ -39,6 +40,7 @@ const MENU: NavSection[] = [
       { id: "fight-breakdown", label: "Fight Breakdown" },
       { id: "top-players", label: "Top Players" },
       { id: "top-skills", label: "Top Skills" },
+      { id: "buffs", label: "Buffs" },
       { id: "classes", label: "Classes" },
       { id: "map-distribution", label: "Map Distribution" },
     ],
@@ -175,6 +177,7 @@ export const VIEW_ICONS: Record<string, ReactNode> = {
   "fight-breakdown": <Swords className="w-4 h-4" />,
   "top-players": <Trophy className="w-4 h-4" />,
   "top-skills": <Zap className="w-4 h-4" />,
+  buffs: <Sparkles className="w-4 h-4" />,
   classes: <Layers className="w-4 h-4" />,
   "map-distribution": <MapIcon className="w-4 h-4" />,
   "commander-stats": <Target className="w-4 h-4" />,
