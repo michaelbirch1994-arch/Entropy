@@ -26,6 +26,9 @@ import type {
   Leaderboards,
   ClassSlice,
   RoleClassification,
+  BoonUptimeData,
+  BoonUptimeColumn,
+  BoonUptimeRow,
 } from '../types/report';
 
 export interface FightInput {
@@ -203,6 +206,99 @@ function computeCategoryScores(metrics: MvpMetric[], pool: PlayerStats[]) {
     bronze: enrichPlacement(scores[2]) ?? emptyMvp(),
     avgScore: scores.length > 0 ? scores.reduce((sum, s) => sum + s.score, 0) / scores.length : 0,
   };
+}
+
+// --- Boon uptime (Buffs > Boons > Uptime, like dps.report) ---
+//
+// Not part of bridge-metrics — EI already reports per-player buff uptime
+// percentages directly on the raw log (`player.buffUptimes[].buffData[0].uptime`,
+// phase 0 = full fight), and each fight's `buffMap` classifies each buff id
+// as "Boon"/"Condition"/etc. So this reads the raw fights directly rather
+// than going through the aggregation core, and averages uptime % across
+// however many fights each player joined.
+
+const BOON_PRIORITY = [
+  'Might', 'Quickness', 'Fury', 'Alacrity', 'Protection', 'Regeneration',
+  'Vigor', 'Aegis', 'Stability', 'Swiftness', 'Resistance', 'Resolution',
+];
+
+function computeBoonUptimes(fights: FightInput[], playerEntries: PlayerStats[]): BoonUptimeData {
+  const buffMeta = new Map<number, { name: string; icon?: string }>();
+  const acc = new Map<string, Map<number, { sum: number; count: number }>>();
+  const groupByAccount = new Map<string, number>();
+
+  for (const f of fights) {
+    const raw = f.raw as Record<string, unknown>;
+    const buffMap = (raw.buffMap ?? {}) as Record<string, { name?: string; icon?: string; classification?: string }>;
+    for (const key of Object.keys(buffMap)) {
+      const def = buffMap[key];
+      if (def && def.classification === 'Boon') {
+        const id = Number(key.replace(/^b/, ''));
+        if (Number.isFinite(id) && !buffMeta.has(id)) {
+          buffMeta.set(id, { name: def.name || `Boon ${id}`, icon: def.icon });
+        }
+      }
+    }
+
+    const players = (raw.players ?? []) as Record<string, unknown>[];
+    for (const p of players) {
+      if (p.notInSquad) continue;
+      const account = typeof p.account === 'string' ? p.account : null;
+      if (!account) continue;
+      if (typeof p.group === 'number') groupByAccount.set(account, p.group);
+
+      let accMap = acc.get(account);
+      if (!accMap) { accMap = new Map(); acc.set(account, accMap); }
+
+      const buffUptimes = (p.buffUptimes ?? []) as Array<{ id?: number; buffData?: Array<{ uptime?: number }> }>;
+      for (const entry of buffUptimes) {
+        const id = Number(entry?.id);
+        if (!Number.isFinite(id)) continue;
+        const uptime = Number(entry?.buffData?.[0]?.uptime);
+        if (!Number.isFinite(uptime)) continue;
+        const cur = accMap.get(id) || { sum: 0, count: 0 };
+        cur.sum += uptime;
+        cur.count += 1;
+        accMap.set(id, cur);
+      }
+    }
+  }
+
+  const columns: BoonUptimeColumn[] = Array.from(buffMeta.entries())
+    .map(([id, meta]) => ({ id, name: meta.name, icon: meta.icon }))
+    .sort((a, b) => {
+      const ai = BOON_PRIORITY.indexOf(a.name);
+      const bi = BOON_PRIORITY.indexOf(b.name);
+      if (ai === -1 && bi === -1) return a.name.localeCompare(b.name);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+
+  const columnIds = new Set(columns.map((c) => c.id));
+
+  const rows: BoonUptimeRow[] = playerEntries
+    .filter((s) => s.account && s.account !== 'Unknown')
+    .map((s) => {
+      const accMap = acc.get(s.account);
+      const uptimes: Record<number, number> = {};
+      if (accMap) {
+        accMap.forEach((v, id) => {
+          if (columnIds.has(id)) uptimes[id] = v.count > 0 ? v.sum / v.count : 0;
+        });
+      }
+      return {
+        account: s.account,
+        profession: s.profession,
+        professionList: s.professionList ?? [],
+        group: groupByAccount.get(s.account) ?? 0,
+        logsJoined: s.logsJoined,
+        uptimes,
+      };
+    })
+    .sort((a, b) => a.group - b.group || a.account.localeCompare(b.account));
+
+  return { columns, rows };
 }
 
 export function buildReportFromFights(fights: FightInput[]): WvWReport {
@@ -419,6 +515,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     commanderStats: { rows: [] },
     roleClassifications,
     attendanceData,
+    boonUptimes: computeBoonUptimes(fights, playerEntries),
     offensiveAvgMvpScore: offensiveScores.avgScore,
     defensiveAvgMvpScore: defensiveScores.avgScore,
     avgMvpScore: (offensiveScores.avgScore + defensiveScores.avgScore) / 2,
