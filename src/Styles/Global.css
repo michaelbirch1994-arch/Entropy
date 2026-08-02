@@ -91,6 +91,13 @@ kbd {
   z-index: -1;
   overflow: hidden;
   background:
+    /* Darkens roughly the top 240px of the viewport regardless of where
+       the animated nebula glow blobs (.entropy-nebula-1/3) happen to sit,
+       so the sticky page header and sidebar logo strip - both of which
+       already use bg-black/30-45 + backdrop-blur - always get a
+       consistently dark surface to sit on instead of occasionally
+       fighting a bright patch of nebula bleeding through. */
+    linear-gradient(to bottom, rgba(2, 1, 6, 0.75) 0%, rgba(2, 1, 6, 0) 240px),
     radial-gradient(ellipse 130% 90% at 50% -10%, rgba(14, 19, 48, 0.1) 0%, rgba(7, 10, 28, 0.2) 45%, rgba(2, 1, 6, 0.45) 100%),
     url("/images/nebula-bg.jpg") center 30% / cover no-repeat;
   background-color: #05040a;
