@@ -1,7 +1,10 @@
+import { motion } from "framer-motion";
 import { useReport } from "../store/ReportContext";
 import { fmtCompact, fmtNum, fmtFixed, fmtFixedGrouped, profChip, profIcon } from "../utils/format";
 import type { MvpCard, MvpTopStat } from "../types/report";
 import { Swords, Shield, Crown, Activity, Droplet, Zap, Target, Flame } from "lucide-react";
+import { generateFightRecap } from "../lib/generateFightRecap";
+import RecapPanel from "../components/ui/RecapPanel";
 
 const ACCENT_STYLES = {
   amber: {
@@ -78,7 +81,12 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label }: {
   };
 
   return (
-    <div className={`bg-[#0a101f]/55 backdrop-blur-md border rounded-2xl p-5 transition-all duration-300 flex flex-col ${a.border} ${a.glow}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 16, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.45, ease: "easeOut", delay: accent === "amber" ? 0 : 0.1 }}
+      className={`bg-[#0a101f]/55 backdrop-blur-md border rounded-2xl p-5 transition-colors duration-300 flex flex-col ${a.border} ${a.glow}`}
+    >
       <div className={`flex items-center gap-2 ${a.heading} text-[11px] font-black uppercase tracking-widest mb-4`}>
         {accent === "amber" ? <Swords className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
         {label}
@@ -86,9 +94,14 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label }: {
 
       <div className="flex justify-between items-start mb-6">
         <div className="flex gap-4">
-          <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center ${a.circle}`}>
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.25, type: "spring", stiffness: 200 }}
+            className={`w-14 h-14 rounded-full border-2 flex items-center justify-center ${a.circle}`}
+          >
             <Crown className={`w-7 h-7 ${a.crown}`} />
-          </div>
+          </motion.div>
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-xl font-black text-slate-100">{mvp.account}</h3>
@@ -119,7 +132,7 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label }: {
         {renderMedal(silver, "silver")}
         {renderMedal(bronze, "bronze")}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -139,8 +152,13 @@ export default function OverviewView() {
     { label: "Interrupts /s", value: fmtFixedGrouped(s.maxInterrupts.value / (s.maxInterrupts.count || 1)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, accent: "text-slate-100" },
   ];
 
+  const recap = generateFightRecap(s);
+
   return (
     <div className="space-y-6 animate-view pb-12">
+      {/* AI-style recap */}
+      <RecapPanel recap={recap} />
+
       {/* Top stats banner */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-slate-800/60 rounded-2xl overflow-hidden border border-slate-800/80">
         {[
@@ -148,11 +166,17 @@ export default function OverviewView() {
           { label: "Allied Deaths", value: s.totalSquadDeaths, color: "text-slate-100" },
           { label: "Enemy Downs", value: s.totalEnemyDowns, color: "text-slate-100" },
           { label: "Enemy Deaths", value: s.totalEnemyDeaths, color: "text-slate-100" },
-        ].map((b) => (
-          <div key={b.label} className="text-center bg-[#0a101f] py-4">
+        ].map((b, i) => (
+          <motion.div
+            key={b.label}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: i * 0.05 }}
+            className="text-center bg-[#0a101f] py-4"
+          >
             <span className={`text-3xl font-black font-mono ${b.color}`}>{fmtNum(b.value)}</span>
             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mt-1">{b.label}</span>
-          </div>
+          </motion.div>
         ))}
       </div>
 
@@ -164,8 +188,15 @@ export default function OverviewView() {
 
       {/* Metrics grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {perSecCards.map((c) => (
-          <div key={c.label} className="bg-[#0a101f]/90 border border-slate-800/80 p-4 rounded-2xl shadow-lg hover:border-slate-700 transition-all flex flex-col justify-between">
+        {perSecCards.map((c, i) => (
+          <motion.div
+            key={c.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.15 + i * 0.04 }}
+            whileHover={{ y: -2 }}
+            className="bg-[#0a101f]/90 border border-slate-800/80 p-4 rounded-2xl shadow-lg hover:border-slate-700 transition-colors flex flex-col justify-between"
+          >
             <div>
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                 {c.icon}
@@ -177,7 +208,7 @@ export default function OverviewView() {
               <span className="text-sky-400 font-bold truncate">{c.player}</span>
               <span className="text-slate-500 font-mono">{c.count} logs</span>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>
