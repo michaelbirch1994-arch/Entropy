@@ -5,12 +5,17 @@
 // older/alternate logs may not have it, so this returns null rather than
 // throwing when it's missing and the UI shows a "not available" state.
 //
-// NOTE: exact field names for combatReplayData weren't verified against a
-// live fetched log in this session (no sandbox network path to dps.report
-// was exercised for this feature) - this follows Elite Insights' documented
-// replay schema (positions as [time, x, y] triples, dead/down as [start,end]
-// interval pairs) but should be spot-checked against a real fight the first
-// time it's used, and adjusted if the shape differs.
+// Confirmed against EI's JsonActorCombatReplayData / JsonCombatReplayMetaData
+// JSON doc (baaron4.github.io/GW2-Elite-Insights-Parser). The real schema is
+// NOT [time, x, y] triples (an earlier, unverified pass through this file
+// assumed that and silently produced zero points for every fight, since
+// every entry has length 2 and got filtered out): per-actor
+// combatReplayData.positions is a flat list of [x, y] pairs sampled at a
+// fixed cadence - the time for sample i is
+// ceil(combatReplayData.start / pollingRate) * pollingRate + i * pollingRate,
+// where pollingRate comes from the fight-level
+// combatReplayMetaData.pollingRate (defaults to 150ms if that block is
+// missing for some reason).
 
 import type { RawFightLog } from "../types/rawFight";
 
@@ -37,17 +42,20 @@ export interface ReplayData {
   players: ReplayPlayerTrack[];
 }
 
-function asPointArray(v: unknown): ReplayPoint[] {
+// combatReplayData.positions is a flat list of [x, y] pairs (NOT [t,x,y] -
+// EI doesn't store a timestamp per sample, the cadence is fixed). Sample i's
+// time is t0 + i*pollingRate, where t0 = ceil(start/pollingRate)*pollingRate.
+function asPositionPoints(v: unknown, t0: number, pollingRate: number): ReplayPoint[] {
   if (!Array.isArray(v)) return [];
   const out: ReplayPoint[] = [];
-  for (const entry of v) {
-    if (!Array.isArray(entry) || entry.length < 3) continue;
-    const [t, x, y] = entry as unknown[];
-    if (typeof t === "number" && typeof x === "number" && typeof y === "number" && Number.isFinite(t) && Number.isFinite(x) && Number.isFinite(y)) {
-      out.push({ t, x, y });
+  v.forEach((entry, i) => {
+    if (!Array.isArray(entry) || entry.length < 2) return;
+    const [x, y] = entry as unknown[];
+    if (typeof x === "number" && typeof y === "number" && Number.isFinite(x) && Number.isFinite(y)) {
+      out.push({ t: t0 + i * pollingRate, x, y });
     }
-  }
-  return out.sort((a, b) => a.t - b.t);
+  });
+  return out;
 }
 
 function asIntervals(v: unknown): [number, number][] {
@@ -62,7 +70,11 @@ function asIntervals(v: unknown): [number, number][] {
 }
 
 export function parseReplayData(log: RawFightLog): ReplayData | null {
+  const rawLog = log as unknown as Record<string, unknown>;
   const rawPlayers = (log.players ?? []) as unknown as Record<string, unknown>[];
+  const replayMeta = (rawLog.combatReplayMetaData ?? {}) as Record<string, unknown>;
+  const pollingRate = Number(replayMeta.pollingRate) > 0 ? Number(replayMeta.pollingRate) : 150;
+
   const players: ReplayPlayerTrack[] = [];
   let minX = Infinity;
   let maxX = -Infinity;
@@ -70,8 +82,11 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
   let maxY = -Infinity;
 
   for (const p of rawPlayers) {
-    const crd = (p.combatReplayData ?? {}) as Record<string, unknown>;
-    const points = asPointArray(crd.positions);
+    const crd = p.combatReplayData as Record<string, unknown> | undefined;
+    if (!crd) continue;
+    const start = Number(crd.start) || 0;
+    const t0 = Math.ceil(start / pollingRate) * pollingRate;
+    const points = asPositionPoints(crd.positions, t0, pollingRate);
     if (points.length === 0) continue;
 
     for (const pt of points) {

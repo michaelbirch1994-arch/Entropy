@@ -114,12 +114,19 @@ function buildLeaderboard(
   });
 }
 
-function getTop(rows: LeaderboardEntry[]): MaxStat {
+// `count` on a leaderboard entry is logsJoined (used for the "N logs" caption
+// under a stat card) - it is NOT seconds, so dividing value/count gives a
+// per-fight average, not a per-second rate. Cards labelled "/s" need the
+// leading player's actual tracked playtime, so this also looks up their
+// totalFightMs from the same player pool the leaderboard was built from.
+function getTop(rows: LeaderboardEntry[], pool?: PlayerStats[]): MaxStat {
   const entry = rows[0];
+  const stat = entry ? pool?.find((s) => s.account === entry.account) : undefined;
   return {
     value: entry?.value ?? 0,
     player: entry?.account ?? '-',
     count: entry?.count ?? 0,
+    totalMs: stat?.totalFightMs ?? 0,
     profession: entry?.profession ?? 'Unknown',
     professionList: entry?.professionList ?? [],
   };
@@ -999,17 +1006,17 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     total, wins, losses, avgSquadSize, avgEnemies, squadKDR, enemyKDR,
     totalSquadKills, totalSquadDeaths, totalEnemyKills, totalEnemyDeaths, totalSquadDowns, totalEnemyDowns,
     leaderboards,
-    maxDownContrib: getTop(leaderboards.downContrib),
-    maxBarrier: getTop(leaderboards.barrier),
-    maxHealing: getTop(leaderboards.healing),
-    maxDodges: getTop(leaderboards.dodges),
-    maxStrips: getTop(leaderboards.strips),
-    maxCleanses: getTop(leaderboards.cleanses),
-    maxCC: getTop(leaderboards.cc),
-    maxInterrupts: getTop(leaderboards.interrupts),
-    maxCCAndInterrupts: getTop(leaderboards.ccAndInterrupts),
-    maxStab: getTop(leaderboards.stability),
-    closestToTag: getTop(leaderboards.closestToTag),
+    maxDownContrib: getTop(leaderboards.downContrib, playerEntries),
+    maxBarrier: getTop(leaderboards.barrier, playerEntries),
+    maxHealing: getTop(leaderboards.healing, playerEntries),
+    maxDodges: getTop(leaderboards.dodges, playerEntries),
+    maxStrips: getTop(leaderboards.strips, playerEntries),
+    maxCleanses: getTop(leaderboards.cleanses, playerEntries),
+    maxCC: getTop(leaderboards.cc, playerEntries),
+    maxInterrupts: getTop(leaderboards.interrupts, playerEntries),
+    maxCCAndInterrupts: getTop(leaderboards.ccAndInterrupts, playerEntries),
+    maxStab: getTop(leaderboards.stability, playerEntries),
+    closestToTag: getTop(leaderboards.closestToTag, playerEntries),
     ...computeTopSkills(fights),
     topSkillsByDamage: [],
     topSkillsByDownContribution: [],
