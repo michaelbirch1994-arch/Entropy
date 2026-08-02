@@ -1,5 +1,5 @@
 import { useReport } from "../store/ReportContext";
-import { fmtCompact, fmtNum, fmtFixed, fmtFixedGrouped, profChip } from "../utils/format";
+import { fmtCompact, fmtNum, fmtFixed, fmtFixedGrouped, profChip, profIcon } from "../utils/format";
 import type { MvpCard, MvpTopStat } from "../types/report";
 import { Swords, Shield, Crown, Activity, Droplet, Zap, Target, Flame } from "lucide-react";
 
@@ -53,8 +53,12 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label }: {
           {medal === "silver" ? "Silver" : "Bronze"}
         </span>
         <div className="flex items-center gap-2 mb-2">
-          <div className={`w-5 h-5 rounded-sm flex items-center justify-center border text-[10px] ${profChip(card.profession)}`}>
-            {card.profession.charAt(0)}
+          <div className={`w-5 h-5 rounded-sm flex items-center justify-center border overflow-hidden ${profChip(card.profession)}`}>
+            {profIcon(card.profession) ? (
+              <img src={profIcon(card.profession)} alt={card.profession} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-[10px]">{card.profession.charAt(0)}</span>
+            )}
           </div>
           <div>
             <p className="text-xs font-bold text-slate-200 leading-none">{card.account}</p>
