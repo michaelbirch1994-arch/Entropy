@@ -648,7 +648,8 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
     return Array.from(map.entries())
       .map(([id, v]) => ({
         name: skillMeta.get(id)?.name ?? `Skill ${id}`,
-        icon: id,
+        icon: skillMeta.get(id)?.icon,
+        id,
         damage: v.damage,
         hits: v.hits,
         downContribution: v.downContribution,
