@@ -697,14 +697,25 @@ function computeReplayFights(fights: FightInput[]) {
 
 // Top outgoing healing sources squad-wide, by skill or trait/buff, mirroring
 // dps.report's healing distribution breakdown - this is what makes something
-// like a Reaper's "Life Siphon" (a directly-cast skill) or "Replenishing
-// Despair" (a trait that converts damage dealt into self-healing) show up as
-// a quantified line instead of disappearing into an undifferentiated total.
+// like a necromancer's "Life Siphon" (a directly-cast dagger skill, API id
+// 69302, that deals damage and heals its caster per pulse) or a revenant's
+// "Replenishing Despair" (a Corruption trait, id 1741, whose triggered
+// "trait skill" effect id 76497 siphons health from nearby enemies whenever
+// the revenant gains dark aura - verified against the live GW2 wiki, not
+// assumed) show up as a quantified line instead of disappearing into an
+// undifferentiated total.
 // Reads player.extHealingStats.totalHealingDist[phase 0] = [{ totalHealing,
 // hits, id, indirectHealing }] straight from the raw log (confirmed against
 // EI's EXTJsonPlayerHealingStats.TotalHealingDist / EXTJsonHealingDist JSON
-// doc - indirectHealing=true means id is a buff/trait id, looked up in
-// buffMap; false means id is a real skill id, looked up in skillMap). This
+// doc). indirectHealing tells us whether to *label* an entry "Trait" or
+// "Skill" in the UI, but it does NOT reliably predict which map (skillMap
+// vs buffMap) the id's actual name/icon live in - "trait skills" like
+// Replenishing Despair behave like triggered skills in the combat log, so
+// EI may file their metadata under either map depending on the ability.
+// computeTopSkills() above already had to work around this exact same gap
+// for condition-damage ticks (see its comment ~line 622); this reuses that
+// same skillMap-then-buffMap merge instead of a strict either/or lookup, so
+// an id resolves correctly regardless of which map actually holds it. This
 // extension data is only present when the log was recorded with arcdps's
 // healing addon active - the same precondition HealingPlayer.hasHealAddon
 // already flags elsewhere in this file.
@@ -712,12 +723,30 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
   type HealDistEntry = { totalHealing?: number; hits?: number; id?: number; indirectHealing?: boolean };
 
   const totals = new Map<string, { id: number; healing: number; hits: number; isTrait: boolean }>();
-  const nameMeta = new Map<string, { name: string; icon?: string }>();
+  // Merged skill+buff name/icon lookup, keyed by numeric id regardless of
+  // which map it came from - same precedence (skillMap first, buffMap only
+  // fills gaps) as computeTopSkills' skillMeta above.
+  const nameMeta = new Map<number, { name: string; icon?: string }>();
 
   for (const f of fights) {
     const raw = f.raw as Record<string, unknown>;
     const skillMap = (raw.skillMap ?? {}) as Record<string, { name?: string; icon?: string }>;
     const buffMap = (raw.buffMap ?? {}) as Record<string, { name?: string; icon?: string }>;
+    for (const key of Object.keys(skillMap)) {
+      const def = skillMap[key];
+      const id = Number(key.replace(/^s/, ''));
+      if (Number.isFinite(id) && def?.name && !nameMeta.has(id)) {
+        nameMeta.set(id, { name: def.name, icon: def.icon });
+      }
+    }
+    for (const key of Object.keys(buffMap)) {
+      const def = buffMap[key];
+      const id = Number(key.replace(/^b/, ''));
+      if (Number.isFinite(id) && def?.name && !nameMeta.has(id)) {
+        nameMeta.set(id, { name: def.name, icon: def.icon });
+      }
+    }
+
     const players = (raw.players ?? []) as Record<string, unknown>[];
 
     for (const p of players) {
@@ -735,10 +764,6 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
         if (healing === 0 && hits === 0) continue;
 
         const key = `${isTrait ? 'b' : 's'}${id}`;
-        if (!nameMeta.has(key)) {
-          const def = isTrait ? buffMap[`b${id}`] : skillMap[`s${id}`];
-          nameMeta.set(key, { name: def?.name || `${isTrait ? 'Trait' : 'Skill'} ${id}`, icon: def?.icon });
-        }
         const cur = totals.get(key) || { id, healing: 0, hits: 0, isTrait };
         cur.healing += healing;
         cur.hits += hits;
@@ -748,9 +773,16 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
   }
 
   return Array.from(totals.entries())
-    .map(([key, v]) => {
-      const meta = nameMeta.get(key);
-      return { id: v.id, name: meta?.name || `Source ${v.id}`, icon: meta?.icon, healing: v.healing, hits: v.hits, isTrait: v.isTrait };
+    .map(([, v]) => {
+      const meta = nameMeta.get(v.id);
+      return {
+        id: v.id,
+        name: meta?.name || `${v.isTrait ? 'Trait' : 'Skill'} ${v.id}`,
+        icon: meta?.icon,
+        healing: v.healing,
+        hits: v.hits,
+        isTrait: v.isTrait,
+      };
     })
     .sort((a, b) => b.healing - a.healing)
     .slice(0, 25);
