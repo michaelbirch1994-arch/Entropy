@@ -33,6 +33,7 @@ import type {
   DamageModifierData,
   RotationsData,
   DpsGraphData,
+  SynergyInsight,
 } from '../types/report';
 
 export interface FightInput {
@@ -356,14 +357,14 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
   type ModItem = { hitCount?: number; totalHitCount?: number; damageGain?: number; totalDamage?: number };
   type ModEntry = { id?: number; damageModifiers?: ModItem[] };
 
-  const modMeta = new Map<number, { name: string; icon?: string }>();
+  const modMeta = new Map<number, { name: string; icon?: string; nonMultiplier: boolean; isCounter: boolean }>();
   const totals = new Map<number, number>();
   const accRows = new Map<string, { profession: string; professionList: string[]; group: number; values: Map<number, { damage: number; hits: number }> }>();
 
   for (const f of fights) {
     const raw = f.raw as Record<string, unknown>;
-    const modMap = (raw.damageModMap ?? {}) as Record<string, { name?: string; icon?: string; incoming?: boolean }>;
-    const idToDesc = new Map<number, { name?: string; icon?: string; incoming?: boolean }>();
+    const modMap = (raw.damageModMap ?? {}) as Record<string, { name?: string; icon?: string; incoming?: boolean; nonMultiplier?: boolean; isCounter?: boolean }>;
+    const idToDesc = new Map<number, { name?: string; icon?: string; incoming?: boolean; nonMultiplier?: boolean; isCounter?: boolean }>();
     for (const key of Object.keys(modMap)) {
       const id = Number(key.replace(/^d/, ''));
       if (!Number.isFinite(id)) continue;
@@ -394,7 +395,14 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
         const hits = Number(item.totalHitCount) || 0;
         if (damage === 0 && hits === 0) continue;
 
-        if (!modMeta.has(id)) modMeta.set(id, { name: desc?.name || `Modifier ${id}`, icon: desc?.icon });
+        if (!modMeta.has(id)) {
+          modMeta.set(id, {
+            name: desc?.name || `Modifier ${id}`,
+            icon: desc?.icon,
+            nonMultiplier: !!desc?.nonMultiplier,
+            isCounter: !!desc?.isCounter,
+          });
+        }
         totals.set(id, (totals.get(id) || 0) + damage);
 
         const cur = row.values.get(id) || { damage: 0, hits: 0 };
@@ -406,7 +414,7 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
   }
 
   const columns: DamageModifierData['columns'] = Array.from(modMeta.entries())
-    .map(([id, meta]) => ({ id, name: meta.name, icon: meta.icon }))
+    .map(([id, meta]) => ({ id, name: meta.name, icon: meta.icon, nonMultiplier: meta.nonMultiplier, isCounter: meta.isCounter }))
     .sort((a, b) => (totals.get(b.id) || 0) - (totals.get(a.id) || 0))
     .slice(0, 24);
   const columnIds = new Set(columns.map((c) => c.id));
@@ -638,6 +646,93 @@ function computeReplayFights(fights: FightInput[]) {
   return rows;
 }
 
+// Automated squad-composition/performance insight flags, computed entirely
+// from data Entropy already derives elsewhere (boon uptime, role
+// classification, K/D) - the kind of "what should we fix next raid" read
+// that raw dps.report/EI output doesn't surface on its own.
+function computeSynergyInsights(
+  playerEntries: PlayerStats[],
+  buffCategoryUptimes: Record<string, BoonUptimeData>,
+  roleClassifications: RoleClassification[],
+  totalSquadKills: number,
+  totalSquadDeaths: number,
+  avgSquadSize: number,
+): SynergyInsight[] {
+  const insights: SynergyInsight[] = [];
+  const boons = buffCategoryUptimes['Boons'];
+
+  function avgUptime(boonName: string): number | null {
+    if (!boons) return null;
+    const col = boons.columns.find((c) => c.name === boonName);
+    if (!col) return null;
+    const withData = boons.rows.filter((r) => r.uptimes[col.id] !== undefined);
+    if (withData.length === 0) return null;
+    return withData.reduce((sum, r) => sum + (r.uptimes[col.id] || 0), 0) / withData.length;
+  }
+
+  const quickness = avgUptime('Quickness');
+  if (quickness !== null) {
+    if (quickness < 20) {
+      insights.push({ id: 'quickness', severity: 'critical', title: 'Very low Quickness uptime', detail: `Squad averaged only ${quickness.toFixed(0)}% Quickness uptime - DPS is likely being left on the table without a dedicated quickness support.` });
+    } else if (quickness < 50) {
+      insights.push({ id: 'quickness', severity: 'warn', title: 'Low Quickness uptime', detail: `Squad averaged ${quickness.toFixed(0)}% Quickness uptime, below the ~70%+ a coordinated squad usually holds.` });
+    } else {
+      insights.push({ id: 'quickness', severity: 'good', title: 'Solid Quickness uptime', detail: `Squad averaged ${quickness.toFixed(0)}% Quickness uptime.` });
+    }
+  }
+
+  const alacrity = avgUptime('Alacrity');
+  if (alacrity !== null) {
+    if (alacrity < 20) {
+      insights.push({ id: 'alacrity', severity: 'warn', title: 'Very low Alacrity uptime', detail: `Squad averaged only ${alacrity.toFixed(0)}% Alacrity uptime.` });
+    } else if (alacrity >= 50) {
+      insights.push({ id: 'alacrity', severity: 'good', title: 'Solid Alacrity uptime', detail: `Squad averaged ${alacrity.toFixed(0)}% Alacrity uptime.` });
+    }
+  }
+
+  const stability = avgUptime('Stability');
+  if (stability !== null) {
+    if (stability < 15) {
+      insights.push({ id: 'stability', severity: 'critical', title: 'Very low Stability uptime', detail: `Squad averaged only ${stability.toFixed(0)}% Stability uptime - vulnerable to CC chains and pulls/knockbacks.` });
+    } else if (stability < 30) {
+      insights.push({ id: 'stability', severity: 'warn', title: 'Low Stability uptime', detail: `Squad averaged ${stability.toFixed(0)}% Stability uptime.` });
+    }
+  }
+
+  const supportCount = roleClassifications.filter((r) => r.role === 'support').length;
+  const damageCount = roleClassifications.filter((r) => r.role === 'damage').length;
+  if (playerEntries.length >= 5) {
+    if (supportCount === 0) {
+      insights.push({ id: 'no-support', severity: 'critical', title: 'No dedicated support detected', detail: 'No player was classified into a support role this session - the squad may have been running without a healer/boon support.' });
+    } else if (supportCount / Math.max(1, playerEntries.length) < 0.15) {
+      insights.push({ id: 'thin-support', severity: 'warn', title: 'Thin support coverage', detail: `Only ${supportCount} of ${playerEntries.length} tracked players were classified as support, against ${damageCount} damage.` });
+    } else {
+      insights.push({ id: 'support-ratio', severity: 'good', title: 'Healthy support ratio', detail: `${supportCount} of ${playerEntries.length} tracked players were classified as support.` });
+    }
+  }
+
+  if (totalSquadDeaths > 0 && totalSquadKills > 0) {
+    const kdr = totalSquadKills / totalSquadDeaths;
+    if (kdr < 1) {
+      insights.push({ id: 'kdr', severity: 'warn', title: 'Trading down', detail: `Squad K/D was ${kdr.toFixed(2)} - taking more deaths than kills across these fights.` });
+    } else if (kdr >= 3) {
+      insights.push({ id: 'kdr', severity: 'good', title: 'Strong trading', detail: `Squad K/D was ${kdr.toFixed(2)} across these fights.` });
+    }
+  }
+
+  const heavyDownPlayers = playerEntries.filter((s) => s.totalFightMs > 0 && s.downs >= 3);
+  if (heavyDownPlayers.length > 0) {
+    const names = heavyDownPlayers.slice(0, 3).map((s) => s.account).join(', ');
+    insights.push({ id: 'heavy-downs', severity: 'warn', title: 'Repeated downs on a few players', detail: `${names}${heavyDownPlayers.length > 3 ? ` +${heavyDownPlayers.length - 3} more` : ''} were downed 3+ times - worth checking positioning or focus-fire priority on them.` });
+  }
+
+  if (avgSquadSize > 0 && avgSquadSize < 5) {
+    insights.push({ id: 'small-squad', severity: 'info', title: 'Small squad size', detail: `Average squad size was ${avgSquadSize} - some stats (role balance, boon coverage) are noisier with fewer players.` });
+  }
+
+  return insights;
+}
+
 export function buildReportFromFights(fights: FightInput[]): WvWReport {
   if (fights.length === 0) throw new Error('No fights to combine.');
 
@@ -859,6 +954,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     rotations: computeRotations(fights),
     dpsGraph: computeDpsGraph(fights),
     replayFights: computeReplayFights(fights),
+    synergyInsights: computeSynergyInsights(playerEntries, buffCategoryUptimes, roleClassifications, totalSquadKills, totalSquadDeaths, avgSquadSize),
     offensiveAvgMvpScore: offensiveScores.avgScore,
     defensiveAvgMvpScore: defensiveScores.avgScore,
     avgMvpScore: (offensiveScores.avgScore + defensiveScores.avgScore) / 2,
