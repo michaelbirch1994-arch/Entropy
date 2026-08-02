@@ -6,6 +6,7 @@ import KdrView from "./views/KdrView";
 import FightBreakdownView from "./views/FightBreakdownView";
 import TopPlayersView from "./views/TopPlayersView";
 import TopSkillsView from "./views/TopSkillsView";
+import BuffsView from "./views/BuffsView";
 import ClassesView from "./views/ClassesView";
 import MapDistributionView from "./views/MapDistributionView";
 import CommanderStatsView from "./views/CommanderStatsView";
@@ -25,6 +26,7 @@ const VIEW_TITLES: Record<string, string> = {
   "fight-breakdown": "Fight Breakdown",
   "top-players": "Top Players",
   "top-skills": "Top Skills",
+  buffs: "Buffs",
   classes: "Classes",
   "map-distribution": "Map Distribution",
   "commander-stats": "Commander Stats",
@@ -42,6 +44,7 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "fight-breakdown": return <FightBreakdownView />;
     case "top-players": return <TopPlayersView />;
     case "top-skills": return <TopSkillsView />;
+    case "buffs": return <BuffsView />;
     case "classes": return <ClassesView />;
     case "map-distribution": return <MapDistributionView />;
     case "commander-stats": return <CommanderStatsView />;
