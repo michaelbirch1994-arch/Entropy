@@ -357,14 +357,15 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
   type ModItem = { hitCount?: number; totalHitCount?: number; damageGain?: number; totalDamage?: number };
   type ModEntry = { id?: number; damageModifiers?: ModItem[] };
 
-  const modMeta = new Map<number, { name: string; icon?: string; nonMultiplier: boolean; isCounter: boolean }>();
+  const modMeta = new Map<number, { name: string; icon?: string; description?: string; nonMultiplier: boolean; isCounter: boolean }>();
   const totals = new Map<number, number>();
+  const playerSets = new Map<number, Set<string>>();
   const accRows = new Map<string, { profession: string; professionList: string[]; group: number; values: Map<number, { damage: number; hits: number }> }>();
 
   for (const f of fights) {
     const raw = f.raw as Record<string, unknown>;
-    const modMap = (raw.damageModMap ?? {}) as Record<string, { name?: string; icon?: string; incoming?: boolean; nonMultiplier?: boolean; isCounter?: boolean }>;
-    const idToDesc = new Map<number, { name?: string; icon?: string; incoming?: boolean; nonMultiplier?: boolean; isCounter?: boolean }>();
+    const modMap = (raw.damageModMap ?? {}) as Record<string, { name?: string; icon?: string; description?: string; incoming?: boolean; nonMultiplier?: boolean; isCounter?: boolean }>;
+    const idToDesc = new Map<number, { name?: string; icon?: string; description?: string; incoming?: boolean; nonMultiplier?: boolean; isCounter?: boolean }>();
     for (const key of Object.keys(modMap)) {
       const id = Number(key.replace(/^d/, ''));
       if (!Number.isFinite(id)) continue;
@@ -399,11 +400,14 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
           modMeta.set(id, {
             name: desc?.name || `Modifier ${id}`,
             icon: desc?.icon,
+            description: desc?.description,
             nonMultiplier: !!desc?.nonMultiplier,
             isCounter: !!desc?.isCounter,
           });
         }
         totals.set(id, (totals.get(id) || 0) + damage);
+        if (!playerSets.has(id)) playerSets.set(id, new Set());
+        playerSets.get(id)!.add(account);
 
         const cur = row.values.get(id) || { damage: 0, hits: 0 };
         cur.damage += damage;
@@ -414,7 +418,15 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
   }
 
   const columns: DamageModifierData['columns'] = Array.from(modMeta.entries())
-    .map(([id, meta]) => ({ id, name: meta.name, icon: meta.icon, nonMultiplier: meta.nonMultiplier, isCounter: meta.isCounter }))
+    .map(([id, meta]) => ({
+      id,
+      name: meta.name,
+      icon: meta.icon,
+      description: meta.description,
+      nonMultiplier: meta.nonMultiplier,
+      isCounter: meta.isCounter,
+      playersWithIt: playerSets.get(id)?.size ?? 0,
+    }))
     .sort((a, b) => (totals.get(b.id) || 0) - (totals.get(a.id) || 0))
     .slice(0, 24);
   const columnIds = new Set(columns.map((c) => c.id));
