@@ -9,7 +9,7 @@ function uptimeColor(pct: number): string {
   if (pct >= 90) return "text-emerald-400";
   if (pct >= 50) return "text-amber-400";
   if (pct > 0) return "text-orange-400/80";
-  return "text-slate-700";
+  return "text-slate-500";
 }
 
 // Tab order mirrors dps.report's Buffs sub-tabs.
@@ -118,7 +118,7 @@ export default function BuffsView() {
                     {row.account}
                   </td>
                   <td className="px-2 py-2.5">
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${profChip(row.profession)}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(row.profession)}`}>
                       {row.profession}
                     </span>
                   </td>

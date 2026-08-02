@@ -46,7 +46,7 @@ export default function MechanicsView() {
           empty={
             <div className="py-10 text-center text-sm text-slate-500">
               No mechanic event data available for this report.
-              <p className="text-[11px] text-slate-600 mt-1">
+              <p className="text-[11px] text-slate-500 mt-1">
                 Only populated for reports built from raw dps.report / .zevtc imports whose fights tracked
                 boss/encounter mechanics (interrupts, CC, boss-specific events, and similar).
               </p>
@@ -113,7 +113,7 @@ export default function MechanicsView() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-slate-200 truncate">{m.def.fullName}</span>
-                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${style.border} ${style.text}`}>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${style.border} ${style.text}`}>
                           {style.label}
                         </span>
                       </div>
@@ -141,7 +141,7 @@ export default function MechanicsView() {
                           );
                         })}
                       </div>
-                      <div className="flex justify-between text-[9px] text-slate-600 font-mono mb-3">
+                      <div className="flex justify-between text-[10px] text-slate-500 font-mono mb-3">
                         <span>0:00</span>
                         <span>{fmtClock(fight.durationMs)}</span>
                       </div>
@@ -173,7 +173,7 @@ export default function MechanicsView() {
                                 <td className="px-3 py-1.5 font-mono text-slate-500">{fmtClock(e.time)}</td>
                                 <td className="px-3 py-1.5 text-slate-300 font-medium">
                                   {e.account ?? e.actor}
-                                  {!e.isPlayer && <span className="text-slate-600 ml-1 text-[10px]">(NPC)</span>}
+                                  {!e.isPlayer && <span className="text-slate-500 ml-1 text-[10px]">(NPC)</span>}
                                 </td>
                               </tr>
                             ))}

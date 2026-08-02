@@ -42,7 +42,7 @@ export default function DamageModifiersView() {
           empty={
             <div className="py-10 text-center text-sm text-slate-500">
               No damage modifier data available for this report.
-              <p className="text-[11px] text-slate-600 mt-1">
+              <p className="text-[11px] text-slate-500 mt-1">
                 Only populated for reports built from raw dps.report / .zevtc imports.
               </p>
             </div>
@@ -71,7 +71,7 @@ export default function DamageModifiersView() {
               <span key={k} className="flex items-center gap-1.5">
                 <span className={`inline-block w-2 h-2 rounded-full ${KIND_DOT[k]}`} />
                 <span className={KIND_COLOR[k]}>{KIND_LABEL[k]}</span>
-                <span className="text-slate-600">
+                <span className="text-slate-500">
                   {k === "gain" && "- real, already-realized extra damage from this modifier"}
                   {k === "underEffect" && "- total damage while active, not the gain itself (multiplier not in the log)"}
                   {k === "counter" && "- informational, not a damage gain"}
@@ -79,7 +79,7 @@ export default function DamageModifiersView() {
               </span>
             ))}
           </div>
-          <p className="text-[10px] text-slate-600 leading-relaxed max-w-3xl">
+          <p className="text-[10px] text-slate-500 leading-relaxed max-w-3xl">
             A number in a cell means that player measurably triggered that modifier at least once - a fair proxy for
             "has this trait/sigil active." A dash means it never fired for them this session; the raw combat log
             doesn't include full gear/trait loadouts, so a dash usually means they don't run it, but could also mean
@@ -111,7 +111,7 @@ export default function DamageModifiersView() {
                         <span className="normal-case font-semibold text-slate-400 text-center leading-tight">{c.name}</span>
                         <span className="flex items-center gap-1">
                           <span className={`inline-block w-1.5 h-1.5 rounded-full ${KIND_DOT[kind]}`} />
-                          <span className="text-[9px] text-slate-600 normal-case">{c.playersWithIt}p</span>
+                          <span className="text-[10px] text-slate-500 normal-case">{c.playersWithIt}p</span>
                         </span>
                       </div>
                     </th>
@@ -129,7 +129,7 @@ export default function DamageModifiersView() {
                     {row.account}
                   </td>
                   <td className="px-2 py-2.5">
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${profChip(row.profession)}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(row.profession)}`}>
                       {row.profession}
                     </span>
                   </td>
@@ -147,7 +147,7 @@ export default function DamageModifiersView() {
                             {fmtNum(v.damage)}
                           </span>
                         ) : (
-                          <span className="text-slate-700">-</span>
+                          <span className="text-slate-500">-</span>
                         )}
                       </td>
                     );

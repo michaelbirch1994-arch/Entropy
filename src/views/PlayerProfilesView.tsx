@@ -114,7 +114,7 @@ export default function PlayerProfilesView() {
                               <Trophy className="w-3 h-3" /> {mvpTotal}
                             </span>
                           ) : (
-                            <span className="text-slate-600">—</span>
+                            <span className="text-slate-500">—</span>
                           )}
                         </td>
                       </motion.tr>
@@ -127,7 +127,7 @@ export default function PlayerProfilesView() {
         )}
       </Panel>
 
-      <div className="flex items-center gap-2 text-[10px] text-slate-600 italic">
+      <div className="flex items-center gap-2 text-[10px] text-slate-500 italic">
         <Sparkles className="w-3 h-3" />
         Career stats are stored locally in this browser and grow every time a new report is loaded here.
       </div>

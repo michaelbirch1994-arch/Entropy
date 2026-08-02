@@ -77,11 +77,11 @@ function ClassDetailPanel({ title, data, total, accent = "text-sky-400" }: { tit
                     className="h-full rounded transition-all duration-500 flex items-center justify-end pr-2"
                     style={{ width: `${Math.max(pct, 3)}%`, backgroundColor: c.color }}
                   >
-                    {pct > 8 && <span className="text-[9px] font-bold text-black/70">{c.value}</span>}
+                    {pct > 8 && <span className="text-[10px] font-bold text-black/70">{c.value}</span>}
                   </div>
                 </div>
                 <span className="text-xs font-mono text-slate-400 w-10 text-right">{fmtNum(c.value)}</span>
-                <span className="text-[10px] font-mono text-slate-600 w-12 text-right">{pct.toFixed(1)}%</span>
+                <span className="text-[10px] font-mono text-slate-500 w-12 text-right">{pct.toFixed(1)}%</span>
               </div>
             );
           })}

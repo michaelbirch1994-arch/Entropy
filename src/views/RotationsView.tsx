@@ -43,7 +43,7 @@ export default function RotationsView() {
           empty={
             <div className="py-10 text-center text-sm text-slate-500">
               No skill-cast timeline data available for this report.
-              <p className="text-[11px] text-slate-600 mt-1">
+              <p className="text-[11px] text-slate-500 mt-1">
                 Only populated for reports built from raw dps.report / .zevtc imports.
               </p>
             </div>
@@ -88,7 +88,7 @@ export default function RotationsView() {
           subtitle={`${activePlayer.account} - ${activePlayer.casts.length} casts over ${fmtClock(fight.durationMs)}`}
           icon={<Clock className="w-3.5 h-3.5" />}
           action={
-            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${profChip(activePlayer.profession)}`}>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(activePlayer.profession)}`}>
               {activePlayer.profession}
             </span>
           }
@@ -108,7 +108,7 @@ export default function RotationsView() {
               );
             })}
           </div>
-          <div className="flex justify-between text-[10px] text-slate-600 font-mono mt-1.5">
+          <div className="flex justify-between text-[10px] text-slate-500 font-mono mt-1.5">
             <span>0:00</span>
             <span>{fmtClock(fight.durationMs)}</span>
           </div>

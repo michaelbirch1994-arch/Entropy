@@ -66,12 +66,12 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label }: {
           </div>
           <div>
             <p className="text-xs font-bold text-slate-200 leading-none">{card.account}</p>
-            <p className="text-[9px] text-slate-500 mt-0.5">{card.profession}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">{card.profession}</p>
           </div>
         </div>
         <div className="space-y-1">
           {vals.map((s) => (
-            <div key={s.l} className="flex justify-between items-center text-[9px] font-mono bg-slate-900/30 px-1.5 py-0.5 rounded">
+            <div key={s.l} className="flex justify-between items-center text-[10px] font-mono bg-slate-900/30 px-1.5 py-0.5 rounded">
               <span className="text-slate-500">{s.l}</span>
               <span className="text-slate-300">{s.v}</span>
             </div>
@@ -142,15 +142,28 @@ export default function OverviewView() {
   if (!report) return null;
   const s = report.stats;
 
+  // "/s" here is a real per-second rate: value divided by the leading
+  // player's actual tracked playtime (totalMs), not by how many logs they
+  // joined. logsJoined (shown as "N logs" below the number) is a much
+  // smaller number than seconds-played, so dividing by it instead - like an
+  // earlier version of this card did - inflated these into per-fight
+  // averages while still being labelled "/s", which is why a healing number
+  // could read as ~98k/s (impossible for one player) when it was really
+  // ~98k healing per fight.
+  const perSec = (stat: { value: number; totalMs?: number }) => {
+    const secs = (stat.totalMs ?? 0) / 1000;
+    return secs > 0 ? stat.value / secs : 0;
+  };
+
   const perSecCards = [
-    { label: "Down Contrib /s", value: fmtFixedGrouped(s.maxDownContrib.value / (s.maxDownContrib.count || 1)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, accent: "text-slate-100" },
-    { label: "Healing /s", value: fmtFixedGrouped(s.maxHealing.value / (s.maxHealing.count || 1)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, accent: "text-slate-100" },
-    { label: "Barrier /s", value: fmtFixedGrouped(s.maxBarrier.value / (s.maxBarrier.count || 1)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, accent: "text-slate-100" },
-    { label: "Cleanses /s", value: fmtFixedGrouped(s.maxCleanses.value / (s.maxCleanses.count || 1)), icon: <Droplet className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, accent: "text-slate-100" },
-    { label: "Strips /s", value: fmtFixedGrouped(s.maxStrips.value / (s.maxStrips.count || 1)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, accent: "text-slate-100" },
-    { label: "Stability Gen /s", value: fmtFixedGrouped(s.maxStab.value / (s.maxStab.count || 1)), icon: <Shield className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxStab.player, count: s.maxStab.count, accent: "text-slate-100" },
-    { label: "CC /s", value: fmtFixedGrouped(s.maxCC.value / (s.maxCC.count || 1)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, accent: "text-slate-100" },
-    { label: "Interrupts /s", value: fmtFixedGrouped(s.maxInterrupts.value / (s.maxInterrupts.count || 1)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, accent: "text-slate-100" },
+    { label: "Down Contrib /s", value: fmtFixedGrouped(perSec(s.maxDownContrib)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, accent: "text-slate-100" },
+    { label: "Healing /s", value: fmtFixedGrouped(perSec(s.maxHealing)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, accent: "text-slate-100" },
+    { label: "Barrier /s", value: fmtFixedGrouped(perSec(s.maxBarrier)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, accent: "text-slate-100" },
+    { label: "Cleanses /s", value: fmtFixedGrouped(perSec(s.maxCleanses)), icon: <Droplet className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, accent: "text-slate-100" },
+    { label: "Strips /s", value: fmtFixedGrouped(perSec(s.maxStrips)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, accent: "text-slate-100" },
+    { label: "Stability Gen /s", value: fmtFixedGrouped(perSec(s.maxStab)), icon: <Shield className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxStab.player, count: s.maxStab.count, accent: "text-slate-100" },
+    { label: "CC /s", value: fmtFixedGrouped(perSec(s.maxCC)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, accent: "text-slate-100" },
+    { label: "Interrupts /s", value: fmtFixedGrouped(perSec(s.maxInterrupts)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, accent: "text-slate-100" },
   ];
 
   const recap = generateFightRecap(s);

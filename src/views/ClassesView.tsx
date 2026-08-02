@@ -21,11 +21,11 @@ function ClassList({ data, total }: { data: ClassSlice[]; total: number }) {
                 className="h-full rounded transition-all duration-500 flex items-center justify-end pr-2"
                 style={{ width: `${Math.max(pct, 3)}%`, backgroundColor: c.color }}
               >
-                {pct > 10 && <span className="text-[9px] font-bold text-black/70">{c.value}</span>}
+                {pct > 10 && <span className="text-[10px] font-bold text-black/70">{c.value}</span>}
               </div>
             </div>
             <span className="text-xs font-mono text-slate-400 w-10 text-right">{c.value}</span>
-            <span className="text-[10px] font-mono text-slate-600 w-12 text-right">{pct.toFixed(1)}%</span>
+            <span className="text-[10px] font-mono text-slate-500 w-12 text-right">{pct.toFixed(1)}%</span>
           </div>
         );
       })}

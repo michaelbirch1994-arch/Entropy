@@ -64,7 +64,7 @@ export default function ReplayView() {
           empty={
             <div className="py-10 text-center text-sm text-slate-500">
               No replay data available for this report.
-              <p className="text-[11px] text-slate-600 mt-1">
+              <p className="text-[11px] text-slate-500 mt-1">
                 Only populated for reports built from raw dps.report / .zevtc imports whose parse included
                 combat replay data.
               </p>
@@ -153,7 +153,7 @@ export default function ReplayView() {
             </select>
           </div>
 
-          <p className="text-[10px] text-slate-600 mt-3 flex items-center gap-2">
+          <p className="text-[10px] text-slate-500 mt-3 flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-amber-500" /> Squad
             <span className="inline-block w-2 h-2 rounded-full bg-slate-500 ml-2" /> Ally / non-squad
             <span className="inline-block w-2 h-2 rounded-full border border-rose-500 ml-2" /> Downed
