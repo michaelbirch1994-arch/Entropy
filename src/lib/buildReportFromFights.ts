@@ -288,12 +288,27 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
       }
     }
 
+    // A player can appear in a fight's player list without actually having
+    // fought in it - joined the squad but arrived after the pull ended,
+    // was dead/disconnected for the whole thing, was scouting elsewhere,
+    // etc. EI still emits a buffUptimes entry for them, and it's ~0% since
+    // they never received any boons, which drags down their *average*
+    // uptime across a 50-fight session even on fights they played well.
+    // activeTimes[0] is EI's own "time this player was actually in combat"
+    // for the fight, so skip fights where that's negligible.
+    const fightDurationMs = Number(raw.durationMS) || 0;
+    const MIN_ACTIVE_FRACTION = 0.1;
+
     const players = (raw.players ?? []) as Record<string, unknown>[];
     for (const p of players) {
       if (p.notInSquad) continue;
       const account = typeof p.account === 'string' ? p.account : null;
       if (!account) continue;
       if (typeof p.group === 'number') groupByAccount.set(account, p.group);
+
+      const activeTimes = p.activeTimes as unknown[] | undefined;
+      const activeMs = Array.isArray(activeTimes) && typeof activeTimes[0] === 'number' ? activeTimes[0] : fightDurationMs;
+      if (fightDurationMs > 0 && activeMs / fightDurationMs < MIN_ACTIVE_FRACTION) continue;
 
       const buffUptimes = (p.buffUptimes ?? []) as Array<{ id?: number; buffData?: Array<{ uptime?: number }> }>;
       for (const entry of buffUptimes) {
@@ -1124,14 +1139,9 @@ function computeSynergyInsights(
     }
   }
 
-  const alacrity = avgUptime('Alacrity');
-  if (alacrity !== null) {
-    if (alacrity < 20) {
-      insights.push({ id: 'alacrity', severity: 'warn', title: 'Very low Alacrity uptime', detail: `Squad averaged only ${alacrity.toFixed(0)}% Alacrity uptime.` });
-    } else if (alacrity >= 50) {
-      insights.push({ id: 'alacrity', severity: 'good', title: 'Solid Alacrity uptime', detail: `Squad averaged ${alacrity.toFixed(0)}% Alacrity uptime.` });
-    }
-  }
+  // Alacrity has no reliable WvW source (no PvE-style Alacrity support builds
+  // in squad comps), so a "low Alacrity uptime" insight is just noise here -
+  // skip it. Quickness/Stability are the boons worth flagging in WvW.
 
   const stability = avgUptime('Stability');
   if (stability !== null) {
@@ -1185,7 +1195,12 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     validLogs,
     method: 'count',
     skillDamageSource: 'target',
-    splitPlayersByClass: false,
+    // When a player relogs onto a different profession mid-session, key their
+    // stats by account+class instead of just account, so a build swap (e.g.
+    // Firebrand for 2 fights, then Scrapper for the rest) shows up as two
+    // separate rows instead of blending both classes' numbers into one
+    // misleading average.
+    splitPlayersByClass: true,
   });
 
   const {
