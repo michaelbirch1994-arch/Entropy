@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Panel from "../components/ui/Panel";
-import { Users, Swords, Trophy, Sparkles } from "lucide-react";
-import { getAllProfiles, topClass, type PlayerProfile } from "../lib/playerProfileStore";
+import { Users, Swords, Trophy, Sparkles, Flame } from "lucide-react";
+import { getAllProfiles, topClass, computeBadges, currentWinStreak, type PlayerProfile } from "../lib/playerProfileStore";
 import { fmtCompact, fmtFixedGrouped, fmtNum, profChip } from "../utils/format";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 
@@ -79,6 +79,7 @@ export default function PlayerProfilesView() {
                     <th className="p-2.5 text-right">Total Healing</th>
                     <th className="p-2.5 text-right">Down Contrib</th>
                     <th className="p-2.5 text-right">MVPs</th>
+              <th className="p-2.5">Badges</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/30 font-mono">
@@ -117,6 +118,36 @@ export default function PlayerProfilesView() {
                           ) : (
                             <span className="text-slate-500">—</span>
                           )}
+                        </td>
+                        <td className="p-2.5">
+                          <div className="flex flex-wrap items-center gap-1 max-w-[220px]">
+                            {(() => {
+                              const streak = currentWinStreak(p);
+                              const badges = computeBadges(p);
+                              if (streak < 3 && badges.length === 0) return <span className="text-slate-500">—</span>;
+                              return (
+                                <>
+                                  {streak >= 3 && (
+                                    <span
+                                      title={`On a ${streak}-win streak`}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border border-orange-500/30 text-orange-400 bg-orange-500/10"
+                                    >
+                                      <Flame className="w-3 h-3" /> {streak}
+                                    </span>
+                                  )}
+                                  {badges.map((b) => (
+                                    <span
+                                      key={b.id}
+                                      title={b.detail}
+                                      className="px-1.5 py-0.5 rounded text-[10px] font-bold border border-sky-500/30 text-sky-400 bg-sky-500/10"
+                                    >
+                                      {b.label}
+                                    </span>
+                                  ))}
+                                </>
+                              );
+                            })()}
+                          </div>
                         </td>
                       </motion.tr>
                     );
