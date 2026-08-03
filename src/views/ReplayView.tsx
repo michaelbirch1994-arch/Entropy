@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Play, Pause, Film, Crosshair } from "lucide-react";
+import { Play, Pause, Film, Crosshair, Download } from "lucide-react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import { interpolatePosition, isInInterval, distanceBetween } from "../lib/parseReplayData";
@@ -115,6 +115,139 @@ export default function ReplayView() {
     }
     return clusters.sort((a, b) => b.count - a.count).slice(0, 12);
   }, [fight]);
+
+  const [clipStart, setClipStart] = useState(0);
+  const [clipEnd, setClipEnd] = useState(0);
+
+  useEffect(() => {
+    if (!fight) return;
+    setClipStart(0);
+    setClipEnd(fight.data.durationMs);
+  }, [fight]);
+
+  // Standalone, dependency-free HTML export of a trimmed time window of the
+  // current replay - no server/backend involved, so "shareable" here means a
+  // single .html file someone can open directly in any browser. Re-implements
+  // the same dot-drawing/interpolation logic as the React view in plain JS
+  // since the exported file can't import from this app's bundle.
+  function exportClip() {
+    if (!fight) return;
+    const start = Math.max(0, Math.min(clipStart, clipEnd));
+    const end = Math.min(fight.data.durationMs, Math.max(clipStart, clipEnd));
+    if (end - start < 500) return;
+
+    const trim = (points: { t: number; x: number; y: number }[]) =>
+      points.filter((p) => p.t >= start - 500 && p.t <= end + 500).map((p) => [p.t - start, p.x, p.y]);
+    const trimIntervals = (intervals: [number, number][]) =>
+      intervals
+        .filter(([s0, e0]) => e0 >= start && s0 <= end)
+        .map(([s0, e0]) => [Math.max(0, s0 - start), Math.min(end - start, e0 - start)]);
+
+    const clipData = {
+      durationMs: end - start,
+      bounds: fight.data.bounds,
+      players: fight.data.players.map((p) => ({
+        account: p.account,
+        inSquad: p.inSquad,
+        isCommander: p.isCommander,
+        points: trim(p.points),
+        downIntervals: trimIntervals(p.downIntervals),
+        deadIntervals: trimIntervals(p.deadIntervals),
+      })),
+      enemies: fight.data.enemies.map((e) => ({
+        id: e.id,
+        points: trim(e.points),
+        downIntervals: trimIntervals(e.downIntervals),
+        deadIntervals: trimIntervals(e.deadIntervals),
+      })),
+    };
+
+    const b = clipData.bounds;
+    const pad = Math.max((b.maxX - b.minX) * 0.08, 50);
+    const viewBoxStr = `${b.minX - pad} ${b.minY - pad} ${b.maxX - b.minX + pad * 2} ${b.maxY - b.minY + pad * 2}`;
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${fight.fightName} - Entropy Replay Clip</title>
+<style>
+  body { margin:0; background:#05070f; font-family:system-ui,sans-serif; color:#e2e8f0; }
+  .wrap { max-width:720px; margin:24px auto; padding:0 16px; }
+  h1 { font-size:14px; text-transform:uppercase; letter-spacing:0.08em; color:#94a3b8; }
+  .stage { background:#000; border-radius:12px; overflow:hidden; border:1px solid #1e293b; }
+  svg { width:100%; height:420px; transform:scaleY(-1); display:block; }
+  .controls { display:flex; align-items:center; gap:12px; margin-top:12px; }
+  button { background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; border-radius:999px; width:36px; height:36px; cursor:pointer; }
+  input[type=range] { flex:1; accent-color:#f59e0b; }
+  .clock { font-family:monospace; font-size:11px; color:#94a3b8; width:90px; text-align:right; }
+  .legend { font-size:10px; color:#64748b; margin-top:10px; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:999px; margin-right:4px; }
+</style></head>
+<body><div class="wrap">
+<h1>${fight.fightName} &middot; Entropy replay clip (${(clipData.durationMs / 1000).toFixed(1)}s)</h1>
+<div class="stage"><svg viewBox="${viewBoxStr}" id="svg"></svg></div>
+<div class="controls">
+  <button id="playBtn">&#9654;</button>
+  <input type="range" id="scrub" min="0" max="${clipData.durationMs}" value="0" />
+  <span class="clock" id="clock">0:00 / ${(clipData.durationMs / 1000).toFixed(1)}s</span>
+</div>
+<p class="legend"><span class="dot" style="background:#f59e0b"></span>Squad<span class="dot" style="background:#64748b;margin-left:8px"></span>Ally<span class="dot" style="background:#f43f5e;margin-left:8px"></span>Enemy</p>
+</div>
+<script>
+const DATA = ${JSON.stringify(clipData)};
+const svg = document.getElementById('svg');
+const scrub = document.getElementById('scrub');
+const clock = document.getElementById('clock');
+const playBtn = document.getElementById('playBtn');
+function interp(points, t) {
+  if (!points.length) return null;
+  if (t <= points[0][0]) return points[0];
+  if (t >= points[points.length - 1][0]) return points[points.length - 1];
+  let lo = 0, hi = points.length - 1;
+  while (lo < hi - 1) { const mid = (lo + hi) >> 1; if (points[mid][0] <= t) lo = mid; else hi = mid; }
+  const a = points[lo], b = points[hi], span = b[0] - a[0] || 1, f = (t - a[0]) / span;
+  return [t, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+}
+function inInterval(intervals, t) { return intervals.some(([s, e]) => t >= s && t <= e); }
+function render(t) {
+  let out = '';
+  DATA.enemies.forEach((e) => {
+    if (inInterval(e.deadIntervals, t)) return;
+    const p = interp(e.points, t); if (!p) return;
+    const down = inInterval(e.downIntervals, t);
+    out += '<circle cx="' + p[1] + '" cy="' + p[2] + '" r="' + (down ? 45 : 38) + '" fill="#f43f5e" fill-opacity="' + (down ? 0.25 : 0.75) + '" stroke="' + (down ? '#f43f5e' : 'none') + '" stroke-width="' + (down ? 10 : 0) + '"/>';
+  });
+  DATA.players.forEach((pl) => {
+    if (inInterval(pl.deadIntervals, t)) return;
+    const p = interp(pl.points, t); if (!p) return;
+    const down = inInterval(pl.downIntervals, t);
+    const r = down ? 55 : pl.isCommander ? 65 : 45;
+    out += '<circle cx="' + p[1] + '" cy="' + p[2] + '" r="' + r + '" fill="' + (pl.inSquad ? '#f59e0b' : '#64748b') + '" fill-opacity="' + (down ? 0.3 : 0.9) + '" stroke="' + (down ? '#f43f5e' : pl.isCommander ? '#fbbf24' : 'none') + '" stroke-width="' + (down || pl.isCommander ? 14 : 0) + '"/>';
+  });
+  svg.innerHTML = out;
+  const s = Math.max(0, Math.floor(t / 1000));
+  clock.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' / ' + (DATA.durationMs / 1000).toFixed(1) + 's';
+}
+let playing = false, lastTs = null, t = 0;
+function tick(now) {
+  if (!playing) return;
+  if (lastTs != null) { t += (now - lastTs); if (t >= DATA.durationMs) t = 0; scrub.value = t; render(t); }
+  lastTs = now;
+  requestAnimationFrame(tick);
+}
+playBtn.onclick = () => { playing = !playing; playBtn.innerHTML = playing ? '&#9208;' : '&#9654;'; lastTs = null; if (playing) requestAnimationFrame(tick); };
+scrub.oninput = () => { t = Number(scrub.value); render(t); };
+render(0);
+</script>
+</body></html>`;
+
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${fight.fightName.replace(/[^a-z0-9]+/gi, "-")}-clip.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
 
 
   if (!report) return null;
@@ -280,6 +413,36 @@ export default function ReplayView() {
             </select>
           </div>
 
+          
+
+          <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-800/60">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Export clip:</span>
+            <input
+              type="number"
+              min={0}
+              max={fight.data.durationMs}
+              value={Math.round(clipStart / 1000)}
+              onChange={(e) => setClipStart(Number(e.target.value) * 1000)}
+              className="w-16 bg-slate-900 border border-slate-700 text-slate-300 text-[11px] rounded-lg px-2 py-1"
+            />
+            <span className="text-[10px] text-slate-500">to</span>
+            <input
+              type="number"
+              min={0}
+              max={fight.data.durationMs}
+              value={Math.round(clipEnd / 1000)}
+              onChange={(e) => setClipEnd(Number(e.target.value) * 1000)}
+              className="w-16 bg-slate-900 border border-slate-700 text-slate-300 text-[11px] rounded-lg px-2 py-1"
+            />
+            <span className="text-[10px] text-slate-500">sec</span>
+            <button
+              type="button"
+              onClick={exportClip}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-amber-500/20 transition-all"
+            >
+              <Download className="w-3 h-3" /> Download standalone .html
+            </button>
+          </div>
           <p className="text-[10px] text-slate-500 mt-3 flex items-center gap-2 flex-wrap">
             <span className="inline-block w-2 h-2 rounded-full bg-amber-500" /> Squad
             <span className="inline-block w-2 h-2 rounded-full bg-slate-500 ml-2" /> Ally / non-squad
