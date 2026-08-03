@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import Sidebar, { VIEW_ICONS } from "./components/layout/Sidebar";
 import { ReportProvider, useReport } from "./store/ReportContext";
 import { DamageScopeProvider, DamageScopeToggle } from "./store/DamageScopeContext";
+import { StatsDisplayProvider, StatsDisplayToggle } from "./store/StatsDisplayContext";
+import { AllyScopeProvider, AllyScopeToggle } from "./store/AllyScopeContext";
 import OverviewView from "./views/OverviewView";
 import KdrView from "./views/KdrView";
 import FightBreakdownView from "./views/FightBreakdownView";
@@ -194,6 +196,8 @@ function ReportShell() {
               </div>
               <div className="flex items-center gap-3">
                 <DamageScopeToggle />
+                <StatsDisplayToggle />
+                <AllyScopeToggle />
                 {source && (
                   <span
                     className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border ${
@@ -261,9 +265,13 @@ export default function App() {
   return (
     <ReportProvider>
       <DamageScopeProvider>
+        <StatsDisplayProvider>
+          <AllyScopeProvider>
       <ReportShell />
       <UpdateToast {...updateState} />
-    </DamageScopeProvider>
+    </AllyScopeProvider>
+        </StatsDisplayProvider>
+      </DamageScopeProvider>
     </ReportProvider>
   );
 }
