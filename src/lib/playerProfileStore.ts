@@ -30,7 +30,18 @@ export interface PlayerProfile {
   offensiveMvpCount: number;
   defensiveMvpCount: number;
   classCounts: Record<string, number>;
+  /** Most recent reports this player appeared in, newest last - capped at MAX_HISTORY entries. Used to derive win/MVP streaks and badges. Older profiles saved before this field existed may not have it. */
+  history: PlayerProfileHistoryEntry[];
 }
+
+export interface PlayerProfileHistoryEntry {
+  ts: number;
+  /** true = report had more wins than losses, false = more losses, null = tied/no fight outcome data. */
+  won: boolean | null;
+  mvp: boolean;
+}
+
+const MAX_HISTORY = 40;
 
 function openDB(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
@@ -97,6 +108,7 @@ function blankProfile(account: string, now: number): PlayerProfile {
     offensiveMvpCount: 0,
     defensiveMvpCount: 0,
     classCounts: {},
+    history: [],
   };
 }
 
@@ -116,6 +128,7 @@ export async function recordReportIntoProfiles(report: WvWReport): Promise<void>
   }
 
   const s = report.stats;
+  const reportWon: boolean | null = s.wins > s.losses ? true : s.wins < s.losses ? false : null;
   const now = Date.now();
 
   const byAccount = new Map<string, {
@@ -194,6 +207,9 @@ export async function recordReportIntoProfiles(report: WvWReport): Promise<void>
     if (e.profession) prof.classCounts[e.profession] = (prof.classCounts[e.profession] ?? 0) + 1;
     if (s.offensiveMvp?.account === account) prof.offensiveMvpCount += 1;
     if (s.defensiveMvp?.account === account) prof.defensiveMvpCount += 1;
+    if (!prof.history) prof.history = [];
+    prof.history.push({ ts: now, won: reportWon, mvp: s.offensiveMvp?.account === account || s.defensiveMvp?.account === account });
+    if (prof.history.length > MAX_HISTORY) prof.history = prof.history.slice(-MAX_HISTORY);
     updates.push(prof);
   });
 
@@ -211,3 +227,73 @@ export function topClass(profile: PlayerProfile): string | null {
   if (entries.length === 0) return null;
   return entries.sort((a, b) => b[1] - a[1])[0][0];
 }
+
+// Current win streak = consecutive most-recent reports (newest first) that
+// this player was on the winning side of, stopping at the first loss/tie or
+// missing outcome data. Longest is the best run anywhere in the retained
+// history window (MAX_HISTORY reports).
+export function currentWinStreak(profile: PlayerProfile): number {
+  const h = profile.history ?? [];
+  let n = 0;
+  for (let i = h.length - 1; i >= 0; i--) {
+    if (h[i].won !== true) break;
+    n++;
+  }
+  return n;
+}
+
+export function longestWinStreak(profile: PlayerProfile): number {
+  const h = profile.history ?? [];
+  let best = 0;
+  let cur = 0;
+  for (const entry of h) {
+    if (entry.won === true) {
+      cur++;
+      best = Math.max(best, cur);
+    } else {
+      cur = 0;
+    }
+  }
+  return best;
+}
+
+export function currentMvpStreak(profile: PlayerProfile): number {
+  const h = profile.history ?? [];
+  let n = 0;
+  for (let i = h.length - 1; i >= 0; i--) {
+    if (!h[i].mvp) break;
+    n++;
+  }
+  return n;
+}
+
+export interface PlayerBadge {
+  id: string;
+  label: string;
+  detail: string;
+}
+
+// Badges derived entirely from data already accumulated on the profile - no
+// new tracking required. Intentionally conservative thresholds since these
+// are meant to be earned across many raid nights, not one good fight.
+export function computeBadges(profile: PlayerProfile): PlayerBadge[] {
+  const badges: PlayerBadge[] = [];
+  const mvpTotal = profile.offensiveMvpCount + profile.defensiveMvpCount;
+  const winStreak = currentWinStreak(profile);
+  const mvpStreak = currentMvpStreak(profile);
+  const classesSeen = Object.keys(profile.classCounts).length;
+
+  if (winStreak >= 3) badges.push({ id: "win-streak", label: `${winStreak}-Win Streak`, detail: "On a winning streak over their most recent reports." });
+  if (mvpStreak >= 2) badges.push({ id: "mvp-streak", label: `${mvpStreak}-Report MVP Streak`, detail: "MVP in each of their last reports." });
+  if (profile.reportsSeen >= 20) badges.push({ id: "veteran", label: "Veteran", detail: "Logged 20+ reports on this device." });
+  else if (profile.reportsSeen >= 10) badges.push({ id: "regular", label: "Regular", detail: "Logged 10+ reports on this device." });
+  if (mvpTotal >= 10) badges.push({ id: "mvp-machine", label: "MVP Machine", detail: "10+ career MVP awards." });
+  else if (mvpTotal >= 5) badges.push({ id: "standout", label: "Standout", detail: "5+ career MVP awards." });
+  if (profile.totalHealing > 5_000_000) badges.push({ id: "field-medic", label: "Field Medic", detail: "5M+ career healing." });
+  if (profile.totalDownContrib > 2_000_000) badges.push({ id: "closer", label: "Closer", detail: "2M+ career down contribution." });
+  if (classesSeen >= 5) badges.push({ id: "jack-of-all-trades", label: "Jack of All Trades", detail: `Played ${classesSeen} different classes.` });
+  else if (classesSeen === 1 && profile.reportsSeen >= 5) badges.push({ id: "specialist", label: "Specialist", detail: "Only ever plays one class." });
+
+  return badges;
+}
+
