@@ -669,8 +669,15 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
         if (!Number.isFinite(id)) continue;
         const dmg = Number(entry?.totalDamage) || 0;
         const hits = Number(entry?.connectedHits ?? entry?.hits) || 0;
-        if (dmg === 0 && hits === 0) continue;
-        accumulate(incoming, id, dmg, hits, 0);
+        // Mirrors the outgoing branch above: EI's totalDamageTaken entries use
+        // the same DistEntry shape as totalDamageDist and carry their own
+        // downContribution value (how much of this incoming skill's damage
+        // contributed to this player going down) - it was previously hardcoded
+        // to 0 here instead of being read, so "Incoming" always showed an empty
+        // Down Contrib bar regardless of the underlying data.
+        const downContrib = Number(entry?.downContribution) || 0;
+        if (dmg === 0 && hits === 0 && downContrib === 0) continue;
+        accumulate(incoming, id, dmg, hits, downContrib);
       }
     }
   }
