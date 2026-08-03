@@ -60,11 +60,11 @@ export async function saveToArchive(report: WvWReport): Promise<void> {
     dateEnd: report.meta.dateEnd,
     dateLabel: report.meta.dateLabel,
     savedAt: Date.now(),
-    fights: report.stats.fights ?? 0,
-    wins: report.stats.wins ?? 0,
-    losses: report.stats.losses ?? 0,
+    fights: Number(report.stats.total ?? 0),
+    wins: Number(report.stats.wins ?? 0),
+    losses: Number(report.stats.losses ?? 0),
     totalDamage,
-    avgSquadSize: report.stats.avgSquadSize ?? 0,
+    avgSquadSize: Number(report.stats.avgSquadSize ?? 0),
     report,
   };
 
