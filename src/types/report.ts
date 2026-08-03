@@ -87,6 +87,8 @@ export interface MvpCard {
 
 export interface OffenseTotals {
   damage: number;
+  /** Raw all-inclusive damage (EI's "All" column) including siege/NPC/gate hits - only populated for reports built after the sitewide All/Players toggle was added. */
+  damageAll?: number;
   directDmg: number;
   connectedDamageCount: number;
   connectedDirectDamageCount: number;
