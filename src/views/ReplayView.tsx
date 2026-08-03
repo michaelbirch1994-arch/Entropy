@@ -23,6 +23,10 @@ export default function ReplayView() {
   // its full pixel size fills the whole frame with dark terrain and reads as
   // a black screen. Opt-in until the framing is reconciled with the map rect.
   const [showMap, setShowMap] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  // Dot radii are in map units, so they must shrink as you zoom in or the
+  // squad turns into one solid blob at high magnification.
+  const dotScale = 0.45 / zoom;
   const [showMechanics, setShowMechanics] = useState(true);
   const [showCasts, setShowCasts] = useState(false);
   const rafRef = useRef<number | null>(null);
@@ -59,8 +63,14 @@ export default function ReplayView() {
     if (!fight) return "0 0 100 100";
     const { bounds } = fight.data;
     const pad = Math.max((bounds.maxX - bounds.minX) * 0.08, 50);
-    return `${bounds.minX - pad} ${bounds.minY - pad} ${bounds.maxX - bounds.minX + pad * 2} ${bounds.maxY - bounds.minY + pad * 2}`;
-  }, [fight]);
+    const fullW = bounds.maxX - bounds.minX + pad * 2;
+    const fullH = bounds.maxY - bounds.minY + pad * 2;
+    const cx = bounds.minX - pad + fullW / 2;
+    const cy = bounds.minY - pad + fullH / 2;
+    const w = fullW / zoom;
+    const h = fullH / zoom;
+    return `${cx - w / 2} ${cy - h / 2} ${w} ${h}`;
+  }, [fight, zoom]);
 
   // Live squad/enemy headcounts and average squad spread from the tag, all
   // recomputed at the current scrub position straight from the same replay
@@ -368,6 +378,16 @@ render(0);
                   {l.label}
                 </button>
               ))}
+            <div className="flex items-center gap-2 ml-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Zoom</span>
+              <input type="range" min={1} max={8} step={0.25} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} className="w-28 accent-sky-400" />
+              <span className="text-[10px] font-mono text-slate-400 w-9">{zoom.toFixed(1)}x</span>
+              {zoom !== 1 && (
+                <button onClick={() => setZoom(1)} className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300 px-2 py-1 rounded border border-slate-800">
+                  Reset
+                </button>
+              )}
+            </div>
             <span className="text-[10px] text-slate-500">
               Markers show where an event happened, not how big the effect was - Elite Insights does not export AoE shapes.
             </span>
@@ -415,10 +435,10 @@ render(0);
                         key={`mech-${m.t}-${m.name}-${i}`}
                         cx={pt.x}
                         cy={pt.y}
-                        r={40 + age * 70}
+                        r={(40 + age * 70) * dotScale}
                         fill="none"
                         stroke="#f43f5e"
-                        strokeWidth={6}
+                        strokeWidth={6 * dotScale}
                         opacity={0.75 * (1 - age)}
                       />
                     );
@@ -438,10 +458,10 @@ render(0);
                         key={`cast-${p.account}`}
                         cx={pt.x}
                         cy={pt.y}
-                        r={18 + age * 40}
+                        r={(18 + age * 40) * dotScale}
                         fill="none"
                         stroke="#fbbf24"
-                        strokeWidth={4}
+                        strokeWidth={4 * dotScale}
                         opacity={0.6 * (1 - age)}
                       />
                     );
@@ -458,11 +478,11 @@ render(0);
                     key={e.id}
                     cx={pt.x}
                     cy={pt.y}
-                    r={down ? 45 : 38}
+                    r={(down ? 45 : 38) * dotScale}
                     fill="#f43f5e"
                     fillOpacity={down ? 0.25 : 0.75}
                     stroke={down ? "#f43f5e" : "none"}
-                    strokeWidth={down ? 10 : 0}
+                    strokeWidth={(down ? 10 : 0) * dotScale}
                   />
                 );
               })}
@@ -477,11 +497,11 @@ render(0);
                     key={p.account}
                     cx={pt.x}
                     cy={pt.y}
-                    r={down ? 55 : p.isCommander ? 65 : 45}
+                    r={(down ? 55 : p.isCommander ? 65 : 45) * dotScale}
                     fill={p.inSquad ? "#f59e0b" : "#64748b"}
                     fillOpacity={down ? 0.3 : 0.9}
                     stroke={down ? "#f43f5e" : p.isCommander ? "#fbbf24" : "none"}
-                    strokeWidth={down || p.isCommander ? 14 : 0}
+                    strokeWidth={(down || p.isCommander ? 14 : 0) * dotScale}
                   />
                 );
               })}
