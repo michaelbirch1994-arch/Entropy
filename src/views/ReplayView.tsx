@@ -347,7 +347,7 @@ render(0);
           <div className="flex flex-wrap items-center gap-2 mb-3">
             {([
               { on: showMap, set: setShowMap, label: "Map", available: !!fight.data.map },
-              { on: showMechanics, set: setShowMechanics, label: "Mechanics", available: fight.data.mechanics.length > 0 },
+              { on: showMechanics, set: setShowMechanics, label: "Mechanics", available: (fight.data.mechanics ?? []).length > 0 },
               { on: showCasts, set: setShowCasts, label: "Cast markers", available: true },
             ] as { on: boolean; set: (v: boolean) => void; label: string; available: boolean }[])
               .filter((l) => l.available)
@@ -399,7 +399,7 @@ render(0);
                 {/* Mechanic events near the playhead, pinned to whoever triggered
                     them. EI exports no AoE geometry, so this marks that something
                     happened to that player at that spot - not the effect's radius. */}
-                {showMechanics && fight.data.mechanics
+                {showMechanics && (fight.data.mechanics ?? [])
                   .filter((m) => Math.abs(m.t - t) <= 1500 && m.account)
                   .map((m, i) => {
                     const owner = fight.data.players.find((p) => p.account === m.account);
@@ -424,7 +424,7 @@ render(0);
                     skill was cast, not the area it covered. */}
                 {showCasts &&
                   fight.data.players.map((p) => {
-                    const recent = p.casts.filter((c) => Math.abs(c.t - t) <= 600);
+                    const recent = (p.casts ?? []).filter((c) => Math.abs(c.t - t) <= 600);
                     if (recent.length === 0) return null;
                     const pt = interpolatePosition(p.points, t);
                     if (!pt) return null;
