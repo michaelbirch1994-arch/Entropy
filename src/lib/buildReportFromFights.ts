@@ -263,7 +263,7 @@ const BUFF_CLASSIFICATIONS: Record<string, string> = {
 // for every EI buff classification in one pass over the fights, so the Buffs
 // view can offer the full set of dps.report-style tabs instead of just Boons.
 function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerStats[]): Record<string, BoonUptimeData> {
-  const buffMetaByClass = new Map<string, Map<number, { name: string; icon?: string }>>();
+  const buffMetaByClass = new Map<string, Map<number, { name: string; icon?: string; stacking: boolean }>>();
   const accByClass = new Map<string, Map<string, Map<number, { sum: number; count: number }>>>();
   const groupByAccount = new Map<string, number>();
 
@@ -274,7 +274,7 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
 
   for (const f of fights) {
     const raw = f.raw as Record<string, unknown>;
-    const buffMap = (raw.buffMap ?? {}) as Record<string, { name?: string; icon?: string; classification?: string }>;
+    const buffMap = (raw.buffMap ?? {}) as Record<string, { name?: string; icon?: string; classification?: string; stacking?: boolean }>;
     const idToClass = new Map<number, string>();
     for (const key of Object.keys(buffMap)) {
       const def = buffMap[key];
@@ -284,7 +284,11 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
         if (!Number.isFinite(id)) continue;
         idToClass.set(id, cls);
         const meta = buffMetaByClass.get(cls)!;
-        if (!meta.has(id)) meta.set(id, { name: def.name || `Buff ${id}`, icon: def.icon });
+        // EI's BuffDesc.stacking distinguishes intensity-stacking buffs (Might,
+// Stability, every condition) from duration-stacking ones. It decides
+// whether this buff's `uptime` value is a percentage or an average
+// stack count - see the note on BoonUptimeColumn.stacking.
+if (!meta.has(id)) meta.set(id, { name: def.name || `Buff ${id}`, icon: def.icon, stacking: !!def.stacking });
       }
     }
 
@@ -343,7 +347,7 @@ if (fightDurationMs > 0 && activeMs / fightDurationMs < MIN_ACTIVE_FRACTION) con
     const acc = accByClass.get(cls)!;
 
     const columns: BoonUptimeColumn[] = Array.from(buffMeta.entries())
-      .map(([id, meta]) => ({ id, name: meta.name, icon: meta.icon }))
+      .map(([id, meta]) => ({ id, name: meta.name, icon: meta.icon, stacking: meta.stacking }))
       .sort((a, b) => {
         const ai = BOON_PRIORITY.indexOf(a.name);
         const bi = BOON_PRIORITY.indexOf(b.name);
