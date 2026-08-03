@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import { useDamageScope, pickDamageScopeValue, type DamageScope } from "../store/DamageScopeContext";
+import { useStatsDisplay } from "../store/StatsDisplayContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
 import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped, profChip } from "../utils/format";
@@ -102,6 +103,21 @@ function ChartTooltip({ active, payload, unit }: { active?: boolean; payload?: {
 export default function OffensiveView() {
   const { report, loading } = useReport();
   const { scope } = useDamageScope();
+  const { mode } = useStatsDisplay();
+  const isPerSecond = mode === "perSecond";
+  // Per-player cells divide by that player's own tracked fight time, not a
+  // squad-wide clock, so a "/s" column rates each player against the time
+  // they were actually in the fight.
+  const perPlayer = (v: number, ms: number | undefined) => {
+    if (!isPerSecond) return fmtCompact(v);
+    const secs = (ms ?? 0) / 1000;
+    return secs > 0 ? fmtFixed(v / secs, 2) : "-";
+  };
+  const perPlayerN = (v: number, ms: number | undefined) => {
+    if (!isPerSecond) return fmtNum(v);
+    const secs = (ms ?? 0) / 1000;
+    return secs > 0 ? fmtFixed(v / secs, 2) : "-";
+  };
   const [sortKey, setSortKey] = useState<SortKey>("damage");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -313,14 +329,14 @@ export default function OffensiveView() {
                     {/* Damage + inline bar */}
                     <td className="p-2.5 text-right relative">
                       <div className="absolute inset-y-0 left-2 right-2 my-1.5 rounded bg-orange-500/10" style={{ width: `${dmgPct}%`, maxWidth: "calc(100% - 1rem)" }} />
-                      <span className="relative text-slate-200 font-semibold">{fmtCompact(pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll))}</span>
+                      <span className="relative text-slate-200 font-semibold">{perPlayer(pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll), p.totalFightMs)}</span>
                     </td>
                     {/* DPS */}
                     <td className="p-2.5 text-right text-orange-400 font-bold">{fmtFixedGrouped(p.dps, 0)}</td>
                     {/* Target/Cleave -> directDmg proxy */}
-                    <td className="p-2.5 text-right text-slate-300">{fmtCompact(p.offenseTotals.directDmg ?? 0)}</td>
+                    <td className="p-2.5 text-right text-slate-300">{perPlayer(p.offenseTotals.directDmg ?? 0, p.totalFightMs)}</td>
                     {/* Down contrib */}
-                    <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.offenseTotals.downContribution ?? 0)}</td>
+                    <td className="p-2.5 text-right text-sky-400">{perPlayer(p.offenseTotals.downContribution ?? 0, p.totalFightMs)}</td>
                     {/* Crit % */}
                     <td className="p-2.5 text-right text-rose-400">{fmtFixed(p.critRate, 1)}%</td>
                     {/* Flank % */}
@@ -328,13 +344,13 @@ export default function OffensiveView() {
                     {/* Glance % */}
                     <td className="p-2.5 text-right text-slate-400">{fmtFixed(p.glanceRate, 1)}%</td>
                     {/* Interrupts */}
-                    <td className="p-2.5 text-right text-cyan-400">{fmtNum(p.offenseTotals.interrupts ?? 0)}</td>
+                    <td className="p-2.5 text-right text-cyan-400">{perPlayerN(p.offenseTotals.interrupts ?? 0, p.totalFightMs)}</td>
                     {/* Invulned (times the enemy target was invulnerable to this player's hits) */}
                     <td className="p-2.5 text-right text-slate-400">{fmtNum(p.offenseTotals.invulned ?? 0)}</td>
                     {/* Strips */}
-                    <td className="p-2.5 text-right text-amber-400">{fmtNum(p.offenseTotals.boonStrips ?? 0)}</td>
+                    <td className="p-2.5 text-right text-amber-400">{perPlayerN(p.offenseTotals.boonStrips ?? 0, p.totalFightMs)}</td>
                     {/* Kills */}
-                    <td className="p-2.5 text-right text-emerald-400">{fmtNum(p.offenseTotals.killed ?? 0)}</td>
+                    <td className="p-2.5 text-right text-emerald-400">{perPlayerN(p.offenseTotals.killed ?? 0, p.totalFightMs)}</td>
                   
                 {hasSiegeData && (
                   <td className="p-2.5 text-right text-slate-500">
