@@ -295,16 +295,12 @@ if (!meta.has(id)) meta.set(id, { name: def.name || `Buff ${id}`, icon: def.icon
       }
     }
 
-    // A player can appear in a fight's player list without actually having
-    // fought in it - joined the squad but arrived after the pull ended,
-    // was dead/disconnected for the whole thing, was scouting elsewhere,
-    // etc. EI still emits a buffUptimes entry for them, and it's ~0% since
-    // they never received any boons, which drags down their *average*
-    // uptime across a 50-fight session even on fights they played well.
-    // activeTimes[0] is EI's own "time this player was actually in combat"
-    // for the fight, so skip fights where that's negligible.
-    const fightDurationMs = Number(raw.durationMS) || 0;
-    const MIN_ACTIVE_FRACTION = 0.25;
+    // Uptimes are averaged as a plain mean across the fights each player
+    // joined, with every player listed - matching how EI and dps.report
+    // report them, so a column here reconciles against theirs. A previous
+    // version weighted by time in combat and hid players under 25% active,
+    // which handled squad-wide averages better but no longer lined up with
+    // either tool.
 
     const players = (raw.players ?? []) as Record<string, unknown>[];
     for (const p of players) {
@@ -313,10 +309,6 @@ if (!meta.has(id)) meta.set(id, { name: def.name || `Buff ${id}`, icon: def.icon
       if (!account) continue;
       if (typeof p.group === 'number') groupByAccount.set(account, p.group);
 
-      const activeTimes = p.activeTimes as unknown[] | undefined;
-      const activeMs = Array.isArray(activeTimes) && typeof activeTimes[0] === 'number' ? activeTimes[0] : fightDurationMs;
-      if (activeMs <= 0) continue;
-if (fightDurationMs > 0 && activeMs / fightDurationMs < MIN_ACTIVE_FRACTION) continue;
 
       const buffUptimes = (p.buffUptimes ?? []) as Array<{ id?: number; buffData?: Array<{ uptime?: number }> }>;
       for (const entry of buffUptimes) {
@@ -331,14 +323,14 @@ if (fightDurationMs > 0 && activeMs / fightDurationMs < MIN_ACTIVE_FRACTION) con
         let accMap = accMapByAccount.get(account);
         if (!accMap) { accMap = new Map(); accMapByAccount.set(account, accMap); }
         const cur = accMap.get(id) || { sum: 0, count: 0 };
-        // Weight each fight by how long this player was actually in combat in
-        // it, rather than treating every fight as one equal sample. A player
-        // who fought for 8s of a 4-minute pull would otherwise move their
-        // session-average uptime exactly as much as a fight they played start
-        // to finish, which is the main reason squad-wide boon uptime drifted
-        // away from what EI/dps.report report on the individual fights.
-        cur.sum += uptime * activeMs;
-        cur.count += activeMs;
+        // A plain mean across the fights a player joined, and every player is
+        // listed - this is deliberately the same methodology EI and dps.report
+        // use, so a column here can be read side by side with theirs. An
+        // earlier version weighted each fight by time in combat and dropped
+        // low-activity players, which was arguably a truer squad average but
+        // meant the numbers no longer reconciled with either tool.
+        cur.sum += uptime;
+        cur.count += 1;
         accMap.set(id, cur);
       }
     }
