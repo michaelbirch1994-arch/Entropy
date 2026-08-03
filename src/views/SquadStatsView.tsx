@@ -1,5 +1,6 @@
 import { useReport } from "../store/ReportContext";
 import { useDamageScope, pickDamageScopeValue } from "../store/DamageScopeContext";
+import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
 import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped } from "../utils/format";
@@ -10,6 +11,7 @@ import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } 
 export default function SquadStatsView() {
   const { report } = useReport();
   const { scope } = useDamageScope();
+const { scope: allyScope } = useAllyScope();
   if (!report) return null;
   const s = report.stats;
 
@@ -22,8 +24,8 @@ export default function SquadStatsView() {
   // guards every field the same way, in case any of them end up sparse too.
   const totalDamage = s.offensePlayers.reduce((a, p) => a + pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll), 0);
   const totalDownContrib = s.offensePlayers.reduce((a, p) => a + (p.offenseTotals.downContribution ?? 0), 0);
-  const totalHealing = s.healingPlayers.reduce((a, p) => a + (p.healingTotals.healing ?? 0), 0);
-  const totalBarrier = s.healingPlayers.reduce((a, p) => a + (p.healingTotals.barrier ?? 0), 0);
+  const totalHealing = s.healingPlayers.reduce((a, p) => a + pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing), 0);
+  const totalBarrier = s.healingPlayers.reduce((a, p) => a + pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier), 0);
   const totalCleanses = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.condiCleanse ?? 0), 0);
   const totalStrips = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.boonStrips ?? 0), 0);
 
@@ -91,7 +93,7 @@ export default function SquadStatsView() {
                     <td className="p-2.5 text-right text-orange-400">{fmtCompact(pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll))}</td>
                     <td className="p-2.5 text-right text-slate-200 font-bold">{fmtFixedGrouped(dps, 0)}</td>
                     <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.offenseTotals.downContribution)}</td>
-                    <td className="p-2.5 text-right text-emerald-400">{heal ? fmtCompact(heal.healingTotals.healing ?? 0) : "—"}</td>
+                    <td className="p-2.5 text-right text-emerald-400">{heal ? fmtCompact(pickAllyScopeValue(allyScope, heal.healingTotals.healing, heal.healingTotals.squadHealing)) : "—"}</td>
                     <td className="p-2.5 text-right text-cyan-400">{sup ? fmtNum(sup.supportTotals.condiCleanse) : "—"}</td>
                     <td className="p-2.5 text-right text-amber-400">{sup ? fmtNum(sup.supportTotals.boonStrips) : "—"}</td>
                     <td className="p-2.5 text-right text-slate-500">{s.generalPlayers.find((g) => g.account === p.account)?.logsJoined ?? "—"}</td>
