@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
+import { useDamageScope, pickDamageScopeValue, type DamageScope } from "../store/DamageScopeContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
 import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped, profChip } from "../utils/format";
@@ -70,8 +71,9 @@ const COLUMNS: {
   { key: "killed", label: "Kills", align: "right" },
 ];
 
-function numVal(row: Row, key: SortKey): number {
+function numVal(row: Row, key: SortKey, scope: DamageScope): number {
   if (key === "account") return 0;
+  if (key === "damage") return pickDamageScopeValue(scope, row.offenseTotals.damage, row.offenseTotals.damageAll);
   if (key === "dps") return row.dps;
   if (key === "critRate") return row.critRate;
   if (key === "flankRate") return row.flankRate;
@@ -98,6 +100,7 @@ function ChartTooltip({ active, payload, unit }: { active?: boolean; payload?: {
 
 export default function OffensiveView() {
   const { report, loading } = useReport();
+  const { scope } = useDamageScope();
   const [sortKey, setSortKey] = useState<SortKey>("damage");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -112,7 +115,7 @@ export default function OffensiveView() {
       };
       return {
         ...p,
-        dps: secs > 0 ? (p.offenseTotals.damage ?? 0) / secs : 0,
+        dps: secs > 0 ? pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll) / secs : 0,
         critRate: pct("criticalRate"),
         flankRate: pct("flankingRate"),
         glanceRate: pct("glanceRate"),
@@ -128,8 +131,8 @@ export default function OffensiveView() {
           ? a.account.localeCompare(b.account)
           : b.account.localeCompare(a.account);
       }
-      const av = numVal(a, sortKey);
-      const bv = numVal(b, sortKey);
+      const av = numVal(a, sortKey, scope);
+      const bv = numVal(b, sortKey, scope);
       return sortDir === "desc" ? bv - av : av - bv;
     });
     return copy;
@@ -147,17 +150,17 @@ export default function OffensiveView() {
   // offenseTotals is sparse - see the comment on numVal() above. Every read
   // here is guarded with `?? 0` so one player missing a key can't turn a
   // summary card, chart, or the dmgPct bar into NaN/blank for the whole page.
-  const totalDamage = rows.reduce((a, r) => a + (r.offenseTotals.damage ?? 0), 0);
+  const totalDamage = rows.reduce((a, r) => a + pickDamageScopeValue(scope, r.offenseTotals.damage, r.offenseTotals.damageAll), 0);
   const totalStrips = rows.reduce((a, r) => a + (r.offenseTotals.boonStrips ?? 0), 0);
   const totalCC = rows.reduce((a, r) => a + (r.offenseTotals.appliedCrowdControl ?? 0), 0);
   const totalDown = rows.reduce((a, r) => a + (r.offenseTotals.downContribution ?? 0), 0);
 
   const top5Dmg = [...rows]
-    .sort((a, b) => (b.offenseTotals.damage ?? 0) - (a.offenseTotals.damage ?? 0))
+    .sort((a, b) => pickDamageScopeValue(scope, b.offenseTotals.damage, b.offenseTotals.damageAll) - pickDamageScopeValue(scope, a.offenseTotals.damage, a.offenseTotals.damageAll))
     .slice(0, 5)
     .map((r) => ({
       name: r.account.split(".")[0],
-      value: r.offenseTotals.damage ?? 0,
+      value: pickDamageScopeValue(scope, r.offenseTotals.damage, r.offenseTotals.damageAll),
       dps: Math.round(r.dps),
     }));
 
@@ -169,7 +172,7 @@ export default function OffensiveView() {
       value: r.offenseTotals.boonStrips ?? 0,
     }));
 
-  const maxDamage = Math.max(...sorted.map((r) => r.offenseTotals.damage ?? 0), 1);
+  const maxDamage = Math.max(...sorted.map((r) => pickDamageScopeValue(scope, r.offenseTotals.damage, r.offenseTotals.damageAll)), 1);
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) {
@@ -271,7 +274,7 @@ export default function OffensiveView() {
             </thead>
             <tbody className="divide-y divide-slate-800/30 font-mono">
               {sorted.map((p, i) => {
-                const dmgPct = ((p.offenseTotals.damage ?? 0) / maxDamage) * 100;
+                const dmgPct = (pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll) / maxDamage) * 100;
                 return (
                   <tr key={p.account} className={`transition-colors hover:bg-blue-950/20 ${i % 2 === 1 ? "bg-slate-900/20" : ""}`}>
                     {/* Subgroup - data has no group field, show neutral */}
@@ -292,7 +295,7 @@ export default function OffensiveView() {
                     {/* Damage + inline bar */}
                     <td className="p-2.5 text-right relative">
                       <div className="absolute inset-y-0 left-2 right-2 my-1.5 rounded bg-orange-500/10" style={{ width: `${dmgPct}%`, maxWidth: "calc(100% - 1rem)" }} />
-                      <span className="relative text-slate-200 font-semibold">{fmtCompact(p.offenseTotals.damage ?? 0)}</span>
+                      <span className="relative text-slate-200 font-semibold">{fmtCompact(pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll))}</span>
                     </td>
                     {/* DPS */}
                     <td className="p-2.5 text-right text-orange-400 font-bold">{fmtFixedGrouped(p.dps, 0)}</td>
