@@ -127,8 +127,8 @@ const tally = new Map<number, { count: number; players: Set<string> }>();
     // filter would wipe everything out (a fight with no damage distribution,
     // or cast ids that do not line up with damage ids), show the raw casts
     // rather than claiming nothing happened.
-    const damaging = damagingSet ? all.filter((s) => damagingSet.has(s.id)) : all;
-    return (damaging.length > 0 ? damaging : all).slice(0, 10);
+    const damagingOnly = damagingSet ? all.filter((s) => damagingSet.has(s.id)) : all;
+    return (damagingOnly.length > 0 ? damagingOnly : all).slice(0, 10);
   }, [selectedT, rotationFight, skillMeta]);
 
   if (!report) return null;
