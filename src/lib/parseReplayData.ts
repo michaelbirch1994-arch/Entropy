@@ -34,6 +34,14 @@ export interface ReplayPlayerTrack {
   points: ReplayPoint[];
   downIntervals: [number, number][];
   deadIntervals: [number, number][];
+  /**
+   * Cast times of skills that actually dealt damage in this fight. These
+   * mark WHERE AND WHEN a skill was cast - they are not the effect's real
+   * area. EI does not export combat-replay decorations (no AoE geometry
+   * exists anywhere in its JSON schema), so anything drawn from this is a
+   * cast marker and must not be presented as an actual AoE footprint.
+   */
+  casts: { t: number; skillId: number }[];
 }
 
 // Hostile targets get a much thinner track than players - EI doesn't expose
@@ -48,11 +56,49 @@ export interface ReplayEnemyTrack {
   deadIntervals: [number, number][];
 }
 
+// EI ships the actual combat-replay map imagery in
+// combatReplayMetaData: `sizes` is the image size in pixels, `maps` is a
+// list of background images each valid for a time interval (fights that
+// cross a map boundary get more than one), and `position` is where that
+// image's top-left sits in the shared pixel space. Crucially, the
+// per-actor combatReplayData.positions are already expressed in that same
+// pixel space, so tracks can be drawn straight onto the image with no
+// conversion - inchToPixel is only needed to turn an in-game range in
+// inches (a skill radius, say) into a pixel radius.
+export interface ReplayMapImage {
+  url: string;
+  startMs: number;
+  endMs: number;
+  x: number;
+  y: number;
+}
+
+export interface ReplayMapInfo {
+  images: ReplayMapImage[];
+  width: number;
+  height: number;
+  inchToPixel: number;
+}
+
+// A timestamped mechanic event (EI's raw.mechanics), resolved where
+// possible to the squad member who triggered it so the replay can pin it
+// to their position at that moment.
+export interface ReplayMechanicMarker {
+  t: number;
+  name: string;
+  severity: string;
+  actor: string;
+  account?: string;
+}
+
 export interface ReplayData {
   durationMs: number;
   bounds: { minX: number; maxX: number; minY: number; maxY: number };
   players: ReplayPlayerTrack[];
   enemies: ReplayEnemyTrack[];
+  map: ReplayMapInfo | null;
+  mechanics: ReplayMechanicMarker[];
+  skillMeta: Record<number, { name: string; icon?: string }>;
 }
 
 // combatReplayData.positions is a flat list of [x, y] pairs (NOT [t,x,y] -
@@ -98,6 +144,50 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
   const replayMeta = (rawLog.combatReplayMetaData ?? {}) as Record<string, unknown>;
   const pollingRate = Number(replayMeta.pollingRate) > 0 ? Number(replayMeta.pollingRate) : 150;
 
+  const sizes = Array.isArray(replayMeta.sizes) ? (replayMeta.sizes as unknown[]) : [];
+  const mapWidth = Number(sizes[0]) || 0;
+  const mapHeight = Number(sizes[1]) || 0;
+  const rawMaps = Array.isArray(replayMeta.maps) ? (replayMeta.maps as Record<string, unknown>[]) : [];
+  const mapImages: ReplayMapImage[] = [];
+  for (const m of rawMaps) {
+    const url = typeof m.url === "string" ? m.url : null;
+    if (!url) continue;
+    const interval = Array.isArray(m.interval) ? (m.interval as unknown[]) : [];
+    const pos = Array.isArray(m.position) ? (m.position as unknown[]) : [];
+    mapImages.push({
+      // EI emits protocol-relative urls for these; an https page refuses
+      // to load them as-is.
+      url: url.startsWith("//") ? `https:${url}` : url.replace(/^http:\/\//i, "https://"),
+      startMs: Number(interval[0]) || 0,
+      endMs: Number(interval[1]) || 0,
+      x: Number(pos[0]) || 0,
+      y: Number(pos[1]) || 0,
+    });
+  }
+  const map: ReplayMapInfo | null =
+    mapImages.length > 0 && mapWidth > 0 && mapHeight > 0
+      ? { images: mapImages, width: mapWidth, height: mapHeight, inchToPixel: Number(replayMeta.inchToPixel) || 0 }
+      : null;
+
+  // Skill names/icons for cast markers, and the set of skills that actually
+  // dealt damage - a raw cast timeline is mostly weapon swaps, dodges and
+  // utility, which would bury the map in meaningless pips.
+  const skillMap = (rawLog.skillMap ?? {}) as Record<string, { name?: string; icon?: string }>;
+  const skillMeta: Record<number, { name: string; icon?: string }> = {};
+  for (const key of Object.keys(skillMap)) {
+    const id = Number(key.replace(/^s/, ""));
+    const def = skillMap[key];
+    if (Number.isFinite(id) && def?.name) skillMeta[id] = { name: def.name, icon: def.icon };
+  }
+  const damagingSkillIds = new Set<number>();
+  for (const p of rawPlayers) {
+    const dist = ((p.totalDamageDist ?? []) as Array<Array<{ id?: number; totalDamage?: number }>>)[0] ?? [];
+    for (const e of dist) {
+      const sid = Number(e?.id);
+      if (Number.isFinite(sid) && (Number(e?.totalDamage) || 0) > 0) damagingSkillIds.add(sid);
+    }
+  }
+
   const players: ReplayPlayerTrack[] = [];
   const enemies: ReplayEnemyTrack[] = [];
   let minX = Infinity;
@@ -120,6 +210,16 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
       if (pt.y > maxY) maxY = pt.y;
     }
 
+    const casts: { t: number; skillId: number }[] = [];
+    for (const entry of (p.rotation ?? []) as Array<{ id?: number; skills?: Array<{ castTime?: number }> }>) {
+      const skillId = Number(entry?.id);
+      if (!Number.isFinite(skillId) || !damagingSkillIds.has(skillId)) continue;
+      for (const sk of entry.skills ?? []) {
+        casts.push({ t: Number(sk?.castTime) || 0, skillId });
+      }
+    }
+    casts.sort((a, b) => a.t - b.t);
+
     players.push({
       account: typeof p.account === "string" ? p.account : "Unknown",
       name: typeof p.name === "string" ? p.name : "Unknown",
@@ -129,6 +229,7 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
       points,
       downIntervals: asIntervals(crd.down),
       deadIntervals: asIntervals(crd.dead),
+      casts,
     });
   }
 
@@ -164,7 +265,35 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
       ? log.durationMS
       : Math.max(...players.map((p) => p.points[p.points.length - 1]?.t ?? 0));
 
-  return { durationMs, bounds: { minX, maxX, minY, maxY }, players, enemies };
+  // Mechanic events (EI raw.mechanics). JsonMechanic.Id is the species id of
+  // whoever triggered it, 0 meaning a player - those are matched back to an
+  // account via character name, the only identifier the event carries, so the
+  // replay can pin the marker to that player's position at that instant.
+  const nameToAccount = new Map<string, string>();
+  for (const p of rawPlayers) {
+    const nm = typeof p.name === "string" ? p.name : null;
+    const acc = typeof p.account === "string" ? p.account : null;
+    if (nm && acc) nameToAccount.set(nm, acc);
+  }
+  const mechanics: ReplayMechanicMarker[] = [];
+  for (const m of (rawLog.mechanics ?? []) as Array<Record<string, unknown>>) {
+    const mName = typeof m.name === "string" ? m.name : "Mechanic";
+    const severity = typeof m.severity === "string" ? m.severity : "Sev0";
+    const events = Array.isArray(m.mechanicsData) ? (m.mechanicsData as Record<string, unknown>[]) : [];
+    for (const e of events) {
+      const actor = typeof e.actor === "string" && e.actor ? e.actor : "Unknown";
+      mechanics.push({
+        t: Number(e.time) || 0,
+        name: mName,
+        severity,
+        actor,
+        account: Number(e.id) === 0 ? nameToAccount.get(actor) : undefined,
+      });
+    }
+  }
+  mechanics.sort((a, b) => a.t - b.t);
+
+  return { durationMs, bounds: { minX, maxX, minY, maxY }, players, enemies, map, mechanics, skillMeta };
 }
 
 export function interpolatePosition(points: ReplayPoint[], t: number): ReplayPoint | null {
