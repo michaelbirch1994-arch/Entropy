@@ -83,7 +83,7 @@ export default function BuffsView() {
 
       <Panel
         title={activeTab}
-        subtitle="% of the fight each player held each buff - averaged across every fight they joined"
+        subtitle="Duration buffs show % of the fight held; intensity-stacking buffs (Might, Stability, conditions) show average stacks, matching Elite Insights - weighted by time in combat across every fight joined"
         icon={<Sparkles className="w-3.5 h-3.5" />}
         action={`${rows.length} players`}
         bodyClassName="p-0"
@@ -123,11 +123,11 @@ export default function BuffsView() {
                     </span>
                   </td>
                   {columns.map((c) => {
-                    const pct = row.uptimes[c.id];
+                    const val = row.uptimes[c.id];
                     return (
                       <td key={c.id} className="text-center px-2 py-2.5 font-mono">
-                        <span className={`font-bold ${uptimeColor(pct ?? 0)}`}>
-                          {pct === undefined ? "-" : `${pct.toFixed(0)}%`}
+                        <span className={`font-bold ${c.stacking ? "text-slate-200" : uptimeColor(val ?? 0)}`}>
+                          {val === undefined ? "-" : c.stacking ? val.toFixed(1) : `${val.toFixed(0)}%`}
                         </span>
                       </td>
                     );
