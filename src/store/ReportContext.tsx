@@ -7,6 +7,7 @@ import {
   putActiveReport,
 } from "../utils/reportCache";
 import { recordReportIntoProfiles } from "../lib/playerProfileStore";
+import { saveToArchive } from "../utils/reportArchive";
 
 export type { ReportSource };
 
@@ -99,6 +100,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
           setReportState(data);
           setSource("url");
           setLoading(false);
+                    void saveToArchive(data);
           void putActiveReport({
             id: reportCacheId(data, "url"),
             source: "url",
@@ -148,6 +150,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         report: data,
       });
       void recordReportIntoProfiles(data);
+      void saveToArchive(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to read file");
       setLoading(false);
@@ -173,6 +176,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         report: data,
       });
       void recordReportIntoProfiles(data);
+      void saveToArchive(data);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to load URL";
       setError(msg);
@@ -195,6 +199,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         report: data,
       });
       void recordReportIntoProfiles(data);
+      void saveToArchive(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load combined report");
       setLoading(false);
