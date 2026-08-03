@@ -122,7 +122,7 @@ export default function OffensiveView() {
         glanceRate: pct("glanceRate"),
       };
     });
-  }, [report]);
+  }, [report, scope]);
 
   const sorted = useMemo(() => {
     const copy = [...rows];
