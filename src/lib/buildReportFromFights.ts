@@ -297,7 +297,7 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
     // activeTimes[0] is EI's own "time this player was actually in combat"
     // for the fight, so skip fights where that's negligible.
     const fightDurationMs = Number(raw.durationMS) || 0;
-    const MIN_ACTIVE_FRACTION = 0.1;
+    const MIN_ACTIVE_FRACTION = 0.25;
 
     const players = (raw.players ?? []) as Record<string, unknown>[];
     for (const p of players) {
@@ -308,7 +308,8 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
 
       const activeTimes = p.activeTimes as unknown[] | undefined;
       const activeMs = Array.isArray(activeTimes) && typeof activeTimes[0] === 'number' ? activeTimes[0] : fightDurationMs;
-      if (fightDurationMs > 0 && activeMs / fightDurationMs < MIN_ACTIVE_FRACTION) continue;
+      if (activeMs <= 0) continue;
+if (fightDurationMs > 0 && activeMs / fightDurationMs < MIN_ACTIVE_FRACTION) continue;
 
       const buffUptimes = (p.buffUptimes ?? []) as Array<{ id?: number; buffData?: Array<{ uptime?: number }> }>;
       for (const entry of buffUptimes) {
@@ -323,8 +324,14 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
         let accMap = accMapByAccount.get(account);
         if (!accMap) { accMap = new Map(); accMapByAccount.set(account, accMap); }
         const cur = accMap.get(id) || { sum: 0, count: 0 };
-        cur.sum += uptime;
-        cur.count += 1;
+        // Weight each fight by how long this player was actually in combat in
+        // it, rather than treating every fight as one equal sample. A player
+        // who fought for 8s of a 4-minute pull would otherwise move their
+        // session-average uptime exactly as much as a fight they played start
+        // to finish, which is the main reason squad-wide boon uptime drifted
+        // away from what EI/dps.report report on the individual fights.
+        cur.sum += uptime * activeMs;
+        cur.count += activeMs;
         accMap.set(id, cur);
       }
     }
@@ -508,6 +515,21 @@ function computeRotations(fights: FightInput[]): RotationsData {
     if (durationMs <= 0) return;
 
     const players = (raw.players ?? []) as Record<string, unknown>[];
+    // Which skill ids actually dealt damage in this fight, taken from EI's own
+    // per-player totalDamageDist. Cast timelines include everything a player
+    // pressed - weapon swaps, dodges, resurrects, pure heals, utility - none of
+    // which belong in a "what caused this DPS spike" breakdown. Intersecting
+    // casts against this set keeps the spike view to skills that could have
+    // produced the damage being explained.
+    const damagingSkillIds = new Set<number>();
+    for (const p of players) {
+      if (p.notInSquad) continue;
+      const dmgDist = ((p.totalDamageDist ?? []) as Array<Array<{ id?: number; totalDamage?: number }>>)[0] ?? [];
+      for (const e of dmgDist) {
+        const sid = Number(e?.id);
+        if (Number.isFinite(sid) && (Number(e?.totalDamage) || 0) > 0) damagingSkillIds.add(sid);
+      }
+    }
     const rotPlayers: RotationsData['fights'][number]['players'] = [];
     for (const p of players) {
       if (p.notInSquad) continue;
@@ -538,6 +560,7 @@ function computeRotations(fights: FightInput[]): RotationsData {
         fightId: f.summary.permalink || `${f.summary.fightName}-${idx}`,
         fightName: f.summary.fightName || `Fight ${idx + 1}`,
         durationMs,
+        damagingSkillIds: Array.from(damagingSkillIds),
         players: rotPlayers,
       });
     }
