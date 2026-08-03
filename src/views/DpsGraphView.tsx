@@ -17,6 +17,34 @@ function fmtClock(sec: number): string {
 // "what happened at this spike" rather than "what happened all fight".
 const SPIKE_WINDOW_SEC = 3;
 
+// Skill icons come straight from EI as absolute CDN urls. Two things bit us
+// here: some come through protocol-relative or as plain http, which a page
+// served over https refuses to load as mixed content (the symptom being an
+// icon that only appears if you explicitly ask the browser to load it), and
+// a CDN hiccup on any one icon should not leave a broken-image glyph in the
+// grid. Normalise the scheme, and degrade to a neutral placeholder on error.
+function SpikeSkillIcon({ src }: { src?: string }) {
+  const [failed, setFailed] = useState(false);
+  const normalised = src
+    ? src.startsWith("//")
+      ? `https:${src}`
+      : src.replace(/^http:\/\//i, "https://")
+    : undefined;
+  if (!normalised || failed) {
+    return <div className="w-6 h-6 rounded bg-slate-800 flex-shrink-0" />;
+  }
+  return (
+    <img
+      src={normalised}
+      alt=""
+      referrerPolicy="no-referrer"
+      decoding="async"
+      onError={() => setFailed(true)}
+      className="w-6 h-6 rounded flex-shrink-0"
+    />
+  );
+}
+
 export default function DpsGraphView() {
   const { report } = useReport();
   const data = report?.stats.dpsGraph;
@@ -67,10 +95,18 @@ export default function DpsGraphView() {
     if (selectedT == null || !rotationFight) return null;
     const windowMs = SPIKE_WINDOW_SEC * 1000;
     const centerMs = selectedT * 1000;
-    const tally = new Map<number, { count: number; players: Set<string> }>();
+    // Only skills that actually dealt damage in this fight belong in a
+// "what caused this spike" list - a cast timeline also records weapon
+// swaps, dodges, resurrects and pure heals, which were crowding out the
+// skills that produced the damage. Reports built before this data
+// existed have no set, in which case nothing is filtered out.
+const damaging = rotationFight.damagingSkillIds;
+const damagingSet = damaging && damaging.length > 0 ? new Set(damaging) : null;
+const tally = new Map<number, { count: number; players: Set<string> }>();
     rotationFight.players.forEach((p) => {
       p.casts.forEach((c) => {
-        if (Math.abs(c.castTime - centerMs) <= windowMs) {
+        if (damagingSet && !damagingSet.has(c.skillId)) return;
+if (Math.abs(c.castTime - centerMs) <= windowMs) {
           const entry = tally.get(c.skillId) ?? { count: 0, players: new Set<string>() };
           entry.count++;
           entry.players.add(p.account);
@@ -227,7 +263,7 @@ export default function DpsGraphView() {
               {spikeBreakdown.map((s) => (
                 <div key={s.id} className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2">
                   {s.icon ? (
-                    <img src={s.icon} alt="" referrerPolicy="no-referrer" className="w-6 h-6 rounded flex-shrink-0" />
+                    <SpikeSkillIcon src={s.icon} />
                   ) : (
                     <div className="w-6 h-6 rounded bg-slate-800 flex-shrink-0" />
                   )}
