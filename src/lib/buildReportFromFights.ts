@@ -26,6 +26,8 @@ import type {
   LeaderboardEntry,
   Leaderboards,
   ClassSlice,
+FightRow,
+TimelinePoint,
   RoleClassification,
   BoonUptimeData,
   BoonUptimeColumn,
@@ -1220,6 +1222,111 @@ function computeSynergyInsights(
   return insights;
 }
 
+// Per-fight table, map distribution and session timeline. All three were
+// left as empty stubs when this file was first ported, which meant the
+// Fight Breakdown, Map Distribution and timeline views rendered blank for
+// every raw-log report ever built - not a bug in those views, they simply
+// had nothing to draw. Everything here comes from data already on each raw
+// EI log, using the same per-fight iteration as computeFightHighlights.
+function computeFightTables(fights: FightInput[]): {
+  fightBreakdown: FightRow[];
+  mapData: ClassSlice[];
+  timelineData: TimelinePoint[];
+} {
+  type RawP = {
+    account?: string; profession?: string; notInSquad?: boolean; friendlyNPC?: boolean;
+    defenses?: Array<{ downCount?: number; deadCount?: number; damageTaken?: number; damageBarrier?: number }>;
+    statsAll?: Array<{ killed?: number; downed?: number; totalDamage?: number; boonStrips?: number }>;
+    support?: Array<{ boonStrips?: number; condiCleanse?: number }>;
+  };
+
+  const fightBreakdown: FightRow[] = [];
+  const timelineData: TimelinePoint[] = [];
+  const mapCounts = new Map<string, number>();
+
+  fights.forEach((f, i) => {
+    const raw = f.raw as Record<string, unknown>;
+    const players = (raw.players ?? []) as RawP[];
+    const squad = players.filter((p) => !p.notInSquad && !p.friendlyNPC);
+    const allies = players.filter((p) => !p.notInSquad || p.friendlyNPC);
+    const enemyCount = Math.max(players.length - squad.length, 0);
+
+    let alliesDown = 0, alliesDead = 0, enemyKills = 0, enemyDowns = 0;
+    let outDamage = 0, inDamage = 0, outStrips = 0, inBarrier = 0;
+    const squadClassCountsFight: Record<string, number> = {};
+
+    for (const p of squad) {
+      const def = p.defenses?.[0];
+      const st = p.statsAll?.[0];
+      alliesDown += Number(def?.downCount) || 0;
+      alliesDead += Number(def?.deadCount) || 0;
+      inDamage += Number(def?.damageTaken) || 0;
+      inBarrier += Number(def?.damageBarrier) || 0;
+      enemyKills += Number(st?.killed) || 0;
+      enemyDowns += Number(st?.downed) || 0;
+      outDamage += Number(st?.totalDamage) || 0;
+      outStrips += Number(p.support?.[0]?.boonStrips) || 0;
+      const prof = String(p.profession || "Unknown");
+      squadClassCountsFight[prof] = (squadClassCountsFight[prof] || 0) + 1;
+    }
+
+    const durationMs = Number(raw.durationMS) || 0;
+    const mins = Math.floor(durationMs / 60000);
+    const secs = Math.round((durationMs % 60000) / 1000);
+    const mapName = String(raw.fightName || raw.name || "Unknown Map");
+    const timestamp = Date.parse((raw.timeStartStd as string) ?? "") || 0;
+    const isWin = !!raw.success;
+
+    mapCounts.set(mapName, (mapCounts.get(mapName) || 0) + 1);
+
+    fightBreakdown.push({
+      id: f.summary.permalink || `${mapName}-${i}`,
+      label: `#${i + 1}`,
+      fullLabel: f.summary.fightName || mapName,
+      permalink: f.summary.permalink,
+      timestamp,
+      mapName,
+      duration: `${mins}m ${secs}s`,
+      isWin,
+      squadCount: squad.length,
+      allyCount: allies.length,
+      enemyCount,
+      teamBreakdown: [],
+      alliesDown,
+      alliesDead,
+      alliesRevived: 0,
+      rallies: 0,
+      enemyDeaths: enemyKills,
+      enemyDowns,
+      totalOutgoingDamage: outDamage,
+      totalIncomingDamage: inDamage,
+      totalOutgoingStrips: outStrips,
+      totalIncomingStrips: 0,
+      totalBoonsApplied: 0,
+      incomingBarrierAbsorbed: inBarrier,
+      outgoingBarrierAbsorbed: 0,
+      squadClassCountsFight,
+    });
+
+    timelineData.push({
+      timestamp,
+      squadCount: squad.length,
+      friendlyCount: allies.length,
+      enemies: enemyCount,
+      isWin,
+      index: i,
+      label: `#${i + 1}`,
+    });
+  });
+
+  const palette = ["#f59e0b", "#38bdf8", "#f43f5e", "#34d399", "#a78bfa", "#fb923c", "#22d3ee", "#e879f9"];
+  const mapData: ClassSlice[] = Array.from(mapCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, value], i) => ({ name, value, color: palette[i % palette.length] }));
+
+  return { fightBreakdown, mapData, timelineData };
+}
+
 export function buildReportFromFights(fights: FightInput[]): WvWReport {
   if (fights.length === 0) throw new Error('No fights to combine.');
 
@@ -1246,6 +1353,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     enemyProfessionCounts,
   } = agg;
 
+  const { fightBreakdown, mapData, timelineData } = computeFightTables(fights);
   const total = fights.length;
   const avgSquadSize = total > 0 ? Math.round(totalSquadSizeAccum / total) : 0;
   const avgEnemies = total > 0 ? Math.round(totalEnemiesAccum / total) : 0;
@@ -1406,8 +1514,8 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     ...computeTopSkills(fights),
     topSkillsByDamage: [],
     topSkillsByDownContribution: [],
-    mapData: [],
-    timelineData: [],
+    mapData,
+    timelineData,
     offensePlayers: playerEntries.map((s) => ({
       account: s.account, profession: s.profession, professionList: s.professionList ?? [],
       offenseTotals: s.offenseTotals as any, offenseRateWeights: s.offenseRateWeights, totalFightMs: s.totalFightMs,
@@ -1440,7 +1548,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     bronze: offensiveScores.bronze,
     squadClassData,
     enemyClassData,
-    fightBreakdown: [],
+    fightBreakdown,
     commanderStats: { rows: [] },
     roleClassifications,
     attendanceData,
