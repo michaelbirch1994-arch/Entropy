@@ -2,14 +2,18 @@ import { useState } from "react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
-import { fmtNum, fmtCompact, profChip } from "../utils/format";
+import { fmtNum, fmtCompact, fmtFixed, profChip } from "../utils/format";
 import { Shield, Heart, Droplet, Zap, Wind, Target } from "lucide-react";
+import { useStatsDisplay, pickStatsDisplayValue } from "../store/StatsDisplayContext";
+import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
 
 type Tab = "defense" | "support" | "healing";
 
 export default function DefensiveView() {
   const { report } = useReport();
   const [tab, setTab] = useState<Tab>("support");
+  const { mode } = useStatsDisplay();
+  const { scope: allyScope } = useAllyScope();
   if (!report) return null;
   const s = report.stats;
 
@@ -21,8 +25,18 @@ export default function DefensiveView() {
   const totalCleanses = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.condiCleanse ?? 0), 0);
   const totalStrips = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.boonStrips ?? 0), 0);
   const totalRes = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.resurrects ?? 0), 0);
-  const totalHealing = s.healingPlayers.reduce((a, p) => a + (p.healingTotals.healing ?? 0), 0);
-  const totalBarrier = s.healingPlayers.reduce((a, p) => a + (p.healingTotals.barrier ?? 0), 0);
+  // Healing/Barrier respect the Squad Only / All Allies toggle - EI already
+  // splits each player's healing/barrier into an all-allies total and a
+  // squad-only subset (healingTotals.healing vs .squadHealing, same for
+  // barrier), so this just picks which of that existing pair to sum.
+  const totalHealing = s.healingPlayers.reduce(
+    (a, p) => a + pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing),
+    0
+  );
+  const totalBarrier = s.healingPlayers.reduce(
+    (a, p) => a + pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier),
+    0
+  );
   const totalDamageTaken = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
   // Barrier absorbed (damageBarrier) is an incoming/defensive stat - damage
   // that never landed because a barrier ate it - distinct from "Total
@@ -31,17 +45,31 @@ export default function DefensiveView() {
   // so surface this one alongside Total Healing/Total Barrier too.
   const totalBarrierAbsorbed = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageBarrier ?? 0), 0);
 
+  // Per Second mode divides each total by the combined active seconds of the
+  // players behind it, rather than a single fight duration - a multi-fight
+  // report has players joining/leaving at different times, so this is the
+  // same "how fast was this actually happening" idea as DPS, generalized to
+  // every summary card instead of just damage.
+  const healingActiveSec = s.healingPlayers.reduce((a, p) => a + (p.activeMs ?? 0), 0) / 1000;
+  const supportActiveSec = s.supportPlayers.reduce((a, p) => a + (p.activeMs ?? 0), 0) / 1000;
+  const defenseActiveSec = s.defensePlayers.reduce((a, p) => a + (Number(p.totalFightMs) || 0), 0) / 1000;
+
+  const isPerSecond = mode === "perSecond";
+  const fmtStat = (v: number, decimals = 0) => (isPerSecond ? fmtFixed(v, decimals || 2) : fmtCompact(v));
+  const fmtStatN = (v: number, decimals = 0) => (isPerSecond ? fmtFixed(v, decimals || 2) : fmtNum(v));
+  const lbl = (base: string) => (isPerSecond ? `${base}/s` : base);
+
   return (
     <div className="space-y-5 animate-view pb-12">
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-        <StatCard label="Total Healing" value={fmtCompact(totalHealing)} icon={<Heart className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
-        <StatCard label="Total Barrier" value={fmtCompact(totalBarrier)} icon={<Shield className="w-3.5 h-3.5 text-teal-400" />} accent="text-teal-400" />
-        <StatCard label="Barrier Absorbed" value={fmtCompact(totalBarrierAbsorbed)} icon={<Shield className="w-3.5 h-3.5 text-teal-300" />} accent="text-teal-300" />
-        <StatCard label="Cleanses" value={fmtNum(totalCleanses)} icon={<Droplet className="w-3.5 h-3.5 text-cyan-400" />} accent="text-cyan-400" />
-        <StatCard label="Boon Strips" value={fmtNum(totalStrips)} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
-        <StatCard label="Resurrects" value={fmtNum(totalRes)} icon={<Wind className="w-3.5 h-3.5 text-sky-400" />} accent="text-sky-400" />
-        <StatCard label="Damage Taken" value={fmtCompact(totalDamageTaken)} icon={<Target className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" />
+        <StatCard label={lbl("Total Healing")} value={fmtStat(pickStatsDisplayValue(mode, totalHealing, healingActiveSec))} icon={<Heart className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
+        <StatCard label={lbl("Total Barrier")} value={fmtStat(pickStatsDisplayValue(mode, totalBarrier, healingActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-teal-400" />} accent="text-teal-400" />
+        <StatCard label={lbl("Barrier Absorbed")} value={fmtStat(pickStatsDisplayValue(mode, totalBarrierAbsorbed, defenseActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-teal-300" />} accent="text-teal-300" />
+        <StatCard label={lbl("Cleanses")} value={fmtStatN(pickStatsDisplayValue(mode, totalCleanses, supportActiveSec))} icon={<Droplet className="w-3.5 h-3.5 text-cyan-400" />} accent="text-cyan-400" />
+        <StatCard label={lbl("Boon Strips")} value={fmtStatN(pickStatsDisplayValue(mode, totalStrips, supportActiveSec))} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
+        <StatCard label={lbl("Resurrects")} value={fmtStatN(pickStatsDisplayValue(mode, totalRes, supportActiveSec))} icon={<Wind className="w-3.5 h-3.5 text-sky-400" />} accent="text-sky-400" />
+        <StatCard label={lbl("Damage Taken")} value={fmtStat(pickStatsDisplayValue(mode, totalDamageTaken, defenseActiveSec))} icon={<Target className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" />
       </div>
 
       {/* Tabs */}
