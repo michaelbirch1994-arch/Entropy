@@ -23,6 +23,7 @@ import {
   Users,
   ArrowUpDown,
   TrendingUp,
+Building2,
 } from "lucide-react";
 
 type SortKey =
@@ -154,6 +155,14 @@ export default function OffensiveView() {
   const totalStrips = rows.reduce((a, r) => a + (r.offenseTotals.boonStrips ?? 0), 0);
   const totalCC = rows.reduce((a, r) => a + (r.offenseTotals.appliedCrowdControl ?? 0), 0);
   const totalDown = rows.reduce((a, r) => a + (r.offenseTotals.downContribution ?? 0), 0);
+  // damageAll (EI's "All" column) includes hits against siege weapons, NPCs,
+  // gates and walls alongside tracked player targets; damage (post-#78 fix)
+  // is player-vs-player only. The gap between them is the closest honest
+  // proxy for "siege/objective damage" EI's export supports - it can't be
+  // split further into siege vs. gate vs. NPC without per-hit target-type
+  // data the JSON doesn't expose.
+  const hasSiegeData = rows.some((r) => r.offenseTotals.damageAll !== undefined);
+  const totalSiegeDamage = rows.reduce((a, r) => a + Math.max(0, (r.offenseTotals.damageAll ?? 0) - (r.offenseTotals.damage ?? 0)), 0);
 
   const top5Dmg = [...rows]
     .sort((a, b) => pickDamageScopeValue(scope, b.offenseTotals.damage, b.offenseTotals.damageAll) - pickDamageScopeValue(scope, a.offenseTotals.damage, a.offenseTotals.damageAll))
@@ -186,11 +195,19 @@ export default function OffensiveView() {
   return (
     <div className="space-y-5 animate-view pb-12">
       {/* Summary stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 gap-4 ${hasSiegeData ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
         <StatCard label="Total Damage" value={fmtCompact(totalDamage)} icon={<Swords className="w-3.5 h-3.5 text-orange-400" />} accent="text-orange-400" />
         <StatCard label="Down Contrib" value={fmtCompact(totalDown)} icon={<Target className="w-3.5 h-3.5 text-sky-400" />} accent="text-sky-400" />
         <StatCard label="Boon Strips" value={fmtNum(totalStrips)} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
         <StatCard label="Crowd Control" value={fmtNum(totalCC)} icon={<Crosshair className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" />
+        {hasSiegeData && (
+          <StatCard
+            label="Siege/NPC/Gate Dmg"
+            value={fmtCompact(totalSiegeDamage)}
+            icon={<Building2 className="w-3.5 h-3.5 text-slate-400" />}
+            accent="text-slate-400"
+          />
+        )}
       </div>
 
       {/* Charts */}
@@ -270,6 +287,7 @@ export default function OffensiveView() {
                     </span>
                   </th>
                 ))}
+                {hasSiegeData && <th className="p-2.5 text-right">Siege/NPC/Gate</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/30 font-mono">
@@ -317,7 +335,12 @@ export default function OffensiveView() {
                     <td className="p-2.5 text-right text-amber-400">{fmtNum(p.offenseTotals.boonStrips ?? 0)}</td>
                     {/* Kills */}
                     <td className="p-2.5 text-right text-emerald-400">{fmtNum(p.offenseTotals.killed ?? 0)}</td>
-                  </tr>
+                  
+                {hasSiegeData && (
+                  <td className="p-2.5 text-right text-slate-500">
+                    {fmtCompact(Math.max(0, (p.offenseTotals.damageAll ?? 0) - (p.offenseTotals.damage ?? 0)))}
+                  </td>
+                )}</tr>
                 );
               })}
             </tbody>
