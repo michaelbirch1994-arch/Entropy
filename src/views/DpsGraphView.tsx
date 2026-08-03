@@ -104,9 +104,8 @@ const damaging = rotationFight.damagingSkillIds;
 const damagingSet = damaging && damaging.length > 0 ? new Set(damaging) : null;
 const tally = new Map<number, { count: number; players: Set<string> }>();
     rotationFight.players.forEach((p) => {
-      p.casts.forEach((c) => {
-        if (damagingSet && !damagingSet.has(c.skillId)) return;
-if (Math.abs(c.castTime - centerMs) <= windowMs) {
+      (p.casts ?? []).forEach((c) => {
+        if (Math.abs(c.castTime - centerMs) <= windowMs) {
           const entry = tally.get(c.skillId) ?? { count: 0, players: new Set<string>() };
           entry.count++;
           entry.players.add(p.account);
@@ -114,7 +113,7 @@ if (Math.abs(c.castTime - centerMs) <= windowMs) {
         }
       });
     });
-    return Array.from(tally.entries())
+    const all = Array.from(tally.entries())
       .map(([id, v]) => ({
         id,
         name: skillMeta[id]?.name ?? `Skill ${id}`,
@@ -122,8 +121,14 @@ if (Math.abs(c.castTime - centerMs) <= windowMs) {
         count: v.count,
         playerCount: v.players.size,
       }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+      .sort((a, b) => b.count - a.count);
+
+    // Prefer damage-dealing skills, but never return an empty panel: if the
+    // filter would wipe everything out (a fight with no damage distribution,
+    // or cast ids that do not line up with damage ids), show the raw casts
+    // rather than claiming nothing happened.
+    const damaging = damagingSet ? all.filter((s) => damagingSet.has(s.id)) : all;
+    return (damaging.length > 0 ? damaging : all).slice(0, 10);
   }, [selectedT, rotationFight, skillMeta]);
 
   if (!report) return null;
