@@ -18,7 +18,11 @@ export default function ReplayView() {
   const [speed, setSpeed] = useState(2);
   // Optional overlay layers. Casts default off: a WvW pull produces
   // thousands of them and they bury the squad dots otherwise.
-  const [showMap, setShowMap] = useState(true);
+  // Off by default. The viewBox is fitted to the squad's actual movement,
+  // which is a small patch of a very large map image, so drawing the map at
+  // its full pixel size fills the whole frame with dark terrain and reads as
+  // a black screen. Opt-in until the framing is reconciled with the map rect.
+  const [showMap, setShowMap] = useState(false);
   const [showMechanics, setShowMechanics] = useState(true);
   const [showCasts, setShowCasts] = useState(false);
   const rafRef = useRef<number | null>(null);
