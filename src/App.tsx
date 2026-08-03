@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Sidebar, { VIEW_ICONS } from "./components/layout/Sidebar";
 import { ReportProvider, useReport } from "./store/ReportContext";
@@ -158,6 +158,10 @@ function NoReportState() {
 
 function ReportShell() {
   const { report, loading, error, source, clearReport } = useReport();
+  // Lets you get back to the import screen to add more logs without
+  // throwing away the report you already have - Clear is destructive and
+  // was previously the only route back.
+  const [atHome, setAtHome] = useState(false);
   const { activeView, setActiveView } = useView();
 
   const headerInfo = useMemo(() => {
@@ -185,7 +189,7 @@ function ReportShell() {
   const viewIcon = VIEW_ICONS[activeView] ?? <Activity className="w-4 h-4" />;
 
   // When no report loaded yet (and not in the middle of initial load), show Import Center
-  const showImport = !report && !loading && !error;
+  const showImport = (!report || atHome) && !loading && !error;
   const showLoading = loading && !report;
   const showError = !loading && !report && !!error;
 
@@ -220,6 +224,14 @@ function ReportShell() {
                 {(activeView === "offensive" || activeView === "squad-stats") && <DamageScopeToggle />}
                 {(activeView === "defensive" || activeView === "offensive") && <StatsDisplayToggle />}
                 {(activeView === "defensive" || activeView === "squad-stats") && <AllyScopeToggle />}
+              <button
+                onClick={() => setAtHome(true)}
+                title="Import more logs without discarding this report"
+                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-amber-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-amber-500/30 bg-black/30 transition-colors"
+              >
+                <Upload className="w-3 h-3" />
+                Import
+              </button>
               <button
                 onClick={handleExportReport}
                 className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-sky-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-sky-500/30 bg-black/30 transition-colors"
@@ -264,7 +276,19 @@ function ReportShell() {
             <ErrorState message={error!} />
           ) : showImport ? (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-              <NoReportState />
+              <div className="w-full">
+                {report && (
+                  <div className="flex justify-center mb-4">
+                    <button
+                      onClick={() => setAtHome(false)}
+                      className="text-[10px] font-bold uppercase tracking-wider text-sky-400 hover:text-sky-300 px-3 py-2 rounded-lg border border-sky-500/30 bg-sky-500/5 transition-colors"
+                    >
+                      Back to report
+                    </button>
+                  </div>
+                )}
+                <NoReportState />
+              </div>
             </motion.div>
           ) : report ? (
             <AnimatePresence mode="wait">
