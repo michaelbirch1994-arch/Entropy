@@ -3,7 +3,7 @@ import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import { fmtCompact, profChip } from "../utils/format";
 import type { DeathRecapEntry, DeathRecapHit } from "../types/report";
-import { Skull, ArrowDown, Swords } from "lucide-react";
+import { Skull, ArrowDown, Swords, ShieldAlert } from "lucide-react";
 
 function fmtClock(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -107,6 +107,102 @@ function DeathCard({ entry }: { entry: DeathRecapEntry }) {
   );
 }
 
+const DEFENSIVE_BOON_NAMES = ["Stability", "Protection", "Resistance", "Aegis"];
+
+// Correlates each player's death count against their aggregate defensive-boon
+// uptime (already computed for the Buffs view) so a squad can spot "this
+// person keeps dying and also runs low stability/protection uptime" at a
+// glance. This is a correlation over averages, not a per-death timeline -
+// arcdps/EI's export doesn't expose exact boon-on/boon-off timestamps, so we
+// deliberately don't claim "this exact boon dropped right before this exact
+// death". squadAvgPct lets each cell be judged against the rest of the squad
+// rather than an arbitrary fixed threshold.
+function useDeathBoonCorrelation(report: ReturnType<typeof useReport>["report"]) {
+  return useMemo(() => {
+    if (!report) return null;
+    const recaps = report.stats.deathRecaps ?? [];
+    if (recaps.length === 0) return null;
+    const boonData = report.stats.buffCategoryUptimes?.["Boons"] ?? report.stats.boonUptimes;
+    if (!boonData || boonData.columns.length === 0 || boonData.rows.length === 0) return null;
+
+    const cols = boonData.columns.filter((c) =>
+      DEFENSIVE_BOON_NAMES.some((b) => c.name.toLowerCase().includes(b.toLowerCase())),
+    );
+    if (cols.length === 0) return null;
+
+    const deathsByAccount = new Map<string, number>();
+    recaps.forEach((r) => deathsByAccount.set(r.account, (deathsByAccount.get(r.account) ?? 0) + 1));
+
+    const squadAvg: Record<number, number> = {};
+    cols.forEach((c) => {
+      const vals = boonData.rows.map((r) => r.uptimes[c.id]).filter((v): v is number => v !== undefined);
+      squadAvg[c.id] = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+    });
+
+    const rows = boonData.rows
+      .map((r) => ({
+        account: r.account,
+        profession: r.profession,
+        deaths: deathsByAccount.get(r.account) ?? 0,
+        boons: cols.map((c) => {
+          const pct = r.uptimes[c.id] ?? 0;
+          return { id: c.id, name: c.name, icon: c.icon, pct, squadAvgPct: squadAvg[c.id], belowAvg: pct < squadAvg[c.id] - 10 };
+        }),
+      }))
+      .filter((r) => r.deaths > 0)
+      .sort((a, b) => b.deaths - a.deaths);
+
+    return rows.length > 0 ? { rows, cols } : null;
+  }, [report]);
+}
+
+function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<typeof useDeathBoonCorrelation>> }) {
+  return (
+    <Panel
+      title="Boon Uptime vs. Deaths"
+      subtitle="Each player's average defensive-boon uptime next to how many times they died - cells noticeably below the squad average are flagged. Correlation, not a per-death timeline."
+      icon={<ShieldAlert className="w-3.5 h-3.5" />}
+      bodyClassName="p-0"
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500">
+              <th className="text-left font-bold px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">Player</th>
+              <th className="text-center font-bold px-2 py-3">Deaths</th>
+              {data.cols.map((c) => (
+                <th key={c.id} className="text-center font-bold px-2 py-3 min-w-[64px]">
+                  {c.name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.rows.map((row, i) => (
+              <tr
+                key={row.account}
+                className={`border-b border-slate-800/40 hover:bg-white/[0.02] transition-colors ${i % 2 === 0 ? "bg-white/[0.01]" : ""}`}
+              >
+                <td className="px-4 py-2.5 font-semibold text-slate-200 sticky left-0 bg-[#0a0e1f]/95 whitespace-nowrap">
+                  {row.account}
+                </td>
+                <td className="text-center px-2 py-2.5 font-mono font-bold text-rose-400">{row.deaths}</td>
+                {row.boons.map((b) => (
+                  <td key={b.id} className="text-center px-2 py-2.5 font-mono">
+                    <span className={`font-bold ${b.belowAvg ? "text-rose-400" : "text-slate-300"}`} title={`Squad avg ${b.squadAvgPct.toFixed(0)}%`}>
+                      {b.pct.toFixed(0)}%
+                    </span>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  );
+}
+
 export default function DeathRecapView() {
   const { report } = useReport();
   const recaps = report?.stats.deathRecaps ?? [];
@@ -118,6 +214,7 @@ export default function DeathRecapView() {
   }, [recaps]);
 
   const filtered = accountFilter === "all" ? recaps : recaps.filter((r) => r.account === accountFilter);
+  const boonCorrelation = useDeathBoonCorrelation(report);
 
   if (!report) return null;
 
@@ -159,6 +256,8 @@ export default function DeathRecapView() {
           ))}
         </select>
       </div>
+
+      {boonCorrelation && <DeathBoonCorrelationPanel data={boonCorrelation} />}
 
       <div className="space-y-3">
         {filtered.map((entry, i) => (
