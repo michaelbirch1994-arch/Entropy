@@ -1,4 +1,5 @@
 import { useReport } from "../store/ReportContext";
+import { useDamageScope, pickDamageScopeValue } from "../store/DamageScopeContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
 import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped } from "../utils/format";
@@ -8,6 +9,7 @@ import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } 
 
 export default function SquadStatsView() {
   const { report } = useReport();
+  const { scope } = useDamageScope();
   if (!report) return null;
   const s = report.stats;
 
@@ -18,7 +20,7 @@ export default function SquadStatsView() {
   // into `a + undefined` -> NaN for the *entire* reduce the moment one such
   // player is hit, which is why these totals were rendering as "-". `?? 0`
   // guards every field the same way, in case any of them end up sparse too.
-  const totalDamage = s.offensePlayers.reduce((a, p) => a + (p.offenseTotals.damage ?? 0), 0);
+  const totalDamage = s.offensePlayers.reduce((a, p) => a + pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll), 0);
   const totalDownContrib = s.offensePlayers.reduce((a, p) => a + (p.offenseTotals.downContribution ?? 0), 0);
   const totalHealing = s.healingPlayers.reduce((a, p) => a + (p.healingTotals.healing ?? 0), 0);
   const totalBarrier = s.healingPlayers.reduce((a, p) => a + (p.healingTotals.barrier ?? 0), 0);
@@ -26,7 +28,7 @@ export default function SquadStatsView() {
   const totalStrips = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.boonStrips ?? 0), 0);
 
   const topDps = [...s.offensePlayers]
-    .map((p) => ({ account: p.account, profession: p.profession, dps: p.offenseTotals.damage / (p.totalFightMs / 1000) }))
+    .map((p) => ({ account: p.account, profession: p.profession, dps: pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll) / (p.totalFightMs / 1000) }))
     .sort((a, b) => b.dps - a.dps)
     .slice(0, 10);
 
@@ -81,12 +83,12 @@ export default function SquadStatsView() {
               {s.offensePlayers.slice(0, 25).map((p) => {
                 const heal = s.healingPlayers.find((h) => h.account === p.account);
                 const sup = s.supportPlayers.find((sp) => sp.account === p.account);
-                const dps = p.offenseTotals.damage / (p.totalFightMs / 1000);
+                const dps = pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll) / (p.totalFightMs / 1000);
                 return (
                   <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
                     <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
                     <td className="p-2.5 text-slate-400">{p.profession}</td>
-                    <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.offenseTotals.damage)}</td>
+                    <td className="p-2.5 text-right text-orange-400">{fmtCompact(pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll))}</td>
                     <td className="p-2.5 text-right text-slate-200 font-bold">{fmtFixedGrouped(dps, 0)}</td>
                     <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.offenseTotals.downContribution)}</td>
                     <td className="p-2.5 text-right text-emerald-400">{heal ? fmtCompact(heal.healingTotals.healing ?? 0) : "—"}</td>
