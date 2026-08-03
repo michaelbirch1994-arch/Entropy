@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, Pause, Film } from "lucide-react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
-import { interpolatePosition, isInInterval } from "../lib/parseReplayData";
+import { interpolatePosition, isInInterval, distanceBetween } from "../lib/parseReplayData";
 
 function fmtClock(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -53,6 +53,39 @@ export default function ReplayView() {
     return `${bounds.minX - pad} ${bounds.minY - pad} ${bounds.maxX - bounds.minX + pad * 2} ${bounds.maxY - bounds.minY + pad * 2}`;
   }, [fight]);
 
+  // Live squad/enemy headcounts and average squad spread from the tag, all
+  // recomputed at the current scrub position straight from the same replay
+  // points the dots are drawn from - not pre-baked report averages, so it
+  // tracks exactly what's on screen at time t.
+  const liveStats = useMemo(() => {
+    if (!fight) return null;
+    const squadAlive = fight.data.players.filter((p) => p.inSquad && !isInInterval(p.deadIntervals, t));
+    const alliesAlive = fight.data.players.filter((p) => !p.inSquad && !isInInterval(p.deadIntervals, t));
+    const enemiesAlive = fight.data.enemies.filter((e) => !isInInterval(e.deadIntervals, t));
+    const commander = squadAlive.find((p) => p.isCommander);
+    const commanderPt = commander ? interpolatePosition(commander.points, t) : null;
+    let distSum = 0;
+    let distCount = 0;
+    if (commanderPt) {
+      squadAlive.forEach((p) => {
+        if (p.isCommander) return;
+        const pt = interpolatePosition(p.points, t);
+        const d = distanceBetween(pt, commanderPt);
+        if (d != null) {
+          distSum += d;
+          distCount++;
+        }
+      });
+    }
+    return {
+      squadCount: squadAlive.length,
+      allyCount: alliesAlive.length,
+      enemyCount: enemiesAlive.length,
+      avgDistToTag: distCount > 0 ? distSum / distCount : null,
+      hasCommander: !!commanderPt,
+    };
+  }, [fight, t]);
+
   if (!report) return null;
 
   if (!fights || fights.length === 0) {
@@ -94,12 +127,52 @@ export default function ReplayView() {
       {fight && (
         <Panel
           title="Fight Replay"
-          subtitle={`${fight.fightName} - scrubbable 2D squad positions`}
+          subtitle={`${fight.fightName} - scrubbable 2D positions, squad + tracked enemies`}
           icon={<Film className="w-3.5 h-3.5" />}
           action={`${fight.data.players.length} players tracked`}
         >
+          {/* Live readout - the numbers that actually change as you scrub,
+              instead of the map being the only signal on screen. */}
+          {liveStats && (
+            <div className="grid grid-cols-3 gap-3 mb-3">
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-amber-400/70 font-bold">Squad Alive</div>
+                <div className="text-lg font-black text-amber-300 font-mono">{liveStats.squadCount}</div>
+              </div>
+              <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-rose-400/70 font-bold">Enemies Tracked</div>
+                <div className="text-lg font-black text-rose-300 font-mono">{liveStats.enemyCount}</div>
+              </div>
+              <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-sky-400/70 font-bold">Avg. Dist to Tag</div>
+                <div className="text-lg font-black text-sky-300 font-mono">
+                  {liveStats.hasCommander && liveStats.avgDistToTag != null ? Math.round(liveStats.avgDistToTag) : "—"}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="bg-black/40 rounded-xl border border-slate-800 overflow-hidden">
             <svg viewBox={viewBox} className="w-full h-[420px]" style={{ transform: "scaleY(-1)" }}>
+              {fight.data.enemies.map((e) => {
+                const pt = interpolatePosition(e.points, t);
+                if (!pt) return null;
+                const dead = isInInterval(e.deadIntervals, t);
+                const down = isInInterval(e.downIntervals, t);
+                if (dead) return null;
+                return (
+                  <circle
+                    key={e.id}
+                    cx={pt.x}
+                    cy={pt.y}
+                    r={down ? 45 : 38}
+                    fill="#f43f5e"
+                    fillOpacity={down ? 0.25 : 0.75}
+                    stroke={down ? "#f43f5e" : "none"}
+                    strokeWidth={down ? 10 : 0}
+                  />
+                );
+              })}
               {fight.data.players.map((p) => {
                 const pt = interpolatePosition(p.points, t);
                 if (!pt) return null;
@@ -153,9 +226,10 @@ export default function ReplayView() {
             </select>
           </div>
 
-          <p className="text-[10px] text-slate-500 mt-3 flex items-center gap-2">
+          <p className="text-[10px] text-slate-500 mt-3 flex items-center gap-2 flex-wrap">
             <span className="inline-block w-2 h-2 rounded-full bg-amber-500" /> Squad
             <span className="inline-block w-2 h-2 rounded-full bg-slate-500 ml-2" /> Ally / non-squad
+            <span className="inline-block w-2 h-2 rounded-full bg-rose-500 ml-2" /> Enemy
             <span className="inline-block w-2 h-2 rounded-full border border-rose-500 ml-2" /> Downed
           </p>
         </Panel>
