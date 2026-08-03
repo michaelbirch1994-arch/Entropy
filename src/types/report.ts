@@ -385,6 +385,14 @@ export interface RotationFight {
   fightId: string;
   fightName: string;
   durationMs: number;
+  /**
+   * Skill ids that actually dealt damage in this fight, from EI's per-player
+   * totalDamageDist. Cast timelines record everything pressed (weapon swaps,
+   * dodges, resurrects, pure heals), so consumers explaining a damage spike
+   * intersect casts against this set. Optional: reports built before this
+   * field existed simply have no filter available.
+   */
+  damagingSkillIds?: number[];
   players: RotationPlayer[];
 }
 
