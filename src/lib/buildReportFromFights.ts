@@ -26,6 +26,7 @@ import type {
   LeaderboardEntry,
   Leaderboards,
   ClassSlice,
+CommanderRow,
 FightRow,
 TimelinePoint,
   RoleClassification,
@@ -1228,6 +1229,105 @@ function computeSynergyInsights(
 // every raw-log report ever built - not a bug in those views, they simply
 // had nothing to draw. Everything here comes from data already on each raw
 // EI log, using the same per-fight iteration as computeFightHighlights.
+// Per-commander record across the session. EI flags the tag holder with
+// player.hasCommanderTag, so a "commander fight" is simply one where that
+// account carried the tag - aggregated per account because a session often
+// has more than one tag, and people swap classes between pulls.
+function computeCommanderStats(fights: FightInput[]): CommanderRow[] {
+  type RawP = {
+    account?: string; name?: string; profession?: string; notInSquad?: boolean;
+    hasCommanderTag?: boolean;
+    defenses?: Array<{ downCount?: number; deadCount?: number; damageTaken?: number; damageBarrier?: number }>;
+    statsAll?: Array<{ killed?: number; downed?: number }>;
+  };
+
+  interface Acc {
+    account: string; names: Set<string>; professions: Set<string>;
+    fights: number; wins: number; durationMs: number;
+    squadSizeAccum: number; enemyAccum: number;
+    kills: number; downs: number; cmdDowns: number; cmdDeaths: number;
+    alliesDown: number; alliesDead: number; damageTaken: number; barrier: number;
+  }
+  const byAccount = new Map<string, Acc>();
+
+  for (const f of fights) {
+    const raw = f.raw as Record<string, unknown>;
+    const players = (raw.players ?? []) as RawP[];
+    const squad = players.filter((p) => !p.notInSquad);
+    const enemyCount = Math.max(players.length - squad.length, 0);
+    const durationMs = Number(raw.durationMS) || 0;
+    const isWin = !!raw.success;
+
+    let alliesDown = 0, alliesDead = 0;
+    for (const p of squad) {
+      alliesDown += Number(p.defenses?.[0]?.downCount) || 0;
+      alliesDead += Number(p.defenses?.[0]?.deadCount) || 0;
+    }
+
+    for (const p of squad) {
+      if (!p.hasCommanderTag) continue;
+      const account = typeof p.account === "string" ? p.account : null;
+      if (!account) continue;
+      let a = byAccount.get(account);
+      if (!a) {
+        a = {
+          account, names: new Set(), professions: new Set(),
+          fights: 0, wins: 0, durationMs: 0, squadSizeAccum: 0, enemyAccum: 0,
+          kills: 0, downs: 0, cmdDowns: 0, cmdDeaths: 0,
+          alliesDown: 0, alliesDead: 0, damageTaken: 0, barrier: 0,
+        };
+        byAccount.set(account, a);
+      }
+      if (p.name) a.names.add(p.name);
+      if (p.profession) a.professions.add(p.profession);
+      a.fights += 1;
+      if (isWin) a.wins += 1;
+      a.durationMs += durationMs;
+      a.squadSizeAccum += squad.length;
+      a.enemyAccum += enemyCount;
+      a.kills += Number(p.statsAll?.[0]?.killed) || 0;
+      a.downs += Number(p.statsAll?.[0]?.downed) || 0;
+      a.cmdDowns += Number(p.defenses?.[0]?.downCount) || 0;
+      a.cmdDeaths += Number(p.defenses?.[0]?.deadCount) || 0;
+      a.damageTaken += Number(p.defenses?.[0]?.damageTaken) || 0;
+      a.barrier += Number(p.defenses?.[0]?.damageBarrier) || 0;
+      a.alliesDown += alliesDown;
+      a.alliesDead += alliesDead;
+    }
+  }
+
+  return Array.from(byAccount.values())
+    .map((a) => {
+      const mins = a.durationMs / 60000;
+      return {
+        key: a.account,
+        account: a.account,
+        characterNames: Array.from(a.names),
+        profession: Array.from(a.professions)[0] ?? "Unknown",
+        professionList: Array.from(a.professions),
+        fights: a.fights,
+        wins: a.wins,
+        losses: a.fights - a.wins,
+        winRatePct: a.fights > 0 ? (a.wins / a.fights) * 100 : 0,
+        totalDurationMs: a.durationMs,
+        avgSquadSize: a.fights > 0 ? Math.round(a.squadSizeAccum / a.fights) : 0,
+        avgEnemySize: a.fights > 0 ? Math.round(a.enemyAccum / a.fights) : 0,
+        kills: a.kills,
+        downs: a.downs,
+        commanderDowns: a.cmdDowns,
+        commanderDeaths: a.cmdDeaths,
+        alliesDown: a.alliesDown,
+        alliesDead: a.alliesDead,
+        kdr: a.cmdDeaths > 0 ? a.kills / a.cmdDeaths : a.kills,
+        damageTaken: a.damageTaken,
+        damageTakenPerMinute: mins > 0 ? a.damageTaken / mins : 0,
+        incomingBarrierAbsorbed: a.barrier,
+        incomingBarrierAbsorbedPerMinute: mins > 0 ? a.barrier / mins : 0,
+      };
+    })
+    .sort((x, y) => y.fights - x.fights || y.winRatePct - x.winRatePct);
+}
+
 function computeFightTables(fights: FightInput[]): {
   fightBreakdown: FightRow[];
   mapData: ClassSlice[];
@@ -1354,6 +1454,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
   } = agg;
 
   const { fightBreakdown, mapData, timelineData } = computeFightTables(fights);
+  const commanderRows = computeCommanderStats(fights);
   const total = fights.length;
   const avgSquadSize = total > 0 ? Math.round(totalSquadSizeAccum / total) : 0;
   const avgEnemies = total > 0 ? Math.round(totalEnemiesAccum / total) : 0;
@@ -1549,7 +1650,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     squadClassData,
     enemyClassData,
     fightBreakdown,
-    commanderStats: { rows: [] },
+    commanderStats: { rows: commanderRows },
     roleClassifications,
     attendanceData,
     boonUptimes: buffCategoryUptimes['Boons'] ?? { columns: [], rows: [] },
