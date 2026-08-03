@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Play, Pause, Film } from "lucide-react";
+import { Play, Pause, Film, Crosshair } from "lucide-react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import { interpolatePosition, isInInterval, distanceBetween } from "../lib/parseReplayData";
@@ -86,6 +86,37 @@ export default function ReplayView() {
     };
   }, [fight, t]);
 
+  // "Bomb"/focus-fire detection: cluster enemy down-state START timestamps
+  // within a short window. EI's export has no per-hit damage timestamps, so
+  // we can't attribute a burst to specific skills/players here - but every
+  // real target's down/dead intervals ARE timestamped, so multiple enemies
+  // going down within a few seconds of each other is a solid, honest proxy
+  // for a squad successfully bombing a group rather than trading single
+  // targets. Clicking a detected bomb seeks the scrubber to that moment.
+  const BOMB_WINDOW_MS = 3000;
+  const bombEvents = useMemo(() => {
+    if (!fight) return [];
+    const downs = fight.data.enemies
+      .flatMap((e) => e.downIntervals.map(([start]) => ({ t: start, enemy: e.name })))
+      .sort((a, b) => a.t - b.t);
+    const clusters: { t: number; count: number; enemies: string[] }[] = [];
+    let i = 0;
+    while (i < downs.length) {
+      let j = i;
+      const enemies: string[] = [];
+      while (j < downs.length && downs[j].t - downs[i].t <= BOMB_WINDOW_MS) {
+        enemies.push(downs[j].enemy);
+        j++;
+      }
+      if (enemies.length >= 2) {
+        clusters.push({ t: downs[i].t, count: enemies.length, enemies });
+      }
+      i = j > i ? j : i + 1;
+    }
+    return clusters.sort((a, b) => b.count - a.count).slice(0, 12);
+  }, [fight]);
+
+
   if (!report) return null;
 
   if (!fights || fights.length === 0) {
@@ -124,7 +155,30 @@ export default function ReplayView() {
         </select>
       )}
 
-      {fight && (
+            {fight && bombEvents.length > 0 && (
+        <Panel
+          title="Detected Bombs"
+          subtitle="Moments where multiple tracked enemies went down within 3 seconds of each other - a proxy for successful focus fire, not an attribution of who did it"
+          icon={<Crosshair className="w-3.5 h-3.5" />}
+          action={`${bombEvents.length} detected`}
+        >
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {bombEvents.map((b, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => { setT(b.t); setPlaying(false); }}
+                className="text-left rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10 hover:border-rose-500/40 transition-colors px-3 py-2"
+              >
+                <div className="text-sm font-black text-rose-300 font-mono">{b.count} downed</div>
+                <div className="text-[10px] text-slate-500 font-mono">{fmtClock(b.t)}</div>
+              </button>
+            ))}
+          </div>
+        </Panel>
+      )}
+
+{fight && (
         <Panel
           title="Fight Replay"
           subtitle={`${fight.fightName} - scrubbable 2D positions, squad + tracked enemies`}
