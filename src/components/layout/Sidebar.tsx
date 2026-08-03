@@ -18,6 +18,8 @@ import {
   Crosshair,
   Skull,
   Star,
+Archive,
+GitCompare,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import EntropyLogo from "../ui/EntropyLogo";
@@ -110,6 +112,14 @@ const MENU: NavSection[] = [
     title: "CAREER",
     icon: <Trophy className="w-4 h-4" />,
     items: [{ id: "player-profiles", label: "Player Profiles" }],
+  },
+  {
+    title: "ARCHIVE",
+    icon: <Archive className="w-4 h-4" />,
+    items: [
+      { id: "archive", label: "Report Archive" },
+      { id: "compare", label: "Compare Reports" },
+    ],
   },
 ];
 
@@ -233,4 +243,6 @@ export const VIEW_ICONS: Record<string, ReactNode> = {
   defensive: <Shield className="w-4 h-4" />,
   roster: <Users className="w-4 h-4" />,
   "player-profiles": <Trophy className="w-4 h-4" />,
+  archive: <Archive className="w-4 h-4" />,
+  compare: <GitCompare className="w-4 h-4" />,
 };
