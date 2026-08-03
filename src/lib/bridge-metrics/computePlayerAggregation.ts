@@ -1,5 +1,5 @@
 
-import { getPlayerCleanses, getPlayerStrips, getPlayerOutgoingInterrupts, getPlayerDamageTaken, getPlayerBreakbarDamage, getPlayerBlocked, getPlayerEvaded, getPlayerMissed, getTargetStatTotal, resolveCommanderDistance, getVindicatorDodgeCasts } from './dashboardMetrics';
+import { getPlayerCleanses, getPlayerStrips, getPlayerOutgoingInterrupts, getPlayerDamageTaken, getPlayerBreakbarDamage, getPlayerBlocked, getPlayerEvaded, getPlayerMissed, getTargetStatTotal, resolveCommanderDistance, getVindicatorDodgeCasts, getPlayerDamage, getPlayerDps } from './dashboardMetrics';
 import { applySquadStabilityGeneration as applyStabilityGeneration, computeDownContribution as getPlayerDownContribution, computeSquadHealing as getPlayerSquadHealing, computeSquadBarrier as getPlayerSquadBarrier, computeOutgoingCrowdControl as getPlayerOutgoingCrowdControl } from './combatMetrics';
 import type { Player } from './dpsReportTypes';
 import type { DisruptionMethod } from './metricsSettings';
@@ -60,6 +60,8 @@ export interface PlayerStats {
     isCommander: boolean;
     damage: number;
     dps: number;
+    damageAll: number;
+    dpsAll: number;
     revives: number;
     outgoingConditions: Record<string, any>;
     incomingConditions: Record<string, any>;
@@ -665,7 +667,7 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
                 kills: 0, enemyDowns: 0, damageTaken: 0, breakbar: 0, blocks: 0, evades: 0, misses: 0, totalFightMs: 0,
                 offenseTotals: {}, offenseRateWeights: {}, defenseActiveMs: 0, defenseTotals: {}, defenseMinionDamageTaken: {}, supportActiveMs: 0, supportTotals: {},
                 healingActiveMs: 0, healingTotals: {}, hasHealAddon: false, profession: identity.profession, professions: new Set(),
-                professionTimeMs: {}, squadActiveMs: 0, firstSeenFightTs: 0, lastSeenFightTs: 0, lastSeenFightDurationMs: 0, isCommander: false, damage: 0, dps: 0, revives: 0, outgoingConditions: {}, incomingConditions: {}, damageModTotals: {}, incomingDamageModTotals: {}
+                professionTimeMs: {}, squadActiveMs: 0, firstSeenFightTs: 0, lastSeenFightTs: 0, lastSeenFightDurationMs: 0, isCommander: false, damage: 0, dps: 0, damageAll: 0, dpsAll: 0, revives: 0, outgoingConditions: {}, incomingConditions: {}, damageModTotals: {}, incomingDamageModTotals: {}
                 , roleClassification: { role: 'damage' as const, supportScore: 0, confidenceScore: 0, threshold: 0, factors: [] }
             });
         }
@@ -1015,6 +1017,16 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
                 if (m.isRate && denom > 0) s.offenseRateWeights[m.id] = (s.offenseRateWeights[m.id] || 0) + denom;
             }
         });
+        // OFFENSE_METRICS' 'damage' metric sources from dpsAll (EI's "All" column,
+        // which includes siege/NPC/gate damage) - correct it here to the
+        // player-vs-player total from getPlayerDamage (sums dpsTargets, matching
+        // dps.report's "Target" column), and stash the original all-inclusive
+        // figure under 'damageAll' so a sitewide All/Players toggle can switch
+        // between the two without recomputing the whole report.
+        if (dpsAll) {
+            s.offenseTotals.damageAll = (s.offenseTotals.damageAll || 0) + (dpsAll.damage || 0);
+            s.offenseTotals.damage = (s.offenseTotals.damage || 0) - (dpsAll.damage || 0) + getPlayerDamage(p);
+        }
         // Use computeDownContribution for offenseTotals.downContribution — it falls back to
         // totalDamageDist when EI uses the aggregate "Enemy Players" target (which zeroes statsTargets.downContribution)
         s.offenseTotals.downContribution = (s.offenseTotals.downContribution || 0) + getPlayerDownContribution(p);
@@ -1034,9 +1046,14 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
 
         s.revives += p.support?.[0]?.resurrects || 0;
         if (dpsAll) {
-            s.damage += dpsAll.damage || 0;
-            s.dps += dpsAll.dps || 0;
+            // Same All/Players split as offenseTotals.damage above - s.damage/s.dps
+            // are the target-only (players) totals used for headline stats; the raw
+            // "All" figures are kept on s.damageAll/s.dpsAll for the toggle.
+            s.damageAll += dpsAll.damage || 0;
+            s.dpsAll += dpsAll.dps || 0;
         }
+        s.damage += getPlayerDamage(p);
+        s.dps += getPlayerDps(p);
 
         // Skill Damage (Global + Player Breakdown)
         const resolveSkillMeta = (entry: any) => {
