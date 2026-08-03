@@ -16,6 +16,11 @@ export default function ReplayView() {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(2);
+  // Optional overlay layers. Casts default off: a WvW pull produces
+  // thousands of them and they bury the squad dots otherwise.
+  const [showMap, setShowMap] = useState(true);
+  const [showMechanics, setShowMechanics] = useState(true);
+  const [showCasts, setShowCasts] = useState(false);
   const rafRef = useRef<number | null>(null);
   const lastTsRef = useRef<number | null>(null);
 
@@ -339,8 +344,105 @@ render(0);
             </div>
           )}
 
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            {([
+              { on: showMap, set: setShowMap, label: "Map", available: !!fight.data.map },
+              { on: showMechanics, set: setShowMechanics, label: "Mechanics", available: fight.data.mechanics.length > 0 },
+              { on: showCasts, set: setShowCasts, label: "Cast markers", available: true },
+            ] as { on: boolean; set: (v: boolean) => void; label: string; available: boolean }[])
+              .filter((l) => l.available)
+              .map((l) => (
+                <button
+                  key={l.label}
+                  onClick={() => l.set(!l.on)}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-colors ${
+                    l.on
+                      ? "text-sky-400 border-sky-500/30 bg-sky-500/5"
+                      : "text-slate-500 border-slate-800 bg-black/30 hover:text-slate-300"
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+            <span className="text-[10px] text-slate-500">
+              Markers show where an event happened, not how big the effect was - Elite Insights does not export AoE shapes.
+            </span>
+          </div>
+
           <div className="bg-black/40 rounded-xl border border-slate-800 overflow-hidden">
             <svg viewBox={viewBox} className="w-full h-[420px]" style={{ transform: "scaleY(-1)" }}>
+                {/* Real combat-replay map imagery from EI. Per-actor positions are
+                    already in this same pixel space, so the image needs no scaling -
+                    but the whole svg is flipped with scaleY(-1) to match EI's y-axis,
+                    so each image is counter-flipped about its own centre to keep it
+                    the right way up. */}
+                {showMap && fight.data.map?.images.map((img, i) => {
+                  const visible = img.endMs <= 0 || (t >= img.startMs && t <= img.endMs);
+                  if (!visible) return null;
+                  const w = fight.data.map!.width;
+                  const h = fight.data.map!.height;
+                  return (
+                    <image
+                      key={`${img.url}-${i}`}
+                      href={img.url}
+                      x={img.x}
+                      y={img.y}
+                      width={w}
+                      height={h}
+                      opacity={0.55}
+                      preserveAspectRatio="none"
+                      transform={`translate(0 ${2 * img.y + h}) scale(1 -1)`}
+                    />
+                  );
+                })}
+
+                {/* Mechanic events near the playhead, pinned to whoever triggered
+                    them. EI exports no AoE geometry, so this marks that something
+                    happened to that player at that spot - not the effect's radius. */}
+                {showMechanics && fight.data.mechanics
+                  .filter((m) => Math.abs(m.t - t) <= 1500 && m.account)
+                  .map((m, i) => {
+                    const owner = fight.data.players.find((p) => p.account === m.account);
+                    const pt = owner ? interpolatePosition(owner.points, t) : null;
+                    if (!pt) return null;
+                    const age = Math.abs(m.t - t) / 1500;
+                    return (
+                      <circle
+                        key={`mech-${m.t}-${m.name}-${i}`}
+                        cx={pt.x}
+                        cy={pt.y}
+                        r={40 + age * 70}
+                        fill="none"
+                        stroke="#f43f5e"
+                        strokeWidth={6}
+                        opacity={0.75 * (1 - age)}
+                      />
+                    );
+                  })}
+
+                {/* Damage-skill cast pulses at the caster's position. Again: where a
+                    skill was cast, not the area it covered. */}
+                {showCasts &&
+                  fight.data.players.map((p) => {
+                    const recent = p.casts.filter((c) => Math.abs(c.t - t) <= 600);
+                    if (recent.length === 0) return null;
+                    const pt = interpolatePosition(p.points, t);
+                    if (!pt) return null;
+                    const age = Math.min(...recent.map((c) => Math.abs(c.t - t))) / 600;
+                    return (
+                      <circle
+                        key={`cast-${p.account}`}
+                        cx={pt.x}
+                        cy={pt.y}
+                        r={18 + age * 40}
+                        fill="none"
+                        stroke="#fbbf24"
+                        strokeWidth={4}
+                        opacity={0.6 * (1 - age)}
+                      />
+                    );
+                  })}
+
               {fight.data.enemies.map((e) => {
                 const pt = interpolatePosition(e.points, t);
                 if (!pt) return null;
