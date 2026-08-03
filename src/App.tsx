@@ -33,6 +33,7 @@ import HighlightsView from "./views/HighlightsView";
 import ArchiveView from "./views/ArchiveView";
 import CompareView from "./views/CompareView";
 import { buildReportHtmlExport } from "./lib/exportReportHtml";
+import { METRICS_VERSION } from "./lib/buildReportFromFights";
 import { Activity, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, Link2, Upload, X, Download } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
@@ -266,6 +267,19 @@ function ReportShell() {
               </div>
             </div>
           </header>
+        )}
+
+        {report && report.meta.appVersion !== METRICS_VERSION && !atHome && (
+          <div className="mx-6 mt-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-4 py-3 flex items-start gap-3">
+            <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-amber-200/90 leading-relaxed">
+              <span className="font-bold">This report was built by an earlier version.</span>{" "}
+              Stats are calculated when a report is built, not when it is viewed, so
+              anything fixed or added since then is missing here - some tables may be
+              empty and some toggles may appear to do nothing. Re-import the raw logs
+              to rebuild it with the current metrics.
+            </div>
+          </div>
         )}
 
         {/* Content */}
