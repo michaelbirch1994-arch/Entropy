@@ -1,7 +1,9 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Sidebar, { VIEW_ICONS } from "./components/layout/Sidebar";
 import { ReportProvider, useReport } from "./store/ReportContext";
+import { ViewProvider, useView } from "./store/ViewContext";
+import { CompareProvider } from "./store/CompareContext";
 import { DamageScopeProvider, DamageScopeToggle } from "./store/DamageScopeContext";
 import { StatsDisplayProvider, StatsDisplayToggle } from "./store/StatsDisplayContext";
 import { AllyScopeProvider, AllyScopeToggle } from "./store/AllyScopeContext";
@@ -28,7 +30,10 @@ import MechanicsView from "./views/MechanicsView";
 import DeathRecapView from "./views/DeathRecapView";
 import BuffGenerationView from "./views/BuffGenerationView";
 import HighlightsView from "./views/HighlightsView";
-import { Activity, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, Link2, Upload, X } from "lucide-react";
+import ArchiveView from "./views/ArchiveView";
+import CompareView from "./views/CompareView";
+import { buildReportHtmlExport } from "./lib/exportReportHtml";
+import { Activity, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, Link2, Upload, X, Download } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
 import RawLogImporter from "./components/ui/RawLogImporter";
@@ -60,6 +65,8 @@ const VIEW_TITLES: Record<string, string> = {
   "death-recap": "Death Recap",
   "buff-generation": "Buff Generation",
   highlights: "Highlights",
+  archive: "Report Archive",
+  compare: "Compare Reports",
 };
 
 function ReportRouter({ activeView }: { activeView: string }) {
@@ -87,6 +94,8 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "death-recap": return <DeathRecapView />;
     case "buff-generation": return <BuffGenerationView />;
     case "highlights": return <HighlightsView />;
+    case "archive": return <ArchiveView />;
+    case "compare": return <CompareView />;
     default: return <OverviewView />;
   }
 }
@@ -149,7 +158,7 @@ function NoReportState() {
 
 function ReportShell() {
   const { report, loading, error, source, clearReport } = useReport();
-  const [activeView, setActiveView] = useState("overview");
+  const { activeView, setActiveView } = useView();
 
   const headerInfo = useMemo(() => {
     if (!report) return null;
@@ -161,6 +170,18 @@ function ReportShell() {
   }, [report]);
 
   const viewTitle = VIEW_TITLES[activeView] ?? "Overview";
+
+  function handleExportReport() {
+    if (!report) return;
+    const html = buildReportHtmlExport(report);
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${report.meta.title.replace(/[^a-z0-9]+/gi, "-")}-snapshot.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   const viewIcon = VIEW_ICONS[activeView] ?? <Activity className="w-4 h-4" />;
 
   // When no report loaded yet (and not in the middle of initial load), show Import Center
@@ -198,6 +219,13 @@ function ReportShell() {
                 <DamageScopeToggle />
                 <StatsDisplayToggle />
                 <AllyScopeToggle />
+              <button
+                onClick={handleExportReport}
+                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-sky-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-sky-500/30 bg-black/30 transition-colors"
+              >
+                <Download className="w-3 h-3" />
+                Export
+              </button>
                 {source && (
                   <span
                     className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border ${
@@ -263,15 +291,19 @@ export default function App() {
   const updateState = useAutoUpdater();
 
   return (
-    <ReportProvider>
-      <DamageScopeProvider>
-        <StatsDisplayProvider>
-          <AllyScopeProvider>
-      <ReportShell />
-      <UpdateToast {...updateState} />
-    </AllyScopeProvider>
-        </StatsDisplayProvider>
-      </DamageScopeProvider>
-    </ReportProvider>
+    <ViewProvider>
+      <CompareProvider>
+        <ReportProvider>
+          <DamageScopeProvider>
+            <StatsDisplayProvider>
+              <AllyScopeProvider>
+                <ReportShell />
+                <UpdateToast {...updateState} />
+              </AllyScopeProvider>
+            </StatsDisplayProvider>
+          </DamageScopeProvider>
+        </ReportProvider>
+      </CompareProvider>
+    </ViewProvider>
   );
 }
