@@ -121,7 +121,7 @@ export const getFightDownsDeaths = (details: any) => {
         squadDeaths += deadCount;
     });
 
-    squadPlayers.forEach((p: any) => {
+    players.forEach((p: any) => {
         if (!p.statsTargets || p.statsTargets.length === 0) return;
         p.statsTargets.forEach((targetStats: any) => {
             if (!Array.isArray(targetStats)) return;
