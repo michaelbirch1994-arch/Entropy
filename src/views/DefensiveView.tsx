@@ -55,6 +55,14 @@ export default function DefensiveView() {
   const defenseActiveSec = s.defensePlayers.reduce((a, p) => a + (Number(p.totalFightMs) || 0), 0) / 1000;
 
   const isPerSecond = mode === "perSecond";
+  // Per-player cells divide by that player's own active combat time, not the
+  // squad-wide total the summary cards use - otherwise a "/s" column would be
+  // rating everyone against the whole squad's clock.
+  const perPlayer = (v: number, activeMs: number | undefined) => {
+    if (!isPerSecond) return fmtCompact(v);
+    const secs = (activeMs ?? 0) / 1000;
+    return secs > 0 ? fmtFixed(v / secs, 2) : "-";
+  };
   const fmtStat = (v: number, decimals = 0) => (isPerSecond ? fmtFixed(v, decimals || 2) : fmtCompact(v));
   const fmtStatN = (v: number, decimals = 0) => (isPerSecond ? fmtFixed(v, decimals || 2) : fmtNum(v));
   const lbl = (base: string) => (isPerSecond ? `${base}/s` : base);
@@ -151,7 +159,11 @@ export default function DefensiveView() {
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">
                 {[...s.healingPlayers]
-                  .sort((a, b) => (b.healingTotals.healing ?? 0) - (a.healingTotals.healing ?? 0))
+                  .sort(
+(a, b) =>
+pickAllyScopeValue(allyScope, b.healingTotals.healing, b.healingTotals.squadHealing) -
+pickAllyScopeValue(allyScope, a.healingTotals.healing, a.healingTotals.squadHealing)
+)
                   .map((p, i) => (
                     <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
                       <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
@@ -161,10 +173,10 @@ export default function DefensiveView() {
                           {p.profession}
                         </span>
                       </td>
-                      <td className="p-2.5 text-right text-emerald-400 font-bold">{fmtCompact(p.healingTotals.healing)}</td>
-                      <td className="p-2.5 text-right text-emerald-400/70">{fmtCompact(p.healingTotals.squadHealing)}</td>
-                      <td className="p-2.5 text-right text-teal-400">{fmtCompact(p.healingTotals.barrier)}</td>
-                      <td className="p-2.5 text-right text-lime-400">{fmtCompact(p.healingTotals.downedHealing)}</td>
+                      <td className="p-2.5 text-right text-emerald-400 font-bold">{perPlayer(pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing), p.activeMs)}</td>
+                      <td className="p-2.5 text-right text-emerald-400/70">{perPlayer(p.healingTotals.squadHealing ?? 0, p.activeMs)}</td>
+                      <td className="p-2.5 text-right text-teal-400">{perPlayer(pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier), p.activeMs)}</td>
+                      <td className="p-2.5 text-right text-lime-400">{perPlayer(p.healingTotals.downedHealing ?? 0, p.activeMs)}</td>
                     </tr>
                   ))}
               </tbody>
