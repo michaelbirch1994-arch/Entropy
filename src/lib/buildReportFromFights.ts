@@ -44,6 +44,13 @@ TimelinePoint,
   FightHighlight,
 } from '../types/report';
 
+// Stamped onto every report. Metrics are computed at build time, not at
+// display time, so a report built by an older version keeps whatever numbers
+// that version produced - updating the app does not retroactively fix it.
+// Bump this whenever a change alters computed output, so the UI can tell the
+// user to re-import instead of silently showing them stale figures.
+export const METRICS_VERSION = 'entropy-raw-v2';
+
 export interface FightInput {
   summary: RawFightSummary;
   raw: RawFightLog;
@@ -1699,7 +1706,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
       dateEnd,
       dateLabel,
       generatedAt: new Date().toISOString(),
-      appVersion: 'entropy-raw-v1',
+      appVersion: METRICS_VERSION,
       trimmedSections: ['fightBreakdown', 'commanderStats', 'mapData', 'timelineData', 'boonTables'],
     },
     stats,
