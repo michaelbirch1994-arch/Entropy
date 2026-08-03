@@ -91,6 +91,19 @@ export default function DpsGraphView() {
   // the spike rather than claiming an exact damage-per-skill split.
   const rotationFight = report?.stats.rotations?.fights.find((rf) => rf.fightId === fight?.fightId);
   const skillMeta = report?.stats.rotations?.skillMeta ?? {};
+  // EI does not timestamp individual damage ticks, so there is no way to know
+  // exactly what each skill dealt inside a 3s window. What we do have is each
+  // skill's total damage and hit count across the whole report, which gives an
+  // average damage per hit; multiplied by casts in the window that ranks the
+  // heavy hitters above the merely spammed. It is an estimate and is labelled
+  // as one - not measured damage.
+  const avgDamagePerHit = useMemo(() => {
+    const m: Record<number, number> = {};
+    for (const s of report?.stats.topSkills ?? []) {
+      if (s.hits > 0) m[s.id] = s.damage / s.hits;
+    }
+    return m;
+  }, [report]);
   const spikeBreakdown = useMemo(() => {
     if (selectedT == null || !rotationFight) return null;
     const windowMs = SPIKE_WINDOW_SEC * 1000;
@@ -120,8 +133,9 @@ const tally = new Map<number, { count: number; players: Set<string> }>();
         icon: skillMeta[id]?.icon,
         count: v.count,
         playerCount: v.players.size,
+        estDamage: v.count * (avgDamagePerHit[id] ?? 0),
       }))
-      .sort((a, b) => b.count - a.count);
+      .sort((a, b) => b.estDamage - a.estDamage || b.count - a.count);
 
     // Prefer damage-dealing skills, but never return an empty panel: if the
     // filter would wipe everything out (a fight with no damage distribution,
@@ -129,7 +143,7 @@ const tally = new Map<number, { count: number; players: Set<string> }>();
     // rather than claiming nothing happened.
     const damagingOnly = damagingSet ? all.filter((s) => damagingSet.has(s.id)) : all;
     return (damagingOnly.length > 0 ? damagingOnly : all).slice(0, 10);
-  }, [selectedT, rotationFight, skillMeta]);
+  }, [selectedT, rotationFight, skillMeta, avgDamagePerHit]);
 
   if (!report) return null;
 
@@ -246,7 +260,7 @@ const tally = new Map<number, { count: number; players: Set<string> }>();
           title="Spike Breakdown"
           subtitle={
             selectedT != null
-              ? `Skills cast squad-wide within ${SPIKE_WINDOW_SEC}s of t=${fmtClock(selectedT)}`
+              ? `Skills cast squad-wide within ${SPIKE_WINDOW_SEC}s of t=${fmtClock(selectedT)}, ordered by estimated damage (casts x that skill\u2019s average damage per hit \u2014 EI does not timestamp damage ticks, so this is an estimate)`
               : "Click any point on the DPS graph above to see what the squad was casting at that moment"
           }
           icon={<Swords className="w-3.5 h-3.5" />}
