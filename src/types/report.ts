@@ -313,6 +313,15 @@ export interface BoonUptimeColumn {
   id: number;
   name: string;
   icon?: string;
+  /**
+   * True for intensity-stacking buffs (Might, Stability, and every
+   * condition). Elite Insights overloads its per-buff `uptime` field: for
+   * duration-stacking buffs it is a percentage of the phase (0-100), but
+   * for intensity-stacking buffs it is the AVERAGE NUMBER OF STACKS held,
+   * which is not a percentage at all and must not be rendered with a %
+   * suffix. dps.report makes the same split in its buff tables.
+   */
+  stacking?: boolean;
 }
 
 export interface BoonUptimeRow {
