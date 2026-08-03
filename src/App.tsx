@@ -218,7 +218,7 @@ function ReportShell() {
               <div className="flex items-center gap-3">
                 {/* These toggles only actually affect Offensive/Squad Stats (damage scope) and Defensive (per-second + squad-only) - hidden elsewhere so they stay honest about which views they change. */}
                 {(activeView === "offensive" || activeView === "squad-stats") && <DamageScopeToggle />}
-                {activeView === "defensive" && <StatsDisplayToggle />}
+                {(activeView === "defensive" || activeView === "offensive") && <StatsDisplayToggle />}
                 {(activeView === "defensive" || activeView === "squad-stats") && <AllyScopeToggle />}
               <button
                 onClick={handleExportReport}
