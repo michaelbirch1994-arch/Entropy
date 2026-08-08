@@ -7,6 +7,45 @@ import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped } from "../utils/format";
 import { Users, Swords, Shield, Heart, Zap, Target } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } from "../utils/chartTheme";
+import type { HealingPlayer, HealingCoverage } from "../types/report";
+
+/**
+ * Render a healing figure honestly.
+ *
+ * Guild Wars 2 only reports healing to the healing player's own client, so
+ * arcdps_healing_stats can only see healing done by someone running it. Without
+ * the addon a player's number is whatever leaked through to addon-running allies -
+ * a real lower bound, not a total - and a zero means "never observed", not "healed
+ * nothing". Showing either as a plain number ranks people on who happened to be
+ * standing near an addon user.
+ */
+function renderHealing(heal: HealingPlayer, value: number) {
+  // Reports archived/cached before healingCoverage existed have no such field.
+  // Fall back to the addon flag, and if that is missing too, show the bare
+  // number rather than mislabelling a real figure as unavailable.
+  const coverage: HealingCoverage =
+    heal.healingCoverage ?? (heal.hasHealAddon ? 'full' : value > 0 ? 'partial' : 'none');
+
+  if (coverage === 'full') return <>{fmtCompact(value)}</>;
+  if (coverage === 'partial') {
+    return (
+      <span
+        className="text-emerald-400/70"
+        title="Lower bound. This player was not running the arcdps healing addon, so only healing that landed on addon-running allies was recorded. Their true total is higher by an unknown amount."
+      >
+        {fmtCompact(value)}<span className="text-amber-500/80">+</span>
+      </span>
+    );
+  }
+  return (
+    <span
+      className="text-slate-600"
+      title="Unavailable - this player was not running the arcdps healing addon and none of their healing was observed by an ally who was. This is not the same as zero healing."
+    >
+      n/a
+    </span>
+  );
+}
 
 export default function SquadStatsView() {
   const { report } = useReport();
@@ -93,7 +132,9 @@ const { scope: allyScope } = useAllyScope();
                     <td className="p-2.5 text-right text-orange-400">{fmtCompact(pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll))}</td>
                     <td className="p-2.5 text-right text-slate-200 font-bold">{fmtFixedGrouped(dps, 0)}</td>
                     <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.offenseTotals.downContribution)}</td>
-                    <td className="p-2.5 text-right text-emerald-400">{heal ? fmtCompact(pickAllyScopeValue(allyScope, heal.healingTotals.healing, heal.healingTotals.squadHealing)) : "—"}</td>
+                    <td className="p-2.5 text-right text-emerald-400">
+                      {heal ? renderHealing(heal, pickAllyScopeValue(allyScope, heal.healingTotals.healing, heal.healingTotals.squadHealing)) : "—"}
+                    </td>
                     <td className="p-2.5 text-right text-cyan-400">{sup ? fmtNum(sup.supportTotals.condiCleanse) : "—"}</td>
                     <td className="p-2.5 text-right text-amber-400">{sup ? fmtNum(sup.supportTotals.boonStrips) : "—"}</td>
                     <td className="p-2.5 text-right text-slate-500">{s.generalPlayers.find((g) => g.account === p.account)?.logsJoined ?? "—"}</td>

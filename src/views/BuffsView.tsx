@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
-import { profChip } from "../utils/format";
+import { profChip, relativeStackColor } from "../utils/format";
 import Panel from "../components/ui/Panel";
 import { Sparkles } from "lucide-react";
 import type { BoonUptimeData } from "../types/report";
+import { BUFF_TAB_ORDER } from "../lib/bridge-metrics/boonGeneration";
 
 function uptimeColor(pct: number): string {
   if (pct >= 90) return "text-emerald-400";
@@ -12,20 +13,10 @@ function uptimeColor(pct: number): string {
   return "text-slate-500";
 }
 
-// Tab order mirrors dps.report's Buffs sub-tabs.
-const TAB_ORDER = [
-  "Boons",
-  "Offensive Buffs",
-  "Support Buffs",
-  "Defensive Buffs",
-  "Conditions",
-  "Gear Buffs",
-  "Debuffs",
-  "Nourishments",
-  "Enhancements",
-  "Other Consumables",
-  "Personal Buffs",
-];
+// Tab order mirrors dps.report's Buffs sub-tabs. Shared with Buff Generation
+// (BUFF_TAB_ORDER) so the two pages can never present these categories in a
+// different order from each other.
+const TAB_ORDER = BUFF_TAB_ORDER;
 
 export default function BuffsView() {
   const { report } = useReport();
@@ -60,6 +51,16 @@ export default function BuffsView() {
   }
 
   const { columns, rows } = data;
+
+  // Precompute each stacking column's values once so relativeStackColor doesn't
+  // rescan every row for every cell (O(players * columns) instead of squared).
+  // Plain computation, not useMemo: this sits after the "no buff data" early
+  // return above, so a hook here would change hook order between renders.
+  const columnValuesById: Record<string, Array<number | undefined>> = {};
+  for (const c of columns) {
+    if (!c.stacking) continue;
+    columnValuesById[c.id] = rows.map((r) => r.uptimes[c.id]);
+  }
 
   return (
     <div className="space-y-5 animate-view pb-12">
@@ -124,9 +125,16 @@ export default function BuffsView() {
                   </td>
                   {columns.map((c) => {
                     const val = row.uptimes[c.id];
+                    // Stacking buffs don't share a 0-100% scale (Might caps at 25,
+                    // Stability is usually 0-3, most conditions have no practical
+                    // cap), so they're colored relative to this column's own
+                    // values rather than against the duration-buff thresholds.
+                    const color = c.stacking
+                      ? relativeStackColor(val, columnValuesById[c.id])
+                      : uptimeColor(val ?? 0);
                     return (
                       <td key={c.id} className="text-center px-2 py-2.5 font-mono">
-                        <span className={`font-bold ${c.stacking ? "text-slate-200" : uptimeColor(val ?? 0)}`}>
+                        <span className={`font-bold ${color}`}>
                           {val === undefined ? "-" : c.stacking ? val.toFixed(1) : `${val.toFixed(0)}%`}
                         </span>
                       </td>

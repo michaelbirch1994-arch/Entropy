@@ -6,6 +6,7 @@ import { fmtNum, fmtCompact, fmtFixed, profChip } from "../utils/format";
 import { Shield, Heart, Droplet, Zap, Wind, Target } from "lucide-react";
 import { useStatsDisplay, pickStatsDisplayValue } from "../store/StatsDisplayContext";
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
+import SurvivalSupport from "../components/ui/SurvivalSupport";
 
 type Tab = "defense" | "support" | "healing";
 
@@ -138,6 +139,25 @@ export default function DefensiveView() {
                   ))}
               </tbody>
             </table>
+          </div>
+        </Panel>
+      )}
+
+      {tab === "healing" && (s.survivalSupport?.length ?? 0) > 0 && (
+        <Panel
+          title="Survival Support"
+          icon={<Heart className="w-4 h-4" />}
+          accent="text-emerald-400"
+        >
+          <p className="mb-3 text-[11px] leading-relaxed text-slate-500">
+            Who kept each player alive. Coverage describes how complete the total is; attribution
+            describes how far the per-contributor split can be trusted. They are independent and can
+            legitimately disagree.
+          </p>
+          <div className="grid gap-3 md:grid-cols-2">
+            {s.survivalSupport!.slice(0, 8).map((bd) => (
+              <SurvivalSupport key={bd.account} breakdown={bd} />
+            ))}
           </div>
         </Panel>
       )}

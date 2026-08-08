@@ -297,7 +297,7 @@ function buildEvtc(opts: { agentName?: string; account?: string } = {}): ArrayBu
       v.setBigUint64(agentBase, 1234n, true);
       v.setUint32(agentBase + 12, 5, true); // is_elite != 0xffffffff -> player
     // "name\0account\0subgroup\0" - deliberately non-ASCII to catch byte/char bugs.
-    const packed = enc.encode(`${opts.agentName ?? 'Geiromül'}\0${opts.account ?? ':svava.4182'}\02\0`);
+    const packed = enc.encode(`${opts.agentName ?? 'Geiromül'}\0${opts.account ?? ':svava.4182'}\0${'2'}\0`);
       b.set(packed, agentBase + 28);
       o += 96;
 

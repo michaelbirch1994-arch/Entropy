@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
-import { profChip } from "../utils/format";
-import { getBoonMetricValue, getBoonWastedValue, getBoonOverstackValue } from "../lib/bridge-metrics/boonGeneration";
+import { profChip, relativeStackColor } from "../utils/format";
+import { getBoonMetricValue, getBoonWastedValue, getBoonOverstackValue, BUFF_TAB_ORDER } from "../lib/bridge-metrics/boonGeneration";
 import { Sparkles } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { CHART_COLORS, TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE } from "../utils/chartTheme";
@@ -37,13 +37,29 @@ function BoonIconTick(props: any) {
 export default function BuffGenerationView() {
   const { report } = useReport();
   const tables = report?.stats.buffGeneration ?? [];
+  // Default tab matches what this page showed before it gained other
+  // categories, so existing users see no change until they explore further.
+  const [tab, setTab] = useState<string>("Boons");
 
-  // One bar per boon: squad-average output (avg stacks for stacking boons,
-  // avg uptime% for pulse boons) across everyone who generated any of it -
-  // gives an immediate "what is my squad actually producing" read instead
-  // of clicking through boons one at a time.
+  // Which classification tabs actually have data this report, in the same
+  // curated order as the Buffs page (BUFF_TAB_ORDER) so the two line up.
+  const tabs = useMemo(
+    () => BUFF_TAB_ORDER.filter((t) => tables.some((table) => table.classification === t)),
+    [tables],
+  );
+  const activeTab = tabs.includes(tab) ? tab : tabs[0];
+  const activeTables = useMemo(
+    () => tables.filter((t) => t.classification === activeTab),
+    [tables, activeTab],
+  );
+
+  // One bar per buff in the active category: squad-average output (avg stacks
+  // for stacking buffs, avg uptime% for pulse buffs) across everyone who
+  // generated any of it - gives an immediate "what is my squad actually
+  // producing" read instead of clicking through buffs one at a time. Scoped to
+  // the active tab so stacks and percentages never share one chart's y-axis.
   const chartData = useMemo(() => {
-    return tables
+    return activeTables
       .map((t) => {
         const contributors = t.rows.filter((r) => getBoonMetricValue(r, "squadBuffs", t.stacking, "uptime") > 0);
         if (contributors.length === 0) return null;
@@ -52,7 +68,7 @@ export default function BuffGenerationView() {
       })
       .filter((d): d is NonNullable<typeof d> => d !== null)
       .sort((a, b) => b.value - a.value);
-  }, [tables]);
+  }, [activeTables]);
 
   const iconsById = useMemo(() => Object.fromEntries(chartData.map((d) => [d.name, d.icon])), [chartData]);
 
@@ -83,8 +99,26 @@ export default function BuffGenerationView() {
 
   return (
     <div className="space-y-5 animate-view pb-12">
+      {tabs.length > 1 && (
+        <div className="flex flex-wrap gap-1.5">
+          {tabs.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all border ${
+                activeTab === t
+                  ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
+                  : "bg-white/[0.02] border-white/[0.06] text-slate-500 hover:text-slate-300 hover:border-white/[0.12]"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+
       <Panel
-        title="Squad Boon Output"
+        title={`Squad ${activeTab} Output`}
         subtitle="Average squad-facing output per boon (avg stacks for stacking boons, avg uptime% for pulse boons) - hover a bar for units"
         icon={<Sparkles className="w-3.5 h-3.5" />}
       >
@@ -119,11 +153,25 @@ export default function BuffGenerationView() {
         </div>
       </Panel>
 
-      {tables.map((table) => {
+      {activeTables.map((table) => {
         const rows = [...table.rows].sort(
           (a, b) => getBoonMetricValue(b, "squadBuffs", table.stacking, "uptime") - getBoonMetricValue(a, "squadBuffs", table.stacking, "uptime")
         );
         const unit = table.stacking ? "avg stacks" : "%";
+
+        // Relative color per category column: stacking buffs don't share a
+        // 0-100% scale (Might caps at 25, Stability is usually 0-3), so "good"
+        // means "better than your squadmates on this specific buff" rather than
+        // a fixed threshold. Precomputed per category so each cell doesn't
+        // rescan every row. See relativeStackColor in utils/format.ts.
+        const columnValuesByCategory = table.stacking
+          ? Object.fromEntries(
+              (Object.keys(CATEGORY_LABELS) as Array<keyof typeof CATEGORY_LABELS>).map((cat) => [
+                cat,
+                rows.map((r) => getBoonMetricValue(r, cat, table.stacking, "uptime")),
+              ]),
+            )
+          : null;
 
         return (
           <Panel
@@ -178,9 +226,19 @@ export default function BuffGenerationView() {
                         </td>
                         {(Object.keys(CATEGORY_LABELS) as Array<keyof typeof CATEGORY_LABELS>).map((cat) => {
                           const value = getBoonMetricValue(row, cat, table.stacking, "uptime");
+                          // Duration buffs (%) keep the simple has-any-output
+                          // green/gray split. Stacking buffs get a relative
+                          // gradient instead of flat green for any nonzero value,
+                          // which previously made 0.1 avg stacks look identical
+                          // to 20 avg stacks.
+                          const color = table.stacking
+                            ? relativeStackColor(value, columnValuesByCategory![cat])
+                            : value > 0
+                              ? "text-emerald-400"
+                              : "text-slate-600";
                           return (
                             <td key={cat} className="text-center px-3 py-2.5 font-mono">
-                              <span className={`font-bold ${value > 0 ? "text-emerald-400" : "text-slate-600"}`}>
+                              <span className={`font-bold ${color}`}>
                                 {table.stacking ? value.toFixed(2) : `${value.toFixed(0)}%`}
                               </span>
                             </td>
