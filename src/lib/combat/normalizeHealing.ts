@@ -211,7 +211,7 @@ export function normalizeHealingEvents(details: any): CombatEventSet {
 
 /** Per-target healing events only (excludes the per-skill axis) — safe to sum. */
 export const perTargetEvents = (set: CombatEventSet): CombatEvent[] =>
-      set.events.filter((e) => e.metadata?.axis !== 'perSkill' && e.subcategory !== 'downed');
+      set.events.filter((e) => e.category === 'healing' && e.metadata?.axis !== 'perSkill' && e.subcategory !== 'downed');
 
 /** Per-skill healing events only — safe to sum. */
 export const perSkillEvents = (set: CombatEventSet): CombatEvent[] =>
