@@ -141,3 +141,22 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # tauri-action uploads installers into a DRAFT release, one job per platform.
+  # Publishing that draft by hand is easy to get wrong: opening the tag's release
+  # page creates a SECOND, empty release on the same tag, and the real one with
+  # the installers stays hidden as a draft. v0.2.1 shipped that way - published,
+  # zero downloads. This job flips the draft that already holds the assets, only
+  # after all four builds succeed, so there is nothing to publish manually and no
+  # window where users can see a half-uploaded release.
+  publish:
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ github.ref_name }}" --draft=false --latest --repo "${{ github.repository }}"
