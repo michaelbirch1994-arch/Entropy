@@ -105,6 +105,13 @@ export type CombatOrigin =
 /** What kind of agent an endpoint is. Minions/NPCs are never collapsed into players. */
 export type AgentKind = 'player' | 'minion' | 'npc' | 'gadget' | 'unknown';
 
+/**
+ * Explicit friendly/enemy attribution for an agent. Never inferred from
+ * ambiguous fields (e.g. squad membership alone) -- normalizers must set
+ * this deliberately based on how the source data distinguishes sides.
+ */
+export type AgentSide = 'friendly' | 'enemy' | 'unknown';
+
 export interface CombatAgent {
   /** Character name as logged. */
   name: string;
@@ -112,6 +119,8 @@ export interface CombatAgent {
   account?: string;
   profession?: string;
   kind: AgentKind;
+  /** Explicit friendly/enemy/unknown attribution. Undefined means not yet classified by the producing normalizer -- treat as unknown, never assume friendly. */
+  side?: AgentSide;
   /** EI `players[]` index when this agent is a squad player. */
   playerIndex?: number;
 }
