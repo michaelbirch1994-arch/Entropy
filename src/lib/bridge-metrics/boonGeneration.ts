@@ -1,392 +1,455 @@
+/**
+ * EI buff classification -> the tab label Entropy shows it under.
+ *
+ * SINGLE SOURCE OF TRUTH: this used to be duplicated in buildReportFromFights.ts
+ * for the Buffs page's category tabs, while Buff Generation independently filtered
+ * to classification === 'Boon' only. The two drifted - Buff Generation never
+ * picked up the wider tab set the Buffs page gained (task: "More buff categories
+ * in Buffs view"), so newer categories like Offensive/Support/Defensive Buffs and
+ * Conditions were visible on one page but not the other. Both now import this map
+ * so they can never diverge again.
+ */
+export const BUFF_CLASSIFICATIONS: Record<string, string> = {
+      Boon: 'Boons',
+      Condition: 'Conditions',
+      Offensive: 'Offensive Buffs',
+      Defensive: 'Defensive Buffs',
+      Support: 'Support Buffs',
+      Debuff: 'Debuffs',
+      Gear: 'Gear Buffs',
+      Enhancement: 'Enhancements',
+      Nourishment: 'Nourishments',
+      'Other Consumable': 'Other Consumables',
+      Other: 'Personal Buffs',
+};
+
+/**
+ * Display order for the classification tabs, shared by the Buffs page and Buff
+ * Generation. Deliberately not the same order as BUFF_CLASSIFICATIONS' own key
+ * order above (that one groups by EI's internal enum; this one is the order a
+ * WvW player actually wants to scan: Boons first, then the offense/support/
+ * defense split, then everything else).
+ */
+export const BUFF_TAB_ORDER = [
+        'Boons',
+        'Offensive Buffs',
+        'Support Buffs',
+        'Defensive Buffs',
+        'Conditions',
+        'Gear Buffs',
+        'Debuffs',
+        'Nourishments',
+        'Enhancements',
+        'Other Consumables',
+        'Personal Buffs',
+    ];
+
 export type BoonCategory = 'selfBuffs' | 'groupBuffs' | 'squadBuffs' | 'totalBuffs';
 export type BoonMetric = 'total' | 'average' | 'uptime';
 
 export interface BuffInfo {
-    name?: string;
-    stacking?: boolean;
-    icon?: string;
-    classification?: string;
+        name?: string;
+        stacking?: boolean;
+        icon?: string;
+        classification?: string;
 }
 
 export interface BuffGenerationEntry {
-    id: number;
-    buffData?: Array<{
-        generation?: number;
-        // EI's own two flavors of "this application didn't (fully) help":
-        // `wasted` = reapplied before it needed to be (buff was still fully
-        // up/at duration from an earlier application - redundant refresh).
-        // `overstack` = applied but discarded because the target was already
-        // at the effect's stack/intensity cap from any source - true
-        // overcapping, distinct from a wasted refresh.
-        wasted?: number;
-        overstack?: number;
-    }>;
+        id: number;
+        buffData?: Array<{
+            generation?: number;
+            // EI's own two flavors of "this application didn't (fully) help":
+            // `wasted` = reapplied before it needed to be (buff was still fully
+            // up/at duration from an earlier application - redundant refresh).
+            // `overstack` = applied but discarded because the target was already
+            // at the effect's stack/intensity cap from any source - true
+            // overcapping, distinct from a wasted refresh.
+            wasted?: number;
+            overstack?: number;
+        }>;
 }
 
 export interface BoonRow {
-    account: string;
-    profession: string;
-    professionList?: string[];
-    activeTimeMs: number;
-    numFights: number;
-    groupSupported: number;
-    squadSupported: number;
-    categories: Record<Exclude<BoonCategory, 'totalBuffs'>, { generationMs: number; wastedMs: number; overstackMs: number }>;
+        account: string;
+        profession: string;
+        professionList?: string[];
+        activeTimeMs: number;
+        numFights: number;
+        groupSupported: number;
+        squadSupported: number;
+        categories: Record<Exclude<BoonCategory, 'totalBuffs'>, { generationMs: number; wastedMs: number; overstackMs: number }>;
 }
 
 export interface BoonTable {
-    id: string;
-    name: string;
-    icon?: string;
-    stacking: boolean;
-    rows: BoonRow[];
+        id: string;
+        name: string;
+        icon?: string;
+        stacking: boolean;
+        /** Tab label (see BUFF_CLASSIFICATIONS) this buff belongs under. */
+    classification: string;
+        rows: BoonRow[];
 }
 
 const BOON_CATEGORIES: Array<Exclude<BoonCategory, 'totalBuffs'>> = ['selfBuffs', 'groupBuffs', 'squadBuffs'];
 
 const CATEGORY_COUNT: Record<Exclude<BoonCategory, 'totalBuffs'>, (groupCount: number, squadCount: number) => number> = {
-    selfBuffs: () => 1,
-    groupBuffs: (groupCount) => Math.max(groupCount - 1, 0),
-    squadBuffs: (_groupCount, squadCount) => Math.max(squadCount - 1, 0),
+        selfBuffs: () => 1,
+        groupBuffs: (groupCount) => Math.max(groupCount - 1, 0),
+        squadBuffs: (_groupCount, squadCount) => Math.max(squadCount - 1, 0),
 };
 
 const safeDiv = (a: number, b: number, fallback = 0) => (b ? a / b : fallback);
 
-const isBoon = (meta?: BuffInfo) => {
-    if (!meta?.classification) return true;
-    return meta.classification === 'Boon';
-};
+/**
+ * Whether EI gave this buff a classification Entropy recognizes.
+ *
+ * Previously this defaulted to `true` (i.e. "treat as a Boon") whenever
+ * classification was missing, and rejected everything else. That's what limited
+ * Buff Generation to Boons only. It now matches the Buffs page's own rule exactly:
+ * skip anything without a classification we recognize, regardless of what that
+ * classification is - no default bucket, no special-casing Boons.
+ */
+const hasRecognizedClassification = (meta?: BuffInfo) =>
+        !!meta?.classification && !!BUFF_CLASSIFICATIONS[meta.classification];
+
+/** Tab label for a buff's classification, or undefined if unrecognized. */
+const classificationLabel = (meta?: BuffInfo): string | undefined =>
+        meta?.classification ? BUFF_CLASSIFICATIONS[meta.classification] : undefined;
 
 const toBoonId = (id: number) => `b${id}`;
 
 const getActiveTimeMs = (player: any, fallbackMs: number) => {
-    const activeTimes = Array.isArray(player?.activeTimes) ? player.activeTimes : [];
-    const activeMs = typeof activeTimes[0] === 'number' ? activeTimes[0] : 0;
-    return activeMs > 0 ? activeMs : fallbackMs;
+        const activeTimes = Array.isArray(player?.activeTimes) ? player.activeTimes : [];
+        const activeMs = typeof activeTimes[0] === 'number' ? activeTimes[0] : 0;
+        return activeMs > 0 ? activeMs : fallbackMs;
 };
 
 const computeGenerationMs = (
-    category: Exclude<BoonCategory, 'totalBuffs'>,
-    stacking: boolean,
-    generation: number,
-    wasted: number,
-    overstack: number,
-    durationMs: number,
-    groupCount: number,
-    squadCount: number,
-) => {
-    const count = CATEGORY_COUNT[category](groupCount, squadCount);
+        category: Exclude<BoonCategory, 'totalBuffs'>,
+        stacking: boolean,
+        generation: number,
+        wasted: number,
+        overstack: number,
+        durationMs: number,
+        groupCount: number,
+        squadCount: number,
+    ) => {
+            const count = CATEGORY_COUNT[category](groupCount, squadCount);
 
-    if (!count || !durationMs) {
-        return { generationMs: 0, wastedMs: 0, overstackMs: 0 };
-    }
+        if (!count || !durationMs) {
+                    return { generationMs: 0, wastedMs: 0, overstackMs: 0 };
+        }
 
-    if (stacking) {
+        if (stacking) {
+                    return {
+                                    generationMs: generation * durationMs * count,
+                                    wastedMs: wasted * durationMs * count,
+                                    overstackMs: overstack * durationMs * count,
+                    };
+        }
+
         return {
-            generationMs: generation * durationMs * count,
-            wastedMs: wasted * durationMs * count,
-            overstackMs: overstack * durationMs * count,
+                    generationMs: (generation / 100) * durationMs * count,
+                    wastedMs: (wasted / 100) * durationMs * count,
+                    overstackMs: (overstack / 100) * durationMs * count,
         };
-    }
-
-    return {
-        generationMs: (generation / 100) * durationMs * count,
-        wastedMs: (wasted / 100) * durationMs * count,
-        overstackMs: (overstack / 100) * durationMs * count,
     };
-};
 
 export const computeBoonMetrics = (
-    row: BoonRow,
-    category: BoonCategory,
-    stacking: boolean,
-) => {
-    const activeTimeMs = row.activeTimeMs || 1;
-    const numFights = row.numFights || 1;
-    const groupSupported = row.groupSupported || 1;
-    const squadSupported = row.squadSupported || 1;
+        row: BoonRow,
+        category: BoonCategory,
+        stacking: boolean,
+    ) => {
+            const activeTimeMs = row.activeTimeMs || 1;
+            const numFights = row.numFights || 1;
+            const groupSupported = row.groupSupported || 1;
+            const squadSupported = row.squadSupported || 1;
 
-    const selfData = row.categories.selfBuffs;
-    const squadData = row.categories.squadBuffs;
+        const selfData = row.categories.selfBuffs;
+            const squadData = row.categories.squadBuffs;
 
-    const sourceData = category === 'totalBuffs'
-        ? {
-            generationMs: selfData.generationMs + squadData.generationMs,
-            wastedMs: selfData.wastedMs + squadData.wastedMs,
-            overstackMs: selfData.overstackMs + squadData.overstackMs,
+        const sourceData = category === 'totalBuffs'
+                ? {
+                                generationMs: selfData.generationMs + squadData.generationMs,
+                                wastedMs: selfData.wastedMs + squadData.wastedMs,
+                                overstackMs: selfData.overstackMs + squadData.overstackMs,
+                }
+                    : row.categories[category];
+
+        const generationMs = sourceData.generationMs;
+            const wastedMs = sourceData.wastedMs;
+            const overstackMs = sourceData.overstackMs;
+
+        let denom = 1;
+            if (category === 'groupBuffs') {
+                        denom = safeDiv(groupSupported - numFights, numFights, 1);
+            } else if (category === 'squadBuffs') {
+                        denom = safeDiv(squadSupported - numFights, numFights, 1);
+            } else if (category === 'totalBuffs') {
+                        denom = squadSupported || 1;
+            }
+
+        let uptimeRaw = 0;
+            let wastedRaw = 0;
+            let overstackRaw = 0;
+
+        if (category === 'selfBuffs') {
+                    uptimeRaw = stacking
+                        ? safeDiv(generationMs, activeTimeMs)
+                                    : safeDiv(generationMs, activeTimeMs) * 100;
+                    wastedRaw = stacking
+                        ? safeDiv(wastedMs, activeTimeMs)
+                                    : safeDiv(wastedMs, activeTimeMs) * 100;
+                    overstackRaw = stacking
+                        ? safeDiv(overstackMs, activeTimeMs)
+                                    : safeDiv(overstackMs, activeTimeMs) * 100;
+        } else {
+                    const base = safeDiv(generationMs, activeTimeMs) / (denom || 1);
+                    const wastedBase = safeDiv(wastedMs, activeTimeMs) / (denom || 1);
+                    const overstackBase = safeDiv(overstackMs, activeTimeMs) / (denom || 1);
+                    uptimeRaw = stacking ? base : base * 100;
+                    wastedRaw = stacking ? wastedBase : wastedBase * 100;
+                    overstackRaw = stacking ? overstackBase : overstackBase * 100;
         }
-        : row.categories[category];
 
-    const generationMs = sourceData.generationMs;
-    const wastedMs = sourceData.wastedMs;
-    const overstackMs = sourceData.overstackMs;
-
-    let denom = 1;
-    if (category === 'groupBuffs') {
-        denom = safeDiv(groupSupported - numFights, numFights, 1);
-    } else if (category === 'squadBuffs') {
-        denom = safeDiv(squadSupported - numFights, numFights, 1);
-    } else if (category === 'totalBuffs') {
-        denom = squadSupported || 1;
-    }
-
-    let uptimeRaw = 0;
-    let wastedRaw = 0;
-    let overstackRaw = 0;
-
-    if (category === 'selfBuffs') {
-        uptimeRaw = stacking
-            ? safeDiv(generationMs, activeTimeMs)
-            : safeDiv(generationMs, activeTimeMs) * 100;
-        wastedRaw = stacking
-            ? safeDiv(wastedMs, activeTimeMs)
-            : safeDiv(wastedMs, activeTimeMs) * 100;
-        overstackRaw = stacking
-            ? safeDiv(overstackMs, activeTimeMs)
-            : safeDiv(overstackMs, activeTimeMs) * 100;
-    } else {
-        const base = safeDiv(generationMs, activeTimeMs) / (denom || 1);
-        const wastedBase = safeDiv(wastedMs, activeTimeMs) / (denom || 1);
-        const overstackBase = safeDiv(overstackMs, activeTimeMs) / (denom || 1);
-        uptimeRaw = stacking ? base : base * 100;
-        wastedRaw = stacking ? wastedBase : wastedBase * 100;
-        overstackRaw = stacking ? overstackBase : overstackBase * 100;
-    }
-
-    return { generationMs, wastedMs, overstackMs, uptimeRaw, wastedRaw, overstackRaw };
-};
+        return { generationMs, wastedMs, overstackMs, uptimeRaw, wastedRaw, overstackRaw };
+    };
 
 export const getBoonMetricValue = (
-    row: BoonRow,
-    category: BoonCategory,
-    stacking: boolean,
-    metric: BoonMetric,
-) => {
-    const { generationMs, uptimeRaw } = computeBoonMetrics(row, category, stacking);
-    const activeTimeMs = row.activeTimeMs || 1;
+        row: BoonRow,
+        category: BoonCategory,
+        stacking: boolean,
+        metric: BoonMetric,
+    ) => {
+            const { generationMs, uptimeRaw } = computeBoonMetrics(row, category, stacking);
+            const activeTimeMs = row.activeTimeMs || 1;
 
-    if (metric === 'total') {
-        return generationMs / 1000;
-    }
-    if (metric === 'average') {
-        return safeDiv(generationMs, activeTimeMs);
-    }
-    return uptimeRaw;
-};
+        if (metric === 'total') {
+                    return generationMs / 1000;
+        }
+            if (metric === 'average') {
+                        return safeDiv(generationMs, activeTimeMs);
+            }
+            return uptimeRaw;
+    };
 
 // "Reapplication" (redundant refresh before the buff needed it) and
 // "overcap/overstacking" (applied past the effect's stack cap) - both
 // represent generation that didn't help anyone, just for different reasons.
 export const getBoonWastedValue = (row: BoonRow, category: BoonCategory, stacking: boolean) =>
-    computeBoonMetrics(row, category, stacking).wastedRaw;
+        computeBoonMetrics(row, category, stacking).wastedRaw;
 
 export const getBoonOverstackValue = (row: BoonRow, category: BoonCategory, stacking: boolean) =>
-    computeBoonMetrics(row, category, stacking).overstackRaw;
+        computeBoonMetrics(row, category, stacking).overstackRaw;
 
 export const formatBoonMetricDisplay = (
-    row: BoonRow,
-    category: BoonCategory,
-    stacking: boolean,
-    metric: BoonMetric,
-    options?: { roundCountStats?: boolean },
-) => {
-    const value = getBoonMetricValue(row, category, stacking, metric);
-    const isPercent = metric === 'uptime' && !stacking;
-    const isRate = metric === 'average';
-    const decimals = options?.roundCountStats && !isPercent && !isRate ? 0 : 2;
-    const formatted = value.toLocaleString(undefined, {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals
-    });
+        row: BoonRow,
+        category: BoonCategory,
+        stacking: boolean,
+        metric: BoonMetric,
+        options?: { roundCountStats?: boolean },
+    ) => {
+            const value = getBoonMetricValue(row, category, stacking, metric);
+            const isPercent = metric === 'uptime' && !stacking;
+            const isRate = metric === 'average';
+            const decimals = options?.roundCountStats && !isPercent && !isRate ? 0 : 2;
+            const formatted = value.toLocaleString(undefined, {
+                        minimumFractionDigits: decimals,
+                        maximumFractionDigits: decimals
+            });
 
-    if (isPercent) {
-        return `${formatted}%`;
-    }
-    return formatted;
-};
+        if (isPercent) {
+                    return `${formatted}%`;
+        }
+            return formatted;
+    };
 
 export const buildBoonTables = (logs: Array<{ details?: any }>, splitPlayersByClass = false) => {
-    const boonMeta = new Map<string, BuffInfo>();
-    const playerAgg = new Map<string, {
-        account: string;
-        profession: string;
-        professions: Set<string>;
-        professionTimeMs: Record<string, number>;
-        activeTimeMs: number;
-        numFights: number;
-        groupSupported: number;
-        squadSupported: number;
-        boons: Record<string, BoonRow['categories']>;
-    }>();
+        const boonMeta = new Map<string, BuffInfo>();
+        const playerAgg = new Map<string, {
+                    account: string;
+                    profession: string;
+                    professions: Set<string>;
+                    professionTimeMs: Record<string, number>;
+                    activeTimeMs: number;
+                    numFights: number;
+                    groupSupported: number;
+                    squadSupported: number;
+                    boons: Record<string, BoonRow['categories']>;
+        }>();
 
-    logs.forEach((log) => {
-        const details = log.details;
-        if (!details) return;
+        logs.forEach((log) => {
+                    const details = log.details;
+                    if (!details) return;
 
-        const durationMs = details.durationMS || 0;
-        const buffMap: Record<string, BuffInfo> = details.buffMap || {};
-        Object.entries(buffMap).forEach(([id, meta]) => {
-            if (!boonMeta.has(id)) {
-                boonMeta.set(id, meta);
-                return;
-            }
-            const existing = boonMeta.get(id) || {};
-            const merged: BuffInfo = {
-                name: existing.name || meta.name,
-                stacking: existing.stacking ?? meta.stacking,
-                icon: existing.icon || meta.icon,
-                classification: existing.classification || meta.classification,
-            };
-            boonMeta.set(id, merged);
+                             const durationMs = details.durationMS || 0;
+                    const buffMap: Record<string, BuffInfo> = details.buffMap || {};
+                    Object.entries(buffMap).forEach(([id, meta]) => {
+                                    if (!boonMeta.has(id)) {
+                                                        boonMeta.set(id, meta);
+                                                        return;
+                                    }
+                                    const existing = boonMeta.get(id) || {};
+                                    const merged: BuffInfo = {
+                                                        name: existing.name || meta.name,
+                                                        stacking: existing.stacking ?? meta.stacking,
+                                                        icon: existing.icon || meta.icon,
+                                                        classification: existing.classification || meta.classification,
+                                    };
+                                    boonMeta.set(id, merged);
+                    });
+
+                             const players = (details.players || []) as any[];
+                    const squadPlayers = players.filter((p) => !p.notInSquad);
+                    const squadCount = squadPlayers.length;
+
+                             const groupCounts = new Map<number, number>();
+                    squadPlayers.forEach((player) => {
+                                    const group = player.group ?? 0;
+                                    groupCounts.set(group, (groupCounts.get(group) || 0) + 1);
+                    });
+
+                             squadPlayers.forEach((player) => {
+                                             const account = player.account || player.name || player.character_name || 'Unknown';
+                                             const profession = player.profession || 'Unknown';
+                                             const group = player.group ?? 0;
+                                             const groupCount = groupCounts.get(group) || 1;
+                                             const activeTimeMs = getActiveTimeMs(player, durationMs);
+                                             const key = splitPlayersByClass && profession !== 'Unknown' ? `${account}::${profession}` : account;
+
+                                                              if (!playerAgg.has(key)) {
+                                                                                  playerAgg.set(key, {
+                                                                                                          account,
+                                                                                                          profession,
+                                                                                                          professions: new Set<string>(),
+                                                                                                          professionTimeMs: {},
+                                                                                                          activeTimeMs: 0,
+                                                                                                          numFights: 0,
+                                                                                                          groupSupported: 0,
+                                                                                                          squadSupported: 0,
+                                                                                                          boons: {},
+                                                                                      });
+                                                              }
+
+                                                              const agg = playerAgg.get(key)!;
+                                             agg.profession = profession;
+                                             if (profession && profession !== 'Unknown') {
+                                                                 agg.professions.add(profession);
+                                                                 agg.professionTimeMs[profession] = (agg.professionTimeMs[profession] || 0) + activeTimeMs;
+                                             }
+                                             agg.activeTimeMs += activeTimeMs;
+                                             agg.numFights += 1;
+                                             agg.groupSupported += groupCount;
+                                             agg.squadSupported += squadCount;
+
+                                                              BOON_CATEGORIES.forEach((category) => {
+                                                                                  const buffs = (player[category] || []) as BuffGenerationEntry[];
+                                                                                  buffs.forEach((buff) => {
+                                                                                                          if (typeof buff?.id !== 'number') return;
+                                                                                                          const boonId = toBoonId(buff.id);
+                                                                                                          const meta = buffMap[boonId];
+                                                                                                          if (!hasRecognizedClassification(meta)) return;
+                                                                                                          const stacking = meta?.stacking ?? false;
+                                                                                                          const generation = buff.buffData?.[0]?.generation ?? 0;
+                                                                                                          const wasted = buff.buffData?.[0]?.wasted ?? 0;
+                                                                                                          const overstack = buff.buffData?.[0]?.overstack ?? 0;
+                                                                                                          const { generationMs, wastedMs, overstackMs } = computeGenerationMs(
+                                                                                                                                      category,
+                                                                                                                                      stacking,
+                                                                                                                                      generation,
+                                                                                                                                      wasted,
+                                                                                                                                      overstack,
+                                                                                                                                      durationMs,
+                                                                                                                                      groupCount,
+                                                                                                                                      squadCount,
+                                                                                                                                  );
+                                                                                                          if (!generationMs && !wastedMs && !overstackMs) return;
+
+                                                                                                                    if (!boonMeta.has(boonId)) {
+                                                                                                                                                boonMeta.set(boonId, meta || {});
+                                                                                                                        }
+
+                                                                                                                    if (!agg.boons[boonId]) {
+                                                                                                                                                agg.boons[boonId] = {
+                                                                                                                                                                                selfBuffs: { generationMs: 0, wastedMs: 0, overstackMs: 0 },
+                                                                                                                                                                                groupBuffs: { generationMs: 0, wastedMs: 0, overstackMs: 0 },
+                                                                                                                                                                                squadBuffs: { generationMs: 0, wastedMs: 0, overstackMs: 0 },
+                                                                                                                                                    };
+                                                                                                                        }
+
+                                                                                                                    agg.boons[boonId][category].generationMs += generationMs;
+                                                                                                          agg.boons[boonId][category].wastedMs += wastedMs;
+                                                                                                          agg.boons[boonId][category].overstackMs += overstackMs;
+                                                                                      });
+                                                              });
+                             });
         });
 
-        const players = (details.players || []) as any[];
-        const squadPlayers = players.filter((p) => !p.notInSquad);
-        const squadCount = squadPlayers.length;
+        const boonIds = Array.from(boonMeta.keys()).filter((id) => hasRecognizedClassification(boonMeta.get(id)));
 
-        const groupCounts = new Map<number, number>();
-        squadPlayers.forEach((player) => {
-            const group = player.group ?? 0;
-            groupCounts.set(group, (groupCounts.get(group) || 0) + 1);
-        });
+        const boonTables: BoonTable[] = boonIds.map((boonId) => {
+                    const meta = boonMeta.get(boonId) || {};
+                    const rows: BoonRow[] = [];
 
-        squadPlayers.forEach((player) => {
-            const account = player.account || player.name || player.character_name || 'Unknown';
-            const profession = player.profession || 'Unknown';
-            const group = player.group ?? 0;
-            const groupCount = groupCounts.get(group) || 1;
-            const activeTimeMs = getActiveTimeMs(player, durationMs);
-            const key = splitPlayersByClass && profession !== 'Unknown' ? `${account}::${profession}` : account;
+                                                            playerAgg.forEach((agg) => {
+                                                                            const boonData = agg.boons[boonId];
+                                                                            if (!boonData) return;
+                                                                            const hasData = BOON_CATEGORIES.some((category) => boonData[category].generationMs > 0 || boonData[category].wastedMs > 0);
+                                                                            if (!hasData) return;
 
-            if (!playerAgg.has(key)) {
-                playerAgg.set(key, {
-                    account,
-                    profession,
-                    professions: new Set<string>(),
-                    professionTimeMs: {},
-                    activeTimeMs: 0,
-                    numFights: 0,
-                    groupSupported: 0,
-                    squadSupported: 0,
-                    boons: {},
-                });
-            }
+                                                                                          const professionList = Array.from(agg.professions || []).filter((prof) => prof && prof !== 'Unknown');
+                                                                            let primaryProfession = agg.profession;
+                                                                            if (professionList.length > 0) {
+                                                                                                primaryProfession = professionList[0];
+                                                                                                let maxTime = agg.professionTimeMs?.[primaryProfession] || 0;
+                                                                                                professionList.forEach((prof) => {
+                                                                                                                        const time = agg.professionTimeMs?.[prof] || 0;
+                                                                                                                        if (time > maxTime) {
+                                                                                                                                                    maxTime = time;
+                                                                                                                                                    primaryProfession = prof;
+                                                                                                                            }
+                                                                                                    });
+                                                                            }
 
-            const agg = playerAgg.get(key)!;
-            agg.profession = profession;
-            if (profession && profession !== 'Unknown') {
-                agg.professions.add(profession);
-                agg.professionTimeMs[profession] = (agg.professionTimeMs[profession] || 0) + activeTimeMs;
-            }
-            agg.activeTimeMs += activeTimeMs;
-            agg.numFights += 1;
-            agg.groupSupported += groupCount;
-            agg.squadSupported += squadCount;
+                                                                                          rows.push({
+                                                                                                              account: agg.account,
+                                                                                                              profession: primaryProfession || 'Unknown',
+                                                                                                              professionList,
+                                                                                                              activeTimeMs: agg.activeTimeMs || 1,
+                                                                                                              numFights: agg.numFights || 1,
+                                                                                                              groupSupported: agg.groupSupported || 1,
+                                                                                                              squadSupported: agg.squadSupported || 1,
+                                                                                                              categories: {
+                                                                                                                                      selfBuffs: { ...boonData.selfBuffs },
+                                                                                                                                      groupBuffs: { ...boonData.groupBuffs },
+                                                                                                                                      squadBuffs: { ...boonData.squadBuffs },
+                                                                                                                  },
+                                                                                              });
+                                                            });
 
-            BOON_CATEGORIES.forEach((category) => {
-                const buffs = (player[category] || []) as BuffGenerationEntry[];
-                buffs.forEach((buff) => {
-                    if (typeof buff?.id !== 'number') return;
-                    const boonId = toBoonId(buff.id);
-                    const meta = buffMap[boonId];
-                    if (!isBoon(meta)) return;
-                    const stacking = meta?.stacking ?? false;
-                    const generation = buff.buffData?.[0]?.generation ?? 0;
-                    const wasted = buff.buffData?.[0]?.wasted ?? 0;
-                    const overstack = buff.buffData?.[0]?.overstack ?? 0;
-                    const { generationMs, wastedMs, overstackMs } = computeGenerationMs(
-                        category,
-                        stacking,
-                        generation,
-                        wasted,
-                        overstack,
-                        durationMs,
-                        groupCount,
-                        squadCount,
-                    );
-                    if (!generationMs && !wastedMs && !overstackMs) return;
+                                                            return {
+                                                                            id: boonId,
+                                                                            name: meta.name || boonId,
+                                                                            icon: meta.icon,
+                                                                            stacking: meta.stacking ?? false,
+                                                                            // Falls back to 'Personal Buffs' only defensively - every id reaching
+                                                                            // this point already passed hasRecognizedClassification above, so
+                                                                            // classificationLabel(meta) is never actually undefined here.
+                                                                            classification: classificationLabel(meta) ?? 'Personal Buffs',
+                                                                            rows,
+                                                            };
+        }).filter((boon) => boon.rows.length > 0);
 
-                    if (!boonMeta.has(boonId)) {
-                        boonMeta.set(boonId, meta || {});
-                    }
-
-                    if (!agg.boons[boonId]) {
-                        agg.boons[boonId] = {
-                            selfBuffs: { generationMs: 0, wastedMs: 0, overstackMs: 0 },
-                            groupBuffs: { generationMs: 0, wastedMs: 0, overstackMs: 0 },
-                            squadBuffs: { generationMs: 0, wastedMs: 0, overstackMs: 0 },
-                        };
-                    }
-
-                    agg.boons[boonId][category].generationMs += generationMs;
-                    agg.boons[boonId][category].wastedMs += wastedMs;
-                    agg.boons[boonId][category].overstackMs += overstackMs;
-                });
-            });
-        });
-    });
-
-    const boonIds = Array.from(boonMeta.keys()).filter((id) => isBoon(boonMeta.get(id)));
-
-    const boonTables: BoonTable[] = boonIds.map((boonId) => {
-        const meta = boonMeta.get(boonId) || {};
-        const rows: BoonRow[] = [];
-
-        playerAgg.forEach((agg) => {
-            const boonData = agg.boons[boonId];
-            if (!boonData) return;
-            const hasData = BOON_CATEGORIES.some((category) => boonData[category].generationMs > 0 || boonData[category].wastedMs > 0);
-            if (!hasData) return;
-
-            const professionList = Array.from(agg.professions || []).filter((prof) => prof && prof !== 'Unknown');
-            let primaryProfession = agg.profession;
-            if (professionList.length > 0) {
-                primaryProfession = professionList[0];
-                let maxTime = agg.professionTimeMs?.[primaryProfession] || 0;
-                professionList.forEach((prof) => {
-                    const time = agg.professionTimeMs?.[prof] || 0;
-                    if (time > maxTime) {
-                        maxTime = time;
-                        primaryProfession = prof;
-                    }
-                });
-            }
-
-            rows.push({
-                account: agg.account,
-                profession: primaryProfession || 'Unknown',
-                professionList,
-                activeTimeMs: agg.activeTimeMs || 1,
-                numFights: agg.numFights || 1,
-                groupSupported: agg.groupSupported || 1,
-                squadSupported: agg.squadSupported || 1,
-                categories: {
-                    selfBuffs: { ...boonData.selfBuffs },
-                    groupBuffs: { ...boonData.groupBuffs },
-                    squadBuffs: { ...boonData.squadBuffs },
-                },
-            });
-        });
-
-        return {
-            id: boonId,
-            name: meta.name || boonId,
-            icon: meta.icon,
-            stacking: meta.stacking ?? false,
-            rows,
-        };
-    }).filter((boon) => boon.rows.length > 0);
-
-    return { boonTables };
+        return { boonTables };
 };
 
 export interface BoonLeaderboardRow {
-  rank: number;
-  account: string;
-  profession: string;
-  professionList?: string[];
-  value: number;
-  count?: number;
+      rank: number;
+      account: string;
+      profession: string;
+      professionList?: string[];
+      value: number;
+      count?: number;
 }
 
 // Ranks players by SQUAD boon generation output for each boon table.
@@ -394,55 +457,55 @@ export interface BoonLeaderboardRow {
 // 'average' (gen/sec), or 'total' (total generation seconds, i.e. "count").
 // Keyed by table.id (e.g. 'b740'), matching BOON_IDS in topStatsCatalog.
 export const buildBoonLeaderboards = (
-  tables: BoonTable[],
-  metric: BoonMetric = 'uptime',
-): Record<string, BoonLeaderboardRow[]> => {
-  const result: Record<string, BoonLeaderboardRow[]> = {};
-  for (const table of tables) {
-    const ranked = table.rows
-      .map((row) => ({
-        account: row.account,
-        profession: row.profession,
-        professionList: row.professionList,
-        value: getBoonMetricValue(row, 'squadBuffs', table.stacking, metric),
-        count: row.numFights,
-      }))
-      .filter((r) => Number.isFinite(r.value) && r.value > 0)
-      .sort((a, b) => (b.value - a.value) || a.account.localeCompare(b.account));
+      tables: BoonTable[],
+      metric: BoonMetric = 'uptime',
+    ): Record<string, BoonLeaderboardRow[]> => {
+          const result: Record<string, BoonLeaderboardRow[]> = {};
+          for (const table of tables) {
+                  const ranked = table.rows
+                    .map((row) => ({
+                                account: row.account,
+                                profession: row.profession,
+                                professionList: row.professionList,
+                                value: getBoonMetricValue(row, 'squadBuffs', table.stacking, metric),
+                                count: row.numFights,
+                    }))
+                    .filter((r) => Number.isFinite(r.value) && r.value > 0)
+                    .sort((a, b) => (b.value - a.value) || a.account.localeCompare(b.account));
 
-    let lastValue: number | null = null;
-    let lastRank = 0;
-    result[table.id] = ranked.map((row, index) => {
-      if (lastValue === null || row.value !== lastValue) {
-        lastRank = index + 1;
-        lastValue = row.value;
-      }
-      return { ...row, rank: lastRank };
-    });
-  }
-  return result;
-};
+            let lastValue: number | null = null;
+                  let lastRank = 0;
+                  result[table.id] = ranked.map((row, index) => {
+                            if (lastValue === null || row.value !== lastValue) {
+                                        lastRank = index + 1;
+                                        lastValue = row.value;
+                            }
+                            return { ...row, rank: lastRank };
+                  });
+          }
+          return result;
+    };
 
 export const getPlayerBoonGenerationMs = (
-    player: any,
-    category: Exclude<BoonCategory, 'totalBuffs'>,
-    boonId: number,
-    durationMs: number,
-    groupCount: number,
-    squadCount: number,
-    buffMap: Record<string, BuffInfo> = {},
-) => {
-    const buffs = (player?.[category] || []) as BuffGenerationEntry[];
-    const target = buffs.find((buff) => buff.id === boonId);
-    if (!target) {
-        return { generationMs: 0, wastedMs: 0, overstackMs: 0 };
-    }
+        player: any,
+        category: Exclude<BoonCategory, 'totalBuffs'>,
+        boonId: number,
+        durationMs: number,
+        groupCount: number,
+        squadCount: number,
+        buffMap: Record<string, BuffInfo> = {},
+    ) => {
+            const buffs = (player?.[category] || []) as BuffGenerationEntry[];
+            const target = buffs.find((buff) => buff.id === boonId);
+            if (!target) {
+                        return { generationMs: 0, wastedMs: 0, overstackMs: 0 };
+            }
 
-    const meta = buffMap[toBoonId(boonId)];
-    const stacking = meta?.stacking ?? false;
-    const generation = target.buffData?.[0]?.generation ?? 0;
-    const wasted = target.buffData?.[0]?.wasted ?? 0;
-    const overstack = target.buffData?.[0]?.overstack ?? 0;
+        const meta = buffMap[toBoonId(boonId)];
+            const stacking = meta?.stacking ?? false;
+            const generation = target.buffData?.[0]?.generation ?? 0;
+            const wasted = target.buffData?.[0]?.wasted ?? 0;
+            const overstack = target.buffData?.[0]?.overstack ?? 0;
 
-    return computeGenerationMs(category, stacking, generation, wasted, overstack, durationMs, groupCount, squadCount);
-};
+        return computeGenerationMs(category, stacking, generation, wasted, overstack, durationMs, groupCount, squadCount);
+    };
