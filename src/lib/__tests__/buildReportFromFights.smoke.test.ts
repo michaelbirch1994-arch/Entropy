@@ -22,60 +22,75 @@ import { summarizeRawFight, type RawFightLog } from '../../types/rawFight';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function loadFixture(): FightInput {
-  const path = join(__dirname, 'fixtures', 'sample-wvw-log.json');
-  const raw = JSON.parse(readFileSync(path, 'utf-8')) as RawFightLog;
-  return { summary: summarizeRawFight(raw), raw };
+    const path = join(__dirname, 'fixtures', 'sample-wvw-log.json');
+    const raw = JSON.parse(readFileSync(path, 'utf-8')) as RawFightLog;
+    return { summary: summarizeRawFight(raw), raw };
 }
 
 describe('buildReportFromFights (real WvW log fixture)', () => {
-  const fight = loadFixture();
-  const report = buildReportFromFights([fight]);
+    const fight = loadFixture();
+    const report = buildReportFromFights([fight]);
 
-  it('produces a report with the expected top-level shape', () => {
-    expect(report.meta).toBeTruthy();
-    expect(report.stats).toBeTruthy();
-  });
+           it('produces a report with the expected top-level shape', () => {
+                 expect(report.meta).toBeTruthy();
+                 expect(report.stats).toBeTruthy();
+           });
 
-  it('finds the squad players in the fixture log', () => {
-    // The fixture has 3 squad members and 7 non-squad "Non Squad Player N"
-    // entries (arcdps includes anyone nearby, not just the recorder's squad).
-    expect(report.stats.offensePlayers.length).toBeGreaterThan(0);
-    expect(report.stats.offensePlayers.length).toBeLessThanOrEqual((fight.raw.players ?? []).length);
-  });
+           it('finds the squad players in the fixture log', () => {
+                 // The fixture has 3 squad members and 7 non-squad "Non Squad Player N"
+                  // entries (arcdps includes anyone nearby, not just the recorder's squad).
+                  expect(report.stats.offensePlayers.length).toBeGreaterThan(0);
+                 expect(report.stats.offensePlayers.length).toBeLessThanOrEqual((fight.raw.players ?? []).length);
+           });
 
-  it('resolves Top Skills with names and no numeric-id leakage into icon', () => {
-    const { topSkills } = report.stats;
-    expect(topSkills).toBeTruthy();
-    for (const s of topSkills ?? []) {
-      expect(typeof s.id).toBe('number');
-      // Regression guard for the bug fixed this session: icon must never
-      // silently hold the raw skill id instead of a real icon URL.
-      if (s.icon !== undefined) expect(typeof s.icon).toBe('string');
-      expect(s.name).toBeTruthy();
-    }
-  });
+           it('resolves Top Skills with names and no numeric-id leakage into icon', () => {
+                 const { topSkills } = report.stats;
+                 expect(topSkills).toBeTruthy();
+                 for (const s of topSkills ?? []) {
+                         expect(typeof s.id).toBe('number');
+                         // Regression guard for the bug fixed this session: icon must never
+                   // silently hold the raw skill id instead of a real icon URL.
+                   if (s.icon !== undefined) expect(typeof s.icon).toBe('string');
+                         expect(s.name).toBeTruthy();
+                 }
+           });
 
-  it('builds a squad rotation timeline covering the same players', () => {
-    expect(report.stats.rotations?.fights.length).toBeGreaterThan(0);
-    const rotFight = report.stats.rotations!.fights[0];
-    expect(rotFight.players.length).toBeGreaterThan(0);
-  });
+           it('builds a squad rotation timeline covering the same players', () => {
+                 expect(report.stats.rotations?.fights.length).toBeGreaterThan(0);
+                 const rotFight = report.stats.rotations!.fights[0];
+                 expect(rotFight.players.length).toBeGreaterThan(0);
+           });
 
-  it('builds buff generation tables without throwing', () => {
-    expect(Array.isArray(report.stats.buffGeneration)).toBe(true);
-  });
+           it('builds buff generation tables without throwing', () => {
+                 expect(Array.isArray(report.stats.buffGeneration)).toBe(true);
+           });
 
-  it('never crashes building death recaps even with no deaths in a short log', () => {
-    expect(Array.isArray(report.stats.deathRecaps)).toBe(true);
-  });
+           it('never crashes building death recaps even with no deaths in a short log', () => {
+                 expect(Array.isArray(report.stats.deathRecaps)).toBe(true);
+           });
 
-  it('builds fight highlights with real, non-empty descriptions', () => {
-    const highlights = report.stats.fightHighlights;
-    expect(Array.isArray(highlights)).toBe(true);
-    for (const h of highlights ?? []) {
-      expect(h.title).toBeTruthy();
-      expect(h.description).toBeTruthy();
-      expect(h.fightName).toBeTruthy();
-    }
-  });
+           it('builds fight highlights with real, non-empty descriptions', () => {
+                 const highlights = report.stats.fightHighlights;
+                 expect(Array.isArray(highlights)).toBe(true);
+                 for (const h of highlights ?? []) {
+                         expect(h.title).toBeTruthy();
+                         expect(h.description).toBeTruthy();
+                         expect(h.fightName).toBeTruthy();
+                 }
+           });
+
+           // Regression guard for the survivalSupport wiring bug caught in pre-push
+           // review: buildReportFromFights was passing computeAllIncomingHealing the
+           // { details } wrapper instead of .details, so every call silently returned
+           // [] and the "Who Kept Me Alive?" panel rendered empty on every report with
+           // no error and no failing test anywhere in the suite. This fixture has a
+           // known addon user (GildedBloom.1887, 17,403 healing) whose incoming-healing
+           // breakdown for at least one squadmate should be non-empty if the wiring is
+           // correct - if this ever goes back to returning [], this test must fail.
+           it('produces non-empty survivalSupport when the fixture has a healing-addon user', () => {
+                 expect(Array.isArray(report.stats.survivalSupport)).toBe(true);
+                 expect(report.stats.survivalSupport!.length).toBeGreaterThan(0);
+                 const withHealing = report.stats.survivalSupport!.find((b) => b.healed > 0);
+                 expect(withHealing).toBeTruthy();
+           });
 });
