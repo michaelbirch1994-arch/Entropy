@@ -33,12 +33,14 @@
  * ---------------------------------------------------------------------------
  * Implemented, with a normalizer: `damage` (partial — see damageTaxonomy.ts for
  * what's classifiable), `healing`, `barrier` (normalizeHealing.ts), `down` and
- * `death` (normalizeDeaths.ts).
+ * `death` (normalizeDeaths.ts), and `boon` (partial — Stability/Aegis loss
+ * events only, from buffUptimes[].states; see normalizeBoonLoss.ts).
  *
  * Investigated but deliberately NOT added this phase, because no normalizer
  * exists yet to populate them and an empty category is worse than no category:
- *   - `boon` / `condition` — real EI data exists (buffUptimes, conditions
- *     distributions) but normalizing it is separate follow-on work.
+ *   - `condition` — real EI data exists (condition distributions) but
+ *     normalizing it is separate follow-on work. `boon` gain events and
+ *     non-Stability/Aegis boons are likewise still out of scope.
  *   - `res` — EI's res-related stats exist per-player but haven't been mapped
  *     to discrete timestamped events.
  *   - `positioning` — deliberately excluded as a CombatEvent category. Position
@@ -90,6 +92,9 @@ export type CombatSubcategory =
   // barrier
   | 'barrierApplied'
   | 'barrierAbsorbed'
+  // boon
+  | 'stabilityLoss'
+  | 'aegisLoss'
   // fallback
   | 'unknown';
 
