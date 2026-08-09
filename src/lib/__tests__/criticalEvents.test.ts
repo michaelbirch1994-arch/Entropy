@@ -90,7 +90,7 @@ describe('detectFailedRecoveries', () => {
     expect(failed[0].timestampMs).toBe(5000);
     expect(failed[0].summary).toContain('Bob');
     expect(failed[0].summary).toContain('2.5s');
-    expect(failed[0].relatedPlayers[0]).toBe('player:Bob.9999');
+    expect(failed[0].relatedPlayers?.[0]).toBe('player:Bob.9999');
   });
 
   it('does not flag a down that was rallied (no linked death)', () => {

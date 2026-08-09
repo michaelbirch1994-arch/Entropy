@@ -3,7 +3,7 @@ import { resolveCommanderDistance } from './dashboardMetrics'
 
 export type ReplayDegree = 'full' | 'coarse' | 'none'
 
-type AnyPlayer = { notInSquad?: boolean; hasCommanderTag?: boolean; account?: string; profession?: string
+type AnyPlayer = { name?: string; notInSquad?: boolean; hasCommanderTag?: boolean; account?: string; profession?: string
   statsAll?: Array<{ distToCom?: number; stackDist?: number }>
   combatReplayData?: { positions?: Array<[number, number]>; dead?: Array<[number, number]>; down?: Array<[number, number]>; start?: number } }
 export type ParsedReport = { details?: { players?: AnyPlayer[]

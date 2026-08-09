@@ -18,8 +18,11 @@
 import type { CombatEvent } from './CombatEvent';
 
 /** Events that carry a real timestamp, excluding phase-aggregate events. */
-export function timestamped(events: CombatEvent[]): CombatEvent[] {
-  return events.filter((e): e is CombatEvent & { timestampMs: number } => e.timestampMs !== null);
+/** A CombatEvent proven (by `timestamped()`) to carry a real, non-null timestamp. */
+export type TimestampedEvent = CombatEvent & { timestampMs: number };
+
+export function timestamped(events: CombatEvent[]): TimestampedEvent[] {
+  return events.filter((e): e is TimestampedEvent => e.timestampMs !== null);
 }
 
 /**
