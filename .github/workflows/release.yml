@@ -100,7 +100,7 @@ jobs:
           releaseBody: "See the changelog for details. Download the installer for your OS below."
           # Tags created from GitHub's release page create a published release first.
           # For those tags, attach installers to that release instead of creating a second hidden draft.
-          releaseDraft: ${{ github.ref_name != 'v0.2.6' && github.ref_name != 'v0.2.7' && github.ref_name != 'v0.2.8' && github.ref_name != 'v0.2.9' && github.ref_name != 'v0.2.12' }}
+          releaseDraft: ${{ github.ref_name != 'v0.2.6' && github.ref_name != 'v0.2.7' && github.ref_name != 'v0.2.8' && github.ref_name != 'v0.2.9' && github.ref_name != 'v0.2.12' && github.ref_name != 'v0.2.13' }}
           prerelease: false
           args: ${{ matrix.args }}
 
