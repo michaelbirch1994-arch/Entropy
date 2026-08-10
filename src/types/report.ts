@@ -1,6 +1,8 @@
 // Types matching the AxiBridge WvW report.json structure.
 
 import type { BoonTable } from "../lib/bridge-metrics/boonGeneration";
+import type { CriticalEvent, IntelligenceFinding } from "../lib/intelligence/types";
+import type { EngagementSegment } from "../lib/intelligence/engagementTypes";
 
 export interface ReportGuild {
     id: string;
@@ -665,6 +667,12 @@ export interface ReportStats {
   buffGeneration?: BoonTable[];
     /** Auto-generated standout-moment cards (biggest blowout, toughest fight, longest engagement, etc.), one set per report. Raw-log reports only. */
   fightHighlights?: FightHighlight[];
+    /** Persisted v2.5 intelligence events generated during raw-log report building. Old reports omit these fields. */
+  criticalEvents?: CriticalEvent[];
+    /** Persisted v2.5 engagement segments generated from timestamped combat events and critical events. Old reports omit this field. */
+  engagementSegments?: EngagementSegment[];
+    /** Persisted v2.5 evidence-backed findings. Old reports omit this field. */
+  intelligenceFindings?: IntelligenceFinding[];
     offensiveAvgMvpScore: number;
     defensiveAvgMvpScore: number;
     avgMvpScore: number;

@@ -156,6 +156,21 @@ export default function IntelligenceDebugView() {
         segments: [] as EngagementSegment[],
         criticalEvents: [] as CriticalEvent[],
         findings: [] as IntelligenceFinding[],
+        persisted: false,
+      };
+    }
+
+    const hasPersistedFields =
+      "engagementSegments" in report.stats ||
+      "criticalEvents" in report.stats ||
+      "intelligenceFindings" in report.stats;
+
+    if (hasPersistedFields) {
+      return {
+        segments: report.stats.engagementSegments ?? [],
+        criticalEvents: report.stats.criticalEvents ?? [],
+        findings: report.stats.intelligenceFindings ?? [],
+        persisted: true,
       };
     }
 
@@ -167,7 +182,7 @@ export default function IntelligenceDebugView() {
       criticalEvents,
     });
 
-    return { segments, criticalEvents, findings };
+    return { segments, criticalEvents, findings, persisted: false };
   }, [report]);
 
   if (!report) {
@@ -211,8 +226,8 @@ export default function IntelligenceDebugView() {
 
           <div className="flex flex-wrap gap-2">
             <StatusPill ok={true} label="Finding engine wired" />
-            <StatusPill ok={hasFightRows} label={hasFightRows ? "Fight rows available" : "No fight rows"} />
-            <StatusPill ok={debug.criticalEvents.length > 0} label={debug.criticalEvents.length > 0 ? "Critical events present" : "Critical events not persisted"} />
+            <StatusPill ok={debug.persisted} label={debug.persisted ? "Persisted intelligence" : "Legacy debug fallback"} />
+            <StatusPill ok={debug.criticalEvents.length > 0} label={debug.criticalEvents.length > 0 ? "Critical events present" : "No critical events"} />
           </div>
         </div>
 
@@ -222,9 +237,9 @@ export default function IntelligenceDebugView() {
             <div>
               <div className="text-sm font-bold text-sky-200">Honesty boundary</div>
               <p className="mt-1 text-sm leading-6 text-slate-300">
-                This panel proves the v2.3 intelligence modules can be displayed in the app. It does not invent
-                missing critical events. Until CriticalEvents and true EngagementSegments are persisted into
-                report.stats, generated findings may correctly show as empty.
+                This panel reads persisted v2.5 intelligence data when the loaded report contains it. It does not invent
+                missing critical events. Old reports fall back to debug-only fight rows, while new raw-log imports
+                can carry CriticalEvents, EngagementSegments, and evidence-backed Findings in report.stats.
               </p>
             </div>
           </div>
@@ -236,13 +251,13 @@ export default function IntelligenceDebugView() {
           icon={<Layers3 className="h-5 w-5" />}
           label="Debug segments"
           value={formatNumber(debug.segments.length)}
-          detail="Derived from fightBreakdown rows for display only"
+          detail={debug.persisted ? "Persisted from raw-log intelligence pipeline" : "Derived from fightBreakdown rows for display only"}
         />
         <StatCard
           icon={<Search className="h-5 w-5" />}
           label="Critical events"
           value={formatNumber(debug.criticalEvents.length)}
-          detail="Will populate after persistence wiring"
+          detail={debug.persisted ? "Persisted during raw-log report build" : "Will populate after re-importing raw logs"}
         />
         <StatCard
           icon={<BrainCircuit className="h-5 w-5" />}
@@ -281,9 +296,9 @@ export default function IntelligenceDebugView() {
             debug.findings.map((finding) => <FindingCard key={finding.id} finding={finding} />)
           ) : (
             <div className="rounded-2xl border border-white/[0.06] bg-black/25 p-5 text-sm leading-6 text-slate-400">
-              No findings are shown because the current report object does not yet persist CriticalEvents into
-              <span className="font-mono text-slate-300"> report.stats</span>. That is correct behavior. The next backend slice should persist
-              critical events and engagement segments during raw-log report building.
+              No findings are shown because this report has no supported persisted CriticalEvent cluster. That is correct behavior:
+              Entropy only shows findings when the backing evidence exists. Re-import raw logs with v2.5 or use a report
+              with full replay/down-death data to populate this section.
             </div>
           )}
         </div>
