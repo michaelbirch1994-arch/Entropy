@@ -30,38 +30,47 @@ const PROFESSIONS = [
   "Dragonhunter",
   "Firebrand",
   "Willbender",
+  "Luminary",
   "Warrior",
   "Berserker",
   "Spellbreaker",
   "Bladesworn",
+  "Paragon",
   "Revenant",
   "Herald",
   "Renegade",
   "Vindicator",
+  "Conduit",
   "Engineer",
   "Scrapper",
   "Holosmith",
   "Mechanist",
+  "Amalgam",
   "Ranger",
   "Druid",
   "Soulbeast",
   "Untamed",
+  "Galeshot",
   "Thief",
   "Daredevil",
   "Deadeye",
   "Specter",
+  "Antiquary",
   "Elementalist",
   "Tempest",
   "Weaver",
   "Catalyst",
+  "Evoker",
   "Necromancer",
   "Reaper",
   "Scourge",
   "Harbinger",
+  "Ritualist",
   "Mesmer",
   "Chronomancer",
   "Mirage",
   "Virtuoso",
+  "Troubadour",
 ];
 
 const SQUAD_TAGS = [
@@ -73,6 +82,7 @@ const SQUAD_TAGS = [
   { id: "might", label: "Might", tone: "orange" },
   { id: "fury", label: "Fury", tone: "orange" },
   { id: "quickness", label: "Quickness", tone: "violet" },
+  { id: "superspeed", label: "Superspeed", tone: "violet" },
   { id: "alacrity", label: "Alacrity", tone: "violet" },
   { id: "healing", label: "Healing", tone: "emerald" },
   { id: "barrier", label: "Barrier", tone: "emerald" },
@@ -121,7 +131,7 @@ const INITIAL_SQUAD: SquadBuildSlot[] = [
     role: "Support",
     buildLink: "",
     tags: ["stability", "aegis", "protection", "cleanse", "healing", "rez"],
-    notes: "Core party support shell; replace with real AxiForge/GW2Skills build link.",
+    notes: "Core party support shell; replace with real Entropy Builder/GW2Skills build link.",
   },
   {
     id: "slot-3",
@@ -207,7 +217,7 @@ function SquadBuilder() {
             <Users className="h-5 w-5 text-sky-300" /> Squad builder
           </div>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-            Draft parties, attach AxiForge or GW2Skills links, and mark what each build contributes. This is planner data only;
+            Draft parties, attach Entropy Builder or GW2Skills links, and mark what each build contributes. This is planner data only;
             it does not alter reports or Intelligence output.
           </p>
         </div>
@@ -327,7 +337,7 @@ function SquadBuilder() {
                         <input
                           value={slot.buildLink}
                           onChange={(event) => updateSlot(slot.id, { buildLink: event.target.value })}
-                          placeholder="AxiForge code or https://gw2skills.net/editor/..."
+                          placeholder="Entropy Builder code or https://gw2skills.net/editor/..."
                           className="rounded-xl border border-white/10 bg-black/45 px-3 py-2 font-mono text-xs text-slate-200 outline-none focus:border-sky-400/40"
                         />
                       </label>
@@ -417,9 +427,9 @@ export default function AxiForgeLabView() {
             <FlaskConical className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-xl font-black uppercase tracking-widest text-slate-100">AxiForge Lab</h2>
+            <h2 className="text-xl font-black uppercase tracking-widest text-slate-100">Entropy Builder</h2>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
-              Decode AxiForge codes, preserve external build links, and draft squad compositions before connecting them to reports.
+              Decode Entropy Builder codes, preserve external build links, and draft squad compositions before connecting them to reports.
             </p>
           </div>
         </div>
@@ -436,7 +446,7 @@ export default function AxiForgeLabView() {
             setCode(event.target.value);
             setResult(null);
           }}
-          placeholder="Paste an AxiForge build/comp code here. GW2Skills links belong in the squad builder below."
+          placeholder="Paste an Entropy Builder build/comp code here. GW2Skills links belong in the squad builder below."
           spellCheck={false}
           className="mt-3 min-h-36 w-full resize-y rounded-2xl border border-white/10 bg-black/45 p-4 font-mono text-sm text-slate-200 outline-none transition focus:border-sky-400/40 focus:ring-2 focus:ring-sky-500/10"
         />
@@ -475,7 +485,7 @@ export default function AxiForgeLabView() {
           <TriangleAlert className="mt-0.5 h-5 w-5 flex-shrink-0" />
           <div>
             <div className="text-sm font-bold">This code could not be decoded.</div>
-            <p className="mt-1 text-sm text-rose-200/75">Check that the complete AxiForge build or comp code was pasted, then try again.</p>
+            <p className="mt-1 text-sm text-rose-200/75">Check that the complete Entropy Builder build or comp code was pasted, then try again.</p>
           </div>
         </section>
       )}
