@@ -62,7 +62,7 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(player).toBeTruthy();
 
                  const skillId = 987654;
-                 raw.skillMap = { ...(raw.skillMap ?? {}), [`s${skillId}`]: { name: 'Savage Slash', icon: 'https://example.invalid/savage-slash.png' } as any };
+                 (raw as any).skillMap = { ...((raw as any).skillMap ?? {}), [`s${skillId}`]: { name: 'Savage Slash', icon: 'https://example.invalid/savage-slash.png' } };
                  player.profession = 'Untamed';
                  player.totalDamageDist = player.totalDamageDist ?? [[]];
                  player.totalDamageDist[0] = [
