@@ -51,7 +51,7 @@ export default function RawLogImporter() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [linkValue, setLinkValue] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [viewing, setViewing] = useState<QueueItem | null>(null);
   const [replaying, setReplaying] = useState<QueueItem | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());

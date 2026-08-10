@@ -71,7 +71,7 @@ const VIEW_TITLES: Record<string, string> = {
   archive: "Report Archive",
   compare: "Compare Reports",
   intelligence: "Intelligence",
-  "axiforge-lab": "AxiForge Lab",
+  "axiforge-lab": "Entropy Builder",
 };
 
 function ReportRouter({ activeView }: { activeView: string }) {
@@ -147,10 +147,16 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
         </div>
 
         {/* Import card */}
-        <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
-
-        {/* Raw log importer (dps.report / .zevtc) */}
+        {/* Primary raw log importer (dps.report / .zevtc) */}
         <RawLogImporter />
+
+        <div className="w-full max-w-lg flex items-center gap-3 text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+          <div className="flex-1 h-px bg-sky-500/10" />
+          Saved report fallback
+          <div className="flex-1 h-px bg-sky-500/10" />
+        </div>
+
+        <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
 
         <button
           type="button"
@@ -158,12 +164,12 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
           className="flex items-center gap-2 rounded-xl border border-sky-400/20 bg-sky-500/[0.06] px-4 py-2 text-xs font-bold uppercase tracking-wider text-sky-300 transition hover:bg-sky-500/[0.12]"
         >
           <FlaskConical className="h-4 w-4" />
-          Open AxiForge Lab
+          Open Entropy Builder
         </button>
 
         {/* Supported formats info */}
         <div className="flex items-center gap-6 text-[10px] text-slate-400 font-mono">
-          <span className="flex items-center gap-1.5"><FileQuestion className="w-3 h-3" /> report.json</span>
+          <span className="flex items-center gap-1.5"><Activity className="w-3 h-3" /> .zevtc / .evtc</span>
           <span className="flex items-center gap-1.5"><Link2 className="w-3 h-3" /> DPS.report URLs</span>
           <span className="flex items-center gap-1.5"><Activity className="w-3 h-3" /> ?report= links</span>
         </div>

@@ -44,7 +44,7 @@ const MENU: NavSection[] = [
   {
     title: "TOOLS",
     icon: <FlaskConical className="w-4 h-4" />,
-    items: [{ id: "axiforge-lab", label: "AxiForge Lab" }],
+    items: [{ id: "axiforge-lab", label: "Entropy Builder" }],
   },
   {
     title: "OVERVIEW",
