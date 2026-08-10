@@ -119,7 +119,13 @@ import type {
 // that version produced - updating the app does not retroactively fix it.
 // Bump this whenever a change alters computed output, so the UI can tell the
 // user to re-import instead of silently showing them stale figures.
-export const METRICS_VERSION = 'entropy-raw-v2';
+export const METRICS_VERSION = 'entropy-raw-v3';
+
+const NATURAL_FORTITUDE_SYNTHETIC_SKILL_ID = -1001779;
+const NATURAL_FORTITUDE_DAMAGE_PER_UNLEASHED_SKILL_HIT = 1779;
+const NATURAL_FORTITUDE_TRAIT_NAME = 'Natural Fortitude';
+const NATURAL_FORTITUDE_TRAIT_ICON = 'https://wiki.guildwars2.com/wiki/Special:FilePath/Natural%20Fortitude.png';
+const SAVAGE_SLASH_SKILL_NAME = 'Savage Slash';
 
 export interface FightInput {
     summary: RawFightSummary;
@@ -176,6 +182,87 @@ function getVal(s: PlayerStats, k: string): number {
       case 'condiDamage': return Object.values(s.outgoingConditions).reduce((sum: number, c: any) => sum + (Number(c?.damage) || 0), 0);
       default: return 0;
     }
+}
+
+interface NaturalFortitudeDamageAdjustment {
+    hits: number;
+    damage: number;
+    byPlayerKey: Map<string, { hits: number; damage: number }>;
+}
+
+function addNaturalFortitudeDamageToPlayer(stat: PlayerStats, damage: number, hits: number) {
+    if (damage <= 0) return;
+
+    stat.damage += damage;
+    stat.damageAll += damage;
+    stat.offenseTotals.damage = Number(stat.offenseTotals.damage || 0) + damage;
+    stat.offenseTotals.damageAll = Number(stat.offenseTotals.damageAll || 0) + damage;
+    stat.offenseTotals.directDmg = Number(stat.offenseTotals.directDmg || 0) + damage;
+    stat.offenseTotals.connectedDamageCount = Number(stat.offenseTotals.connectedDamageCount || 0) + hits;
+    stat.dps = stat.totalFightMs > 0 ? stat.damage / (stat.totalFightMs / 1000) : 0;
+    stat.dpsAll = stat.totalFightMs > 0 ? stat.damageAll / (stat.totalFightMs / 1000) : 0;
+}
+
+function resolveRawPlayerAggregationKey(player: Record<string, unknown>): string {
+    const account = typeof player.account === 'string' && player.account !== 'Unknown'
+      ? player.account
+      : typeof player.name === 'string'
+        ? player.name
+        : 'Unknown';
+    const profession = String(player.profession || 'Unknown');
+    return profession !== 'Unknown' ? `${account}::${profession}` : account;
+}
+
+function computeNaturalFortitudeDamage(fights: FightInput[]): NaturalFortitudeDamageAdjustment {
+    type DistEntry = { id?: number; connectedHits?: number; hits?: number };
+
+    const result: NaturalFortitudeDamageAdjustment = {
+        hits: 0,
+        damage: 0,
+        byPlayerKey: new Map(),
+    };
+
+    for (const f of fights) {
+        const raw = f.raw as Record<string, unknown>;
+        const skillMap = (raw.skillMap ?? {}) as Record<string, { name?: string }>;
+        const savageSlashIds = new Set<number>();
+
+        for (const key of Object.keys(skillMap)) {
+            const id = Number(key.replace(/^s/, ''));
+            const name = String(skillMap[key]?.name || '').trim();
+            if (Number.isFinite(id) && name === SAVAGE_SLASH_SKILL_NAME) {
+                savageSlashIds.add(id);
+            }
+        }
+
+        if (savageSlashIds.size === 0) continue;
+
+        const players = (raw.players ?? []) as Record<string, unknown>[];
+        for (const p of players) {
+            if (p.notInSquad || String(p.profession || '') !== 'Untamed') continue;
+            const outDist = (p.totalDamageDist ?? []) as DistEntry[][];
+            let playerHits = 0;
+
+            for (const entry of outDist[0] ?? []) {
+                const id = Number(entry?.id);
+                if (!Number.isFinite(id) || !savageSlashIds.has(id)) continue;
+                playerHits += Number(entry?.connectedHits ?? entry?.hits) || 0;
+            }
+
+            if (playerHits <= 0) continue;
+
+            const damage = playerHits * NATURAL_FORTITUDE_DAMAGE_PER_UNLEASHED_SKILL_HIT;
+            const playerKey = resolveRawPlayerAggregationKey(p);
+            const cur = result.byPlayerKey.get(playerKey) || { hits: 0, damage: 0 };
+            cur.hits += playerHits;
+            cur.damage += damage;
+            result.byPlayerKey.set(playerKey, cur);
+            result.hits += playerHits;
+            result.damage += damage;
+        }
+    }
+
+    return result;
 }
 
 function buildLeaderboard(
@@ -695,6 +782,7 @@ function computeDpsGraph(fights: FightInput[]): DpsGraphData {
 // reads for the player-level total in combatMetrics.ts) - down contribution is
 // an outgoing-damage concept, so it's only accumulated for outgoing skills.
 function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topIncomingSkills: TopSkill[] } {
+    const naturalFortitude = computeNaturalFortitudeDamage(fights);
     const skillMeta = new Map<number, { name: string; icon?: string }>();
     const outgoing = new Map<number, { damage: number; hits: number; downContribution: number }>();
     const incoming = new Map<number, { damage: number; hits: number; downContribution: number }>();
@@ -771,6 +859,14 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                           accumulate(incoming, id, dmg, hits, downContrib);
                 }
         }
+  }
+
+  if (naturalFortitude.damage > 0 || naturalFortitude.hits > 0) {
+        skillMeta.set(NATURAL_FORTITUDE_SYNTHETIC_SKILL_ID, {
+          name: NATURAL_FORTITUDE_TRAIT_NAME,
+          icon: NATURAL_FORTITUDE_TRAIT_ICON,
+        });
+        accumulate(outgoing, NATURAL_FORTITUDE_SYNTHETIC_SKILL_ID, naturalFortitude.damage, naturalFortitude.hits, 0);
   }
 
   function toTopSkills(map: Map<number, { damage: number; hits: number; downContribution: number }>): TopSkill[] {
@@ -1595,6 +1691,16 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
         }
         return stat;
   });
+
+  const naturalFortitudePlayerDamage = computeNaturalFortitudeDamage(fights);
+    if (naturalFortitudePlayerDamage.damage > 0) {
+          for (const stat of playerEntries) {
+                  const key = stat.profession && stat.profession !== 'Unknown' ? `${stat.account}::${stat.profession}` : stat.account;
+                  const adjustment = naturalFortitudePlayerDamage.byPlayerKey.get(key);
+                  if (!adjustment) continue;
+                  addNaturalFortitudeDamageToPlayer(stat, adjustment.damage, adjustment.hits);
+          }
+  }
 
   const createLB = (k: string, higher: boolean) => buildLeaderboard(
         playerEntries.map((stat) => ({ account: stat.account, profession: stat.profession, professionList: stat.professionList, value: getVal(stat, k), count: stat.logsJoined })),
