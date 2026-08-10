@@ -98,10 +98,10 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Entropy ${{ github.ref_name }}"
           releaseBody: "See the changelog for details. Download the installer for your OS below."
-          # v0.2.6 and v0.2.7 are created from GitHub's release page because this
+          # v0.2.6-v0.2.8 are created from GitHub's release page because this
           # environment cannot push tags directly; that creates a published release first.
           # Keep later tags on the normal draft-first path.
-          releaseDraft: ${{ github.ref_name != 'v0.2.6' && github.ref_name != 'v0.2.7' }}
+          releaseDraft: ${{ github.ref_name != 'v0.2.6' && github.ref_name != 'v0.2.7' && github.ref_name != 'v0.2.8' }}
           prerelease: false
           args: ${{ matrix.args }}
 
