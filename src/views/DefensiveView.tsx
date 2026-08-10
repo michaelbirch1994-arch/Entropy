@@ -6,7 +6,6 @@ import { fmtNum, fmtCompact, fmtFixed, profChip } from "../utils/format";
 import { Shield, Heart, Droplet, Zap, Wind, Target } from "lucide-react";
 import { useStatsDisplay, pickStatsDisplayValue } from "../store/StatsDisplayContext";
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
-import SurvivalSupport from "../components/ui/SurvivalSupport";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 
 type Tab = "defense" | "support" | "healing";
@@ -72,9 +71,6 @@ export default function DefensiveView() {
     };
   }, [s, allyScope]);
 
-  const survivalSupport = s?.survivalSupport ?? [];
-  const survivalSupportReady = survivalSupport.length > 0;
-
   const supportRows = useMemo(() => {
     if (!s || tab !== "support") return [];
     return [...s.supportPlayers].sort((a, b) => (b.supportTotals.condiCleanse ?? 0) - (a.supportTotals.condiCleanse ?? 0));
@@ -89,8 +85,8 @@ export default function DefensiveView() {
     );
   }, [s, tab, allyScope]);
 
-  const healingFallbackRows = useMemo(() => {
-    if (!s || tab !== "healing" || survivalSupportReady) return [];
+  const healingMvpRows = useMemo(() => {
+    if (!s || tab !== "healing") return [];
     const firstPositive = (...values: Array<number | undefined>) => values.find((value) => Number.isFinite(value) && (value ?? 0) > 0) ?? 0;
 
     return [...s.healingPlayers]
@@ -111,7 +107,7 @@ export default function DefensiveView() {
       .filter((p) => p.sustain > 0)
       .sort((a, b) => b.sustain - a.sustain)
       .slice(0, 8);
-  }, [s, tab, survivalSupportReady, allyScope]);
+  }, [s, tab, allyScope]);
 
   const defenseRows = useMemo(() => {
     if (!s || tab !== "defense") return [];
@@ -211,68 +207,48 @@ export default function DefensiveView() {
 
       {tab === "healing" && (
         <Panel
-          title="Who Kept Me Alive Overview"
+          title="Healing MVP Player Cards"
+          subtitle="Top sustain output by player. This replaces the per-target attribution overview until that data path is reliable."
           icon={<Heart className="w-4 h-4" />}
           accent="text-emerald-400"
         >
-          {survivalSupportReady ? (
-            <>
-              <p className="mb-3 text-[11px] leading-relaxed text-slate-500">
-                Per-target incoming healing attribution. Each card shows how complete the total is and how reliable the contributor split is.
-              </p>
-              <div className="grid gap-3 md:grid-cols-2">
-                {survivalSupport.slice(0, 8).map((bd) => (
-                  <SurvivalSupport key={bd.account} breakdown={bd} />
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="space-y-4">
-              <div className="rounded-lg border border-amber-500/15 bg-amber-500/5 p-4">
-                <div className="text-xs font-bold uppercase tracking-wider text-amber-300">Detailed attribution unavailable</div>
-                <p className="mt-1 text-[12px] leading-relaxed text-slate-400">
-                  This report does not include per-target incoming healing attribution, so Entropy cannot honestly say who healed each specific player. The list below falls back to observed sustain output: healing, barrier, downed healing, and life-siphon healing generated for allies.
-                </p>
-              </div>
-              {healingFallbackRows.length > 0 ? (
-                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                  {healingFallbackRows.map((p, i) => (
-                    <div key={p.account} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="truncate text-xs font-semibold text-slate-200">{p.account}</div>
-                          <div className="mt-1"><ClassCell profession={p.profession} /></div>
-                        </div>
-                        <div className={`font-mono text-lg font-bold ${i < 3 ? "text-emerald-400" : "text-slate-300"}`}>
-                          {fmtCompact(p.sustain)}
-                        </div>
-                      </div>
-                      <div className="mt-3 grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
-                        <div>
-                          <div>Heal</div>
-                          <div className="font-mono text-[12px] text-emerald-400">{fmtCompact(p.healing)}</div>
-                        </div>
-                        <div>
-                          <div>Barrier</div>
-                          <div className="font-mono text-[12px] text-teal-400">{fmtCompact(p.barrier)}</div>
-                        </div>
-                        <div>
-                          <div>Downed</div>
-                          <div className="font-mono text-[12px] text-lime-400">{fmtCompact(p.downedHealing)}</div>
-                        </div>
-                        <div>
-                          <div>Life</div>
-                          <div className="font-mono text-[12px] text-purple-400">{fmtCompact(p.lifeSiphon)}</div>
-                        </div>
-                      </div>
+          {healingMvpRows.length > 0 ? (
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+              {healingMvpRows.map((p, i) => (
+                <div key={p.account} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-xs font-semibold text-slate-200">{p.account}</div>
+                      <div className="mt-1"><ClassCell profession={p.profession} /></div>
                     </div>
-                  ))}
+                    <div className={`font-mono text-lg font-bold ${i < 3 ? "text-emerald-400" : "text-slate-300"}`}>
+                      {fmtCompact(p.sustain)}
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
+                    <div>
+                      <div>Heal</div>
+                      <div className="font-mono text-[12px] text-emerald-400">{fmtCompact(p.healing)}</div>
+                    </div>
+                    <div>
+                      <div>Barrier</div>
+                      <div className="font-mono text-[12px] text-teal-400">{fmtCompact(p.barrier)}</div>
+                    </div>
+                    <div>
+                      <div>Downed</div>
+                      <div className="font-mono text-[12px] text-lime-400">{fmtCompact(p.downedHealing)}</div>
+                    </div>
+                    <div>
+                      <div>Life</div>
+                      <div className="font-mono text-[12px] text-purple-400">{fmtCompact(p.lifeSiphon)}</div>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-5 text-center text-sm text-slate-500">
-                  No healing, barrier, downed healing, or life-siphon output was available in this report. Re-import raw logs with the current Entropy version if the main Healing table has values but this overview remains empty.
-                </div>
-              )}
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-5 text-center text-sm text-slate-500">
+              No healing, barrier, downed healing, or life-siphon output was available in this report.
             </div>
           )}
         </Panel>
