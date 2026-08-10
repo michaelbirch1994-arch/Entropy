@@ -1,11 +1,13 @@
 [package]
 name = "entropy"
-version = "0.2.15"
+version = "0.2.16"
 description = "GW2 WvW combat analytics desktop app"
 edition = "2021"
 
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+
 
 [dependencies]
 tauri = { version = "2", features = [] }
