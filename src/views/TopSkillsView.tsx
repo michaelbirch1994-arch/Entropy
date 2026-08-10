@@ -7,6 +7,20 @@ import { Zap, ArrowDownLeft, Flame, Trophy, HeartPulse } from "lucide-react";
 type SortKey = "damage" | "downContribution" | "hits";
 type Tab = "outgoing" | "incoming" | "healing";
 
+const SORT_LABEL: Record<SortKey, string> = {
+  damage: "Damage",
+  downContribution: "Down Contribution",
+  hits: "Hits",
+};
+
+function metricValueForSkill(skill: TopSkill, sort: SortKey) {
+  return skill[sort];
+}
+
+function metricValueForHealing(source: TopHealingSource, sort: SortKey) {
+  return sort === "hits" ? source.hits : source.healing;
+}
+
 // Wraps the skill/buff icon with a graceful fallback. A plain <img> is used
 // (not a fetch()-then-blob-URL indirection) because img-src already permits
 // any https:// source in every place this app actually runs - the web build
@@ -138,7 +152,7 @@ function LifeStealSpotlight({
         {topSources.map((source, i) => {
           const matchingDamage = damageById.get(source.id);
           return (
-            <div key={`${source.isTrait ? "trait" : "skill"}-${source.id}`} className="rounded-xl border border-slate-800/70 bg-[#080d19]/80 p-3">
+            <div key={`lifesteal:${source.isTrait ? "trait" : "skill"}:${source.id}:${source.healing}:${source.hits}`} className="rounded-xl border border-slate-800/70 bg-[#080d19]/80 p-3">
               <div className="flex items-start gap-3 mb-3">
                 <SkillIcon src={source.icon || matchingDamage?.icon} index={i} />
                 <div className="min-w-0">
@@ -193,11 +207,34 @@ export default function TopSkillsView() {
     const sortedHealing = [...healingSources].sort((a, b) =>
       sort === "hits" ? b.hits - a.hits : b.healing - a.healing
     );
-    const maxHeal = Math.max(...sortedHealing.map((x) => x.healing), 1);
+    const maxHeal = Math.max(...sortedHealing.map((x) => metricValueForHealing(x, sort)), 1);
 
     return (
-      <div className="space-y-5 animate-view pb-12">
+      <div className="space-y-5 animate-view pb-12" key={`healing-view:${sort}`}>
         <TabRow tab={tab} setTab={setTab} />
+
+        <div className="flex items-center gap-2 text-[11px]">
+          <span className="text-slate-500 font-bold uppercase tracking-wider">Sort by:</span>
+          {([
+            { k: "damage", l: "Healing", icon: HeartPulse },
+            { k: "hits", l: "Hits", icon: Zap },
+          ] as { k: SortKey; l: string; icon: typeof Flame }[]).map((opt) => {
+            const Icon = opt.icon;
+            const isActive = (sort === "downContribution" ? "damage" : sort) === opt.k;
+            return (
+              <button
+                key={opt.k}
+                onClick={() => setSort(opt.k)}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-bold transition-all ${
+                  isActive ? "bg-sky-500/15 text-sky-400" : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                <Icon className="w-3 h-3" />
+                {opt.l}
+              </button>
+            );
+          })}
+        </div>
 
         {sortedHealing.length === 0 ? (
           <div className="py-10 text-center text-sm text-slate-500">
@@ -209,47 +246,50 @@ export default function TopSkillsView() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {sortedHealing.slice(0, 20).map((hs, i) => (
-              <div
-                key={`${hs.isTrait ? "b" : "s"}${hs.id}`}
-                className="bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg hover:border-slate-700 transition-all"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <SkillIcon src={hs.icon} index={i} />
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-bold text-slate-100">{hs.name}</span>
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
-                            hs.isTrait ? "border-fuchsia-500/30 text-fuchsia-400" : "border-emerald-500/30 text-emerald-400"
-                          }`}
-                        >
-                          {hs.isTrait ? "Trait" : "Skill"}
-                        </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`healing-grid:${sort}:${sortedHealing.map((x) => `${x.id}:${metricValueForHealing(x, sort)}`).join("|")}`}>
+            {sortedHealing.slice(0, 20).map((hs, i) => {
+              const activeValue = metricValueForHealing(hs, sort);
+              return (
+                <div
+                  key={`healing:${sort}:${hs.isTrait ? "trait" : "skill"}:${hs.id}:${hs.name}:${hs.healing}:${hs.hits}`}
+                  className="bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg hover:border-slate-700 transition-all"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <SkillIcon src={hs.icon} index={i} />
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-bold text-slate-100">{hs.name}</span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+                              hs.isTrait ? "border-fuchsia-500/30 text-fuchsia-400" : "border-emerald-500/30 text-emerald-400"
+                            }`}
+                          >
+                            {hs.isTrait ? "Trait" : "Skill"}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono">{fmtNum(hs.hits)} hits</div>
                       </div>
-                      <div className="text-[10px] text-slate-500 font-mono">{fmtNum(hs.hits)} hits</div>
+                    </div>
+                    <span className={`text-xs font-black font-mono ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>
+                      #{i + 1}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-[10px] font-mono mb-1">
+                      <span className="text-slate-500">Sorted by {sort === "hits" ? "Hits" : "Healing"}</span>
+                      <span className="text-emerald-400 font-bold">{sort === "hits" ? fmtNum(activeValue) : fmtCompact(activeValue)}</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
+                        style={{ width: `${(activeValue / maxHeal) * 100}%` }}
+                      />
                     </div>
                   </div>
-                  <span className={`text-xs font-black font-mono ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>
-                    #{i + 1}
-                  </span>
                 </div>
-                <div>
-                  <div className="flex justify-between text-[10px] font-mono mb-1">
-                    <span className="text-slate-500">Healing</span>
-                    <span className="text-emerald-400 font-bold">{fmtCompact(hs.healing)}</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
-                      style={{ width: `${(hs.healing / maxHeal) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -258,6 +298,7 @@ export default function TopSkillsView() {
 
   const skills: TopSkill[] = tab === "outgoing" ? s.topSkills : s.topIncomingSkills;
   const sorted = [...skills].sort((a, b) => b[sort] - a[sort]);
+  const maxActive = Math.max(...sorted.map((x) => metricValueForSkill(x, sort)), 1);
   const maxDmg = Math.max(...sorted.map((x) => x.damage), 1);
   const maxDc = Math.max(...sorted.map((x) => x.downContribution), 1);
   const healingSources: TopHealingSource[] = s.topHealingSkills ?? [];
@@ -268,7 +309,7 @@ export default function TopSkillsView() {
   const maxMatchedHealing = Math.max(...visibleHealingMatches.map((source) => source.healing), 1);
 
   return (
-    <div className="space-y-5 animate-view pb-12">
+    <div className="space-y-5 animate-view pb-12" key={`${tab}-view:${sort}`}>
       <TabRow tab={tab} setTab={setTab} />
 
       {/* Sort selector */}
@@ -300,12 +341,13 @@ export default function TopSkillsView() {
       )}
 
       {/* Skills grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`${tab}:grid:${sort}:${sorted.map((x) => `${x.id}:${metricValueForSkill(x, sort)}`).join("|")}`}>
         {sorted.slice(0, 20).map((sk, i) => {
           const healingMatch = tab === "outgoing" ? healingById.get(sk.id) : undefined;
+          const activeValue = metricValueForSkill(sk, sort);
           return (
             <div
-              key={sk.name}
+              key={`${tab}:${sort}:${sk.id}:${sk.name}:${sk.damage}:${sk.downContribution}:${sk.hits}`}
               className="bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg hover:border-slate-700 transition-all"
             >
               <div className="flex items-start justify-between mb-3">
@@ -326,6 +368,19 @@ export default function TopSkillsView() {
                 <span className={`text-xs font-black font-mono ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>
                   #{i + 1}
                 </span>
+              </div>
+
+              <div className="mb-3 rounded-xl border border-sky-500/15 bg-sky-500/[0.05] p-3">
+                <div className="flex justify-between text-[10px] font-mono mb-1">
+                  <span className="text-slate-400">Sorted by {SORT_LABEL[sort]}</span>
+                  <span className="text-sky-300 font-bold">{sort === "hits" ? fmtNum(activeValue) : fmtCompact(activeValue)}</span>
+                </div>
+                <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-sky-600 to-sky-300 rounded-full transition-all duration-500"
+                    style={{ width: `${(activeValue / maxActive) * 100}%` }}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
