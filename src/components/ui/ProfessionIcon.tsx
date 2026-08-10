@@ -1,7 +1,8 @@
 // Renders a profession/elite-spec icon as an inline SVG from locally vendored
 // path data (src/data/professionIcons.ts) instead of hotlinking
-// render.guildwars2.com PNGs. Uses currentColor so it automatically matches
-// whatever text color class (e.g. profChip()) wraps it.
+// render.guildwars2.com PNGs. The silhouettes are local assets; the default
+// color palette matches the flat square class icons used for Entropy's visual
+// class language.
 import { PROFESSION_ICON_DATA } from "../../data/professionIcons";
 import { PROFESSION_FAMILY } from "../../utils/format";
 
@@ -22,12 +23,30 @@ const FAMILY_TO_BASE: Record<string, string> = {
   mesmer: "Mesmer",
 };
 
+// Sampled from the supplied 384px flat class/spec PNG set. Keeping this local
+// avoids runtime image fetches and keeps every class icon visually consistent
+// whether it renders inside a chip, table, card, or squad builder slot.
+const FAMILY_ICON_COLOR: Record<string, string> = {
+  guardian: "#2bbee3",
+  warrior: "#f9be40",
+  revenant: "#a1261d",
+  engineer: "#c97230",
+  ranger: "#88d828",
+  thief: "#c8717c",
+  elementalist: "#e94045",
+  necro: "#00d87d",
+  mesmer: "#b844e4",
+};
+
 export default function ProfessionIcon({
   profession,
   className = "w-4 h-4",
+  monochrome = false,
 }: {
   profession: string;
   className?: string;
+  /** Use surrounding text color instead of Entropy's profession palette. */
+  monochrome?: boolean;
 }) {
   const family = PROFESSION_FAMILY[profession];
   const data = PROFESSION_ICON_DATA[profession] ?? PROFESSION_ICON_DATA[FAMILY_TO_BASE[family ?? ""] ?? ""];
@@ -40,6 +59,7 @@ export default function ProfessionIcon({
       className={className}
       fill="currentColor"
       aria-hidden="true"
+      style={!monochrome && family ? { color: FAMILY_ICON_COLOR[family] } : undefined}
     >
       <path d={data.path} />
     </svg>
