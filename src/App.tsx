@@ -35,6 +35,7 @@ import CompareView from "./views/CompareView";
 import IntelligenceDebugView from "./views/IntelligenceDebugView";
 import AxiForgeLabView from "./views/AxiForgeLabView";
 import { buildReportHtmlExport } from "./lib/exportReportHtml";
+import type { WvWReport } from "./types/report";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
 import { Activity, BrainCircuit, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, FlaskConical, Link2, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
@@ -43,6 +44,7 @@ import RawLogImporter from "./components/ui/RawLogImporter";
 import EntropyWordmarkReveal from "./components/ui/EntropyWordmarkReveal";
 import UpdateToast from "./components/ui/UpdateToast";
 import { useAutoUpdater } from "./utils/useAutoUpdater";
+
 
 const VIEW_TITLES: Record<string, string> = {
   overview: "Overview",
@@ -73,6 +75,7 @@ const VIEW_TITLES: Record<string, string> = {
   intelligence: "Intelligence",
   "axiforge-lab": "Entropy Builder",
 };
+
 
 function ReportRouter({ activeView }: { activeView: string }) {
   switch (activeView) {
@@ -107,6 +110,7 @@ function ReportRouter({ activeView }: { activeView: string }) {
   }
 }
 
+
 function LoadingState() {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
@@ -115,6 +119,7 @@ function LoadingState() {
     </div>
   );
 }
+
 
 function ErrorState({ message }: { message: string }) {
   return (
@@ -129,6 +134,7 @@ function ErrorState({ message }: { message: string }) {
     </div>
   );
 }
+
 
 function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void }) {
   const { uploadReport, loadFromUrl, error, loading } = useReport();
@@ -146,9 +152,11 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
           </div>
         </div>
 
+
         {/* Import card */}
         {/* Primary raw log importer (dps.report / .zevtc) */}
         <RawLogImporter />
+
 
         <div className="w-full max-w-lg flex items-center gap-3 text-[10px] text-slate-500 uppercase font-bold tracking-widest">
           <div className="flex-1 h-px bg-sky-500/10" />
@@ -156,7 +164,9 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
           <div className="flex-1 h-px bg-sky-500/10" />
         </div>
 
+
         <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
+
 
         <button
           type="button"
@@ -166,6 +176,7 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
           <FlaskConical className="h-4 w-4" />
           Open Entropy Builder
         </button>
+
 
         {/* Supported formats info */}
         <div className="flex items-center gap-6 text-[10px] text-slate-400 font-mono">
@@ -178,9 +189,11 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
   );
 }
 
+
 function safeFileName(title: string): string {
   return title.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "") || "entropy-report";
 }
+
 
 function downloadHtmlSnapshot(title: string, html: string) {
   const blob = new Blob([html], { type: "text/html" });
@@ -192,6 +205,43 @@ function downloadHtmlSnapshot(title: string, html: string) {
   URL.revokeObjectURL(url);
 }
 
+const DEFAULT_SHARE_VIEWER_URL = "https://michaelbirch1994-arch.github.io/Entropy/";
+
+function getConfiguredShareViewerUrl(): string {
+  const configured = import.meta.env.VITE_ENTROPY_SHARE_VIEWER_URL;
+  if (typeof configured === "string" && configured.trim()) return configured.trim();
+
+  if (typeof window !== "undefined" && /^https?:$/i.test(window.location.protocol)) {
+    return window.location.href;
+  }
+
+  return DEFAULT_SHARE_VIEWER_URL;
+}
+
+function getReportPermalinks(report: WvWReport): string[] {
+  const seen = new Set<string>();
+  const rows = report.stats?.fightBreakdown ?? [];
+
+  for (const row of rows) {
+    const permalink = typeof row.permalink === "string" ? row.permalink.trim() : "";
+    if (permalink) seen.add(permalink);
+  }
+
+  return [...seen];
+}
+
+function buildEntropyShareLink(report: WvWReport): string | null {
+  const permalinks = getReportPermalinks(report);
+  if (permalinks.length === 0) return null;
+
+  const url = new URL(getConfiguredShareViewerUrl());
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("permalinks", permalinks.join(","));
+  return url.toString();
+}
+
+
 function ReportShell() {
   const { report, loading, error, source, clearReport } = useReport();
   // Lets you get back to the import screen to add more logs without
@@ -200,6 +250,7 @@ function ReportShell() {
   const [atHome, setAtHome] = useState(false);
   const [exportStatus, setExportStatus] = useState<"idle" | "copied" | "downloaded" | "failed">("idle");
   const { activeView, setActiveView } = useView();
+
 
   const headerInfo = useMemo(() => {
     if (!report) return null;
@@ -210,18 +261,22 @@ function ReportShell() {
     };
   }, [report]);
 
+
   const viewTitle = VIEW_TITLES[activeView] ?? "Overview";
   const showTool = activeView === "axiforge-lab";
+
 
   function flashExportStatus(status: typeof exportStatus) {
     setExportStatus(status);
     window.setTimeout(() => setExportStatus("idle"), 2500);
   }
 
+
   async function handleExportReport() {
     if (!report) return;
     const html = buildReportHtmlExport(report);
     const standaloneLink = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+
 
     try {
       if (standaloneLink.length > 1_500_000 || !navigator.clipboard?.writeText) {
@@ -229,6 +284,7 @@ function ReportShell() {
         flashExportStatus("downloaded");
         return;
       }
+
 
       await navigator.clipboard.writeText(standaloneLink);
       flashExportStatus("copied");
@@ -242,14 +298,17 @@ function ReportShell() {
     }
   }
 
+
   const exportLabel =
     exportStatus === "copied" ? "Link copied" : exportStatus === "downloaded" ? "HTML saved" : exportStatus === "failed" ? "Export failed" : "Export link";
   const viewIcon = VIEW_ICONS[activeView] ?? <Activity className="w-4 h-4" />;
+
 
   // When no report loaded yet (and not in the middle of initial load), show Import Center
   const showImport = (!report || atHome) && !loading && !error;
   const showLoading = loading && !report;
   const showError = !loading && !report && !!error;
+
 
   return (
     <div className="flex h-screen w-full text-slate-100 overflow-hidden">
@@ -260,8 +319,10 @@ function ReportShell() {
         <div className="entropy-nebula entropy-nebula-4" />
       </div>
 
+
       {/* Only show sidebar when a report is loaded */}
       {(report || showTool) && <Sidebar activeView={activeView} setActiveView={setActiveView} />}
+
 
       <main className="flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar">
         {/* Header - only when report is active */}
@@ -292,7 +353,7 @@ function ReportShell() {
                 </button>
                 <button
                   onClick={handleExportReport}
-                  title="Copy a standalone browser link to this static report snapshot; large snapshots are saved as HTML instead."
+                  title="Copy a short Entropy viewer link when the report came from dps.report; otherwise save an HTML snapshot."
                   className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-sky-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-sky-500/30 bg-black/30 transition-colors"
                 >
                   <Link2 className="w-3 h-3" />
@@ -327,6 +388,7 @@ function ReportShell() {
           </header>
         )}
 
+
         {report && report.meta.appVersion !== METRICS_VERSION && !atHome && (
           <div className="mx-6 mt-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-4 py-3 flex items-start gap-3">
             <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
@@ -339,6 +401,7 @@ function ReportShell() {
             </div>
           </div>
         )}
+
 
         {/* Content */}
         <div className={report || showTool ? "p-6" : "flex items-center justify-center min-h-full"}>
@@ -383,11 +446,13 @@ function ReportShell() {
   );
 }
 
+
 export default function App() {
   // Runs once per launch, no-op outside the desktop app - see
   // src/utils/useAutoUpdater.ts for why this checks on startup only
   // instead of polling.
   const updateState = useAutoUpdater();
+
 
   return (
     <ViewProvider>
@@ -406,3 +471,10 @@ export default function App() {
     </ViewProvider>
   );
 }
+
+
+
+
+
+
+
