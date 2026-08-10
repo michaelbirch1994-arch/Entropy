@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   BrainCircuit,
@@ -16,6 +16,7 @@ import {
 import { useReport } from "../store/ReportContext";
 import {
   buildIntelligenceDashboard,
+  type IntelligenceAction,
   type IntelligenceDashboard,
   type IntelligenceEngagementInsight,
   type IntelligenceReadiness,
@@ -47,6 +48,8 @@ interface FightContext {
   downs: number;
   deaths: number;
 }
+
+const ALL_FIGHTS_ID = "all";
 
 const UNKNOWN_FIGHT: FightContext = {
   id: "unknown",
@@ -113,6 +116,17 @@ function buildFightContextMap(report: WvWReport, dashboard: IntelligenceDashboar
 function fightContextFor(map: Map<string, FightContext>, fightId?: string): FightContext {
   if (!fightId) return UNKNOWN_FIGHT;
   return map.get(fightId) ?? { ...UNKNOWN_FIGHT, id: fightId, name: fightId };
+}
+
+function uniqueFightContexts(map: Map<string, FightContext>): FightContext[] {
+  return Array.from(new Map(Array.from(map.values()).map((context) => [context.id, context])).values())
+    .filter((context) => context.id !== UNKNOWN_FIGHT.id)
+    .sort((a, b) => a.index - b.index || a.label.localeCompare(b.label));
+}
+
+function isInSelectedFight(fightContexts: Map<string, FightContext>, fightId: string | undefined, selectedFightId: string): boolean {
+  if (selectedFightId === ALL_FIGHTS_ID) return true;
+  return fightContextFor(fightContexts, fightId).id === selectedFightId;
 }
 
 function contextForTimelineItem(
@@ -210,6 +224,78 @@ function FightContextStrip({ context, compact = false }: { context: FightContext
         <div className="mt-2 truncate text-xs font-bold text-slate-300">{context.name}</div>
       )}
     </div>
+  );
+}
+
+function FightSelector({
+  fights,
+  selectedFightId,
+  onSelect,
+  totals,
+}: {
+  fights: FightContext[];
+  selectedFightId: string;
+  onSelect: (fightId: string) => void;
+  totals: { downs: number; deaths: number; findings: number; criticalEvents: number };
+}) {
+  return (
+    <section className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Fight breakdown</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            Click a fight to scope the analytics below. All fights keeps the full report overview.
+          </p>
+        </div>
+        <Pill>{fights.length || "unknown"} fights detected</Pill>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <button
+          type="button"
+          onClick={() => onSelect(ALL_FIGHTS_ID)}
+          className={`rounded-2xl border p-4 text-left transition ${selectedFightId === ALL_FIGHTS_ID ? "border-amber-300/40 bg-amber-400/[0.08] shadow-[0_0_35px_-18px_rgba(251,191,36,0.75)]" : "border-white/[0.06] bg-black/25 hover:border-white/15 hover:bg-white/[0.04]"}`}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <Pill className="border-amber-400/20 bg-amber-500/[0.08] text-amber-200">All fights</Pill>
+            <Pill>{formatNumber(totals.findings)} findings</Pill>
+          </div>
+          <div className="mt-3 text-xs leading-5 text-slate-400">Full night overview with every fight and report window included.</div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-2">
+              <div className="text-base font-black text-amber-200">{formatNumber(totals.downs)}</div>
+              <div className="text-[10px] font-bold uppercase text-slate-500">downs</div>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-2">
+              <div className="text-base font-black text-rose-200">{formatNumber(totals.deaths)}</div>
+              <div className="text-[10px] font-bold uppercase text-slate-500">deaths</div>
+            </div>
+          </div>
+        </button>
+
+        {fights.map((fight) => (
+          <button
+            key={fight.id}
+            type="button"
+            onClick={() => onSelect(fight.id)}
+            className={`rounded-2xl border p-4 text-left transition ${selectedFightId === fight.id ? "border-sky-300/40 bg-sky-400/[0.08] shadow-[0_0_35px_-18px_rgba(56,189,248,0.75)]" : "border-white/[0.06] bg-black/25 hover:border-white/15 hover:bg-white/[0.04]"}`}
+          >
+            <FightContextStrip context={fight} compact />
+            <div className="mt-3 truncate text-xs font-bold text-slate-300">{fight.name}</div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-white/[0.06] bg-black/25 p-2">
+                <div className="text-base font-black text-amber-200">{formatNumber(fight.downs)}</div>
+                <div className="text-[10px] font-bold uppercase text-slate-500">downs</div>
+              </div>
+              <div className="rounded-xl border border-white/[0.06] bg-black/25 p-2">
+                <div className="text-base font-black text-rose-200">{formatNumber(fight.deaths)}</div>
+                <div className="text-[10px] font-bold uppercase text-slate-500">deaths</div>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -367,7 +453,7 @@ function DownsDeathsChart({ engagements, fightContexts }: { engagements: Intelli
             </div>
           );
         })}
-        {rows.length === 0 && <div className="text-sm text-slate-500">No engagement windows available.</div>}
+        {rows.length === 0 && <div className="text-sm text-slate-500">No engagement windows available for this selection.</div>}
       </div>
       <div className="mt-4 flex gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
         <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-300" /> Downs</span>
@@ -377,14 +463,14 @@ function DownsDeathsChart({ engagements, fightContexts }: { engagements: Intelli
   );
 }
 
-function EmptyState({ dashboard }: { dashboard: IntelligenceDashboard }) {
+function EmptyState({ dashboard, scope = "this report" }: { dashboard: IntelligenceDashboard; scope?: string }) {
   return (
     <div className="rounded-2xl border border-white/[0.06] bg-black/25 p-5">
       <div className="flex items-start gap-3">
         <FileWarning className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-300" />
         <p className="text-sm leading-6 text-slate-400">
           {dashboard.persisted
-            ? "No current finding rule produced a supported conclusion. Entropy stays quiet when the evidence does not support a claim."
+            ? `No current finding rule produced a supported conclusion for ${scope}. Entropy stays quiet when the evidence does not support a claim.`
             : "This report predates persisted Intelligence data. Re-import raw logs with the current app to populate critical events, engagement windows, and findings."}
         </p>
       </div>
@@ -438,6 +524,7 @@ function CriticalEventCard({ event, fightContext }: { event: CriticalEvent; figh
 
 export default function IntelligenceDebugView() {
   const { report } = useReport();
+  const [selectedFightId, setSelectedFightId] = useState(ALL_FIGHTS_ID);
   const dashboard = useMemo(() => (report ? buildIntelligenceDashboard(report) : null), [report]);
 
   if (!report || !dashboard) {
@@ -451,14 +538,42 @@ export default function IntelligenceDebugView() {
   }
 
   const readiness = READINESS_STYLE[dashboard.readiness];
-  const topEngagements = dashboard.engagements.slice(0, 3);
   const fightContexts = buildFightContextMap(report, dashboard);
+  const fightList = uniqueFightContexts(fightContexts);
+  const selectedFight = selectedFightId === ALL_FIGHTS_ID ? null : fightList.find((fight) => fight.id === selectedFightId) ?? null;
+  const selectedScopeLabel = selectedFight?.label ?? "this report";
   const segmentById = new Map(dashboard.engagements.map((engagement) => [engagement.id, engagement]));
   const chronologicalTimeline = [...dashboard.timeline].sort((a, b) => {
     const af = contextForTimelineItem(a, segmentById, fightContexts);
     const bf = contextForTimelineItem(b, segmentById, fightContexts);
     return af.index - bf.index || a.timestampMs - b.timestampMs;
   });
+  const scopedEngagements = dashboard.engagements.filter((engagement) => isInSelectedFight(fightContexts, engagement.fightId, selectedFightId));
+  const scopedFindings = dashboard.findings.filter((finding) => isInSelectedFight(fightContexts, finding.relatedFight, selectedFightId));
+  const scopedCriticalEvents = dashboard.criticalEvents.filter((event) => isInSelectedFight(fightContexts, event.fightId, selectedFightId));
+  const scopedTimeline = chronologicalTimeline.filter((item) => {
+    if (selectedFightId === ALL_FIGHTS_ID) return true;
+    return contextForTimelineItem(item, segmentById, fightContexts).id === selectedFightId;
+  });
+  const scopedFindingIds = new Set(scopedFindings.map((finding) => finding.id));
+  const scopedActions = selectedFightId === ALL_FIGHTS_ID
+    ? dashboard.actions
+    : dashboard.actions.filter((action: IntelligenceAction) => action.basedOn.some((id) => scopedFindingIds.has(id)));
+  const topEngagements = scopedEngagements.slice(0, 3);
+  const highestPressure = scopedEngagements[0];
+  const scopedTotals = {
+    downs: scopedEngagements.reduce((sum, engagement) => sum + engagement.downs, 0),
+    deaths: scopedEngagements.reduce((sum, engagement) => sum + engagement.deaths, 0),
+    findings: scopedFindings.length,
+    criticalEvents: scopedCriticalEvents.length,
+  };
+  const allTotals = {
+    downs: dashboard.totals.downs,
+    deaths: dashboard.totals.deaths,
+    findings: dashboard.totals.findings,
+    criticalEvents: dashboard.totals.criticalEvents,
+  };
+  const engagementScopeText = selectedFight ? `in ${selectedFight.label}` : `across ${fightList.length || "unknown"} fights`;
 
   return (
     <div className="space-y-6 pb-12">
@@ -484,27 +599,45 @@ export default function IntelligenceDebugView() {
             <Pill className={dashboard.persisted ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-300" : "border-amber-400/20 bg-amber-500/10 text-amber-300"}>
               {dashboard.persisted ? "persisted data" : "legacy fallback"}
             </Pill>
+            {selectedFight && <Pill className="border-sky-400/20 bg-sky-500/[0.08] text-sky-200">Viewing {selectedFight.label}</Pill>}
           </div>
         </div>
       </section>
 
+      <FightSelector fights={fightList} selectedFightId={selectedFightId} onSelect={setSelectedFightId} totals={allTotals} />
+
+      {selectedFight && (
+        <section className="rounded-[2rem] border border-sky-400/15 bg-sky-500/[0.04] p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-black uppercase tracking-[0.28em] text-sky-300">Selected fight analytics</div>
+              <h3 className="mt-1 text-xl font-black uppercase tracking-wider text-slate-100">{selectedFight.name}</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-400">
+                The cards below are filtered to this fight only, so pressure windows, findings, and events no longer mix with other uploads.
+              </p>
+            </div>
+            <FightContextStrip context={selectedFight} compact />
+          </div>
+        </section>
+      )}
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={<Gauge className="h-5 w-5" />} label="Highest pressure" value={dashboard.engagements[0] ? `${dashboard.engagements[0].pressureScore}/100` : "0/100"} detail={dashboard.engagements[0] ? `${fightContextFor(fightContexts, dashboard.engagements[0].fightId).label} · ${dashboard.engagements[0].label}` : "No engagement windows available."} />
-        <StatCard icon={<Flame className="h-5 w-5" />} label="Review first" value={dashboard.engagements[0] ? `#${dashboard.engagements[0].priority}` : "None"} detail={dashboard.engagements[0]?.reviewPrompt ?? "Load or re-import a report for review targets."} />
-        <StatCard icon={<BrainCircuit className="h-5 w-5" />} label="Findings" value={formatNumber(dashboard.totals.findings)} detail="Evidence-backed conclusions tied to specific fights." />
-        <StatCard icon={<Database className="h-5 w-5" />} label="Downs / deaths" value={`${formatNumber(dashboard.totals.downs)} / ${formatNumber(dashboard.totals.deaths)}`} detail="From Intelligence windows, grouped by fight." />
+        <StatCard icon={<Gauge className="h-5 w-5" />} label="Highest pressure" value={highestPressure ? `${highestPressure.pressureScore}/100` : "0/100"} detail={highestPressure ? `${fightContextFor(fightContexts, highestPressure.fightId).label} · ${highestPressure.label}` : "No engagement windows available for this selection."} />
+        <StatCard icon={<Flame className="h-5 w-5" />} label="Review first" value={highestPressure ? `#${highestPressure.priority}` : "None"} detail={highestPressure?.reviewPrompt ?? "No scoped review target available."} />
+        <StatCard icon={<BrainCircuit className="h-5 w-5" />} label="Findings" value={formatNumber(scopedTotals.findings)} detail={selectedFight ? "Evidence-backed conclusions for the selected fight." : "Evidence-backed conclusions tied to specific fights."} />
+        <StatCard icon={<Database className="h-5 w-5" />} label="Downs / deaths" value={`${formatNumber(scopedTotals.downs)} / ${formatNumber(scopedTotals.deaths)}`} detail={selectedFight ? "From Intelligence windows in the selected fight." : "From Intelligence windows, grouped by fight."} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Priority engagements</h3>
-            <Pill>{dashboard.engagements.length} windows across {fightContexts.size || "unknown"} fights</Pill>
+            <Pill>{scopedEngagements.length} windows {engagementScopeText}</Pill>
           </div>
           <div className="mt-4 grid gap-3 xl:grid-cols-3">
             {topEngagements.length > 0 ? topEngagements.map((insight) => (
               <EngagementCard key={insight.id} insight={insight} fightContext={fightContextFor(fightContexts, insight.fightId)} />
-            )) : <EmptyState dashboard={dashboard} />}
+            )) : <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}
           </div>
         </div>
 
@@ -512,16 +645,16 @@ export default function IntelligenceDebugView() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <DownsDeathsChart engagements={dashboard.engagements} fightContexts={fightContexts} />
+        <DownsDeathsChart engagements={scopedEngagements} fightContexts={fightContexts} />
 
         <div className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Action queue</h3>
-            <Pill>{dashboard.actions.length} actions</Pill>
+            <Pill>{scopedActions.length} actions</Pill>
           </div>
           <div className="mt-4 grid gap-3">
-            {dashboard.actions.length > 0 ? (
-              dashboard.actions.map((action, index) => (
+            {scopedActions.length > 0 ? (
+              scopedActions.map((action, index) => (
                 <div key={action.id} className="rounded-2xl border border-amber-400/10 bg-amber-500/[0.04] p-4">
                   <div className="text-xs font-black text-amber-300">#{index + 1}</div>
                   <h3 className="mt-1 text-sm font-black uppercase tracking-wider text-slate-100">{action.title}</h3>
@@ -529,7 +662,7 @@ export default function IntelligenceDebugView() {
                 </div>
               ))
             ) : (
-              <EmptyState dashboard={dashboard} />
+              <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />
             )}
           </div>
         </div>
@@ -538,13 +671,15 @@ export default function IntelligenceDebugView() {
       <section className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Fight timeline</h3>
-          <Pill>{chronologicalTimeline.length} linked windows</Pill>
+          <Pill>{scopedTimeline.length} linked windows</Pill>
         </div>
         <div className="mt-2 text-xs leading-5 text-slate-500">
-          Chronological by fight. Times are relative to the fight they belong to, not the whole uploaded report.
+          {selectedFight
+            ? `Showing only windows tied to ${selectedFight.label}. Times remain relative to that fight.`
+            : "Chronological by fight. Times are relative to the fight they belong to, not the whole uploaded report."}
         </div>
         <div className="mt-4 grid gap-3">
-          {chronologicalTimeline.map((item) => {
+          {scopedTimeline.map((item) => {
             const insight = segmentById.get(item.id);
             const fightContext = contextForTimelineItem(item, segmentById, fightContexts);
             return (
@@ -569,7 +704,7 @@ export default function IntelligenceDebugView() {
               </div>
             );
           })}
-          {chronologicalTimeline.length === 0 && <EmptyState dashboard={dashboard} />}
+          {scopedTimeline.length === 0 && <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}
         </div>
       </section>
 
@@ -577,25 +712,25 @@ export default function IntelligenceDebugView() {
         <div className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Findings</h3>
-            <Pill>{dashboard.findings.length} findings</Pill>
+            <Pill>{scopedFindings.length} findings</Pill>
           </div>
           <div className="mt-4 grid gap-3">
-            {dashboard.findings.length > 0 ? dashboard.findings.map((finding) => (
+            {scopedFindings.length > 0 ? scopedFindings.map((finding) => (
               <FindingCard key={finding.id} finding={finding} fightContext={fightContextFor(fightContexts, finding.relatedFight)} />
-            )) : <EmptyState dashboard={dashboard} />}
+            )) : <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}
           </div>
         </div>
 
         <div className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Critical event feed</h3>
-            <Pill>{dashboard.criticalEvents.length} events</Pill>
+            <Pill>{scopedCriticalEvents.length} events</Pill>
           </div>
           <div className="mt-4 grid max-h-[720px] gap-2 overflow-y-auto pr-1 custom-scrollbar">
-            {dashboard.criticalEvents.slice(0, 16).map((event) => (
+            {scopedCriticalEvents.slice(0, 16).map((event) => (
               <CriticalEventCard key={event.id} event={event} fightContext={fightContextFor(fightContexts, event.fightId)} />
             ))}
-            {dashboard.criticalEvents.length === 0 && <EmptyState dashboard={dashboard} />}
+            {scopedCriticalEvents.length === 0 && <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}
           </div>
         </div>
       </section>
