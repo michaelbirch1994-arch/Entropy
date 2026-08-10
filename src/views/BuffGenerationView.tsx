@@ -85,12 +85,37 @@ export default function BuffGenerationView() {
       .sort((a, b) => b.value - a.value);
   }, [activeTables]);
 
-  const sortedTables = useMemo(() => {
-    const scoreById = new Map(chartData.map((d) => [d.id, d.value]));
-    return [...activeTables].sort((a, b) => (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0));
-  }, [activeTables, chartData]);
+  const scoreById = useMemo(() => new Map(chartData.map((d) => [d.id, d.value])), [chartData]);
+  const sortedTables = useMemo(() => [...activeTables].sort((a, b) => (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0)), [activeTables, scoreById]);
 
   const selectedTable = sortedTables.find((t) => t.id === selectedBoonId) ?? sortedTables[0];
+  const selectedBreakdown = useMemo(() => {
+    if (!selectedTable) return null;
+    const table = selectedTable;
+    const rows = [...table.rows].sort(
+      (a, b) => getBoonMetricValue(b, "squadBuffs", table.stacking, "uptime") - getBoonMetricValue(a, "squadBuffs", table.stacking, "uptime")
+    );
+    const unit = table.stacking ? "avg stacks" : "%";
+    const totalSquadOutput = rows.reduce((sum, row) => sum + getBoonMetricValue(row, "squadBuffs", table.stacking, "uptime"), 0);
+    const totalWasted = rows.reduce((sum, row) => sum + getBoonWastedValue(row, "squadBuffs", table.stacking), 0);
+    const totalOverstack = rows.reduce((sum, row) => sum + getBoonOverstackValue(row, "squadBuffs", table.stacking), 0);
+
+    // Relative color per category column: stacking buffs don't share a
+    // 0-100% scale (Might caps at 25, Stability is usually 0-3), so "good"
+    // means "better than your squadmates on this specific buff" rather than
+    // a fixed threshold. Precomputed per category so each cell doesn't
+    // rescan every row. See relativeStackColor in utils/format.ts.
+    const columnValuesByCategory = table.stacking
+      ? Object.fromEntries(
+          (Object.keys(CATEGORY_LABELS) as Array<keyof typeof CATEGORY_LABELS>).map((cat) => [
+            cat,
+            rows.map((r) => getBoonMetricValue(r, cat, table.stacking, "uptime")),
+          ]),
+        )
+      : null;
+
+    return { table, rows, unit, totalSquadOutput, totalWasted, totalOverstack, columnValuesByCategory };
+  }, [selectedTable]);
   const iconsByName = useMemo(() => Object.fromEntries(chartData.map((d) => [d.name, d.icon])), [chartData]);
 
   if (!report) return null;
@@ -178,7 +203,7 @@ export default function BuffGenerationView() {
 
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {sortedTables.map((table) => {
-            const value = getTableScore(table);
+            const value = scoreById.get(table.id) ?? 0;
             const selected = selectedTable?.id === table.id;
             const unit = table.stacking ? "avg stacks" : "%";
             return (
@@ -207,29 +232,8 @@ export default function BuffGenerationView() {
         </div>
       </Panel>
 
-      {selectedTable && (() => {
-        const table = selectedTable;
-        const rows = [...table.rows].sort(
-          (a, b) => getBoonMetricValue(b, "squadBuffs", table.stacking, "uptime") - getBoonMetricValue(a, "squadBuffs", table.stacking, "uptime")
-        );
-        const unit = table.stacking ? "avg stacks" : "%";
-        const totalSquadOutput = rows.reduce((sum, row) => sum + getBoonMetricValue(row, "squadBuffs", table.stacking, "uptime"), 0);
-        const totalWasted = rows.reduce((sum, row) => sum + getBoonWastedValue(row, "squadBuffs", table.stacking), 0);
-        const totalOverstack = rows.reduce((sum, row) => sum + getBoonOverstackValue(row, "squadBuffs", table.stacking), 0);
-
-        // Relative color per category column: stacking buffs don't share a
-        // 0-100% scale (Might caps at 25, Stability is usually 0-3), so "good"
-        // means "better than your squadmates on this specific buff" rather than
-        // a fixed threshold. Precomputed per category so each cell doesn't
-        // rescan every row. See relativeStackColor in utils/format.ts.
-        const columnValuesByCategory = table.stacking
-          ? Object.fromEntries(
-              (Object.keys(CATEGORY_LABELS) as Array<keyof typeof CATEGORY_LABELS>).map((cat) => [
-                cat,
-                rows.map((r) => getBoonMetricValue(r, cat, table.stacking, "uptime")),
-              ]),
-            )
-          : null;
+      {selectedBreakdown && (() => {
+        const { table, rows, unit, totalSquadOutput, totalWasted, totalOverstack, columnValuesByCategory } = selectedBreakdown;
 
         return (
           <Panel
