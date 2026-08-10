@@ -303,7 +303,7 @@ export default function RawLogImporter() {
             <div className="rounded-xl border border-amber-500/10 bg-white/[0.02] px-3.5 py-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  <Folder className="w-3.5 h-3.5" />const [open, setOpen] = useState(true);
+                  <Folder className="w-3.5 h-3.5" />const [open, setOpen] = useState(true);useState(true)
                   Auto-import from local folder
                 </span>
                 {folderStatus === "watching" && (
