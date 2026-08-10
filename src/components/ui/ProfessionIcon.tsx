@@ -61,7 +61,7 @@ export default function ProfessionIcon({
       aria-hidden="true"
       style={!monochrome && family ? { color: FAMILY_ICON_COLOR[family] } : undefined}
     >
-      <path d={data.path} />
+      <path d={data.path} fillRule="evenodd" clipRule="evenodd" />
     </svg>
   );
 }
