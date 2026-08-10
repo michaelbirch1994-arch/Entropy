@@ -55,6 +55,36 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  }
            });
 
+
+           it('synthesizes Untamed Natural Fortitude damage from Savage Slash hits', () => {
+                 const raw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const player = (raw.players ?? []).find((p: any) => !p.notInSquad) as any;
+                 expect(player).toBeTruthy();
+
+                 const skillId = 987654;
+                 raw.skillMap = { ...(raw.skillMap ?? {}), [`s${skillId}`]: { name: 'Savage Slash', icon: 'https://example.invalid/savage-slash.png' } as any };
+                 player.profession = 'Untamed';
+                 player.totalDamageDist = player.totalDamageDist ?? [[]];
+                 player.totalDamageDist[0] = [
+                         ...(player.totalDamageDist[0] ?? []),
+                         { id: skillId, totalDamage: 0, connectedHits: 2, downContribution: 0 },
+                 ];
+
+                 const original = buildReportFromFights([fight]);
+                 const synthetic = buildReportFromFights([{ summary: summarizeRawFight(raw), raw }]);
+                 const naturalFortitude = synthetic.stats.topSkills.find((s) => s.name === 'Natural Fortitude');
+                 expect(naturalFortitude).toBeTruthy();
+                 expect(naturalFortitude!.damage).toBe(3558);
+                 expect(naturalFortitude!.hits).toBe(2);
+                 expect(naturalFortitude!.icon).toContain('Natural%20Fortitude');
+
+                 const before = original.stats.offensePlayers.find((p) => p.account === player.account);
+                 const after = synthetic.stats.offensePlayers.find((p) => p.account === player.account && p.profession === 'Untamed');
+                 expect(before).toBeTruthy();
+                 expect(after).toBeTruthy();
+                 expect(after!.offenseTotals.damage).toBe((before!.offenseTotals.damage || 0) + 3558);
+           });
+
            it('builds a squad rotation timeline covering the same players', () => {
                  expect(report.stats.rotations?.fights.length).toBeGreaterThan(0);
                  const rotFight = report.stats.rotations!.fights[0];
