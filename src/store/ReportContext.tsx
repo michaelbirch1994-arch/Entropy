@@ -8,8 +8,13 @@ import {
 } from "../utils/reportCache";
 import { recordReportIntoProfiles } from "../lib/playerProfileStore";
 import { saveToArchive } from "../utils/reportArchive";
+import { buildReportFromFights } from "../lib/buildReportFromFights";
+import { fetchDpsReportJson } from "../utils/dpsReport";
+import { summarizeRawFight } from "../types/rawFight";
+
 
 export type { ReportSource };
+
 
 interface ReportContextValue {
   report: WvWReport | null;
@@ -25,6 +30,7 @@ interface ReportContextValue {
   clearReport: () => Promise<void>;
 }
 
+
 const ReportContext = createContext<ReportContextValue>({
   report: null,
   index: null,
@@ -38,11 +44,19 @@ const ReportContext = createContext<ReportContextValue>({
   clearReport: async () => {},
 });
 
-function getReportIdFromUrl(): string | null {
-  if (typeof window === "undefined") return null;
+
+function getReportQueryFromUrl(): { reportId: string | null; permalinks: string[] } {
+  if (typeof window === "undefined") return { reportId: null, permalinks: [] };
   const params = new URLSearchParams(window.location.search);
-  return params.get("report");
+  const reportId = params.get("report");
+  const permalinks = (params.get("permalinks") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id): id is string => /^[A-Za-z0-9_-]+$/.test(id));
+
+  return { reportId, permalinks: [...new Set(permalinks)] };
 }
+
 
 function parseReport(text: string, labelForError: string): WvWReport {
   let data: unknown;
@@ -64,10 +78,12 @@ function parseReport(text: string, labelForError: string): WvWReport {
   return data as WvWReport;
 }
 
+
 function reportCacheId(report: WvWReport, source: ReportSource): string {
   const base = report.meta?.id ?? (source === "upload" ? "upload" : "url");
   return `${source}:${base}`;
 }
+
 
 export function ReportProvider({ children }: { children: ReactNode }) {
   const [report, setReportState] = useState<WvWReport | null>(null);
@@ -77,10 +93,12 @@ export function ReportProvider({ children }: { children: ReactNode }) {
   const [reportId, setReportId] = useState<string | null>(null);
   const [source, setSource] = useState<ReportSource | null>(null);
 
+
   useEffect(() => {
     let cancelled = false;
-    const id = getReportIdFromUrl();
+    const { reportId: id, permalinks } = getReportQueryFromUrl();
     setReportId(id);
+
 
     async function load() {
       setLoading(true);
@@ -89,6 +107,29 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         const idxRes = await fetch(`${import.meta.env.BASE_URL}reports/index.json`);
         if (idxRes.ok && !cancelled) {
           setIndex((await idxRes.json()) as ReportIndex);
+        }
+
+
+        if (permalinks.length > 0) {
+          const fights = await Promise.all(
+            permalinks.map(async (permalink) => {
+              const raw = await fetchDpsReportJson(permalink);
+              return { summary: summarizeRawFight(raw, permalink), raw };
+            }),
+          );
+          const data = buildReportFromFights(fights);
+          if (cancelled) return;
+          setReportState(data);
+          setSource("url");
+          setLoading(false);
+          void saveToArchive(data);
+          void putActiveReport({
+            id: reportCacheId(data, "url"),
+            source: "url",
+            savedAt: Date.now(),
+            report: data,
+          });
+          return;
         }
 
         if (id) {
@@ -109,6 +150,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
           });
           return;
         }
+
 
         // No URL param: restore the last-viewed report from cache (if any).
         const cached = await getActiveReport();
@@ -133,6 +175,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+
   const uploadReport = useCallback(async (file: File) => {
     setLoading(true);
     setError(null);
@@ -156,6 +199,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
   }, []);
+
 
   const loadFromUrl = useCallback(async (url: string) => {
     setLoading(true);
@@ -184,6 +228,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+
   const setReport = useCallback(async (data: WvWReport) => {
     setLoading(true);
     setError(null);
@@ -206,6 +251,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+
   const clearReport = useCallback(async () => {
     setReportState(null);
     setSource(null);
@@ -214,6 +260,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     setLoading(false);
     await clearActiveReport();
   }, []);
+
 
   return (
     <ReportContext.Provider
@@ -234,6 +281,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     </ReportContext.Provider>
   );
 }
+
 
 export function useReport() {
   return useContext(ReportContext);
