@@ -33,9 +33,10 @@ import HighlightsView from "./views/HighlightsView";
 import ArchiveView from "./views/ArchiveView";
 import CompareView from "./views/CompareView";
 import IntelligenceDebugView from "./views/IntelligenceDebugView";
+import AxiForgeLabView from "./views/AxiForgeLabView";
 import { buildReportHtmlExport } from "./lib/exportReportHtml";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
-import { Activity, BrainCircuit, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, Link2, Upload, X, Download } from "lucide-react";
+import { Activity, BrainCircuit, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, FlaskConical, Link2, Upload, X, Download } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
 import RawLogImporter from "./components/ui/RawLogImporter";
@@ -70,6 +71,7 @@ const VIEW_TITLES: Record<string, string> = {
   archive: "Report Archive",
   compare: "Compare Reports",
   intelligence: "Intelligence",
+  "axiforge-lab": "AxiForge Lab",
 };
 
 function ReportRouter({ activeView }: { activeView: string }) {
@@ -100,6 +102,7 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "archive": return <ArchiveView />;
     case "compare": return <CompareView />;
     case "intelligence": return <IntelligenceDebugView />;
+    case "axiforge-lab": return <AxiForgeLabView />;
     default: return <OverviewView />;
   }
 }
@@ -127,7 +130,7 @@ function ErrorState({ message }: { message: string }) {
   );
 }
 
-function NoReportState() {
+function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void }) {
   const { uploadReport, loadFromUrl, error, loading } = useReport();
   return (
     <div className="flex flex-col items-center justify-center min-h-full px-6 py-16">
@@ -148,6 +151,15 @@ function NoReportState() {
 
         {/* Raw log importer (dps.report / .zevtc) */}
         <RawLogImporter />
+
+        <button
+          type="button"
+          onClick={onOpenAxiForgeLab}
+          className="flex items-center gap-2 rounded-xl border border-sky-400/20 bg-sky-500/[0.06] px-4 py-2 text-xs font-bold uppercase tracking-wider text-sky-300 transition hover:bg-sky-500/[0.12]"
+        >
+          <FlaskConical className="h-4 w-4" />
+          Open AxiForge Lab
+        </button>
 
         {/* Supported formats info */}
         <div className="flex items-center gap-6 text-[10px] text-slate-400 font-mono">
@@ -178,6 +190,7 @@ function ReportShell() {
   }, [report]);
 
   const viewTitle = VIEW_TITLES[activeView] ?? "Overview";
+  const showTool = activeView === "axiforge-lab";
 
   function handleExportReport() {
     if (!report) return;
@@ -207,7 +220,7 @@ function ReportShell() {
       </div>
 
       {/* Only show sidebar when a report is loaded */}
-      {report && <Sidebar activeView={activeView} setActiveView={setActiveView} />}
+      {(report || showTool) && <Sidebar activeView={activeView} setActiveView={setActiveView} />}
 
       <main className="flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar">
         {/* Header - only when report is active */}
@@ -286,8 +299,10 @@ function ReportShell() {
         )}
 
         {/* Content */}
-        <div className={report ? "p-6" : "flex items-center justify-center min-h-full"}>
-          {showLoading ? (
+        <div className={report || showTool ? "p-6" : "flex items-center justify-center min-h-full"}>
+          {showTool ? (
+            <AxiForgeLabView />
+          ) : showLoading ? (
             <LoadingState />
           ) : showError ? (
             <ErrorState message={error!} />
@@ -304,7 +319,7 @@ function ReportShell() {
                     </button>
                   </div>
                 )}
-                <NoReportState />
+                <NoReportState onOpenAxiForgeLab={() => setActiveView("axiforge-lab")} />
               </div>
             </motion.div>
           ) : report ? (
@@ -349,3 +364,4 @@ export default function App() {
     </ViewProvider>
   );
 }
+
