@@ -36,7 +36,7 @@ import IntelligenceDebugView from "./views/IntelligenceDebugView";
 import AxiForgeLabView from "./views/AxiForgeLabView";
 import { buildReportHtmlExport } from "./lib/exportReportHtml";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
-import { Activity, BrainCircuit, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, FlaskConical, Link2, Upload, X, Download } from "lucide-react";
+import { Activity, BrainCircuit, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, FlaskConical, Link2, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
 import RawLogImporter from "./components/ui/RawLogImporter";
@@ -172,12 +172,27 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
   );
 }
 
+function safeFileName(title: string): string {
+  return title.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "") || "entropy-report";
+}
+
+function downloadHtmlSnapshot(title: string, html: string) {
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${safeFileName(title)}-snapshot.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function ReportShell() {
   const { report, loading, error, source, clearReport } = useReport();
   // Lets you get back to the import screen to add more logs without
   // throwing away the report you already have - Clear is destructive and
   // was previously the only route back.
   const [atHome, setAtHome] = useState(false);
+  const [exportStatus, setExportStatus] = useState<"idle" | "copied" | "downloaded" | "failed">("idle");
   const { activeView, setActiveView } = useView();
 
   const headerInfo = useMemo(() => {
@@ -192,17 +207,37 @@ function ReportShell() {
   const viewTitle = VIEW_TITLES[activeView] ?? "Overview";
   const showTool = activeView === "axiforge-lab";
 
-  function handleExportReport() {
+  function flashExportStatus(status: typeof exportStatus) {
+    setExportStatus(status);
+    window.setTimeout(() => setExportStatus("idle"), 2500);
+  }
+
+  async function handleExportReport() {
     if (!report) return;
     const html = buildReportHtmlExport(report);
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${report.meta.title.replace(/[^a-z0-9]+/gi, "-")}-snapshot.html`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const standaloneLink = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+
+    try {
+      if (standaloneLink.length > 1_500_000 || !navigator.clipboard?.writeText) {
+        downloadHtmlSnapshot(report.meta.title, html);
+        flashExportStatus("downloaded");
+        return;
+      }
+
+      await navigator.clipboard.writeText(standaloneLink);
+      flashExportStatus("copied");
+    } catch {
+      try {
+        downloadHtmlSnapshot(report.meta.title, html);
+        flashExportStatus("downloaded");
+      } catch {
+        flashExportStatus("failed");
+      }
+    }
   }
+
+  const exportLabel =
+    exportStatus === "copied" ? "Link copied" : exportStatus === "downloaded" ? "HTML saved" : exportStatus === "failed" ? "Export failed" : "Export link";
   const viewIcon = VIEW_ICONS[activeView] ?? <Activity className="w-4 h-4" />;
 
   // When no report loaded yet (and not in the middle of initial load), show Import Center
@@ -241,21 +276,22 @@ function ReportShell() {
                 {(activeView === "offensive" || activeView === "squad-stats") && <DamageScopeToggle />}
                 {(activeView === "defensive" || activeView === "offensive") && <StatsDisplayToggle />}
                 {(activeView === "defensive" || activeView === "squad-stats") && <AllyScopeToggle />}
-              <button
-                onClick={() => setAtHome(true)}
-                title="Import more logs without discarding this report"
-                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-amber-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-amber-500/30 bg-black/30 transition-colors"
-              >
-                <Upload className="w-3 h-3" />
-                Import
-              </button>
-              <button
-                onClick={handleExportReport}
-                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-sky-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-sky-500/30 bg-black/30 transition-colors"
-              >
-                <Download className="w-3 h-3" />
-                Export
-              </button>
+                <button
+                  onClick={() => setAtHome(true)}
+                  title="Import more logs without discarding this report"
+                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-amber-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-amber-500/30 bg-black/30 transition-colors"
+                >
+                  <Upload className="w-3 h-3" />
+                  Import
+                </button>
+                <button
+                  onClick={handleExportReport}
+                  title="Copy a standalone browser link to this static report snapshot; large snapshots are saved as HTML instead."
+                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-sky-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-sky-500/30 bg-black/30 transition-colors"
+                >
+                  <Link2 className="w-3 h-3" />
+                  {exportLabel}
+                </button>
                 {source && (
                   <span
                     className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border ${
@@ -364,4 +400,3 @@ export default function App() {
     </ViewProvider>
   );
 }
-
