@@ -1,0 +1,311 @@
+import type { WvWReport } from "../../types/report";
+import { createEngagementSegment, type EngagementSegment } from "./engagementTypes";
+import { synthesizeFindings } from "./findingEngine";
+import type { CriticalEvent, FindingCategory, FindingSeverity, IntelligenceFinding, PatternConfidence } from "./types";
+
+export type IntelligenceReadiness = "stable" | "review" | "high-risk";
+
+export interface IntelligenceAction {
+  id: string;
+  title: string;
+  detail: string;
+  basedOn: string[];
+  confidence: PatternConfidence;
+}
+
+export interface IntelligenceTimelineItem {
+  id: string;
+  label: string;
+  timestampMs: number;
+  severity: FindingSeverity;
+  category: FindingCategory;
+  detail: string;
+  downs: number;
+  deaths: number;
+  criticalEvents: number;
+}
+
+export interface IntelligenceDashboard {
+  persisted: boolean;
+  readiness: IntelligenceReadiness;
+  headline: string;
+  summary: string;
+  segments: EngagementSegment[];
+  criticalEvents: CriticalEvent[];
+  findings: IntelligenceFinding[];
+  timeline: IntelligenceTimelineItem[];
+  actions: IntelligenceAction[];
+  severityCounts: Record<FindingSeverity, number>;
+  categoryCounts: Partial<Record<FindingCategory, number>>;
+  totals: {
+    downs: number;
+    deaths: number;
+    segments: number;
+    criticalEvents: number;
+    findings: number;
+  };
+  coverage: {
+    replay: boolean;
+    mechanics: boolean;
+    deathRecaps: boolean;
+    survivalSupport: boolean;
+    fightRows: boolean;
+  };
+}
+
+const SEVERITY_WEIGHT: Record<FindingSeverity, number> = {
+  info: 1,
+  notable: 2,
+  significant: 3,
+  critical: 4,
+};
+
+function asNumber(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function buildFallbackSegments(report: WvWReport): EngagementSegment[] {
+  const fights = report.stats.fightBreakdown ?? [];
+
+  return fights.slice(0, 12).map((fight, index) => {
+    const timestamp = asNumber(fight.timestamp) || index * 100000;
+    const durationMs = 60000;
+
+    return createEngagementSegment({
+      id: `legacy-engagement:${fight.id || index}`,
+      fightId: String(fight.id || `fight-${index + 1}`),
+      index,
+      start: {
+        timestampMs: timestamp,
+        reason: "manual-or-derived",
+        evidence: [
+          {
+            statement: "Segment derived from persisted fightBreakdown row because raw Intelligence windows are not present.",
+            metrics: {
+              fightIndex: index + 1,
+              squadCount: asNumber(fight.squadCount),
+              enemyCount: asNumber(fight.enemyCount),
+            },
+          },
+        ],
+      },
+      end: {
+        timestampMs: timestamp + durationMs,
+        reason: "manual-or-derived",
+        evidence: [
+          {
+            statement: "Duration is a display placeholder for a legacy report without persisted engagement windows.",
+            metrics: { durationMs },
+          },
+        ],
+      },
+      durationMs,
+      state: asNumber(fight.alliesDead) > 0 ? "wipe" : "active",
+      confidence: "low",
+      criticalEventIds: [],
+      combatEventIds: [],
+      participantKeys: [],
+      downs: asNumber(fight.alliesDown),
+      deaths: asNumber(fight.alliesDead),
+      evidence: [
+        {
+          statement: "Fight-level down/death totals are available; CriticalEvent ids are not persisted for this report.",
+          metrics: {
+            alliesDown: asNumber(fight.alliesDown),
+            alliesDead: asNumber(fight.alliesDead),
+            enemyDowns: asNumber(fight.enemyDowns),
+            enemyDeaths: asNumber(fight.enemyDeaths),
+          },
+        },
+      ],
+      note: fight.fullLabel || fight.label,
+    });
+  });
+}
+
+function severityCounts(findings: IntelligenceFinding[]): Record<FindingSeverity, number> {
+  return findings.reduce<Record<FindingSeverity, number>>(
+    (counts, finding) => {
+      counts[finding.severity] += 1;
+      return counts;
+    },
+    { info: 0, notable: 0, significant: 0, critical: 0 },
+  );
+}
+
+function categoryCounts(findings: IntelligenceFinding[]): Partial<Record<FindingCategory, number>> {
+  return findings.reduce<Partial<Record<FindingCategory, number>>>((counts, finding) => {
+    counts[finding.category] = (counts[finding.category] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
+function readinessFor(findings: IntelligenceFinding[], deaths: number): IntelligenceReadiness {
+  if (findings.some((finding) => finding.severity === "critical") || deaths >= 8) return "high-risk";
+  if (findings.some((finding) => finding.severity === "significant") || deaths > 0 || findings.length > 0) return "review";
+  return "stable";
+}
+
+function headlineFor(readiness: IntelligenceReadiness, findings: IntelligenceFinding[], persisted: boolean): string {
+  if (!persisted) return "Legacy report: rebuild raw logs for full Intelligence.";
+  if (readiness === "high-risk") return "High-risk engagement patterns detected.";
+  if (readiness === "review") return "Reviewable pressure patterns detected.";
+  if (findings.length === 0) return "No evidence-backed collapse patterns detected.";
+  return "Intelligence data is available.";
+}
+
+function summaryFor(readiness: IntelligenceReadiness, findings: IntelligenceFinding[], criticalEvents: CriticalEvent[]): string {
+  if (findings.length === 0 && criticalEvents.length === 0) {
+    return "Entropy did not find supported critical-event clusters in this report. That is a data-backed absence, not a clean bill of health.";
+  }
+
+  const top = [...findings].sort((a, b) => SEVERITY_WEIGHT[b.severity] - SEVERITY_WEIGHT[a.severity])[0];
+  if (top) return top.summary;
+  if (readiness === "review") return "Critical events exist, but none currently combine into a supported finding.";
+  return "Critical event data is present for inspection.";
+}
+
+function actionForFinding(finding: IntelligenceFinding): IntelligenceAction {
+  if (finding.recommendation) {
+    return {
+      id: finding.recommendation.id,
+      title: finding.recommendation.title,
+      detail: finding.recommendation.detail,
+      basedOn: finding.recommendation.basedOn,
+      confidence: finding.recommendation.confidence,
+    };
+  }
+
+  const title = finding.title;
+  if (finding.title === "Defensive collapse") {
+    return {
+      id: `action:${finding.id}`,
+      title: "Audit defensive call timing",
+      detail: "Review stability, stunbreak, cleanse, barrier, and invuln timing around this engagement before changing composition.",
+      basedOn: [finding.id],
+      confidence: finding.confidence,
+    };
+  }
+  if (finding.title === "Positioning collapse") {
+    return {
+      id: `action:${finding.id}`,
+      title: "Review tag follow and regroup discipline",
+      detail: "Use the engagement evidence to identify whether downs happened during split positioning, late regroups, or over-extension.",
+      basedOn: [finding.id],
+      confidence: finding.confidence,
+    };
+  }
+  if (finding.title === "Spike collapse") {
+    return {
+      id: `action:${finding.id}`,
+      title: "Pre-call enemy spike windows",
+      detail: "Mark the spike timing and compare defensive coverage just before the enemy damage window lands.",
+      basedOn: [finding.id],
+      confidence: finding.confidence,
+    };
+  }
+  if (finding.title === "Failed recovery cluster") {
+    return {
+      id: `action:${finding.id}`,
+      title: "Tighten recovery assignments",
+      detail: "Check whether recovery failed from missing rez pressure, insufficient peel, or deaths that happened after downs were already stabilized.",
+      basedOn: [finding.id],
+      confidence: finding.confidence,
+    };
+  }
+
+  return {
+    id: `action:${finding.id}`,
+    title: `Review ${title.toLowerCase()}`,
+    detail: "Inspect the supporting evidence and compare it against comms, comp, and positioning before making changes.",
+    basedOn: [finding.id],
+    confidence: finding.confidence,
+  };
+}
+
+function actionPlan(findings: IntelligenceFinding[]): IntelligenceAction[] {
+  const seen = new Set<string>();
+  return [...findings]
+    .sort((a, b) => SEVERITY_WEIGHT[b.severity] - SEVERITY_WEIGHT[a.severity])
+    .map(actionForFinding)
+    .filter((action) => {
+      const key = action.title;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 5);
+}
+
+function timelineItems(segments: EngagementSegment[], findings: IntelligenceFinding[]): IntelligenceTimelineItem[] {
+  const findingBySegment = new Map<string, IntelligenceFinding[]>();
+  for (const finding of findings) {
+    const segmentId = finding.id.split(":").slice(2).join(":");
+    const list = findingBySegment.get(segmentId) ?? [];
+    list.push(finding);
+    findingBySegment.set(segmentId, list);
+  }
+
+  return segments
+    .map((segment) => {
+      const segmentFindings = findingBySegment.get(segment.id) ?? [];
+      const topFinding = [...segmentFindings].sort((a, b) => SEVERITY_WEIGHT[b.severity] - SEVERITY_WEIGHT[a.severity])[0];
+      return {
+        id: segment.id,
+        label: segment.note ?? `Engagement ${segment.index + 1}`,
+        timestampMs: segment.start.timestampMs,
+        severity: topFinding?.severity ?? (segment.deaths > 0 ? "significant" : segment.downs > 0 ? "notable" : "info"),
+        category: topFinding?.category ?? "other",
+        detail: topFinding?.title ?? segment.state,
+        downs: segment.downs,
+        deaths: segment.deaths,
+        criticalEvents: segment.criticalEventIds.length,
+      };
+    })
+    .sort((a, b) => b.deaths - a.deaths || b.downs - a.downs || b.criticalEvents - a.criticalEvents || a.timestampMs - b.timestampMs)
+    .slice(0, 8);
+}
+
+export function buildIntelligenceDashboard(report: WvWReport): IntelligenceDashboard {
+  const persisted =
+    "engagementSegments" in report.stats ||
+    "criticalEvents" in report.stats ||
+    "intelligenceFindings" in report.stats;
+
+  const segments = persisted ? report.stats.engagementSegments ?? [] : buildFallbackSegments(report);
+  const criticalEvents = persisted ? report.stats.criticalEvents ?? [] : [];
+  const findings = persisted
+    ? report.stats.intelligenceFindings ?? []
+    : synthesizeFindings({ fightId: report.meta.id, segments, criticalEvents });
+
+  const totals = {
+    downs: segments.reduce((sum, segment) => sum + segment.downs, 0),
+    deaths: segments.reduce((sum, segment) => sum + segment.deaths, 0),
+    segments: segments.length,
+    criticalEvents: criticalEvents.length,
+    findings: findings.length,
+  };
+  const readiness = readinessFor(findings, totals.deaths);
+
+  return {
+    persisted,
+    readiness,
+    headline: headlineFor(readiness, findings, persisted),
+    summary: summaryFor(readiness, findings, criticalEvents),
+    segments,
+    criticalEvents,
+    findings,
+    timeline: timelineItems(segments, findings),
+    actions: actionPlan(findings),
+    severityCounts: severityCounts(findings),
+    categoryCounts: categoryCounts(findings),
+    totals,
+    coverage: {
+      replay: Boolean(report.stats.replayFights?.length),
+      mechanics: Boolean(report.stats.mechanics?.fights?.length),
+      deathRecaps: Boolean(report.stats.deathRecaps?.length),
+      survivalSupport: Boolean(report.stats.survivalSupport?.length),
+      fightRows: Boolean(report.stats.fightBreakdown?.length),
+    },
+  };
+}
