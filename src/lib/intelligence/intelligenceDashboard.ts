@@ -25,6 +25,25 @@ export interface IntelligenceTimelineItem {
   criticalEvents: number;
 }
 
+export interface IntelligenceEngagementInsight {
+  id: string;
+  label: string;
+  fightId: string;
+  timestampMs: number;
+  pressureScore: number;
+  pressurePercent: number;
+  pressureLabel: "quiet" | "watch" | "danger" | "critical";
+  priority: number;
+  state: EngagementSegment["state"];
+  downs: number;
+  deaths: number;
+  criticalEvents: number;
+  findings: IntelligenceFinding[];
+  topFinding?: IntelligenceFinding;
+  reviewPrompt: string;
+  evidencePoints: string[];
+}
+
 export interface IntelligenceDashboard {
   persisted: boolean;
   readiness: IntelligenceReadiness;
@@ -33,6 +52,7 @@ export interface IntelligenceDashboard {
   segments: EngagementSegment[];
   criticalEvents: CriticalEvent[];
   findings: IntelligenceFinding[];
+  engagements: IntelligenceEngagementInsight[];
   timeline: IntelligenceTimelineItem[];
   actions: IntelligenceAction[];
   severityCounts: Record<FindingSeverity, number>;
@@ -57,6 +77,13 @@ const SEVERITY_WEIGHT: Record<FindingSeverity, number> = {
   info: 1,
   notable: 2,
   significant: 3,
+  critical: 4,
+};
+
+const PRESSURE_LABEL_WEIGHT: Record<IntelligenceEngagementInsight["pressureLabel"], number> = {
+  quiet: 1,
+  watch: 2,
+  danger: 3,
   critical: 4,
 };
 
@@ -237,14 +264,97 @@ function actionPlan(findings: IntelligenceFinding[]): IntelligenceAction[] {
     .slice(0, 5);
 }
 
-function timelineItems(segments: EngagementSegment[], findings: IntelligenceFinding[]): IntelligenceTimelineItem[] {
-  const findingBySegment = new Map<string, IntelligenceFinding[]>();
+function pressureLabelFor(score: number): IntelligenceEngagementInsight["pressureLabel"] {
+  if (score >= 80) return "critical";
+  if (score >= 55) return "danger";
+  if (score >= 25) return "watch";
+  return "quiet";
+}
+
+function reviewPromptFor(segment: EngagementSegment, topFinding?: IntelligenceFinding): string {
+  if (topFinding?.title === "Defensive collapse") return "Review defensive cooldown timing before the first clustered downs.";
+  if (topFinding?.title === "Positioning collapse") return "Watch player spacing and regroup pathing before this pressure window.";
+  if (topFinding?.title === "Spike collapse") return "Compare enemy spike timing against squad mitigation coverage.";
+  if (topFinding?.title === "Failed recovery cluster") return "Check rez pressure, peel, and whether downs converted into deaths too quickly.";
+  if (segment.deaths > 0) return "Start with death recaps and the 15 seconds before each death.";
+  if (segment.downs > 0) return "Review why downs happened and whether recovery stabilized cleanly.";
+  return "Low pressure window; use as baseline comparison against higher-risk fights.";
+}
+
+function evidencePointsFor(segment: EngagementSegment, segmentFindings: IntelligenceFinding[]): string[] {
+  const points = [
+    `${segment.downs} squad down${segment.downs === 1 ? "" : "s"}`,
+    `${segment.deaths} squad death${segment.deaths === 1 ? "" : "s"}`,
+    `${segment.criticalEventIds.length} critical event${segment.criticalEventIds.length === 1 ? "" : "s"}`,
+  ];
+
+  const topFinding = segmentFindings[0];
+  if (topFinding) points.unshift(topFinding.summary);
+  if (segment.confidence !== "high") points.push(`${segment.confidence} confidence window`);
+  return points.slice(0, 5);
+}
+
+function findingsBySegment(findings: IntelligenceFinding[]): Map<string, IntelligenceFinding[]> {
+  const bySegment = new Map<string, IntelligenceFinding[]>();
   for (const finding of findings) {
     const segmentId = finding.id.split(":").slice(2).join(":");
-    const list = findingBySegment.get(segmentId) ?? [];
+    const list = bySegment.get(segmentId) ?? [];
     list.push(finding);
-    findingBySegment.set(segmentId, list);
+    bySegment.set(segmentId, list);
   }
+  for (const [segmentId, segmentFindings] of bySegment) {
+    bySegment.set(
+      segmentId,
+      [...segmentFindings].sort((a, b) => SEVERITY_WEIGHT[b.severity] - SEVERITY_WEIGHT[a.severity]),
+    );
+  }
+  return bySegment;
+}
+
+function engagementInsights(segments: EngagementSegment[], findings: IntelligenceFinding[]): IntelligenceEngagementInsight[] {
+  const bySegment = findingsBySegment(findings);
+
+  return segments
+    .map((segment) => {
+      const segmentFindings = bySegment.get(segment.id) ?? [];
+      const topFinding = segmentFindings[0];
+      const severityScore = topFinding ? SEVERITY_WEIGHT[topFinding.severity] * 16 : 0;
+      const pressureScore = Math.min(
+        100,
+        Math.round(segment.downs * 8 + segment.deaths * 18 + segment.criticalEventIds.length * 12 + severityScore),
+      );
+      const pressureLabel = pressureLabelFor(pressureScore);
+
+      return {
+        id: segment.id,
+        label: segment.note ?? `Engagement ${segment.index + 1}`,
+        fightId: segment.fightId,
+        timestampMs: segment.start.timestampMs,
+        pressureScore,
+        pressurePercent: Math.max(4, pressureScore),
+        pressureLabel,
+        priority: 0,
+        state: segment.state,
+        downs: segment.downs,
+        deaths: segment.deaths,
+        criticalEvents: segment.criticalEventIds.length,
+        findings: segmentFindings,
+        topFinding,
+        reviewPrompt: reviewPromptFor(segment, topFinding),
+        evidencePoints: evidencePointsFor(segment, segmentFindings),
+      };
+    })
+    .sort(
+      (a, b) =>
+        PRESSURE_LABEL_WEIGHT[b.pressureLabel] - PRESSURE_LABEL_WEIGHT[a.pressureLabel] ||
+        b.pressureScore - a.pressureScore ||
+        a.timestampMs - b.timestampMs,
+    )
+    .map((insight, index) => ({ ...insight, priority: index + 1 }));
+}
+
+function timelineItems(segments: EngagementSegment[], findings: IntelligenceFinding[]): IntelligenceTimelineItem[] {
+  const findingBySegment = findingsBySegment(findings);
 
   return segments
     .map((segment) => {
@@ -286,6 +396,7 @@ export function buildIntelligenceDashboard(report: WvWReport): IntelligenceDashb
     findings: findings.length,
   };
   const readiness = readinessFor(findings, totals.deaths);
+  const engagements = engagementInsights(segments, findings);
 
   return {
     persisted,
@@ -295,6 +406,7 @@ export function buildIntelligenceDashboard(report: WvWReport): IntelligenceDashb
     segments,
     criticalEvents,
     findings,
+    engagements,
     timeline: timelineItems(segments, findings),
     actions: actionPlan(findings),
     severityCounts: severityCounts(findings),
