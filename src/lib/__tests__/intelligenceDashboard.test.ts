@@ -84,6 +84,9 @@ describe("buildIntelligenceDashboard", () => {
     expect(dashboard.persisted).toBe(true);
     expect(dashboard.readiness).toBe("high-risk");
     expect(dashboard.actions[0].title).toBe("Audit defensive call timing");
+    expect(dashboard.engagements[0].pressureLabel).toBe("critical");
+    expect(dashboard.engagements[0].pressureScore).toBeGreaterThan(80);
+    expect(dashboard.engagements[0].reviewPrompt).toContain("defensive cooldown");
     expect(dashboard.timeline[0].detail).toBe("Defensive collapse");
     expect(dashboard.coverage.replay).toBe(true);
     expect(dashboard.coverage.deathRecaps).toBe(true);
@@ -110,6 +113,7 @@ describe("buildIntelligenceDashboard", () => {
     expect(dashboard.totals.segments).toBe(1);
     expect(dashboard.totals.criticalEvents).toBe(0);
     expect(dashboard.totals.findings).toBe(0);
+    expect(dashboard.engagements[0].evidencePoints).toContain("2 squad downs");
     expect(dashboard.headline).toContain("Legacy report");
   });
 });
