@@ -20,6 +20,7 @@ import {
   Star,
 Archive,
 GitCompare,
+FlaskConical,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import EntropyLogo from "../ui/EntropyLogo";
@@ -40,6 +41,11 @@ interface NavSection {
 }
 
 const MENU: NavSection[] = [
+  {
+    title: "TOOLS",
+    icon: <FlaskConical className="w-4 h-4" />,
+    items: [{ id: "axiforge-lab", label: "AxiForge Lab" }],
+  },
   {
     title: "OVERVIEW",
     icon: <Activity className="w-4 h-4" />,
@@ -251,4 +257,6 @@ export const VIEW_ICONS: Record<string, ReactNode> = {
   archive: <Archive className="w-4 h-4" />,
   compare: <GitCompare className="w-4 h-4" />,
   intelligence: <Sparkles className="w-4 h-4" />,
+  "axiforge-lab": <FlaskConical className="w-4 h-4" />,
 };
+
