@@ -98,15 +98,18 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Entropy ${{ github.ref_name }}"
           releaseBody: "See the changelog for details. Download the installer for your OS below."
-          releaseDraft: true
+          # v0.2.6 is created from GitHub's release page because this environment
+          # cannot push tags directly; that creates a published release first.
+          # Keep later tags on the normal draft-first path.
+          releaseDraft: ${{ github.ref_name != 'v0.2.6' }}
           prerelease: false
           args: ${{ matrix.args }}
 
       - name: Attest build provenance
         # Cryptographically ties each installer back to this exact commit
         # and Actions run, so anyone who downloads a release can confirm it
-        # was actually built by this repo's CI and not substituted or
-        # tampered with after the fact. continue-on-error because this is a
+        # was actually built by *this* repo's CI from a specific commit, not
+        # tampered with or substituted after the fact. continue-on-error because this is a
         # transparency nice-to-have, not something that should ever block a
         # release from going out if the glob below misses on some platform.
         uses: actions/attest-build-provenance@v4
