@@ -249,7 +249,7 @@ function SquadBuilder() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">{partyLabel(party)}</h3>
-                  <p className="text-xs text-slate-500">{partySlots.length}/5 planned slots</p>
+                  <p className="text-xs text-slate-500">{partySlots.length}/5 planned slots</p>Entropy BuilderEntropy BuilderEntPaste an Entropy Builder build/comp code here. GW2Skills links belong in the squad builder below.ropy Builder/GW2Skills build link.Entropy Builder code or https://gw2skills.net/editor/...Entropy Builder or GW2Skills links codes
                 </div>
                 <button
                   type="button"
