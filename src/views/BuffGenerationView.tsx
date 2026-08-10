@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
-import { profChip, relativeStackColor } from "../utils/format";
-import { getBoonMetricValue, getBoonWastedValue, getBoonOverstackValue, BUFF_TAB_ORDER } from "../lib/bridge-metrics/boonGeneration";
+import ProfessionIcon from "../components/ui/ProfessionIcon";
+import { fmtCompact, profChip, relativeStackColor } from "../utils/format";
+import { getBoonMetricValue, getBoonWastedValue, getBoonOverstackValue, BUFF_TAB_ORDER, type BoonTable } from "../lib/bridge-metrics/boonGeneration";
 import { Sparkles } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { CHART_COLORS, TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE } from "../utils/chartTheme";
@@ -16,8 +17,7 @@ const CATEGORY_LABELS = {
 const BAR_COLORS = [CHART_COLORS.amber, CHART_COLORS.sky, CHART_COLORS.rose, CHART_COLORS.emerald, CHART_COLORS.teal, CHART_COLORS.orange, CHART_COLORS.cyan, CHART_COLORS.blue, CHART_COLORS.red];
 
 // Custom XAxis tick that draws the boon's own icon instead of/alongside its
-// name, so the summary chart reads at a glance instead of requiring the
-// dropdown-per-boon flow this replaced.
+// name, so the summary chart reads at a glance.
 function BoonIconTick(props: any) {
   const { x, y, payload, icons } = props;
   const icon = icons?.[payload.value];
@@ -34,12 +34,29 @@ function BoonIconTick(props: any) {
   );
 }
 
+function ClassCell({ profession }: { profession: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(profession)}`}>
+      <ProfessionIcon profession={profession} className="w-3.5 h-3.5 shrink-0" />
+      {profession}
+    </span>
+  );
+}
+
+function getTableScore(table: BoonTable) {
+  const contributors = table.rows.filter((r) => getBoonMetricValue(r, "squadBuffs", table.stacking, "uptime") > 0);
+  if (contributors.length === 0) return 0;
+  const avg = contributors.reduce((sum, r) => sum + getBoonMetricValue(r, "squadBuffs", table.stacking, "uptime"), 0) / contributors.length;
+  return Math.round(avg * 100) / 100;
+}
+
 export default function BuffGenerationView() {
   const { report } = useReport();
   const tables = report?.stats.buffGeneration ?? [];
-  // Default tab matches what this page showed before it gained other
-  // categories, so existing users see no change until they explore further.
+  // Default tab matches what this page showed before it gained other categories,
+  // so existing users see no change until they explore further.
   const [tab, setTab] = useState<string>("Boons");
+  const [selectedBoonId, setSelectedBoonId] = useState<string | null>(null);
 
   // Which classification tabs actually have data this report, in the same
   // curated order as the Buffs page (BUFF_TAB_ORDER) so the two line up.
@@ -55,22 +72,26 @@ export default function BuffGenerationView() {
 
   // One bar per buff in the active category: squad-average output (avg stacks
   // for stacking buffs, avg uptime% for pulse buffs) across everyone who
-  // generated any of it - gives an immediate "what is my squad actually
-  // producing" read instead of clicking through buffs one at a time. Scoped to
-  // the active tab so stacks and percentages never share one chart's y-axis.
+  // generated any of it. Scoped to the active tab so stacks and percentages
+  // never share one chart's y-axis.
   const chartData = useMemo(() => {
     return activeTables
       .map((t) => {
-        const contributors = t.rows.filter((r) => getBoonMetricValue(r, "squadBuffs", t.stacking, "uptime") > 0);
-        if (contributors.length === 0) return null;
-        const avg = contributors.reduce((sum, r) => sum + getBoonMetricValue(r, "squadBuffs", t.stacking, "uptime"), 0) / contributors.length;
-        return { id: t.id, name: t.name, icon: t.icon, stacking: t.stacking, value: Math.round(avg * 100) / 100 };
+        const value = getTableScore(t);
+        if (value <= 0) return null;
+        return { id: t.id, name: t.name, icon: t.icon, stacking: t.stacking, value };
       })
       .filter((d): d is NonNullable<typeof d> => d !== null)
       .sort((a, b) => b.value - a.value);
   }, [activeTables]);
 
-  const iconsById = useMemo(() => Object.fromEntries(chartData.map((d) => [d.name, d.icon])), [chartData]);
+  const sortedTables = useMemo(() => {
+    const scoreById = new Map(chartData.map((d) => [d.id, d.value]));
+    return [...activeTables].sort((a, b) => (scoreById.get(b.id) ?? 0) - (scoreById.get(a.id) ?? 0));
+  }, [activeTables, chartData]);
+
+  const selectedTable = sortedTables.find((t) => t.id === selectedBoonId) ?? sortedTables[0];
+  const iconsByName = useMemo(() => Object.fromEntries(chartData.map((d) => [d.name, d.icon])), [chartData]);
 
   if (!report) return null;
 
@@ -86,7 +107,7 @@ export default function BuffGenerationView() {
               <p className="text-[11px] text-slate-500 mt-1">
                 Only populated for reports built from raw dps.report / .zevtc imports. This shows who is actually
                 generating a boon versus who is just standing near someone who is - distinct from the plain uptime
-                tables under Buffs, which show what each player *had*, not what they *produced*.
+                tables under Buffs, which show what each player had, not what they produced.
               </p>
             </div>
           }
@@ -104,7 +125,10 @@ export default function BuffGenerationView() {
           {tabs.map((t) => (
             <button
               key={t}
-              onClick={() => setTab(t)}
+              onClick={() => {
+                setTab(t);
+                setSelectedBoonId(null);
+              }}
               className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all border ${
                 activeTab === t
                   ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
@@ -119,7 +143,7 @@ export default function BuffGenerationView() {
 
       <Panel
         title={`Squad ${activeTab} Output`}
-        subtitle="Average squad-facing output per boon (avg stacks for stacking boons, avg uptime% for pulse boons) - hover a bar for units"
+        subtitle="Average squad-facing output per boon. Select a boon below to inspect only that breakdown instead of scrolling every player table."
         icon={<Sparkles className="w-3.5 h-3.5" />}
       >
         <div className="h-64">
@@ -130,7 +154,7 @@ export default function BuffGenerationView() {
                 dataKey="name"
                 interval={0}
                 height={40}
-                tick={(props) => <BoonIconTick {...props} icons={iconsById} />}
+                tick={(props) => <BoonIconTick {...props} icons={iconsByName} />}
                 stroke="#334155"
               />
               <YAxis tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" width={40} />
@@ -145,19 +169,53 @@ export default function BuffGenerationView() {
               />
               <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                 {chartData.map((d, i) => (
-                  <Cell key={d.id} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+                  <Cell key={d.id} fill={selectedTable?.id === d.id ? CHART_COLORS.amber : BAR_COLORS[i % BAR_COLORS.length]} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {sortedTables.map((table) => {
+            const value = getTableScore(table);
+            const selected = selectedTable?.id === table.id;
+            const unit = table.stacking ? "avg stacks" : "%";
+            return (
+              <button
+                key={table.id}
+                type="button"
+                onClick={() => setSelectedBoonId(table.id)}
+                className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition-all ${
+                  selected
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                    : "border-slate-800/70 bg-slate-950/40 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                }`}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  {table.icon ? <img src={table.icon} alt="" referrerPolicy="no-referrer" className="h-5 w-5 shrink-0 rounded-sm" /> : <Sparkles className="h-4 w-4 shrink-0" />}
+                  <span className="truncate text-xs font-semibold">{table.name}</span>
+                </span>
+                <span className="shrink-0 text-right font-mono text-[11px]">
+                  <span className="block font-bold">{value.toFixed(table.stacking ? 2 : 0)}{table.stacking ? "" : "%"}</span>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-500">{table.rows.length} players</span>
+                  <span className="sr-only"> {unit}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </Panel>
 
-      {activeTables.map((table) => {
+      {selectedTable && (() => {
+        const table = selectedTable;
         const rows = [...table.rows].sort(
           (a, b) => getBoonMetricValue(b, "squadBuffs", table.stacking, "uptime") - getBoonMetricValue(a, "squadBuffs", table.stacking, "uptime")
         );
         const unit = table.stacking ? "avg stacks" : "%";
+        const totalSquadOutput = rows.reduce((sum, row) => sum + getBoonMetricValue(row, "squadBuffs", table.stacking, "uptime"), 0);
+        const totalWasted = rows.reduce((sum, row) => sum + getBoonWastedValue(row, "squadBuffs", table.stacking), 0);
+        const totalOverstack = rows.reduce((sum, row) => sum + getBoonOverstackValue(row, "squadBuffs", table.stacking), 0);
 
         // Relative color per category column: stacking buffs don't share a
         // 0-100% scale (Might caps at 25, Stability is usually 0-3), so "good"
@@ -175,9 +233,8 @@ export default function BuffGenerationView() {
 
         return (
           <Panel
-            key={table.id}
             title={`${table.name} Generation`}
-            subtitle={`Self vs. group vs. squad ${unit} contributed by each player, plus how much of that squad output was reapplied before it was needed (Reapplied) or discarded past the stack/effect cap (Overcapped)`}
+            subtitle={`Only the selected ${activeTab.toLowerCase()} metric is shown. Self, group, and squad values are ${unit}.`}
             icon={
               table.icon ? (
                 <img src={table.icon} alt="" referrerPolicy="no-referrer" className="w-4 h-4 rounded-sm" />
@@ -188,6 +245,20 @@ export default function BuffGenerationView() {
             action={`${rows.length} players`}
             bodyClassName="p-0"
           >
+            <div className="grid grid-cols-3 gap-2 border-b border-slate-800/50 p-3 text-center text-[10px] uppercase tracking-wider text-slate-500">
+              <div className="rounded-lg bg-slate-950/50 p-2">
+                <div>Squad Output</div>
+                <div className="mt-1 font-mono text-sm font-bold text-emerald-400">{fmtCompact(totalSquadOutput)}</div>
+              </div>
+              <div className="rounded-lg bg-slate-950/50 p-2">
+                <div>Reapplied</div>
+                <div className="mt-1 font-mono text-sm font-bold text-amber-400">{fmtCompact(totalWasted)}</div>
+              </div>
+              <div className="rounded-lg bg-slate-950/50 p-2">
+                <div>Overcapped</div>
+                <div className="mt-1 font-mono text-sm font-bold text-rose-400">{fmtCompact(totalOverstack)}</div>
+              </div>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
@@ -220,9 +291,7 @@ export default function BuffGenerationView() {
                           {row.account}
                         </td>
                         <td className="px-2 py-2.5">
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(row.profession)}`}>
-                            {row.profession}
-                          </span>
+                          <ClassCell profession={row.profession} />
                         </td>
                         {(Object.keys(CATEGORY_LABELS) as Array<keyof typeof CATEGORY_LABELS>).map((cat) => {
                           const value = getBoonMetricValue(row, cat, table.stacking, "uptime");
@@ -262,7 +331,7 @@ export default function BuffGenerationView() {
             </div>
           </Panel>
         );
-      })}
+      })()}
     </div>
   );
 }
