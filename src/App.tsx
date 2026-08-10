@@ -32,9 +32,10 @@ import BuffGenerationView from "./views/BuffGenerationView";
 import HighlightsView from "./views/HighlightsView";
 import ArchiveView from "./views/ArchiveView";
 import CompareView from "./views/CompareView";
+import IntelligenceDebugView from "./views/IntelligenceDebugView";
 import { buildReportHtmlExport } from "./lib/exportReportHtml";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
-import { Activity, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, Link2, Upload, X, Download } from "lucide-react";
+import { Activity, BrainCircuit, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, Link2, Upload, X, Download } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
 import RawLogImporter from "./components/ui/RawLogImporter";
@@ -68,6 +69,7 @@ const VIEW_TITLES: Record<string, string> = {
   highlights: "Highlights",
   archive: "Report Archive",
   compare: "Compare Reports",
+  intelligence: "Intelligence",
 };
 
 function ReportRouter({ activeView }: { activeView: string }) {
@@ -97,6 +99,7 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "highlights": return <HighlightsView />;
     case "archive": return <ArchiveView />;
     case "compare": return <CompareView />;
+    case "intelligence": return <IntelligenceDebugView />;
     default: return <OverviewView />;
   }
 }
