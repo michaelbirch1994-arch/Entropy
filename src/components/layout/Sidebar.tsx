@@ -114,6 +114,11 @@ const MENU: NavSection[] = [
     items: [{ id: "player-profiles", label: "Player Profiles" }],
   },
   {
+    title: "INTELLIGENCE",
+    icon: <Sparkles className="w-4 h-4" />,
+    items: [{ id: "intelligence", label: "Intelligence Debug" }],
+  },
+  {
     title: "ARCHIVE",
     icon: <Archive className="w-4 h-4" />,
     items: [
@@ -245,4 +250,5 @@ export const VIEW_ICONS: Record<string, ReactNode> = {
   "player-profiles": <Trophy className="w-4 h-4" />,
   archive: <Archive className="w-4 h-4" />,
   compare: <GitCompare className="w-4 h-4" />,
+  intelligence: <Sparkles className="w-4 h-4" />,
 };
