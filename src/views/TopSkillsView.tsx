@@ -34,6 +34,7 @@ function SkillIcon({ src, index }: { src?: string; index: number }) {
     />
   );
 }
+
 function TabRow({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   return (
     <div className="flex items-center gap-2">
@@ -68,6 +69,115 @@ function TabRow({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
         <HeartPulse className="w-3.5 h-3.5" /> Healing
       </button>
     </div>
+  );
+}
+
+function buildHealingById(healingSources: TopHealingSource[]) {
+  const byId = new Map<number, TopHealingSource>();
+
+  for (const source of healingSources) {
+    const existing = byId.get(source.id);
+    if (!existing) {
+      byId.set(source.id, { ...source });
+      continue;
+    }
+
+    existing.healing += source.healing;
+    existing.hits += source.hits;
+    existing.isTrait = existing.isTrait || source.isTrait;
+    if (!existing.icon && source.icon) existing.icon = source.icon;
+    if (/^(Skill|Trait) \d+$/.test(existing.name) && !/^(Skill|Trait) \d+$/.test(source.name)) {
+      existing.name = source.name;
+    }
+  }
+
+  return byId;
+}
+
+function LifeStealSpotlight({
+  healingSources,
+  topSkills,
+  onOpenHealing,
+}: {
+  healingSources: TopHealingSource[];
+  topSkills: TopSkill[];
+  onOpenHealing: () => void;
+}) {
+  if (healingSources.length === 0) return null;
+
+  const damageById = new Map(topSkills.map((skill) => [skill.id, skill]));
+  const topSources = [...healingSources]
+    .filter((source) => source.healing > 0)
+    .sort((a, b) => b.healing - a.healing)
+    .slice(0, 4);
+  const maxHealing = Math.max(...topSources.map((source) => source.healing), 1);
+
+  if (topSources.length === 0) return null;
+
+  return (
+    <section className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4 shadow-lg">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-4">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-black text-emerald-300">
+            <HeartPulse className="w-4 h-4" /> Life-steal and conversion healing detected
+          </div>
+          <p className="text-[11px] text-slate-400 mt-1 max-w-3xl">
+            These are healing sources produced by skills or trait-triggered siphons. When the same id also dealt outgoing damage,
+            the card below shows both sides of the trade: damage dealt and healing returned.
+          </p>
+        </div>
+        <button
+          onClick={onOpenHealing}
+          className="self-start rounded-lg border border-emerald-500/30 px-3 py-1.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/10 transition-all"
+        >
+          Open full healing breakdown
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        {topSources.map((source, i) => {
+          const matchingDamage = damageById.get(source.id);
+          return (
+            <div key={`${source.isTrait ? "trait" : "skill"}-${source.id}`} className="rounded-xl border border-slate-800/70 bg-[#080d19]/80 p-3">
+              <div className="flex items-start gap-3 mb-3">
+                <SkillIcon src={source.icon || matchingDamage?.icon} index={i} />
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-bold text-slate-100">{source.name}</div>
+                  <div className="text-[10px] text-slate-500 font-mono">
+                    {source.isTrait ? "Trait-triggered" : "Skill"} · {fmtNum(source.hits)} healing hits
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div>
+                  <div className="flex justify-between text-[10px] font-mono mb-1">
+                    <span className="text-slate-500">Healing returned</span>
+                    <span className="text-emerald-300 font-bold">{fmtCompact(source.healing)}</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-emerald-700 to-emerald-300 rounded-full"
+                      style={{ width: `${(source.healing / maxHealing) * 100}%` }}
+                    />
+                  </div>
+                </div>
+                {matchingDamage ? (
+                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-500">
+                    <span>Matched damage</span>
+                    <span className="text-orange-300 font-bold">{fmtCompact(matchingDamage.damage)}</span>
+                  </div>
+                ) : (
+                  <div className="text-[10px] text-slate-500">
+                    Healing-only source or below the outgoing top-damage cutoff.
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -150,6 +260,12 @@ export default function TopSkillsView() {
   const sorted = [...skills].sort((a, b) => b[sort] - a[sort]);
   const maxDmg = Math.max(...sorted.map((x) => x.damage), 1);
   const maxDc = Math.max(...sorted.map((x) => x.downContribution), 1);
+  const healingSources: TopHealingSource[] = s.topHealingSkills ?? [];
+  const healingById = buildHealingById(healingSources);
+  const visibleHealingMatches = tab === "outgoing"
+    ? sorted.map((skill) => healingById.get(skill.id)).filter((source): source is TopHealingSource => !!source)
+    : [];
+  const maxMatchedHealing = Math.max(...visibleHealingMatches.map((source) => source.healing), 1);
 
   return (
     <div className="space-y-5 animate-view pb-12">
@@ -179,54 +295,82 @@ export default function TopSkillsView() {
         })}
       </div>
 
+      {tab === "outgoing" && (
+        <LifeStealSpotlight healingSources={healingSources} topSkills={s.topSkills} onOpenHealing={() => setTab("healing")} />
+      )}
+
       {/* Skills grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {sorted.slice(0, 20).map((sk, i) => (
-          <div
-            key={sk.name}
-            className="bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg hover:border-slate-700 transition-all"
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <SkillIcon src={sk.icon} index={i} />
-                <div>
-                  <div className="text-sm font-bold text-slate-100">{sk.name}</div>
-                  <div className="text-[10px] text-slate-500 font-mono">{fmtNum(sk.hits)} hits</div>
+        {sorted.slice(0, 20).map((sk, i) => {
+          const healingMatch = tab === "outgoing" ? healingById.get(sk.id) : undefined;
+          return (
+            <div
+              key={sk.name}
+              className="bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg hover:border-slate-700 transition-all"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <SkillIcon src={sk.icon || healingMatch?.icon} index={i} />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-bold text-slate-100">{sk.name}</span>
+                      {healingMatch && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border border-emerald-500/30 text-emerald-400">
+                          Life steal
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono">{fmtNum(sk.hits)} hits</div>
+                  </div>
                 </div>
+                <span className={`text-xs font-black font-mono ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>
+                  #{i + 1}
+                </span>
               </div>
-              <span className={`text-xs font-black font-mono ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>
-                #{i + 1}
-              </span>
-            </div>
 
-            <div className="space-y-2">
-              <div>
-                <div className="flex justify-between text-[10px] font-mono mb-1">
-                  <span className="text-slate-500">Damage</span>
-                  <span className="text-orange-400 font-bold">{fmtCompact(sk.damage)}</span>
+              <div className="space-y-2">
+                <div>
+                  <div className="flex justify-between text-[10px] font-mono mb-1">
+                    <span className="text-slate-500">Damage</span>
+                    <span className="text-orange-400 font-bold">{fmtCompact(sk.damage)}</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-full transition-all duration-500"
+                      style={{ width: `${(sk.damage / maxDmg) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-full transition-all duration-500"
-                    style={{ width: `${(sk.damage / maxDmg) * 100}%` }}
-                  />
+                <div>
+                  <div className="flex justify-between text-[10px] font-mono mb-1">
+                    <span className="text-slate-500">Down Contrib</span>
+                    <span className="text-sky-400 font-bold">{fmtCompact(sk.downContribution)}</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-sky-600 to-sky-400 rounded-full transition-all duration-500"
+                      style={{ width: `${(sk.downContribution / maxDc) * 100}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-[10px] font-mono mb-1">
-                  <span className="text-slate-500">Down Contrib</span>
-                  <span className="text-sky-400 font-bold">{fmtCompact(sk.downContribution)}</span>
-                </div>
-                <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-sky-600 to-sky-400 rounded-full transition-all duration-500"
-                    style={{ width: `${(sk.downContribution / maxDc) * 100}%` }}
-                  />
-                </div>
+                {healingMatch && (
+                  <div>
+                    <div className="flex justify-between text-[10px] font-mono mb-1">
+                      <span className="text-slate-500">Life-steal healing</span>
+                      <span className="text-emerald-400 font-bold">{fmtCompact(healingMatch.healing)}</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-700 to-emerald-300 rounded-full transition-all duration-500"
+                        style={{ width: `${(healingMatch.healing / maxMatchedHealing) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
