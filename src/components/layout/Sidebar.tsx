@@ -122,7 +122,7 @@ const MENU: NavSection[] = [
   {
     title: "INTELLIGENCE",
     icon: <Sparkles className="w-4 h-4" />,
-    items: [{ id: "intelligence", label: "Intelligence Debug" }],
+    items: [{ id: "intelligence", label: "Intelligence" }],
   },
   {
     title: "ARCHIVE",
@@ -259,4 +259,3 @@ export const VIEW_ICONS: Record<string, ReactNode> = {
   intelligence: <Sparkles className="w-4 h-4" />,
   "axiforge-lab": <FlaskConical className="w-4 h-4" />,
 };
-
