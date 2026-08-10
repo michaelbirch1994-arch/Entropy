@@ -153,7 +153,55 @@ export default function OffensiveView() {
       return sortDir === "desc" ? bv - av : av - bv;
     });
     return copy;
-  }, [rows, sortKey, sortDir]);
+  }, [rows, sortKey, sortDir, scope]);
+
+  const derived = useMemo(() => {
+    // offenseTotals is sparse - see the comment on numVal() above. Every read
+    // here is guarded with `?? 0` so one player missing a key can't turn a
+    // summary card, chart, or the dmgPct bar into NaN/blank for the whole page.
+    const totalDamage = rows.reduce((a, r) => a + pickDamageScopeValue(scope, r.offenseTotals.damage, r.offenseTotals.damageAll), 0);
+    const totalStrips = rows.reduce((a, r) => a + (r.offenseTotals.boonStrips ?? 0), 0);
+    const totalCC = rows.reduce((a, r) => a + (r.offenseTotals.appliedCrowdControl ?? 0), 0);
+    const totalDown = rows.reduce((a, r) => a + (r.offenseTotals.downContribution ?? 0), 0);
+    // damageAll (EI's "All" column) includes hits against siege weapons, NPCs,
+    // gates and walls alongside tracked player targets; damage (post-#78 fix)
+    // is player-vs-player only. The gap between them is the closest honest
+    // proxy for "siege/objective damage" EI's export supports - it can't be
+    // split further into siege vs. gate vs. NPC without per-hit target-type
+    // data the JSON doesn't expose.
+    const hasSiegeData = rows.some((r) => r.offenseTotals.damageAll !== undefined);
+    const totalSiegeDamage = rows.reduce((a, r) => a + Math.max(0, (r.offenseTotals.damageAll ?? 0) - (r.offenseTotals.damage ?? 0)), 0);
+    const byDamage = [...rows].sort(
+      (a, b) => pickDamageScopeValue(scope, b.offenseTotals.damage, b.offenseTotals.damageAll) - pickDamageScopeValue(scope, a.offenseTotals.damage, a.offenseTotals.damageAll),
+    );
+    const top5Dmg = byDamage.slice(0, 5).map((r) => ({
+      name: r.account.split(".")[0],
+      value: pickDamageScopeValue(scope, r.offenseTotals.damage, r.offenseTotals.damageAll),
+      dps: Math.round(r.dps),
+    }));
+
+    const top5Strips = [...rows]
+      .sort((a, b) => (b.offenseTotals.boonStrips ?? 0) - (a.offenseTotals.boonStrips ?? 0))
+      .slice(0, 5)
+      .map((r) => ({
+        name: r.account.split(".")[0],
+        value: r.offenseTotals.boonStrips ?? 0,
+      }));
+
+    const maxDamage = Math.max(...byDamage.map((r) => pickDamageScopeValue(scope, r.offenseTotals.damage, r.offenseTotals.damageAll)), 1);
+
+    return {
+      totalDamage,
+      totalStrips,
+      totalCC,
+      totalDown,
+      hasSiegeData,
+      totalSiegeDamage,
+      top5Dmg,
+      top5Strips,
+      maxDamage,
+    };
+  }, [rows, scope]);
 
   if (loading) {
     return (
@@ -163,41 +211,6 @@ export default function OffensiveView() {
     );
   }
   if (!report) return null;
-
-  // offenseTotals is sparse - see the comment on numVal() above. Every read
-  // here is guarded with `?? 0` so one player missing a key can't turn a
-  // summary card, chart, or the dmgPct bar into NaN/blank for the whole page.
-  const totalDamage = rows.reduce((a, r) => a + pickDamageScopeValue(scope, r.offenseTotals.damage, r.offenseTotals.damageAll), 0);
-  const totalStrips = rows.reduce((a, r) => a + (r.offenseTotals.boonStrips ?? 0), 0);
-  const totalCC = rows.reduce((a, r) => a + (r.offenseTotals.appliedCrowdControl ?? 0), 0);
-  const totalDown = rows.reduce((a, r) => a + (r.offenseTotals.downContribution ?? 0), 0);
-  // damageAll (EI's "All" column) includes hits against siege weapons, NPCs,
-  // gates and walls alongside tracked player targets; damage (post-#78 fix)
-  // is player-vs-player only. The gap between them is the closest honest
-  // proxy for "siege/objective damage" EI's export supports - it can't be
-  // split further into siege vs. gate vs. NPC without per-hit target-type
-  // data the JSON doesn't expose.
-  const hasSiegeData = rows.some((r) => r.offenseTotals.damageAll !== undefined);
-  const totalSiegeDamage = rows.reduce((a, r) => a + Math.max(0, (r.offenseTotals.damageAll ?? 0) - (r.offenseTotals.damage ?? 0)), 0);
-
-  const top5Dmg = [...rows]
-    .sort((a, b) => pickDamageScopeValue(scope, b.offenseTotals.damage, b.offenseTotals.damageAll) - pickDamageScopeValue(scope, a.offenseTotals.damage, a.offenseTotals.damageAll))
-    .slice(0, 5)
-    .map((r) => ({
-      name: r.account.split(".")[0],
-      value: pickDamageScopeValue(scope, r.offenseTotals.damage, r.offenseTotals.damageAll),
-      dps: Math.round(r.dps),
-    }));
-
-  const top5Strips = [...rows]
-    .sort((a, b) => (b.offenseTotals.boonStrips ?? 0) - (a.offenseTotals.boonStrips ?? 0))
-    .slice(0, 5)
-    .map((r) => ({
-      name: r.account.split(".")[0],
-      value: r.offenseTotals.boonStrips ?? 0,
-    }));
-
-  const maxDamage = Math.max(...sorted.map((r) => pickDamageScopeValue(scope, r.offenseTotals.damage, r.offenseTotals.damageAll)), 1);
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) {
@@ -211,15 +224,15 @@ export default function OffensiveView() {
   return (
     <div className="space-y-5 animate-view pb-12">
       {/* Summary stat cards */}
-      <div className={`grid grid-cols-2 gap-4 ${hasSiegeData ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
-        <StatCard label="Total Damage" value={fmtCompact(totalDamage)} icon={<Swords className="w-3.5 h-3.5 text-orange-400" />} accent="text-orange-400" />
-        <StatCard label="Down Contrib" value={fmtCompact(totalDown)} icon={<Target className="w-3.5 h-3.5 text-sky-400" />} accent="text-sky-400" />
-        <StatCard label="Boon Strips" value={fmtNum(totalStrips)} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
-        <StatCard label="Crowd Control" value={fmtNum(totalCC)} icon={<Crosshair className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" />
-        {hasSiegeData && (
+      <div className={`grid grid-cols-2 gap-4 ${derived.hasSiegeData ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+        <StatCard label="Total Damage" value={fmtCompact(derived.totalDamage)} icon={<Swords className="w-3.5 h-3.5 text-orange-400" />} accent="text-orange-400" />
+        <StatCard label="Down Contrib" value={fmtCompact(derived.totalDown)} icon={<Target className="w-3.5 h-3.5 text-sky-400" />} accent="text-sky-400" />
+        <StatCard label="Boon Strips" value={fmtNum(derived.totalStrips)} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
+        <StatCard label="Crowd Control" value={fmtNum(derived.totalCC)} icon={<Crosshair className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" />
+        {derived.hasSiegeData && (
           <StatCard
             label="Siege/NPC/Gate Dmg"
-            value={fmtCompact(totalSiegeDamage)}
+            value={fmtCompact(derived.totalSiegeDamage)}
             icon={<Building2 className="w-3.5 h-3.5 text-slate-400" />}
             accent="text-slate-400"
           />
@@ -231,7 +244,7 @@ export default function OffensiveView() {
         <Panel title="Top 5 Damage Output" icon={<TrendingUp className="w-4 h-4" />} accent="text-orange-400">
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={top5Dmg} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
+              <BarChart data={derived.top5Dmg} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
                 <defs>
                   <linearGradient id="dmgGradient" x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0%" stopColor="#f97316" stopOpacity={0.8} />
@@ -257,7 +270,7 @@ export default function OffensiveView() {
         <Panel title="Top 5 Boon Strips" icon={<ShieldOff className="w-4 h-4" />} accent="text-amber-400">
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={top5Strips} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
+              <BarChart data={derived.top5Strips} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
                 <XAxis type="number" hide />
                 <YAxis
                   type="category"
@@ -303,12 +316,12 @@ export default function OffensiveView() {
                     </span>
                   </th>
                 ))}
-                {hasSiegeData && <th className="p-2.5 text-right">Siege/NPC/Gate</th>}
+                {derived.hasSiegeData && <th className="p-2.5 text-right">Siege/NPC/Gate</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/30 font-mono">
               {sorted.map((p, i) => {
-                const dmgPct = (pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll) / maxDamage) * 100;
+                const dmgPct = (pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll) / derived.maxDamage) * 100;
                 return (
                   <tr key={p.account} className={`transition-colors hover:bg-blue-950/20 ${i % 2 === 1 ? "bg-slate-900/20" : ""}`}>
                     {/* Subgroup - data has no group field, show neutral */}
@@ -352,7 +365,7 @@ export default function OffensiveView() {
                     {/* Kills */}
                     <td className="p-2.5 text-right text-emerald-400">{perPlayerN(p.offenseTotals.killed ?? 0, p.totalFightMs)}</td>
                   
-                {hasSiegeData && (
+                {derived.hasSiegeData && (
                   <td className="p-2.5 text-right text-slate-500">
                     {fmtCompact(Math.max(0, (p.offenseTotals.damageAll ?? 0) - (p.offenseTotals.damage ?? 0)))}
                   </td>
