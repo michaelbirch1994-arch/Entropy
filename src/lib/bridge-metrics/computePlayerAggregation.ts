@@ -80,6 +80,7 @@ export type DamageMitigationTotals = {
         interrupted: number;
         totalMitigation: number;
         minMitigation: number;
+        isEstimated: boolean;
 };
 
 export type DamageMitigationRow = {
@@ -203,7 +204,8 @@ const createMitigationTotals = (): DamageMitigationTotals => ({
         invulned: 0,
         interrupted: 0,
         totalMitigation: 0,
-        minMitigation: 0
+        minMitigation: 0,
+        isEstimated: true
 });
 
 const readNumber = (value: any) => {
@@ -1436,6 +1438,7 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
                                     const base = parseMitigationKey(rawKey);
                                     const identity = getMitigationIdentity(base.account, base.profession, splitPlayersByClass);
                                     const row = ensureMitigationRow(acc.damageMitigationPlayersMap, identity.key, { ...base, account: identity.accountLabel, profession: identity.profession });
+                                    row.mitigationTotals.isEstimated = false;
                                     Object.values(skillMap as any).forEach((entry: any) => {
                                                         const avoided = readNumber(entry?.avoided_damage ?? entry?.avoidedDamage);
                                                         if (avoided <= 0) return;
@@ -1459,6 +1462,7 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
                                                                                 profession: identity.profession,
                                                                                 minion: String(minionName || 'Unknown')
                                                         });
+                                                        row.mitigationTotals.isEstimated = false;
                                                         Object.values(skillMap as any).forEach((entry: any) => {
                                                                                 addMitigationTotals(row.mitigationTotals, entry);
                                                         });
@@ -1502,7 +1506,8 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
                                                                                                             invulned,
                                                                                                             interrupted,
                                                                                                             totalMitigation: 0,
-                                                                                                            minMitigation: 0
+                                                                                                            minMitigation: 0,
+                                                                                                            isEstimated: true
                                                                                 }
                                                                                                 );
                                                 });
@@ -1549,7 +1554,8 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
                                                                                                                                             invulned,
                                                                                                                                             interrupted,
                                                                                                                                             totalMitigation: 0,
-                                                                                                                                            minMitigation: 0
+                                                                                                                                            minMitigation: 0,
+                                                                                                                                            isEstimated: true
                                                                                                             }
                                                                                                                                 );
                                                                         });
@@ -1598,6 +1604,7 @@ const recomputeMitigationTotals = (
                         bucket.minMitigation += avoidMin;
             });
             rows.forEach((row, rowKey) => {
+                        if (row.mitigationTotals.isEstimated === false) return;
                         const totals = aggregate.get(rowKey) || createMitigationTotals();
                         row.mitigationTotals.totalHits = totals.totalHits;
                         row.mitigationTotals.blocked = totals.blocked;
@@ -1608,6 +1615,7 @@ const recomputeMitigationTotals = (
                         row.mitigationTotals.interrupted = totals.interrupted;
                         row.mitigationTotals.totalMitigation = totals.totalMitigation;
                         row.mitigationTotals.minMitigation = totals.minMitigation;
+                        row.mitigationTotals.isEstimated = true;
             });
     };
 
