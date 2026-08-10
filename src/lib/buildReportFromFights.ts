@@ -14,6 +14,14 @@
 import { computePlayerAggregation, type PlayerStats } from './bridge-metrics/computePlayerAggregation';
 import type { HealingCoverage } from '../types/report';
 import { computeAllIncomingHealing, type IncomingHealingBreakdown } from './bridge-metrics/incomingHealing';
+import { normalizeDeathEvents } from './combat/normalizeDeaths';
+import { detectFailedRecoveries, detectMassDowns } from './intelligence/criticalEvents';
+import { detectSquadSeparations } from './intelligence/squadSeparation';
+import { segmentEngagements } from './intelligence/segmentation';
+import { synthesizeFindings } from './intelligence/findingEngine';
+import type { CombatEvent } from './combat/CombatEvent';
+import type { CriticalEvent, IntelligenceFinding } from './intelligence/types';
+import type { EngagementSegment } from './intelligence/engagementTypes';
 
 /**
  * Merge per-log incoming-healing breakdowns into one per player.
@@ -1480,6 +1488,60 @@ function computeFightTables(fights: FightInput[]): {
   return { fightBreakdown, mapData, timelineData };
 }
 
+
+interface PersistedIntelligence {
+    combatEvents: CombatEvent[];
+    criticalEvents: CriticalEvent[];
+    engagementSegments: EngagementSegment[];
+    intelligenceFindings: IntelligenceFinding[];
+}
+
+function computePersistedIntelligence(fights: FightInput[]): PersistedIntelligence {
+    const combatEvents: CombatEvent[] = [];
+    const criticalEvents: CriticalEvent[] = [];
+    const engagementSegments: EngagementSegment[] = [];
+    const intelligenceFindings: IntelligenceFinding[] = [];
+
+    fights.forEach((fight, index) => {
+        const fightId = fight.summary.permalink || `${fight.summary.fightName || 'fight'}-${index}`;
+        const parsedReport = { details: fight.raw } as any;
+
+        const downDeathSet = normalizeDeathEvents(parsedReport);
+        combatEvents.push(...downDeathSet.events);
+
+        const fightCriticalEvents: CriticalEvent[] = [
+            ...detectMassDowns(downDeathSet, fightId),
+            ...detectFailedRecoveries(downDeathSet, fightId),
+            ...detectSquadSeparations(parsedReport, fightId, downDeathSet),
+        ].sort((a, b) => a.timestampMs - b.timestampMs);
+
+        criticalEvents.push(...fightCriticalEvents);
+
+        const fightSegments = segmentEngagements({
+            fightId,
+            combatEvents: downDeathSet.events,
+            criticalEvents: fightCriticalEvents,
+        });
+
+        engagementSegments.push(...fightSegments);
+
+        intelligenceFindings.push(
+            ...synthesizeFindings({
+                fightId,
+                segments: fightSegments,
+                criticalEvents: fightCriticalEvents,
+            }),
+        );
+    });
+
+    return {
+        combatEvents,
+        criticalEvents,
+        engagementSegments,
+        intelligenceFindings,
+    };
+}
+
 export function buildReportFromFights(fights: FightInput[]): WvWReport {
     if (fights.length === 0) throw new Error('No fights to combine.');
 
@@ -1650,6 +1712,8 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
               factors: s.roleClassification.factors,
       }));
 
+  const persistedIntelligence = computePersistedIntelligence(fights);
+
   const stats: ReportStats = {
         total, wins, losses, avgSquadSize, avgEnemies, squadKDR, enemyKDR,
         totalSquadKills, totalSquadDeaths, totalEnemyKills, totalEnemyDeaths, totalSquadDowns, totalEnemyDowns,
@@ -1725,6 +1789,9 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
         topHealingSkills: computeTopHealingSkills(fights),
         deathRecaps: computeDeathRecaps(fights),
         fightHighlights: computeFightHighlights(fights),
+        criticalEvents: persistedIntelligence.criticalEvents,
+        engagementSegments: persistedIntelligence.engagementSegments,
+        intelligenceFindings: persistedIntelligence.intelligenceFindings,
         // Self- vs. group- vs. squad-generation split for stacking/non-stacking
         // boons - reuses AxiBridge's vendored boonGeneration engine as-is, reading
         // player.selfBuffs/groupBuffs/squadBuffs straight from the raw log (each
