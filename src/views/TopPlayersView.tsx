@@ -41,6 +41,10 @@ function formatMetricValue(entry: LeaderboardEntry, unit?: string) {
   return entry.value >= 100000 ? fmtCompact(entry.value) : fmtNum(entry.value);
 }
 
+function leaderboardSnapshotKey(metric: MetricKey, entries: LeaderboardEntry[]) {
+  return `${metric}:${entries.slice(0, 12).map((entry) => `${entry.account}:${entry.profession}:${entry.rank}:${entry.value}:${entry.count}`).join("|")}`;
+}
+
 function PlayerMetricCard({
   entry,
   index,
@@ -104,9 +108,10 @@ export default function TopPlayersView() {
   const entries: LeaderboardEntry[] = lb[metric] ?? [];
   const active = METRICS.find((m) => m.key === metric)!;
   const maxValue = entries.length ? entries[0].value : 1;
+  const snapshotKey = leaderboardSnapshotKey(metric, entries);
 
   return (
-    <div className="space-y-5 animate-view pb-12">
+    <div className="space-y-5 animate-view pb-12" key={`top-players:${snapshotKey}`}>
       {/* Metric selector */}
       <div className="flex flex-wrap gap-2">
         {METRICS.map((m) => {
@@ -130,14 +135,14 @@ export default function TopPlayersView() {
       </div>
 
       {/* Top 3 podium */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" key={`podium:${snapshotKey}`}>
         {entries.slice(0, 3).map((e, i) => {
           const place = i + 1;
           const colors = ["text-amber-400", "text-slate-300", "text-orange-400"];
           const borders = ["border-amber-500/40", "border-slate-500/40", "border-orange-600/40"];
           return (
             <div
-              key={`${metric}:podium:${e.account}`}
+              key={`${metric}:podium:${e.account}:${e.profession}:${e.rank}:${e.value}`}
               className={`bg-[#0a101f]/90 border ${borders[i]} rounded-2xl p-4 shadow-xl flex items-center gap-4`}
             >
               <div className={`text-3xl font-black font-mono ${colors[i]}`}>#{place}</div>
@@ -156,16 +161,17 @@ export default function TopPlayersView() {
 
       {/* Metric-bound player cards */}
       <Panel
+        key={`panel:${snapshotKey}`}
         title={`${active.label} Player Cards`}
         subtitle="These cards are driven by the same selected metric as the podium and table."
         icon={<active.icon className="w-4 h-4" />}
         accent="text-sky-400"
       >
         {entries.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" key={`cards:${snapshotKey}`}>
             {entries.slice(0, 12).map((entry, index) => (
               <PlayerMetricCard
-                key={`${metric}:card:${entry.account}`}
+                key={`${metric}:card:${entry.account}:${entry.profession}:${entry.rank}:${entry.value}:${entry.count}`}
                 entry={entry}
                 index={index}
                 max={maxValue}
