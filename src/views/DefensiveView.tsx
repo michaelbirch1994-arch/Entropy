@@ -58,13 +58,21 @@ export default function DefensiveView() {
 
   const survivalSupport = s.survivalSupport ?? [];
   const survivalSupportReady = survivalSupport.length > 0;
+  const firstPositive = (...values: Array<number | undefined>) => values.find((value) => Number.isFinite(value) && (value ?? 0) > 0) ?? 0;
   const healingFallbackRows = [...s.healingPlayers]
     .map((p) => {
-      const squadHealing = p.healingTotals.squadHealing ?? 0;
-      const squadBarrier = p.healingTotals.squadBarrier ?? 0;
-      const downedHealing = p.healingTotals.squadDownedHealing ?? p.healingTotals.downedHealing ?? 0;
-      const sustain = squadHealing + squadBarrier + downedHealing;
-      return { ...p, squadHealing, squadBarrier, downedHealing, sustain };
+      const scopeHealing = pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing);
+      const scopeBarrier = pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier);
+      const healing = firstPositive(scopeHealing, p.healingTotals.squadHealing, p.healingTotals.healing);
+      const barrier = firstPositive(scopeBarrier, p.healingTotals.squadBarrier, p.healingTotals.barrier);
+      const downedHealing = firstPositive(
+        p.healingTotals.squadDownedHealing,
+        p.healingTotals.groupDownedHealing,
+        p.healingTotals.downedHealing,
+      );
+      const lifeSiphon = firstPositive(p.healingTotals.squadConversionHealing, p.healingTotals.conversionHealing);
+      const sustain = healing + barrier + downedHealing + lifeSiphon;
+      return { ...p, healing, barrier, downedHealing, lifeSiphon, sustain };
     })
     .filter((p) => p.sustain > 0)
     .sort((a, b) => b.sustain - a.sustain)
@@ -183,7 +191,7 @@ export default function DefensiveView() {
               <div className="rounded-lg border border-amber-500/15 bg-amber-500/5 p-4">
                 <div className="text-xs font-bold uppercase tracking-wider text-amber-300">Detailed attribution unavailable</div>
                 <p className="mt-1 text-[12px] leading-relaxed text-slate-400">
-                  This report does not include per-target incoming healing attribution, so Entropy cannot honestly say who healed each specific player. The list below falls back to squad-facing sustain output: healing, barrier, and downed healing generated for allies.
+                  This report does not include per-target incoming healing attribution, so Entropy cannot honestly say who healed each specific player. The list below falls back to observed sustain output: healing, barrier, downed healing, and life-siphon healing generated for allies.
                 </p>
               </div>
               {healingFallbackRows.length > 0 ? (
@@ -199,18 +207,22 @@ export default function DefensiveView() {
                           {fmtCompact(p.sustain)}
                         </div>
                       </div>
-                      <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
+                      <div className="mt-3 grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
                         <div>
                           <div>Heal</div>
-                          <div className="font-mono text-[12px] text-emerald-400">{fmtCompact(p.squadHealing)}</div>
+                          <div className="font-mono text-[12px] text-emerald-400">{fmtCompact(p.healing)}</div>
                         </div>
                         <div>
                           <div>Barrier</div>
-                          <div className="font-mono text-[12px] text-teal-400">{fmtCompact(p.squadBarrier)}</div>
+                          <div className="font-mono text-[12px] text-teal-400">{fmtCompact(p.barrier)}</div>
                         </div>
                         <div>
                           <div>Downed</div>
                           <div className="font-mono text-[12px] text-lime-400">{fmtCompact(p.downedHealing)}</div>
+                        </div>
+                        <div>
+                          <div>Life</div>
+                          <div className="font-mono text-[12px] text-purple-400">{fmtCompact(p.lifeSiphon)}</div>
                         </div>
                       </div>
                     </div>
@@ -218,7 +230,7 @@ export default function DefensiveView() {
                 </div>
               ) : (
                 <div className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-5 text-center text-sm text-slate-500">
-                  No healing or barrier output was available in this report.
+                  No healing, barrier, downed healing, or life-siphon output was available in this report. Re-import raw logs with the current Entropy version if the main Healing table has values but this overview remains empty.
                 </div>
               )}
             </div>
