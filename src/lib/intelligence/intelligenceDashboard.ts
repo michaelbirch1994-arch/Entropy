@@ -87,6 +87,9 @@ const PRESSURE_LABEL_WEIGHT: Record<IntelligenceEngagementInsight["pressureLabel
   critical: 4,
 };
 
+const MAX_DEATH_RECAP_EVENTS = 180;
+const MAX_DASHBOARD_CRITICAL_EVENTS = 320;
+
 function asNumber(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
@@ -137,32 +140,36 @@ function buildDeathRecapCriticalEvents(report: WvWReport): CriticalEvent[] {
   const recaps = report.stats.deathRecaps ?? [];
   if (recaps.length === 0) return [];
 
-  return recaps.filter(isUsableDeathRecap).map((recap, index) => {
-    const toDownDamage = totalDamage(recap.toDown);
-    const toKillDamage = totalDamage(recap.toKill);
-    const downHit = strongestHit(recap.toDown);
-    const killHit = recap.toKill[recap.toKill.length - 1] ?? strongestHit(recap.toKill) ?? downHit;
-    const pieces = [
-      `${recap.account} died at ${formatClock(recap.deathTimeMs)}.`,
-      recap.toDown.length > 0 ? `Downed by ${hitLabel(downHit)} across ${formatCompact(toDownDamage)} pre-down damage.` : "No separate downstate damage packet was recorded.",
-      recap.toKill.length > 0 ? `Finished by ${hitLabel(killHit)} after ${formatCompact(toKillDamage)} additional damage.` : "No separate deadstate finish packet was recorded.",
-    ];
+  return recaps
+    .filter(isUsableDeathRecap)
+    .sort((a, b) => asNumber(a.fightIndex) - asNumber(b.fightIndex) || asNumber(a.deathTimeMs) - asNumber(b.deathTimeMs))
+    .slice(0, MAX_DEATH_RECAP_EVENTS)
+    .map((recap, index) => {
+      const toDownDamage = totalDamage(recap.toDown);
+      const toKillDamage = totalDamage(recap.toKill);
+      const downHit = strongestHit(recap.toDown);
+      const killHit = recap.toKill[recap.toKill.length - 1] ?? strongestHit(recap.toKill) ?? downHit;
+      const pieces = [
+        `${recap.account} died at ${formatClock(recap.deathTimeMs)}.`,
+        recap.toDown.length > 0 ? `Downed by ${hitLabel(downHit)} across ${formatCompact(toDownDamage)} pre-down damage.` : "No separate downstate damage packet was recorded.",
+        recap.toKill.length > 0 ? `Finished by ${hitLabel(killHit)} after ${formatCompact(toKillDamage)} additional damage.` : "No separate deadstate finish packet was recorded.",
+      ];
 
-    return {
-      id: `death-recap:${recap.fightIndex}:${recap.account}:${recap.deathTimeMs}:${index}`,
-      timestampMs: recap.deathTimeMs,
-      fightId: fightIdForDeathRecap(report, recap),
-      category: "defense",
-      kind: "death-recap",
-      summary: pieces.join(" "),
-      relatedEvents: [
-        ...recap.toDown.map((hit) => `death-recap:down:${hit.id}:${hit.time}`),
-        ...recap.toKill.map((hit) => `death-recap:kill:${hit.id}:${hit.time}`),
-      ],
-      relatedPlayers: [recap.account],
-      confidence: "high",
-    } satisfies CriticalEvent;
-  });
+      return {
+        id: `death-recap:${recap.fightIndex}:${recap.account}:${recap.deathTimeMs}:${index}`,
+        timestampMs: recap.deathTimeMs,
+        fightId: fightIdForDeathRecap(report, recap),
+        category: "defense",
+        kind: "death-recap",
+        summary: pieces.join(" "),
+        relatedEvents: [
+          ...recap.toDown.map((hit) => `death-recap:down:${hit.id}:${hit.time}`),
+          ...recap.toKill.map((hit) => `death-recap:kill:${hit.id}:${hit.time}`),
+        ],
+        relatedPlayers: [recap.account],
+        confidence: "high",
+      } satisfies CriticalEvent;
+    });
 }
 
 function buildFallbackSegments(report: WvWReport): EngagementSegment[] {
@@ -459,7 +466,9 @@ export function buildIntelligenceDashboard(report: WvWReport): IntelligenceDashb
   const segments = persisted ? report.stats.engagementSegments ?? [] : buildFallbackSegments(report);
   const persistedCriticalEvents = persisted ? report.stats.criticalEvents ?? [] : [];
   const deathRecapEvents = buildDeathRecapCriticalEvents(report);
-  const criticalEvents = [...persistedCriticalEvents, ...deathRecapEvents].sort((a, b) => a.timestampMs - b.timestampMs);
+  const criticalEvents = [...persistedCriticalEvents, ...deathRecapEvents]
+    .sort((a, b) => a.timestampMs - b.timestampMs)
+    .slice(0, MAX_DASHBOARD_CRITICAL_EVENTS);
   const findings = persisted
     ? report.stats.intelligenceFindings ?? []
     : synthesizeFindings({ fightId: report.meta.id, segments, criticalEvents });
