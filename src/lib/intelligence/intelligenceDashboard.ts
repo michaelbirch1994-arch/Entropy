@@ -118,6 +118,16 @@ function hitLabel(hit: DeathRecapHit | undefined): string {
   return `${hit.name}${source} (${formatCompact(asNumber(hit.damage))})`;
 }
 
+function isUsableDeathRecap(recap: DeathRecapEntry): boolean {
+  return Boolean(
+    recap.account &&
+      Number.isFinite(recap.deathTimeMs) &&
+      Number.isFinite(recap.fightIndex) &&
+      Array.isArray(recap.toDown) &&
+      Array.isArray(recap.toKill),
+  );
+}
+
 function fightIdForDeathRecap(report: WvWReport, recap: DeathRecapEntry): string {
   const fight = report.stats.fightBreakdown?.[recap.fightIndex];
   return String(fight?.id || `fight-${recap.fightIndex + 1}`);
@@ -127,7 +137,7 @@ function buildDeathRecapCriticalEvents(report: WvWReport): CriticalEvent[] {
   const recaps = report.stats.deathRecaps ?? [];
   if (recaps.length === 0) return [];
 
-  return recaps.map((recap, index) => {
+  return recaps.filter(isUsableDeathRecap).map((recap, index) => {
     const toDownDamage = totalDamage(recap.toDown);
     const toKillDamage = totalDamage(recap.toKill);
     const downHit = strongestHit(recap.toDown);
