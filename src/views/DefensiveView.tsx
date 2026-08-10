@@ -7,6 +7,7 @@ import { Shield, Heart, Droplet, Zap, Wind, Target } from "lucide-react";
 import { useStatsDisplay, pickStatsDisplayValue } from "../store/StatsDisplayContext";
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
 import SurvivalSupport from "../components/ui/SurvivalSupport";
+import ProfessionIcon from "../components/ui/ProfessionIcon";
 
 type Tab = "defense" | "support" | "healing";
 
@@ -55,6 +56,20 @@ export default function DefensiveView() {
   const supportActiveSec = s.supportPlayers.reduce((a, p) => a + (p.activeMs ?? 0), 0) / 1000;
   const defenseActiveSec = s.defensePlayers.reduce((a, p) => a + (Number(p.totalFightMs) || 0), 0) / 1000;
 
+  const survivalSupport = s.survivalSupport ?? [];
+  const survivalSupportReady = survivalSupport.length > 0;
+  const healingFallbackRows = [...s.healingPlayers]
+    .map((p) => {
+      const squadHealing = p.healingTotals.squadHealing ?? 0;
+      const squadBarrier = p.healingTotals.squadBarrier ?? 0;
+      const downedHealing = p.healingTotals.squadDownedHealing ?? p.healingTotals.downedHealing ?? 0;
+      const sustain = squadHealing + squadBarrier + downedHealing;
+      return { ...p, squadHealing, squadBarrier, downedHealing, sustain };
+    })
+    .filter((p) => p.sustain > 0)
+    .sort((a, b) => b.sustain - a.sustain)
+    .slice(0, 8);
+
   const isPerSecond = mode === "perSecond";
   // Per-player cells divide by that player's own active combat time, not the
   // squad-wide total the summary cards use - otherwise a "/s" column would be
@@ -67,6 +82,13 @@ export default function DefensiveView() {
   const fmtStat = (v: number, decimals = 0) => (isPerSecond ? fmtFixed(v, decimals || 2) : fmtCompact(v));
   const fmtStatN = (v: number, decimals = 0) => (isPerSecond ? fmtFixed(v, decimals || 2) : fmtNum(v));
   const lbl = (base: string) => (isPerSecond ? `${base}/s` : base);
+
+  const ClassCell = ({ profession }: { profession: string }) => (
+    <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(profession)}`}>
+      <ProfessionIcon profession={profession} className="w-3.5 h-3.5 shrink-0" />
+      {profession}
+    </span>
+  );
 
   return (
     <div className="space-y-5 animate-view pb-12">
@@ -125,11 +147,7 @@ export default function DefensiveView() {
                     <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
                       <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
                       <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
-                      <td className="p-2.5">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(p.profession)}`}>
-                          {p.profession}
-                        </span>
-                      </td>
+                      <td className="p-2.5"><ClassCell profession={p.profession} /></td>
                       <td className="p-2.5 text-right text-cyan-400 font-bold">{fmtNum(p.supportTotals.condiCleanse)}</td>
                       <td className="p-2.5 text-right text-amber-400">{p.supportTotals.boonStrips}</td>
                       <td className="p-2.5 text-right text-slate-300">{p.supportTotals.stunBreak}</td>
@@ -143,22 +161,68 @@ export default function DefensiveView() {
         </Panel>
       )}
 
-      {tab === "healing" && (s.survivalSupport?.length ?? 0) > 0 && (
+      {tab === "healing" && (
         <Panel
-          title="Survival Support"
+          title="Who Kept Me Alive Overview"
           icon={<Heart className="w-4 h-4" />}
           accent="text-emerald-400"
         >
-          <p className="mb-3 text-[11px] leading-relaxed text-slate-500">
-            Who kept each player alive. Coverage describes how complete the total is; attribution
-            describes how far the per-contributor split can be trusted. They are independent and can
-            legitimately disagree.
-          </p>
-          <div className="grid gap-3 md:grid-cols-2">
-            {s.survivalSupport!.slice(0, 8).map((bd) => (
-              <SurvivalSupport key={bd.account} breakdown={bd} />
-            ))}
-          </div>
+          {survivalSupportReady ? (
+            <>
+              <p className="mb-3 text-[11px] leading-relaxed text-slate-500">
+                Per-target incoming healing attribution. Each card shows how complete the total is and how reliable the contributor split is.
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                {survivalSupport.slice(0, 8).map((bd) => (
+                  <SurvivalSupport key={bd.account} breakdown={bd} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-amber-500/15 bg-amber-500/5 p-4">
+                <div className="text-xs font-bold uppercase tracking-wider text-amber-300">Detailed attribution unavailable</div>
+                <p className="mt-1 text-[12px] leading-relaxed text-slate-400">
+                  This report does not include per-target incoming healing attribution, so Entropy cannot honestly say who healed each specific player. The list below falls back to squad-facing sustain output: healing, barrier, and downed healing generated for allies.
+                </p>
+              </div>
+              {healingFallbackRows.length > 0 ? (
+                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                  {healingFallbackRows.map((p, i) => (
+                    <div key={p.account} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="truncate text-xs font-semibold text-slate-200">{p.account}</div>
+                          <div className="mt-1"><ClassCell profession={p.profession} /></div>
+                        </div>
+                        <div className={`font-mono text-lg font-bold ${i < 3 ? "text-emerald-400" : "text-slate-300"}`}>
+                          {fmtCompact(p.sustain)}
+                        </div>
+                      </div>
+                      <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
+                        <div>
+                          <div>Heal</div>
+                          <div className="font-mono text-[12px] text-emerald-400">{fmtCompact(p.squadHealing)}</div>
+                        </div>
+                        <div>
+                          <div>Barrier</div>
+                          <div className="font-mono text-[12px] text-teal-400">{fmtCompact(p.squadBarrier)}</div>
+                        </div>
+                        <div>
+                          <div>Downed</div>
+                          <div className="font-mono text-[12px] text-lime-400">{fmtCompact(p.downedHealing)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-5 text-center text-sm text-slate-500">
+                  No healing or barrier output was available in this report.
+                </div>
+              )}
+            </div>
+          )}
         </Panel>
       )}
 
@@ -180,19 +244,15 @@ export default function DefensiveView() {
               <tbody className="divide-y divide-slate-800/30 font-mono">
                 {[...s.healingPlayers]
                   .sort(
-(a, b) =>
-pickAllyScopeValue(allyScope, b.healingTotals.healing, b.healingTotals.squadHealing) -
-pickAllyScopeValue(allyScope, a.healingTotals.healing, a.healingTotals.squadHealing)
-)
+                    (a, b) =>
+                      pickAllyScopeValue(allyScope, b.healingTotals.healing, b.healingTotals.squadHealing) -
+                      pickAllyScopeValue(allyScope, a.healingTotals.healing, a.healingTotals.squadHealing)
+                  )
                   .map((p, i) => (
                     <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
                       <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
                       <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
-                      <td className="p-2.5">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(p.profession)}`}>
-                          {p.profession}
-                        </span>
-                      </td>
+                      <td className="p-2.5"><ClassCell profession={p.profession} /></td>
                       <td className="p-2.5 text-right text-emerald-400 font-bold">{perPlayer(pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing), p.activeMs)}</td>
                       <td className="p-2.5 text-right text-emerald-400/70">{perPlayer(p.healingTotals.squadHealing ?? 0, p.activeMs)}</td>
                       <td className="p-2.5 text-right text-teal-400">{perPlayer(pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier), p.activeMs)}</td>
@@ -233,11 +293,7 @@ pickAllyScopeValue(allyScope, a.healingTotals.healing, a.healingTotals.squadHeal
                     <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
                       <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
                       <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
-                      <td className="p-2.5">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(p.profession)}`}>
-                          {p.profession}
-                        </span>
-                      </td>
+                      <td className="p-2.5"><ClassCell profession={p.profession} /></td>
                       <td className="p-2.5 text-right text-rose-400 font-bold">{fmtCompact(p.defenseTotals.damageTaken)}</td>
                       <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.defenseTotals.powerDamageTaken)}</td>
                       <td className="p-2.5 text-right text-fuchsia-400">{fmtCompact(p.defenseTotals.conditionDamageTaken)}</td>
