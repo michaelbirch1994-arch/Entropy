@@ -50,6 +50,11 @@ interface FightContext {
 }
 
 const ALL_FIGHTS_ID = "all";
+const FIGHT_SELECTOR_PREVIEW_COUNT = 11;
+const FINDINGS_PREVIEW_COUNT = 6;
+const CRITICAL_EVENTS_PREVIEW_COUNT = 16;
+
+type ExpandableSection = "findings" | "criticalEvents";
 
 const UNKNOWN_FIGHT: FightContext = {
   id: "unknown",
@@ -238,16 +243,23 @@ function FightSelector({
   onSelect: (fightId: string) => void;
   totals: { downs: number; deaths: number; findings: number; criticalEvents: number };
 }) {
+  const [showAllFights, setShowAllFights] = useState(false);
+  const visibleFights = showAllFights ? fights : fights.slice(0, FIGHT_SELECTOR_PREVIEW_COUNT);
+  const hiddenFightCount = Math.max(0, fights.length - visibleFights.length);
+
   return (
     <section className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Fight breakdown</h3>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            Click a fight to scope the analytics below. All fights keeps the full report overview.
+            Click a fight to scope the analytics below. Long sessions load the first fights now; expand the rest only when needed.
           </p>
         </div>
-        <Pill>{fights.length || "unknown"} fights detected</Pill>
+        <div className="flex flex-wrap gap-2">
+          <Pill>{fights.length || "unknown"} fights detected</Pill>
+          {fights.length > FIGHT_SELECTOR_PREVIEW_COUNT && <Pill>{visibleFights.length} loaded</Pill>}
+        </div>
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -273,7 +285,7 @@ function FightSelector({
           </div>
         </button>
 
-        {fights.map((fight) => (
+        {visibleFights.map((fight) => (
           <button
             key={fight.id}
             type="button"
@@ -294,6 +306,28 @@ function FightSelector({
             </div>
           </button>
         ))}
+
+        {hiddenFightCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowAllFights(true)}
+            className="rounded-2xl border border-sky-400/20 bg-sky-500/[0.05] p-4 text-left text-xs font-bold uppercase tracking-wider text-sky-300 transition hover:bg-sky-500/[0.1]"
+          >
+            Show {hiddenFightCount} more fights
+            <div className="mt-2 text-[11px] normal-case leading-5 tracking-normal text-slate-500">Loads the remaining fight cards on demand.</div>
+          </button>
+        )}
+
+        {showAllFights && fights.length > FIGHT_SELECTOR_PREVIEW_COUNT && (
+          <button
+            type="button"
+            onClick={() => setShowAllFights(false)}
+            className="rounded-2xl border border-white/[0.06] bg-black/25 p-4 text-left text-xs font-bold uppercase tracking-wider text-slate-400 transition hover:border-white/15 hover:text-slate-200"
+          >
+            Collapse fight list
+            <div className="mt-2 text-[11px] normal-case leading-5 tracking-normal text-slate-500">Keeps the selected fight active and unloads extra cards.</div>
+          </button>
+        )}
       </div>
     </section>
   );
@@ -525,7 +559,15 @@ function CriticalEventCard({ event, fightContext }: { event: CriticalEvent; figh
 export default function IntelligenceDebugView() {
   const { report } = useReport();
   const [selectedFightId, setSelectedFightId] = useState(ALL_FIGHTS_ID);
+  const [expandedSections, setExpandedSections] = useState<Record<ExpandableSection, boolean>>({
+    findings: false,
+    criticalEvents: false,
+  });
   const dashboard = useMemo(() => (report ? buildIntelligenceDashboard(report) : null), [report]);
+
+  function toggleSection(section: ExpandableSection) {
+    setExpandedSections((current) => ({ ...current, [section]: !current[section] }));
+  }
 
   if (!report || !dashboard) {
     return (
@@ -561,6 +603,8 @@ export default function IntelligenceDebugView() {
     : dashboard.actions.filter((action: IntelligenceAction) => action.basedOn.some((id) => scopedFindingIds.has(id)));
   const topEngagements = scopedEngagements.slice(0, 3);
   const highestPressure = scopedEngagements[0];
+  const visibleFindings = expandedSections.findings ? scopedFindings : scopedFindings.slice(0, FINDINGS_PREVIEW_COUNT);
+  const visibleCriticalEvents = expandedSections.criticalEvents ? scopedCriticalEvents : scopedCriticalEvents.slice(0, CRITICAL_EVENTS_PREVIEW_COUNT);
   const scopedTotals = {
     downs: scopedEngagements.reduce((sum, engagement) => sum + engagement.downs, 0),
     deaths: scopedEngagements.reduce((sum, engagement) => sum + engagement.deaths, 0),
@@ -712,26 +756,44 @@ export default function IntelligenceDebugView() {
         <div className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Findings</h3>
-            <Pill>{scopedFindings.length} findings</Pill>
+            <Pill>{visibleFindings.length}/{scopedFindings.length} loaded</Pill>
           </div>
           <div className="mt-4 grid gap-3">
-            {scopedFindings.length > 0 ? scopedFindings.map((finding) => (
+            {scopedFindings.length > 0 ? visibleFindings.map((finding) => (
               <FindingCard key={finding.id} finding={finding} fightContext={fightContextFor(fightContexts, finding.relatedFight)} />
             )) : <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}
           </div>
+          {scopedFindings.length > FINDINGS_PREVIEW_COUNT && (
+            <button
+              type="button"
+              onClick={() => toggleSection("findings")}
+              className="mt-4 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-300 transition hover:border-sky-400/30 hover:text-sky-300"
+            >
+              {expandedSections.findings ? "Collapse findings" : `Show all ${scopedFindings.length} findings`}
+            </button>
+          )}
         </div>
 
         <div className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Critical event feed</h3>
-            <Pill>{scopedCriticalEvents.length} events</Pill>
+            <Pill>{visibleCriticalEvents.length}/{scopedCriticalEvents.length} loaded</Pill>
           </div>
           <div className="mt-4 grid max-h-[720px] gap-2 overflow-y-auto pr-1 custom-scrollbar">
-            {scopedCriticalEvents.slice(0, 16).map((event) => (
+            {visibleCriticalEvents.map((event) => (
               <CriticalEventCard key={event.id} event={event} fightContext={fightContextFor(fightContexts, event.fightId)} />
             ))}
             {scopedCriticalEvents.length === 0 && <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}
           </div>
+          {scopedCriticalEvents.length > CRITICAL_EVENTS_PREVIEW_COUNT && (
+            <button
+              type="button"
+              onClick={() => toggleSection("criticalEvents")}
+              className="mt-4 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-300 transition hover:border-sky-400/30 hover:text-sky-300"
+            >
+              {expandedSections.criticalEvents ? "Collapse event feed" : `Show all ${scopedCriticalEvents.length} events`}
+            </button>
+          )}
         </div>
       </section>
     </div>
