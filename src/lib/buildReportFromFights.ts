@@ -119,13 +119,18 @@ import type {
 // that version produced - updating the app does not retroactively fix it.
 // Bump this whenever a change alters computed output, so the UI can tell the
 // user to re-import instead of silently showing them stale figures.
-export const METRICS_VERSION = 'entropy-raw-v3';
+export const METRICS_VERSION = 'entropy-raw-v4';
 
 const NATURAL_FORTITUDE_SYNTHETIC_SKILL_ID = -1001779;
 const NATURAL_FORTITUDE_DAMAGE_PER_UNLEASHED_SKILL_HIT = 1779;
 const NATURAL_FORTITUDE_TRAIT_NAME = 'Natural Fortitude';
 const NATURAL_FORTITUDE_TRAIT_ICON = 'https://wiki.guildwars2.com/wiki/Special:FilePath/Natural%20Fortitude.png';
-const SAVAGE_SLASH_SKILL_NAME = 'Savage Slash';
+const NATURAL_FORTITUDE_TRIGGER_SKILLS: Record<string, { divisor: number }> = {
+    'Savage Slash': { divisor: 1 },
+    'Solar Brilliance': { divisor: 6 },
+    'Relentless Whirl': { divisor: 5 },
+    'Rampant Growth': { divisor: 1 },
+};
 
 export interface FightInput {
     summary: RawFightSummary;
@@ -225,17 +230,18 @@ function computeNaturalFortitudeDamage(fights: FightInput[]): NaturalFortitudeDa
     for (const f of fights) {
         const raw = f.raw as Record<string, unknown>;
         const skillMap = (raw.skillMap ?? {}) as Record<string, { name?: string }>;
-        const savageSlashIds = new Set<number>();
+        const triggerSkillIds = new Map<number, { divisor: number }>();
 
         for (const key of Object.keys(skillMap)) {
             const id = Number(key.replace(/^s/, ''));
             const name = String(skillMap[key]?.name || '').trim();
-            if (Number.isFinite(id) && name === SAVAGE_SLASH_SKILL_NAME) {
-                savageSlashIds.add(id);
+            const rule = NATURAL_FORTITUDE_TRIGGER_SKILLS[name];
+            if (Number.isFinite(id) && rule) {
+                triggerSkillIds.set(id, rule);
             }
         }
 
-        if (savageSlashIds.size === 0) continue;
+        if (triggerSkillIds.size === 0) continue;
 
         const players = (raw.players ?? []) as Record<string, unknown>[];
         for (const p of players) {
@@ -245,8 +251,12 @@ function computeNaturalFortitudeDamage(fights: FightInput[]): NaturalFortitudeDa
 
             for (const entry of outDist[0] ?? []) {
                 const id = Number(entry?.id);
-                if (!Number.isFinite(id) || !savageSlashIds.has(id)) continue;
-                playerHits += Number(entry?.connectedHits ?? entry?.hits) || 0;
+                if (!Number.isFinite(id)) continue;
+                const rule = triggerSkillIds.get(id);
+                if (!rule) continue;
+                const hits = Number(entry?.connectedHits ?? entry?.hits) || 0;
+                if (hits <= 0) continue;
+                playerHits += Math.floor(hits / rule.divisor);
             }
 
             if (playerHits <= 0) continue;
