@@ -99,7 +99,7 @@ export default function ReplayView() {
     if (commanderPt) return commanderPt;
     const pts = squadAlive
       .map((p) => interpolatePosition(p.points, t))
-      .filter((pt): pt is { x: number; y: number } => !!pt);
+      .filter((pt): pt is NonNullable<ReturnType<typeof interpolatePosition>> => !!pt);
     if (pts.length === 0) return null;
     return {
       x: pts.reduce((sum, pt) => sum + pt.x, 0) / pts.length,

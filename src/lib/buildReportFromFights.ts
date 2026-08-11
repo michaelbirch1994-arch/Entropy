@@ -12,7 +12,7 @@
 // see THIRD_PARTY_NOTICES.md and the "Phase 2 full parity" scoping note.
 
 import { computePlayerAggregation, type PlayerStats } from './bridge-metrics/computePlayerAggregation';
-import type { HealingCoverage, PlayerSkillBreakdown, PlayerSkillSource, TopHealingSource, TopSkill } from '../types/report';
+import type { HealingCoverage, PlayerSkillBreakdown, PlayerSkillSource } from '../types/report';
 import { computeAllIncomingHealing, type IncomingHealingBreakdown } from './bridge-metrics/incomingHealing';
 import { normalizeDeathEvents } from './combat/normalizeDeaths';
 import { detectFailedRecoveries, detectMassDowns } from './intelligence/criticalEvents';
