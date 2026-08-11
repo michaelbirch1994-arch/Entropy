@@ -134,6 +134,15 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(Array.isArray(report.stats.buffGeneration)).toBe(true);
            });
 
+           it('populates per-fight effective-healing drilldown skill sources', () => {
+                 const firstFight = report.stats.fightBreakdown[0];
+                 expect(firstFight).toBeTruthy();
+                 expect(firstFight.topIncomingDamageSkills?.length).toBeGreaterThan(0);
+                 expect(firstFight.topOutgoingHealingSkills?.length).toBeGreaterThan(0);
+                 expect(firstFight.topIncomingDamageSkills![0].name).toBeTruthy();
+                 expect(firstFight.topOutgoingHealingSkills![0].name).toBeTruthy();
+           });
+
            it('never crashes building death recaps even with no deaths in a short log', () => {
                  expect(Array.isArray(report.stats.deathRecaps)).toBe(true);
            });
