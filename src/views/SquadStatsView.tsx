@@ -6,7 +6,7 @@ import StatCard from "../components/ui/StatCard";
 import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped } from "../utils/format";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 import { Users, Swords, Shield, Heart, Zap, Target, Activity, Crosshair, Gauge, MapPin } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, ReferenceLine, ScatterChart, Scatter, ZAxis } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, ReferenceLine } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } from "../utils/chartTheme";
 import type { GeneralPlayer, HealingPlayer, HealingCoverage, OffensePlayer, DefensePlayer } from "../types/report";
 
@@ -57,6 +57,11 @@ function pct(value: number) {
   return `${Math.round(value * 100)}%`;
 }
 
+function normalizeScore(value: number, max: number) {
+  if (!Number.isFinite(value) || value <= 0 || max <= 0) return 0;
+  return Math.round((value / max) * 100);
+}
+
 function distanceTone(distance: number) {
   if (distance <= 600) return { label: "tight", dot: "bg-emerald-400", text: "text-emerald-300", border: "border-emerald-500/30", fill: "bg-emerald-500/10" };
   if (distance <= 1200) return { label: "wide", dot: "bg-amber-400", text: "text-amber-300", border: "border-amber-500/30", fill: "bg-amber-500/10" };
@@ -70,11 +75,14 @@ function buildPressureRows(players: OffensePlayer[], scope: ReturnType<typeof us
     const enemyDowns = p.offenseTotals.downed ?? 0;
     const kills = p.offenseTotals.killed ?? 0;
     const dps = safeDiv(damage, p.totalFightMs / 1000);
-    const pressureScore = downContribution + enemyDowns * 25000 + kills * 15000;
-    return { account: p.account, profession: p.profession, damage, dps, downContribution, enemyDowns, kills, pressureScore };
-  }).sort((a, b) => b.pressureScore - a.pressureScore);
-  const max = Math.max(...base.map((p) => p.pressureScore), 1);
-  return base.map((p) => ({ ...p, pressurePct: safeDiv(p.pressureScore, max) }));
+    // Kill Pressure is intentionally not "total damage." It rewards damage
+    // that helps force downs/kills, with a smaller baseline for sustained
+    // player-vs-player pressure so finishers do not erase the setup work.
+    const pressureRaw = downContribution + enemyDowns * 50000 + kills * 80000 + damage * 0.05;
+    return { account: p.account, profession: p.profession, damage, dps, downContribution, enemyDowns, kills, pressureRaw };
+  }).sort((a, b) => b.pressureRaw - a.pressureRaw);
+  const max = Math.max(...base.map((p) => p.pressureRaw), 1);
+  return base.map((p) => ({ ...p, pressureScore: normalizeScore(p.pressureRaw, max), pressurePct: safeDiv(p.pressureRaw, max) }));
 }
 
 function buildHealingRows(healers: HealingPlayer[], defenders: DefensePlayer[], allyScope: ReturnType<typeof useAllyScope>["scope"]) {
@@ -83,8 +91,9 @@ function buildHealingRows(healers: HealingPlayer[], defenders: DefensePlayer[], 
     const healing = pickAllyScopeValue(allyScope, h.healingTotals.healing, h.healingTotals.squadHealing);
     const barrier = pickAllyScopeValue(allyScope, h.healingTotals.barrier, h.healingTotals.squadBarrier);
     const downedHealing = pickAllyScopeValue(allyScope, h.healingTotals.downedHealing, h.healingTotals.squadDownedHealing);
-    const sustain = healing + barrier + downedHealing;
+    const sustain = healing + barrier;
     const taken = defenseByAccount.get(h.account)?.defenseTotals.damageTaken ?? 0;
+    const effectiveHealing = sustain - taken;
     const coverage: HealingCoverage = h.healingCoverage ?? (h.hasHealAddon ? "full" : sustain > 0 ? "partial" : "none");
     return {
       account: h.account,
@@ -94,10 +103,11 @@ function buildHealingRows(healers: HealingPlayer[], defenders: DefensePlayer[], 
       downedHealing,
       sustain,
       taken,
-      effectiveness: safeDiv(sustain, taken),
+      effectiveHealing,
+      effectiveness: safeDiv(effectiveHealing, taken),
       coverage,
     };
-  }).filter((r) => r.sustain > 0 || r.taken > 0).sort((a, b) => b.sustain - a.sustain);
+  }).filter((r) => r.sustain > 0 || r.taken > 0).sort((a, b) => b.effectiveHealing - a.effectiveHealing);
 }
 
 function buildDistanceRows(players: GeneralPlayer[]) {
@@ -151,20 +161,39 @@ const { scope: allyScope } = useAllyScope();
   const chartData = topDps.map((p) => ({ name: p.account.split(".")[0], DPS: Math.round(p.dps), profession: p.profession }));
   const pressureRows = buildPressureRows(s.offensePlayers, scope);
   const topPressureRows = pressureRows.slice(0, 8);
-  const pressureChartData = s.fightBreakdown.slice(0, 40).map((fight, index) => ({
-    name: fight.label || `F${index + 1}`,
-    damage: Math.round((fight.totalOutgoingDamage ?? 0) / 1000000),
-    downs: fight.enemyDowns ?? 0,
-    kills: fight.enemyDeaths ?? 0,
-    score: Math.round((fight.enemyDowns ?? 0) * 2 + (fight.enemyDeaths ?? 0) * 3 + safeDiv(fight.totalOutgoingDamage ?? 0, 1000000)),
+  const pressureChartRaw = s.fightBreakdown.slice(0, 40).map((fight, index) => {
+    const raw = (fight.totalOutgoingDamage ?? 0) * 0.05 + (fight.enemyDowns ?? 0) * 50000 + (fight.enemyDeaths ?? 0) * 80000;
+    return {
+      name: fight.label || `F${index + 1}`,
+      damage: Math.round((fight.totalOutgoingDamage ?? 0) / 1000000),
+      downs: fight.enemyDowns ?? 0,
+      kills: fight.enemyDeaths ?? 0,
+      raw,
+    };
+  });
+  const maxFightPressure = Math.max(...pressureChartRaw.map((fight) => fight.raw), 1);
+  const pressureChartData = pressureChartRaw.map((fight) => ({
+    ...fight,
+    score: normalizeScore(fight.raw, maxFightPressure),
   }));
   const healingRows = buildHealingRows(s.healingPlayers, s.defensePlayers, allyScope);
   const topHealingRows = healingRows.slice(0, 8);
   const totalDamageTaken = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
-  const sustainTotal = totalHealing + totalBarrier;
-  const healingEffectiveness = safeDiv(sustainTotal, totalDamageTaken);
-  const fullCoverageCount = healingRows.filter((r) => r.coverage === "full").length;
-  const partialCoverageCount = healingRows.filter((r) => r.coverage === "partial").length;
+  const effectiveHealingTotal = totalHealing + totalBarrier - totalDamageTaken;
+  const healingEffectiveness = safeDiv(effectiveHealingTotal, totalDamageTaken);
+  const healingChartData = s.fightBreakdown.slice(0, 40).map((fight, index) => {
+    const healing = Number(fight.totalOutgoingHealing ?? 0);
+    const barrier = Number(fight.totalOutgoingBarrier ?? fight.incomingBarrierAbsorbed ?? 0);
+    const incomingDamage = Number(fight.totalIncomingDamage ?? 0);
+    return {
+      name: fight.label || `F${index + 1}`,
+      healing,
+      barrier,
+      incomingDamage,
+      effectiveHealing: Number(fight.effectiveHealing ?? (healing + barrier - incomingDamage)),
+    };
+  });
+  const hasPerFightHealing = s.fightBreakdown.some((fight) => typeof fight.totalOutgoingHealing === "number");
   const distanceRows = buildDistanceRows(s.generalPlayers);
   const topDistanceRows = distanceRows.slice(0, 10);
   const averageTagDistance = safeDiv(
@@ -190,17 +219,17 @@ const { scope: allyScope } = useAllyScope();
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <StatCard
           label="Kill Pressure"
-          value={pressureLeader ? fmtCompact(pressureLeader.pressureScore) : "n/a"}
+          value={pressureLeader ? `${pressureLeader.pressureScore}/100` : "n/a"}
           icon={<Crosshair className="w-3.5 h-3.5 text-rose-400" />}
           accent="text-rose-300"
           sub={pressureLeader ? `${pressureLeader.account} · ${fmtCompact(pressureLeader.downContribution)} down contribution` : "No pressure data available"}
         />
         <StatCard
           label="Healing Effectiveness"
-          value={totalDamageTaken > 0 ? pct(healingEffectiveness) : "n/a"}
+          value={totalDamageTaken > 0 ? fmtCompact(effectiveHealingTotal) : "n/a"}
           icon={<Activity className="w-3.5 h-3.5 text-emerald-400" />}
-          accent="text-emerald-300"
-          sub={`${fullCoverageCount} full coverage · ${partialCoverageCount} lower-bound`}
+          accent={effectiveHealingTotal >= 0 ? "text-emerald-300" : "text-rose-300"}
+          sub={`healing + barrier - incoming · ${pct(healingEffectiveness)} of incoming`}
         />
         <StatCard
           label="Distance to Tag"
@@ -229,7 +258,7 @@ const { scope: allyScope } = useAllyScope();
                     <YAxis tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" />
                     <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
                     <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />
-                    <Line type="monotone" dataKey="score" name="Pressure Score" stroke="#fb7185" strokeWidth={2.25} dot={{ r: 2 }} />
+                    <Line type="monotone" dataKey="score" name="Pressure Score / 100" stroke="#fb7185" strokeWidth={2.25} dot={{ r: 2 }} />
                     <Line type="monotone" dataKey="downs" name="Enemy Downs" stroke="#38bdf8" strokeWidth={1.75} dot={{ r: 2 }} />
                     <Line type="monotone" dataKey="kills" name="Enemy Kills" stroke="#f59e0b" strokeWidth={1.75} dot={{ r: 2 }} />
                   </LineChart>
@@ -248,7 +277,7 @@ const { scope: allyScope } = useAllyScope();
                       <ProfessionIcon profession={p.profession} className="h-4 w-4 shrink-0" />
                       <div className="truncate text-sm font-bold text-slate-200">{p.account}</div>
                     </div>
-                    <div className="font-mono text-sm font-black text-rose-300">{fmtCompact(p.pressureScore)}</div>
+                    <div className="font-mono text-sm font-black text-rose-300">{p.pressureScore}/100</div>
                   </div>
                   <div className="mt-2">
                     <MetricBar value={p.pressurePct} tone="bg-rose-400" />
@@ -257,6 +286,9 @@ const { scope: allyScope } = useAllyScope();
                     <span>Downs <b className="text-sky-300">{fmtNum(p.enemyDowns)}</b></span>
                     <span>Kills <b className="text-amber-300">{fmtNum(p.kills)}</b></span>
                     <span>Down C. <b className="text-rose-300">{fmtCompact(p.downContribution)}</b></span>
+                  </div>
+                  <div className="mt-2 text-[10px] uppercase tracking-wider text-slate-600">
+                    Down contribution + downs + kills + 5% damage, normalized to leader
                   </div>
                 </div>
               )) : (
@@ -270,44 +302,41 @@ const { scope: allyScope } = useAllyScope();
 
         <Panel
           title="Healing Effectiveness"
-          subtitle="Sustain output compared against the squad damage environment. Healing coverage still matters."
+          subtitle="Effective healing is healing + barrier - incoming damage. Lines connect fights so spikes and sustain gaps are visible."
           icon={<Activity className="w-4 h-4" />}
           accent="text-emerald-400"
-          action={totalDamageTaken > 0 ? `${pct(healingEffectiveness)} sustain / incoming` : "no incoming"}
+          action={totalDamageTaken > 0 ? `${fmtCompact(effectiveHealingTotal)} effective` : "no incoming"}
         >
           <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.95fr] gap-5">
             <div className="h-72">
-              {healingRows.length ? (
+              {healingChartData.length ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <ScatterChart margin={{ left: 8, right: 18, top: 12, bottom: 8 }}>
+                  <LineChart data={healingChartData} margin={{ left: 8, right: 18, top: 12, bottom: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                     <XAxis
-                      type="number"
-                      dataKey="taken"
-                      name="Damage Taken"
-                      tickFormatter={(v) => fmtCompact(Number(v))}
+                      dataKey="name"
                       tick={{ fill: "#64748b", fontSize: 10 }}
                       stroke="#334155"
+                      interval="preserveStartEnd"
                     />
                     <YAxis
-                      type="number"
-                      dataKey="sustain"
-                      name="Healing + Barrier"
                       tickFormatter={(v) => fmtCompact(Number(v))}
                       tick={{ fill: "#64748b", fontSize: 10 }}
                       stroke="#334155"
                     />
-                    <ZAxis type="number" dataKey="effectiveness" range={[50, 180]} />
                     <Tooltip
                       contentStyle={TOOLTIP_STYLE}
                       itemStyle={TOOLTIP_ITEM_STYLE}
                       labelStyle={TOOLTIP_LABEL_STYLE}
                       formatter={(value, name) => [typeof value === "number" ? fmtCompact(value) : value, name]}
-                      cursor={{ strokeDasharray: "3 3" }}
                     />
                     <ReferenceLine y={0} stroke="#334155" />
-                    <Scatter name="Players" data={healingRows} fill="#34d399" />
-                  </ScatterChart>
+                    <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />
+                    <Line type="monotone" dataKey="healing" name="Healing" stroke="#34d399" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                    <Line type="monotone" dataKey="barrier" name={hasPerFightHealing ? "Barrier" : "Barrier Absorbed"} stroke="#2dd4bf" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                    <Line type="monotone" dataKey="incomingDamage" name="Incoming Damage" stroke="#fb7185" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                    <Line type="monotone" dataKey="effectiveHealing" name="Effective Healing" stroke="#f8fafc" strokeWidth={2.5} dot={{ r: 2 }} connectNulls />
+                  </LineChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="h-full rounded-xl border border-dashed border-slate-800 flex items-center justify-center text-xs text-slate-500">
@@ -316,6 +345,11 @@ const { scope: allyScope } = useAllyScope();
               )}
             </div>
             <div className="space-y-3">
+              <div className="rounded-xl border border-slate-800/70 bg-[#080d19]/70 p-3 text-xs text-slate-400">
+                {hasPerFightHealing
+                  ? "This report includes exact per-fight outgoing healing/barrier layers."
+                  : "This report was built before per-fight outgoing healing existed; exact fight-by-fight healing appears after reparsing with this build."}
+              </div>
               {topHealingRows.length ? topHealingRows.map((p) => {
                 const tone = p.coverage === "full" ? "text-emerald-300" : p.coverage === "partial" ? "text-amber-300" : "text-slate-500";
                 return (
@@ -325,12 +359,16 @@ const { scope: allyScope } = useAllyScope();
                         <ProfessionIcon profession={p.profession} className="h-4 w-4 shrink-0" />
                         <div className="truncate text-sm font-bold text-slate-200">{p.account}</div>
                       </div>
-                      <div className={`font-mono text-xs uppercase tracking-wider ${tone}`}>{p.coverage}</div>
+                      <div className={`font-mono text-xs uppercase tracking-wider ${tone}`}>{fmtCompact(p.effectiveHealing)}</div>
                     </div>
                     <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
                       <span>Heal <b className="text-emerald-300">{fmtCompact(p.healing)}</b></span>
                       <span>Barrier <b className="text-teal-300">{fmtCompact(p.barrier)}</b></span>
-                      <span>Ratio <b className="text-slate-200">{pct(p.effectiveness)}</b></span>
+                      <span>Incoming <b className="text-rose-300">{fmtCompact(p.taken)}</b></span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-500">
+                      <span>{p.coverage} coverage</span>
+                      <span>heal + barrier - incoming</span>
                     </div>
                   </div>
                 );
