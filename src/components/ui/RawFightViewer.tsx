@@ -4,6 +4,7 @@ import { extractFightPlayers, type RawFightLog, type RawFightSummary } from "../
 import { fmtCompact, profChip } from "../../utils/format";
 import StatCard from "./StatCard";
 import Panel from "./Panel";
+import ClassIcon from "./ClassIcon";
 
 type SortKey = "dps" | "damage" | "damageTaken" | "downCount" | "deadCount" | "cleanses" | "strips" | "resurrects";
 
@@ -150,7 +151,8 @@ export default function RawFightViewer({ summary, log, onClose }: RawFightViewer
                         )}
                       </td>
                       <td className="px-3 py-2">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(p.profession)}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(p.profession)}`}>
+                          <ClassIcon name={p.profession} size="xs" />
                           {p.profession}
                         </span>
                       </td>
