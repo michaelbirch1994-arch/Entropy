@@ -1562,6 +1562,7 @@ function computeFightTables(fights: FightInput[]): {
           statsAll?: Array<{ killed?: number; downed?: number; totalDamage?: number; boonStrips?: number }>;
           support?: Array<{ boonStrips?: number; condiCleanse?: number }>;
           totalDamageTaken?: Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number }>>;
+          totalDamageTakenDist?: Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number }>>;
           extHealingStats?: {
                   outgoingHealing?: Array<{ healing?: number }>;
                   outgoingHealingAllies?: Array<Array<{ healing?: number }>>;
@@ -1651,7 +1652,7 @@ function computeFightTables(fights: FightInput[]): {
                 healingSkillTotals.set(id, current);
         };
         for (const p of squad) {
-                p.totalDamageTaken?.[0]?.forEach(pushIncoming);
+                (p.totalDamageTaken?.[0] ?? p.totalDamageTakenDist?.[0])?.forEach(pushIncoming);
                 p.extHealingStats?.totalHealingDist?.[0]?.forEach((entry) => pushHealing(entry, 'totalHealing'));
                 p.extBarrierStats?.totalBarrierDist?.[0]?.forEach((entry) => pushHealing(entry, 'totalBarrier'));
         }
