@@ -12,7 +12,7 @@
 // see THIRD_PARTY_NOTICES.md and the "Phase 2 full parity" scoping note.
 
 import { computePlayerAggregation, type PlayerStats } from './bridge-metrics/computePlayerAggregation';
-import type { HealingCoverage } from '../types/report';
+import type { HealingCoverage, PlayerSkillBreakdown, PlayerSkillSource } from '../types/report';
 import { computeAllIncomingHealing, type IncomingHealingBreakdown } from './bridge-metrics/incomingHealing';
 import { normalizeDeathEvents } from './combat/normalizeDeaths';
 import { detectFailedRecoveries, detectMassDowns } from './intelligence/criticalEvents';
@@ -68,6 +68,62 @@ function mergeSurvivalSupport(perLog: IncomingHealingBreakdown[][]): IncomingHea
         bd.contributorsAvailable = bd.contributors.length > 0;
   }
     return [...byAccount.values()].sort((a, b) => b.healed - a.healed);
+}
+
+function topPlayerSources<T>(
+    map: Map<string, T>,
+    valueKey: keyof T,
+    limit = 5,
+): PlayerSkillSource[] {
+    return Array.from(map.values())
+        .map((entry: any) => ({
+            id: String(entry.id ?? ''),
+            name: String(entry.name ?? 'Unknown Skill'),
+            icon: entry.icon,
+            value: Number(entry[valueKey] ?? entry.total ?? 0),
+            hits: Number(entry.hits ?? 0),
+            downContribution: Number(entry.downContribution ?? 0),
+        }))
+        .filter((entry) => Number.isFinite(entry.value) && entry.value > 0)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, limit);
+}
+
+function serializePlayerSkillBreakdowns(
+    agg: ReturnType<typeof computePlayerAggregation>,
+): Record<string, PlayerSkillBreakdown> {
+    const out: Record<string, PlayerSkillBreakdown> = {};
+
+    for (const bd of agg.playerSkillBreakdownMap.values()) {
+        const key = bd.profession && bd.profession !== 'Unknown' ? `${bd.account}::${bd.profession}` : bd.account;
+        out[key] = {
+            account: bd.account,
+            profession: bd.profession,
+            professionList: bd.professionList,
+            damage: topPlayerSources(bd.skills, 'damage'),
+            healing: [],
+            barrier: [],
+        };
+        if (!out[bd.account]) out[bd.account] = out[key];
+    }
+
+    for (const bd of agg.healingBreakdownMap.values()) {
+        const key = bd.profession && bd.profession !== 'Unknown' ? `${bd.account}::${bd.profession}` : bd.account;
+        const existing = out[key] ?? {
+            account: bd.account,
+            profession: bd.profession,
+            professionList: bd.professionList,
+            damage: [],
+            healing: [],
+            barrier: [],
+        };
+        existing.healing = topPlayerSources(bd.healingSkills, 'total');
+        existing.barrier = topPlayerSources(bd.barrierSkills, 'total');
+        out[key] = existing;
+        if (!out[bd.account]) out[bd.account] = existing;
+    }
+
+    return out;
 }
 
 /**
@@ -1505,13 +1561,16 @@ function computeFightTables(fights: FightInput[]): {
           defenses?: Array<{ downCount?: number; deadCount?: number; damageTaken?: number; damageBarrier?: number }>;
           statsAll?: Array<{ killed?: number; downed?: number; totalDamage?: number; boonStrips?: number }>;
           support?: Array<{ boonStrips?: number; condiCleanse?: number }>;
+          totalDamageTaken?: Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number }>>;
           extHealingStats?: {
                   outgoingHealing?: Array<{ healing?: number }>;
                   outgoingHealingAllies?: Array<Array<{ healing?: number }>>;
+                  totalHealingDist?: Array<Array<{ id?: number; totalHealing?: number; healing?: number; hits?: number }>>;
           };
           extBarrierStats?: {
                   outgoingBarrier?: Array<{ barrier?: number }>;
                   outgoingBarrierAllies?: Array<Array<{ barrier?: number }>>;
+                  totalBarrierDist?: Array<Array<{ id?: number; totalBarrier?: number; barrier?: number; hits?: number }>>;
           };
     };
 
@@ -1564,6 +1623,54 @@ function computeFightTables(fights: FightInput[]): {
         const mapName = String(raw.fightName || raw.name || "Unknown Map");
         const timestamp = Date.parse((raw.timeStartStd as string) ?? "") || 0;
         const isWin = !!raw.success;
+        const skillMap = (raw.skillMap ?? {}) as Record<string, { name?: string; icon?: string }>;
+        const buffMap = (raw.buffMap ?? {}) as Record<string, { name?: string; icon?: string }>;
+        const resolveMeta = (id: number) => {
+                const def = skillMap[`s${id}`] ?? buffMap[`b${id}`];
+                return {
+                        name: String(def?.name || `Skill ${id}`),
+                        icon: def?.icon,
+                };
+        };
+        const incomingSkillTotals = new Map<number, { damage: number; hits: number }>();
+        const healingSkillTotals = new Map<number, { healing: number; hits: number }>();
+        const pushIncoming = (entry: any) => {
+                const id = Number(entry?.id);
+                if (!Number.isFinite(id)) return;
+                const current = incomingSkillTotals.get(id) ?? { damage: 0, hits: 0 };
+                current.damage += Number(entry?.totalDamage ?? 0);
+                current.hits += Number(entry?.connectedHits ?? entry?.hits ?? 0);
+                incomingSkillTotals.set(id, current);
+        };
+        const pushHealing = (entry: any, valueField: string) => {
+                const id = Number(entry?.id);
+                if (!Number.isFinite(id)) return;
+                const current = healingSkillTotals.get(id) ?? { healing: 0, hits: 0 };
+                current.healing += Number(entry?.[valueField] ?? entry?.healing ?? 0);
+                current.hits += Number(entry?.hits ?? 0);
+                healingSkillTotals.set(id, current);
+        };
+        for (const p of squad) {
+                p.totalDamageTaken?.[0]?.forEach(pushIncoming);
+                p.extHealingStats?.totalHealingDist?.[0]?.forEach((entry) => pushHealing(entry, 'totalHealing'));
+                p.extBarrierStats?.totalBarrierDist?.[0]?.forEach((entry) => pushHealing(entry, 'totalBarrier'));
+        }
+        const topIncomingDamageSkills: TopSkill[] = Array.from(incomingSkillTotals.entries())
+                .map(([id, total]) => {
+                        const meta = resolveMeta(id);
+                        return { id, name: meta.name, icon: meta.icon, damage: total.damage, hits: total.hits, downContribution: 0 };
+                })
+                .filter((entry) => entry.damage > 0)
+                .sort((a, b) => b.damage - a.damage)
+                .slice(0, 10);
+        const topOutgoingHealingSkills: TopHealingSource[] = Array.from(healingSkillTotals.entries())
+                .map(([id, total]) => {
+                        const meta = resolveMeta(id);
+                        return { id, name: meta.name, icon: meta.icon, healing: total.healing, hits: total.hits, isTrait: false };
+                })
+                .filter((entry) => entry.healing > 0)
+                .sort((a, b) => b.healing - a.healing)
+                .slice(0, 10);
 
                      mapCounts.set(mapName, (mapCounts.get(mapName) || 0) + 1);
 
@@ -1591,6 +1698,8 @@ function computeFightTables(fights: FightInput[]): {
                              totalOutgoingHealing: outHealing,
                              totalOutgoingBarrier: outBarrier,
                              effectiveHealing: outHealing + outBarrier - inDamage,
+                             topOutgoingHealingSkills,
+                             topIncomingDamageSkills,
                              totalOutgoingStrips: outStrips,
                              totalIncomingStrips: 0,
                              totalBoonsApplied: 0,
@@ -1927,6 +2036,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
         synergyInsights: computeSynergyInsights(playerEntries, buffCategoryUptimes, roleClassifications, totalSquadKills, totalSquadDeaths, avgSquadSize),
         mechanics: computeMechanicsTimeline(fights),
         topHealingSkills: computeTopHealingSkills(fights),
+        playerSkillBreakdowns: serializePlayerSkillBreakdowns(agg),
         deathRecaps: computeDeathRecaps(fights),
         fightHighlights: computeFightHighlights(fights),
         criticalEvents: persistedIntelligence.criticalEvents,

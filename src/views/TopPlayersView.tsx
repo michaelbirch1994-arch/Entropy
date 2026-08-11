@@ -5,7 +5,7 @@ import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
 import Panel from "../components/ui/Panel";
 import LeaderboardTable from "../components/ui/LeaderboardTable";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
-import type { DefensePlayer, HealingPlayer, LeaderboardEntry, OffensePlayer, SupportPlayer } from "../types/report";
+import type { DefensePlayer, HealingPlayer, LeaderboardEntry, OffensePlayer, PlayerSkillBreakdown, SupportPlayer } from "../types/report";
 import { fmtCompact, fmtNum, profChip, profStyle } from "../utils/format";
 import { ChevronDown, ChevronUp, Trophy, Swords, Heart, Shield, Zap, Droplet, Target, Wind } from "lucide-react";
 
@@ -51,6 +51,8 @@ type SourceRow = {
   label: string;
   value: number;
   tone: string;
+  icon?: string;
+  hits?: number;
 };
 
 type PlayerSourceBreakdown = {
@@ -61,10 +63,10 @@ type PlayerSourceBreakdown = {
   defense: SourceRow[];
 };
 
-function positiveRow(label: string, value: number | undefined, tone: string): SourceRow | null {
+function positiveRow(label: string, value: number | undefined, tone: string, icon?: string, hits?: number): SourceRow | null {
   const numeric = Number(value ?? 0);
   if (!Number.isFinite(numeric) || numeric <= 0) return null;
-  return { label, value: numeric, tone };
+  return { label, value: numeric, tone, icon, hits };
 }
 
 function rows(...items: Array<SourceRow | null>) {
@@ -73,6 +75,11 @@ function rows(...items: Array<SourceRow | null>) {
 
 function findLeaderboardValue(leaderboards: Record<string, LeaderboardEntry[]>, key: string, account: string) {
   return leaderboards[key]?.find((entry) => entry.account === account)?.value ?? 0;
+}
+
+function findPlayerSkillBreakdown(reportBreakdowns: Record<string, PlayerSkillBreakdown> | undefined, entry: LeaderboardEntry) {
+  if (!reportBreakdowns) return undefined;
+  return reportBreakdowns[`${entry.account}::${entry.profession}`] ?? reportBreakdowns[entry.account];
 }
 
 function buildPlayerSourceBreakdown({
@@ -84,6 +91,7 @@ function buildPlayerSourceBreakdown({
   leaderboards,
   damageScope,
   allyScope,
+  skillBreakdown,
 }: {
   account: string;
   offense?: OffensePlayer;
@@ -93,6 +101,7 @@ function buildPlayerSourceBreakdown({
   leaderboards: Record<string, LeaderboardEntry[]>;
   damageScope: ReturnType<typeof useDamageScope>["scope"];
   allyScope: ReturnType<typeof useAllyScope>["scope"];
+  skillBreakdown?: PlayerSkillBreakdown;
 }): PlayerSourceBreakdown {
   const offenseTotals = offense?.offenseTotals;
   const healingTotals = healing?.healingTotals;
@@ -104,6 +113,7 @@ function buildPlayerSourceBreakdown({
 
   return {
     damage: rows(
+      ...(skillBreakdown?.damage.slice(0, 5).map((skill) => positiveRow(skill.name, skill.value, "bg-orange-400", skill.icon, skill.hits)) ?? []),
       positiveRow("Total damage", damage, "bg-orange-400"),
       positiveRow("Direct damage", offenseTotals?.directDmg, "bg-amber-400"),
       positiveRow("Critical damage", offenseTotals?.criticalDmg, "bg-yellow-300"),
@@ -113,6 +123,7 @@ function buildPlayerSourceBreakdown({
       positiveRow("Kills", offenseTotals?.killed, "bg-red-400"),
     ),
     healing: rows(
+      ...(skillBreakdown?.healing.slice(0, 5).map((skill) => positiveRow(skill.name, skill.value, "bg-emerald-400", skill.icon, skill.hits)) ?? []),
       positiveRow("Total healing", healingTotal, "bg-emerald-400"),
       positiveRow("Healing Power", pickAllyScopeValue(allyScope, healingTotals?.healingPowerHealing, healingTotals?.squadHealingPowerHealing), "bg-green-300"),
       positiveRow("Life steal / conversion", pickAllyScopeValue(allyScope, healingTotals?.conversionHealing, healingTotals?.squadConversionHealing), "bg-lime-300"),
@@ -121,6 +132,7 @@ function buildPlayerSourceBreakdown({
       positiveRow("Self healing", healingTotals?.selfHealing, "bg-emerald-600"),
     ),
     barrier: rows(
+      ...(skillBreakdown?.barrier.slice(0, 5).map((skill) => positiveRow(skill.name, skill.value, "bg-teal-400", skill.icon, skill.hits)) ?? []),
       positiveRow("Total barrier", barrierTotal, "bg-teal-400"),
       positiveRow("Group barrier", healingTotals?.groupBarrier, "bg-cyan-400"),
       positiveRow("Self barrier", healingTotals?.selfBarrier, "bg-sky-400"),
@@ -158,8 +170,14 @@ function SourceGroup({ title, rows }: { title: string; rows: SourceRow[] }) {
           {rows.slice(0, 8).map((row) => (
             <div key={`${title}:${row.label}`} className="space-y-1">
               <div className="flex items-center justify-between gap-3 text-[11px]">
-                <span className="truncate text-slate-300">{row.label}</span>
-                <span className="font-mono font-bold text-slate-100">{fmtCompact(row.value)}</span>
+                <span className="min-w-0 flex items-center gap-2 truncate text-slate-300">
+                  {row.icon && <img src={row.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm object-cover" loading="lazy" />}
+                  <span className="truncate">{row.label}</span>
+                </span>
+                <span className="flex-shrink-0 text-right font-mono font-bold text-slate-100">
+                  {fmtCompact(row.value)}
+                  {typeof row.hits === "number" && row.hits > 0 && <span className="ml-1 text-[9px] text-slate-500">{fmtNum(row.hits)} hits</span>}
+                </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-slate-800/80">
                 <div className={`h-full rounded-full ${row.tone}`} style={{ width: `${max > 0 ? Math.max(4, (row.value / max) * 100) : 0}%` }} />
@@ -346,6 +364,7 @@ export default function TopPlayersView() {
                   leaderboards: lb,
                   damageScope,
                   allyScope,
+                  skillBreakdown: findPlayerSkillBreakdown(report.stats.playerSkillBreakdowns, entry),
                 })}
               />
             ))}

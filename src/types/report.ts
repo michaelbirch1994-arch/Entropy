@@ -277,6 +277,10 @@ export interface FightRow {
     totalOutgoingBarrier?: number;
     /** Healing + barrier - incoming damage for this fight. Positive means sustain outpaced pressure. */
     effectiveHealing?: number;
+    /** Top outgoing healing sources for this specific fight. Present on reports built after v0.2.23 when healing addon data exists. */
+    topOutgoingHealingSkills?: TopHealingSource[];
+    /** Top incoming damage sources for this specific fight. Present on reports built after v0.2.23. */
+    topIncomingDamageSkills?: TopSkill[];
     totalOutgoingStrips: number;
     totalIncomingStrips: number;
     totalBoonsApplied: number;
@@ -590,6 +594,24 @@ export interface TopHealingSource {
   isTrait: boolean;
 }
 
+export interface PlayerSkillSource {
+    id: string;
+    name: string;
+    icon?: string;
+    value: number;
+    hits: number;
+    downContribution?: number;
+}
+
+export interface PlayerSkillBreakdown {
+    account: string;
+    profession: string;
+    professionList?: string[];
+    damage: PlayerSkillSource[];
+    healing: PlayerSkillSource[];
+    barrier: PlayerSkillSource[];
+}
+
 export interface ReportStats {
     total: number;
     wins: number;
@@ -664,9 +686,11 @@ export interface ReportStats {
     /** Automated squad-composition/performance insight flags. Raw-log reports only. */
   synergyInsights?: SynergyInsight[];
     /** Per-fight boss/encounter mechanic event markers. Raw-log reports only. */
-  mechanics?: MechanicsData;
+    mechanics?: MechanicsData;
     /** Top outgoing healing sources by skill/trait, squad-wide. Only populated when the log was recorded with the healing addon active. Raw-log reports only. */
   topHealingSkills?: TopHealingSource[];
+    /** Per-player top damage/healing/barrier skill sources for compact player-card drilldowns. Raw-log reports only. */
+  playerSkillBreakdowns?: Record<string, PlayerSkillBreakdown>;
     /** Per-death damage breakdown (what actually killed each player, and what put them down first) for every squad death across all fights. Raw-log reports only. */
   deathRecaps?: DeathRecapEntry[];
     /** Self- vs. group- vs. squad-generation split for every boon, per player. Distinct from buffCategoryUptimes (which shows what a player *had*, not what they *generated*). Raw-log reports only. */
