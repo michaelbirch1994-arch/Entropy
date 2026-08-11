@@ -6,7 +6,7 @@
 }
 
 html {
-  background: #05040a;
+  background: #02030a;
 }
 
 html,
@@ -51,11 +51,11 @@ kbd {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(56, 189, 248, 0.18);
   border-radius: 999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(245, 158, 11, 0.3);
+  background: rgba(244, 114, 182, 0.32);
 }
 
 @keyframes fadeSlideUp {
@@ -81,8 +81,7 @@ kbd {
 }
 
 /* ---------------------------------------------------------------- */
-/* Entropy background: deep space with warm nebula tones matching   */
-/* the cinematic space aesthetic from the reference video.           */
+/* Entropy background: JWST deep-space plate with blue/pink ionized glow. */
 /* ---------------------------------------------------------------- */
 
 .entropy-bg {
@@ -97,10 +96,10 @@ kbd {
        already use bg-black/30-45 + backdrop-blur - always get a
        consistently dark surface to sit on instead of occasionally
        fighting a bright patch of nebula bleeding through. */
-    linear-gradient(to bottom, rgba(2, 1, 6, 0.75) 0%, rgba(2, 1, 6, 0) 240px),
-    radial-gradient(ellipse 130% 90% at 50% -10%, rgba(14, 19, 48, 0.1) 0%, rgba(7, 10, 28, 0.2) 45%, rgba(2, 1, 6, 0.45) 100%),
-    url("/images/nebula-bg.jpg") center 30% / cover no-repeat;
-  background-color: #05040a;
+    linear-gradient(to bottom, rgba(2, 3, 10, 0.88) 0%, rgba(2, 3, 10, 0.18) 280px),
+    radial-gradient(ellipse 100% 80% at 52% 52%, rgba(244, 114, 182, 0.16) 0%, rgba(59, 130, 246, 0.12) 42%, rgba(2, 3, 10, 0.68) 100%),
+    url("/images/jwst-entropy-bg.jpg") center center / cover no-repeat;
+  background-color: #02030a;
 }
 
 .entropy-bg::before,
@@ -156,7 +155,7 @@ kbd {
   height: 680px;
   top: -200px;
   left: -140px;
-  background: radial-gradient(circle, rgba(88, 60, 180, 0.45) 0%, rgba(88, 60, 180, 0) 70%);
+  background: radial-gradient(circle, rgba(80, 110, 255, 0.38) 0%, rgba(80, 110, 255, 0) 70%);
 }
 
 .entropy-nebula-2 {
@@ -164,7 +163,7 @@ kbd {
   height: 560px;
   bottom: -160px;
   right: -100px;
-  background: radial-gradient(circle, rgba(40, 90, 200, 0.4) 0%, rgba(40, 90, 200, 0) 70%);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.32) 0%, rgba(56, 189, 248, 0) 70%);
   animation-delay: -9s;
 }
 
@@ -173,7 +172,7 @@ kbd {
   height: 460px;
   top: 38%;
   right: 12%;
-  background: radial-gradient(circle, rgba(150, 60, 160, 0.25) 0%, rgba(150, 60, 160, 0) 70%);
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.28) 0%, rgba(244, 114, 182, 0) 70%);
   animation-delay: -4s;
 }
 
@@ -182,7 +181,7 @@ kbd {
   height: 380px;
   top: 55%;
   left: 8%;
-  background: radial-gradient(circle, rgba(217, 119, 6, 0.16) 0%, rgba(217, 119, 6, 0) 70%);
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.14) 0%, rgba(251, 146, 60, 0) 70%);
   animation-delay: -13s;
 }
 

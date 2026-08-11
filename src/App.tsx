@@ -46,6 +46,8 @@ import UpdateToast from "./components/ui/UpdateToast";
 import { useAutoUpdater } from "./utils/useAutoUpdater";
 
 
+
+
 const VIEW_TITLES: Record<string, string> = {
   overview: "Overview",
   kdr: "KDR",
@@ -75,6 +77,8 @@ const VIEW_TITLES: Record<string, string> = {
   intelligence: "Intelligence",
   "axiforge-lab": "Entropy Builder",
 };
+
+
 
 
 function ReportRouter({ activeView }: { activeView: string }) {
@@ -111,6 +115,8 @@ function ReportRouter({ activeView }: { activeView: string }) {
 }
 
 
+
+
 function LoadingState() {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
@@ -119,6 +125,8 @@ function LoadingState() {
     </div>
   );
 }
+
+
 
 
 function ErrorState({ message }: { message: string }) {
@@ -134,6 +142,8 @@ function ErrorState({ message }: { message: string }) {
     </div>
   );
 }
+
+
 
 
 function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void }) {
@@ -153,9 +163,13 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
         </div>
 
 
+
+
         {/* Import card */}
         {/* Primary raw log importer (dps.report / .zevtc) */}
         <RawLogImporter />
+
+
 
 
         <div className="w-full max-w-lg flex items-center gap-3 text-[10px] text-slate-500 uppercase font-bold tracking-widest">
@@ -165,7 +179,11 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
         </div>
 
 
+
+
         <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
+
+
 
 
         <button
@@ -176,6 +194,8 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
           <FlaskConical className="h-4 w-4" />
           Open Entropy Builder
         </button>
+
+
 
 
         {/* Supported formats info */}
@@ -190,9 +210,13 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
 }
 
 
+
+
 function safeFileName(title: string): string {
   return title.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "") || "entropy-report";
 }
+
+
 
 
 function downloadHtmlSnapshot(title: string, html: string) {
@@ -205,34 +229,43 @@ function downloadHtmlSnapshot(title: string, html: string) {
   URL.revokeObjectURL(url);
 }
 
+
 const DEFAULT_SHARE_VIEWER_URL = "https://michaelbirch1994-arch.github.io/Entropy/";
+
 
 function getConfiguredShareViewerUrl(): string {
   const configured = import.meta.env.VITE_ENTROPY_SHARE_VIEWER_URL;
   if (typeof configured === "string" && configured.trim()) return configured.trim();
 
+
   if (typeof window !== "undefined" && /^https?:$/i.test(window.location.protocol)) {
     return window.location.href;
   }
 
+
   return DEFAULT_SHARE_VIEWER_URL;
 }
+
 
 function getReportPermalinks(report: WvWReport): string[] {
   const seen = new Set<string>();
   const rows = report.stats?.fightBreakdown ?? [];
+
 
   for (const row of rows) {
     const permalink = typeof row.permalink === "string" ? row.permalink.trim() : "";
     if (permalink) seen.add(permalink);
   }
 
+
   return [...seen];
 }
+
 
 function buildEntropyShareLink(report: WvWReport): string | null {
   const permalinks = getReportPermalinks(report);
   if (permalinks.length === 0) return null;
+
 
   const url = new URL(getConfiguredShareViewerUrl());
   url.search = "";
@@ -240,6 +273,8 @@ function buildEntropyShareLink(report: WvWReport): string | null {
   url.searchParams.set("permalinks", permalinks.join(","));
   return url.toString();
 }
+
+
 
 
 function ReportShell() {
@@ -252,6 +287,8 @@ function ReportShell() {
   const { activeView, setActiveView } = useView();
 
 
+
+
   const headerInfo = useMemo(() => {
     if (!report) return null;
     return {
@@ -262,8 +299,12 @@ function ReportShell() {
   }, [report]);
 
 
+
+
   const viewTitle = VIEW_TITLES[activeView] ?? "Overview";
   const showTool = activeView === "axiforge-lab";
+
+
 
 
   function flashExportStatus(status: typeof exportStatus) {
@@ -272,10 +313,14 @@ function ReportShell() {
   }
 
 
+
+
   async function handleExportReport() {
     if (!report) return;
     const html = buildReportHtmlExport(report);
     const standaloneLink = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+
+
 
 
     try {
@@ -284,6 +329,8 @@ function ReportShell() {
         flashExportStatus("downloaded");
         return;
       }
+
+
 
 
       await navigator.clipboard.writeText(standaloneLink);
@@ -299,15 +346,21 @@ function ReportShell() {
   }
 
 
+
+
   const exportLabel =
     exportStatus === "copied" ? "Link copied" : exportStatus === "downloaded" ? "HTML saved" : exportStatus === "failed" ? "Export failed" : "Export link";
   const viewIcon = VIEW_ICONS[activeView] ?? <Activity className="w-4 h-4" />;
+
+
 
 
   // When no report loaded yet (and not in the middle of initial load), show Import Center
   const showImport = (!report || atHome) && !loading && !error;
   const showLoading = loading && !report;
   const showError = !loading && !report && !!error;
+
+
 
 
   return (
@@ -320,8 +373,12 @@ function ReportShell() {
       </div>
 
 
+
+
       {/* Only show sidebar when a report is loaded */}
       {(report || showTool) && <Sidebar activeView={activeView} setActiveView={setActiveView} />}
+
+
 
 
       <main className="flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar">
@@ -389,6 +446,8 @@ function ReportShell() {
         )}
 
 
+
+
         {report && report.meta.appVersion !== METRICS_VERSION && !atHome && (
           <div className="mx-6 mt-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-4 py-3 flex items-start gap-3">
             <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
@@ -401,6 +460,8 @@ function ReportShell() {
             </div>
           </div>
         )}
+
+
 
 
         {/* Content */}
@@ -447,11 +508,15 @@ function ReportShell() {
 }
 
 
+
+
 export default function App() {
   // Runs once per launch, no-op outside the desktop app - see
   // src/utils/useAutoUpdater.ts for why this checks on startup only
   // instead of polling.
   const updateState = useAutoUpdater();
+
+
 
 
   return (
@@ -471,10 +536,3 @@ export default function App() {
     </ViewProvider>
   );
 }
-
-
-
-
-
-
-
