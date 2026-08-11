@@ -98,7 +98,7 @@ kbd {
        fighting a bright patch of nebula bleeding through. */
     linear-gradient(to bottom, rgba(2, 3, 10, 0.88) 0%, rgba(2, 3, 10, 0.18) 280px),
     radial-gradient(ellipse 100% 80% at 52% 52%, rgba(244, 114, 182, 0.16) 0%, rgba(59, 130, 246, 0.12) 42%, rgba(2, 3, 10, 0.68) 100%),
-    url("/images/jwst-entropy-bg.png") center center / cover no-repeat;
+    url("/images/jwst-entropy-bg.jpg") center center / cover no-repeat;
   background-color: #02030a;
 }
 
