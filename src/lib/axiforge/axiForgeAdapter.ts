@@ -52,14 +52,14 @@ export function decodeAxiForgeCode(code: string): AxiForgeDecodeResult {
       ok: false,
       kind: "unknown",
       value: null,
-      error: "Unsupported AxiForge code format.",
+      error: "Unsupported build code format.",
     };
   } catch (error) {
     return {
       ok: false,
       kind,
       value: null,
-      error: error instanceof Error ? error.message : "Failed to decode AxiForge code.",
+      error: error instanceof Error ? error.message : "Failed to decode build code.",
     };
   }
 }
