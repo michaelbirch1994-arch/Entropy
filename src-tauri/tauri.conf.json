@@ -23,7 +23,7 @@
     "security": {
       "csp": {
         "default-src": "'self' customprotocol: asset:",
-        "connect-src": "ipc: http://ipc.localhost 'self' https://dps.report https://github.com https://api.github.com https://objects.githubusercontent.com https://release-assets.githubusercontent.com",
+        "connect-src": "ipc: http://ipc.localhost 'self' https://dps.report https://api.guildwars2.com https://github.com https://api.github.com https://objects.githubusercontent.com https://release-assets.githubusercontent.com",
         "img-src": "'self' asset: http://asset.localhost blob: data: https:",
         "style-src": "'self' 'unsafe-inline'",
         "font-src": "'self' data:"

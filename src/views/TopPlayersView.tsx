@@ -148,7 +148,10 @@ export default function TopPlayersView() {
               <div className={`text-3xl font-black font-mono ${colors[i]}`}>#{place}</div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold text-slate-100 truncate">{e.account}</div>
-                <div className="text-[10px] text-slate-500 font-mono">{e.profession}</div>
+                <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
+                  <ProfessionIcon profession={e.profession} className="h-3.5 w-3.5" />
+                  {e.profession}
+                </div>
                 <div className={`text-lg font-black font-mono ${colors[i]} mt-1`}>
                   {formatMetricValue(e, active.unit)}
                   {active.unit && <span className="ml-1 text-[10px] text-slate-500">{active.unit}</span>}

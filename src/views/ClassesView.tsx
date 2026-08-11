@@ -5,6 +5,7 @@ import type { ClassSlice } from "../types/report";
 import { Layers, Users } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE } from "../utils/chartTheme";
+import ClassIcon from "../components/ui/ClassIcon";
 
 function ClassList({ data, total }: { data: ClassSlice[]; total: number }) {
   return (
@@ -14,7 +15,9 @@ function ClassList({ data, total }: { data: ClassSlice[]; total: number }) {
         const s = profStyle(c.name);
         return (
           <div key={c.name} className="flex items-center gap-3">
-            <div className={`w-2.5 h-2.5 rounded-sm ${s.dot} flex-shrink-0`} />
+            <div className={`h-6 w-6 rounded-md border ${s.border} ${s.bg} flex flex-shrink-0 items-center justify-center`}>
+              <ClassIcon name={c.name} size="sm" />
+            </div>
             <span className="text-xs font-semibold text-slate-300 w-28 flex-shrink-0">{c.name}</span>
             <div className="flex-1 h-5 bg-slate-800/40 rounded overflow-hidden">
               <div

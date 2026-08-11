@@ -103,7 +103,8 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label }: {
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-xl font-black text-slate-100">{mvp.account}</h3>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${profChip(mvp.profession)}`}>
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold border ${profChip(mvp.profession)}`}>
+                <ProfessionIcon profession={mvp.profession} className="h-3.5 w-3.5" />
                 {mvp.profession}
               </span>
             </div>

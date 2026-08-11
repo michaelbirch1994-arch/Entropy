@@ -1,5 +1,6 @@
 import type { LeaderboardEntry } from "../../types/report";
 import { fmtCompact, fmtNum, profChip, profStyle } from "../../utils/format";
+import ClassIcon from "./ClassIcon";
 
 interface LeaderboardTableProps {
   entries: LeaderboardEntry[];
@@ -32,7 +33,8 @@ export default function LeaderboardTable({ entries, metricLabel, compact = false
                 <td className={`px-2 py-2 font-bold ${e.rank <= 3 ? "text-amber-400" : "text-slate-500"}`}>{e.rank}</td>
                 <td className="px-2 py-2 text-slate-200 font-semibold whitespace-nowrap">{e.account}</td>
                 <td className="px-2 py-2">
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(e.profession)}`}>
+                  <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(e.profession)}`}>
+                    <ClassIcon name={e.profession} size="xs" />
                     {e.profession}
                   </span>
                 </td>
