@@ -13,8 +13,8 @@ name: Release desktop builds
 # must be added as repo secrets (Settings > Secrets and variables > Actions)
 # - see .github/workflows/generate-signing-key.yml for how the keypair was
 # generated. Builds still succeed without them, they just won't produce
-# signed updater artifacts (the updater feature silently has nothing to
-# find), so this isn't a hard requirement, just a silent feature gap.
+# signed updater artifacts (the updater feature has nothing useful to find),
+# so keep the build logs checked after each cut.
 #
 # Beyond updater signing, this workflow also attaches two extra layers of
 # protection for anyone downloading a release directly (not through the
@@ -105,9 +105,10 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "Entropy ${{ github.ref_name }}"
           releaseBody: "See the changelog for details. Download the installer for your OS below."
-          # Tags created from GitHub's release page create a published release first.
-          # For those tags, attach installers to that release instead of creating a second hidden draft.
-          releaseDraft: ${{ github.ref_name != 'v0.2.6' && github.ref_name != 'v0.2.7' && github.ref_name != 'v0.2.8' && github.ref_name != 'v0.2.9' && github.ref_name != 'v0.2.12' && github.ref_name != 'v0.2.13' && github.ref_name != 'v0.2.14' && github.ref_name != 'v0.2.15' && github.ref_name != 'v0.2.16' }}
+          # Keep updater assets on the visible release users download from.
+          # Hidden draft releases can strand latest.json/signatures away from
+          # GitHub's /releases/latest endpoint, which makes the updater look dead.
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
 
@@ -153,13 +154,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-  # tauri-action uploads installers into a DRAFT release, one job per platform.
-  # Publishing that draft by hand is easy to get wrong: opening the tag's release
-  # page creates a SECOND, empty release on the same tag, and the real one with
-  # the installers stays hidden as a draft. v0.2.1 shipped that way - published,
-  # zero downloads. This job flips the draft that already holds the assets, only
-  # after all four builds succeed, so there is nothing to publish manually and no
-  # window where users can see a half-uploaded release.
+  # Keep GitHub's "Latest" pointer pinned to the just-built tag after all
+  # platform jobs complete. With releaseDraft=false above, this is not what
+  # publishes the release; it only normalizes the latest marker.
   publish:
     needs: release
     if: startsWith(github.ref, 'refs/tags/')
@@ -167,7 +164,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Publish the draft release
+      - name: Mark release latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "${{ github.ref_name }}" --draft=false --latest --repo "${{ github.repository }}"
+        run: gh release edit "${{ github.ref_name }}" --latest --repo "${{ github.repository }}"
