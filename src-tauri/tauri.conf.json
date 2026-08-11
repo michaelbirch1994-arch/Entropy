@@ -47,7 +47,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU0NUE3NEY0MEI1Qzc3NkYKUldSdmQxd0w5SFJhVk02TVhFOVZzeFczd2Zmc293TE5aWlpxcEp5REUvUFdRVDRDaXM4eEE1VU8K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU0NUE3NEY0MEI1Qzc3NkYKUldSdmQxd0w5SFJhVk02TVhFOVZzeFczd2Zmc293TE5aWmlxcEp5REUvUFdRVDRDaXM4eEE1VU8K",
       "endpoints": [
         "https://github.com/michaelbirch1994-arch/Entropy/releases/latest/download/latest.json"
       ],
