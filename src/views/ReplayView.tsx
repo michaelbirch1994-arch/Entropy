@@ -9,6 +9,10 @@ function fmtClock(ms: number): string {
   return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
 export default function ReplayView() {
   const { report } = useReport();
   const fights = report?.stats.replayFights;
@@ -26,7 +30,7 @@ export default function ReplayView() {
   const [zoom, setZoom] = useState(1);
   // Dot radii are in map units, so they must shrink as you zoom in or the
   // squad turns into one solid blob at high magnification.
-  const dotScale = 0.45 / zoom;
+  const dotScale = 0.16 / Math.sqrt(zoom);
   const [showMechanics, setShowMechanics] = useState(true);
   const [showCasts, setShowCasts] = useState(false);
   const rafRef = useRef<number | null>(null);
@@ -84,8 +88,24 @@ export default function ReplayView() {
     const h = fullH / zoom;
     const maxPanX = Math.max(0, (fullW - w) / 2);
     const maxPanY = Math.max(0, (fullH - h) / 2);
-    return { baseCx, baseCy, w, h, maxPanX, maxPanY };
+    return { baseCx, baseCy, w, h, maxPanX, maxPanY, minX: bounds.minX - pad, maxX: bounds.maxX + pad, minY: bounds.minY - pad, maxY: bounds.maxY + pad };
   }, [fight, zoom]);
+
+  const focusPoint = useMemo(() => {
+    if (!fight) return null;
+    const squadAlive = fight.data.players.filter((p) => p.inSquad && !isInInterval(p.deadIntervals, t));
+    const commander = squadAlive.find((p) => p.isCommander);
+    const commanderPt = commander ? interpolatePosition(commander.points, t) : null;
+    if (commanderPt) return commanderPt;
+    const pts = squadAlive
+      .map((p) => interpolatePosition(p.points, t))
+      .filter((pt): pt is { x: number; y: number } => !!pt);
+    if (pts.length === 0) return null;
+    return {
+      x: pts.reduce((sum, pt) => sum + pt.x, 0) / pts.length,
+      y: pts.reduce((sum, pt) => sum + pt.y, 0) / pts.length,
+    };
+  }, [fight, t]);
 
   // Re-clamp pan whenever the allowed range shrinks (e.g. zooming back out)
   // so a stale pan offset from a higher zoom level doesn't leave the view
@@ -101,10 +121,16 @@ export default function ReplayView() {
 
   const viewBox = useMemo(() => {
     if (!frame) return "0 0 100 100";
-    const cx = frame.baseCx + pan.x;
-    const cy = frame.baseCy + pan.y;
+    const preferredCx = zoom > 1 && focusPoint ? focusPoint.x : frame.baseCx;
+    const preferredCy = zoom > 1 && focusPoint ? focusPoint.y : frame.baseCy;
+    const minCx = frame.minX + frame.w / 2;
+    const maxCx = frame.maxX - frame.w / 2;
+    const minCy = frame.minY + frame.h / 2;
+    const maxCy = frame.maxY - frame.h / 2;
+    const cx = clamp(preferredCx + pan.x, Math.min(minCx, maxCx), Math.max(minCx, maxCx));
+    const cy = clamp(preferredCy + pan.y, Math.min(minCy, maxCy), Math.max(minCy, maxCy));
     return `${cx - frame.w / 2} ${cy - frame.h / 2} ${frame.w} ${frame.h}`;
-  }, [frame, pan]);
+  }, [frame, focusPoint, pan, zoom]);
 
   // Mouse/touch drag-to-pan on the SVG viewport. Only active once zoomed in
   // (maxPanX/Y are 0 at zoom 1, so drags are effectively no-ops there).
@@ -306,14 +332,14 @@ function render(t) {
     if (inInterval(e.deadIntervals, t)) return;
     const p = interp(e.points, t); if (!p) return;
     const down = inInterval(e.downIntervals, t);
-    out += '<circle cx="' + p[1] + '" cy="' + p[2] + '" r="' + (down ? 45 : 38) + '" fill="#f43f5e" fill-opacity="' + (down ? 0.25 : 0.75) + '" stroke="' + (down ? '#f43f5e' : 'none') + '" stroke-width="' + (down ? 10 : 0) + '"/>';
+    out += '<circle cx="' + p[1] + '" cy="' + p[2] + '" r="' + (down ? 18 : 12) + '" fill="#f43f5e" fill-opacity="' + (down ? 0.25 : 0.75) + '" stroke="' + (down ? '#f43f5e' : 'none') + '" stroke-width="' + (down ? 4 : 0) + '"/>';
   });
   DATA.players.forEach((pl) => {
     if (inInterval(pl.deadIntervals, t)) return;
     const p = interp(pl.points, t); if (!p) return;
     const down = inInterval(pl.downIntervals, t);
-    const r = down ? 55 : pl.isCommander ? 65 : 45;
-    out += '<circle cx="' + p[1] + '" cy="' + p[2] + '" r="' + r + '" fill="' + (pl.inSquad ? '#f59e0b' : '#64748b') + '" fill-opacity="' + (down ? 0.3 : 0.9) + '" stroke="' + (down ? '#f43f5e' : pl.isCommander ? '#fbbf24' : 'none') + '" stroke-width="' + (down || pl.isCommander ? 14 : 0) + '"/>';
+    const r = down ? 20 : pl.isCommander ? 24 : 14;
+    out += '<circle cx="' + p[1] + '" cy="' + p[2] + '" r="' + r + '" fill="' + (pl.inSquad ? '#f59e0b' : '#64748b') + '" fill-opacity="' + (down ? 0.3 : 0.9) + '" stroke="' + (down ? '#f43f5e' : pl.isCommander ? '#fbbf24' : 'none') + '" stroke-width="' + (down || pl.isCommander ? 5 : 0) + '"/>';
   });
   svg.innerHTML = out;
   const s = Math.max(0, Math.floor(t / 1000));

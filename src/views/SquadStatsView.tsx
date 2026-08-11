@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useReport } from "../store/ReportContext";
 import { useDamageScope, pickDamageScopeValue } from "../store/DamageScopeContext";
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
@@ -136,6 +137,8 @@ export default function SquadStatsView() {
   const { report } = useReport();
   const { scope } = useDamageScope();
 const { scope: allyScope } = useAllyScope();
+  const [selectedHealingIndex, setSelectedHealingIndex] = useState(0);
+  const [hoveredDistanceAccount, setHoveredDistanceAccount] = useState<string | null>(null);
   if (!report) return null;
   const s = report.stats;
 
@@ -187,13 +190,18 @@ const { scope: allyScope } = useAllyScope();
     const incomingDamage = Number(fight.totalIncomingDamage ?? 0);
     return {
       name: fight.label || `F${index + 1}`,
+      index,
+      fullLabel: fight.fullLabel || fight.mapName || `Fight ${index + 1}`,
       healing,
       barrier,
       incomingDamage,
       effectiveHealing: Number(fight.effectiveHealing ?? (healing + barrier - incomingDamage)),
+      outgoingSkills: fight.topOutgoingHealingSkills ?? [],
+      incomingSkills: fight.topIncomingDamageSkills ?? [],
     };
   });
   const hasPerFightHealing = s.fightBreakdown.some((fight) => typeof fight.totalOutgoingHealing === "number");
+  const selectedHealingFight = healingChartData[Math.min(selectedHealingIndex, Math.max(healingChartData.length - 1, 0))];
   const distanceRows = buildDistanceRows(s.generalPlayers);
   const topDistanceRows = distanceRows.slice(0, 10);
   const averageTagDistance = safeDiv(
@@ -203,6 +211,7 @@ const { scope: allyScope } = useAllyScope();
   const splitCount = distanceRows.filter((p) => p.avgDistance > 1200).length;
   const tightCount = distanceRows.filter((p) => p.avgDistance <= 600).length;
   const pressureLeader = topPressureRows[0];
+  const hoveredDistance = topDistanceRows.find((p) => p.account === hoveredDistanceAccount);
 
   return (
     <div className="space-y-5 animate-view pb-12">
@@ -311,7 +320,13 @@ const { scope: allyScope } = useAllyScope();
             <div className="h-72">
               {healingChartData.length ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={healingChartData} margin={{ left: 8, right: 18, top: 12, bottom: 8 }}>
+                  <LineChart
+                    data={healingChartData}
+                    margin={{ left: 8, right: 18, top: 12, bottom: 8 }}
+                    onClick={(event) => {
+                      if (typeof event?.activeTooltipIndex === "number") setSelectedHealingIndex(event.activeTooltipIndex);
+                    }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                     <XAxis
                       dataKey="name"
@@ -332,10 +347,10 @@ const { scope: allyScope } = useAllyScope();
                     />
                     <ReferenceLine y={0} stroke="#334155" />
                     <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />
-                    <Line type="monotone" dataKey="healing" name="Healing" stroke="#34d399" strokeWidth={2} dot={{ r: 2 }} connectNulls />
-                    <Line type="monotone" dataKey="barrier" name={hasPerFightHealing ? "Barrier" : "Barrier Absorbed"} stroke="#2dd4bf" strokeWidth={2} dot={{ r: 2 }} connectNulls />
-                    <Line type="monotone" dataKey="incomingDamage" name="Incoming Damage" stroke="#fb7185" strokeWidth={2} dot={{ r: 2 }} connectNulls />
-                    <Line type="monotone" dataKey="effectiveHealing" name="Effective Healing" stroke="#f8fafc" strokeWidth={2.5} dot={{ r: 2 }} connectNulls />
+                    <Line type="monotone" dataKey="healing" name="Healing" stroke="#34d399" strokeWidth={2} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} connectNulls />
+                    <Line type="monotone" dataKey="barrier" name={hasPerFightHealing ? "Barrier" : "Barrier Absorbed"} stroke="#2dd4bf" strokeWidth={2} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} connectNulls />
+                    <Line type="monotone" dataKey="incomingDamage" name="Incoming Damage" stroke="#fb7185" strokeWidth={2} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} connectNulls />
+                    <Line type="monotone" dataKey="effectiveHealing" name="Effective Healing" stroke="#f8fafc" strokeWidth={2.5} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} connectNulls />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
@@ -346,10 +361,63 @@ const { scope: allyScope } = useAllyScope();
             </div>
             <div className="space-y-3">
               <div className="rounded-xl border border-slate-800/70 bg-[#080d19]/70 p-3 text-xs text-slate-400">
-                {hasPerFightHealing
-                  ? "This report includes exact per-fight outgoing healing/barrier layers."
+                {selectedHealingFight ? (
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Selected fight</div>
+                        <div className="mt-1 text-sm font-black text-slate-100">{selectedHealingFight.name} · {selectedHealingFight.fullLabel}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedHealingIndex(0)}
+                        className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
+                      <span>Incoming <b className="block text-rose-300">{fmtCompact(selectedHealingFight.incomingDamage)}</b></span>
+                      <span>Healing <b className="block text-emerald-300">{fmtCompact(selectedHealingFight.healing)}</b></span>
+                      <span>Barrier <b className="block text-teal-300">{fmtCompact(selectedHealingFight.barrier)}</b></span>
+                    </div>
+                  </>
+                ) : hasPerFightHealing
+                  ? "Click a point on the graph to inspect that fight."
                   : "This report was built before per-fight outgoing healing existed; exact fight-by-fight healing appears after reparsing with this build."}
               </div>
+              {selectedHealingFight && (
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-3">
+                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">Outgoing healing / barrier skills</div>
+                    {selectedHealingFight.outgoingSkills.length ? selectedHealingFight.outgoingSkills.slice(0, 6).map((skill) => (
+                      <div key={`heal:${skill.id}`} className="flex items-center justify-between gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
+                        <span className="min-w-0 flex items-center gap-2 text-slate-300">
+                          {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
+                          <span className="truncate">{skill.name}</span>
+                        </span>
+                        <span className="font-mono font-bold text-emerald-200">{fmtCompact(skill.healing)} <span className="text-[10px] text-slate-500">{fmtNum(skill.hits)} hits</span></span>
+                      </div>
+                    )) : (
+                      <div className="text-[11px] text-slate-500">Exact per-fight healing sources need a report parsed with this build.</div>
+                    )}
+                  </div>
+                  <div className="rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
+                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-rose-300">Incoming damage skills</div>
+                    {selectedHealingFight.incomingSkills.length ? selectedHealingFight.incomingSkills.slice(0, 6).map((skill) => (
+                      <div key={`incoming:${skill.id}`} className="flex items-center justify-between gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
+                        <span className="min-w-0 flex items-center gap-2 text-slate-300">
+                          {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
+                          <span className="truncate">{skill.name}</span>
+                        </span>
+                        <span className="font-mono font-bold text-rose-200">{fmtCompact(skill.damage)} <span className="text-[10px] text-slate-500">{fmtNum(skill.hits)} hits</span></span>
+                      </div>
+                    )) : (
+                      <div className="text-[11px] text-slate-500">Exact per-fight incoming sources need a report parsed with this build.</div>
+                    )}
+                  </div>
+                </div>
+              )}
               {topHealingRows.length ? topHealingRows.map((p) => {
                 const tone = p.coverage === "full" ? "text-emerald-300" : p.coverage === "partial" ? "text-amber-300" : "text-slate-500";
                 return (
@@ -397,6 +465,17 @@ const { scope: allyScope } = useAllyScope();
               <div className="absolute left-1/2 top-1/2 grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-blue-400/40 bg-blue-500/15 text-[10px] font-black uppercase tracking-wider text-blue-200">
                 Tag
               </div>
+              {hoveredDistance && (
+                <div className="absolute left-1/2 top-4 z-10 w-56 -translate-x-1/2 rounded-xl border border-slate-700 bg-[#080d19]/95 p-3 text-center shadow-xl">
+                  <div className="truncate text-sm font-black text-slate-100">{hoveredDistance.account}</div>
+                  <div className="mt-1 flex items-center justify-center gap-1.5 text-[10px] uppercase tracking-wider text-slate-500">
+                    <ProfessionIcon profession={hoveredDistance.profession} className="h-3.5 w-3.5" />
+                    {hoveredDistance.profession}
+                  </div>
+                  <div className="mt-2 font-mono text-sm font-black text-blue-200">{fmtFixed(hoveredDistance.avgDistance, 0)} avg distance</div>
+                  <div className="text-[10px] text-slate-500">{fmtNum(hoveredDistance.samples)} samples · {fmtNum(hoveredDistance.fights)} fights</div>
+                </div>
+              )}
               {topDistanceRows.map((p, index) => {
                 const angle = (index / Math.max(1, topDistanceRows.length)) * Math.PI * 2 - Math.PI / 2;
                 const radius = Math.min(43, Math.max(10, (p.avgDistance / 1800) * 43));
@@ -408,6 +487,10 @@ const { scope: allyScope } = useAllyScope();
                     key={p.account}
                     className={`absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/40 ${tone.dot} shadow-[0_0_18px_rgba(255,255,255,0.15)]`}
                     style={{ left: `${left}%`, top: `${top}%` }}
+                    onMouseEnter={() => setHoveredDistanceAccount(p.account)}
+                    onMouseLeave={() => setHoveredDistanceAccount(null)}
+                    onFocus={() => setHoveredDistanceAccount(p.account)}
+                    onBlur={() => setHoveredDistanceAccount(null)}
                     title={`${p.account}: ${fmtFixed(p.avgDistance, 0)} average distance`}
                   />
                 );
