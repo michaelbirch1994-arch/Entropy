@@ -85,6 +85,45 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(after!.offenseTotals.damage).toBe((before!.offenseTotals.damage || 0) + 3558);
            });
 
+           it('synthesizes Natural Fortitude from Solar Brilliance, Relentless Whirl, and Rampant Growth trigger rates', () => {
+                 const raw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const player = (raw.players ?? []).find((p: any) => !p.notInSquad) as any;
+                 expect(player).toBeTruthy();
+
+                 const solarBrillianceId = 900001;
+                 const relentlessWhirlId = 900002;
+                 const rampantGrowthId = 900003;
+                 (raw as any).skillMap = {
+                         ...((raw as any).skillMap ?? {}),
+                         [`s${solarBrillianceId}`]: { name: 'Solar Brilliance', icon: 'https://example.invalid/solar-brilliance.png' },
+                         [`s${relentlessWhirlId}`]: { name: 'Relentless Whirl', icon: 'https://example.invalid/relentless-whirl.png' },
+                         [`s${rampantGrowthId}`]: { name: 'Rampant Growth', icon: 'https://example.invalid/rampant-growth.png' },
+                 };
+                 player.profession = 'Untamed';
+                 player.totalDamageDist = player.totalDamageDist ?? [[]];
+                 player.totalDamageDist[0] = [
+                         ...(player.totalDamageDist[0] ?? []),
+                         { id: solarBrillianceId, totalDamage: 0, connectedHits: 12, downContribution: 0 },
+                         { id: relentlessWhirlId, totalDamage: 0, connectedHits: 10, downContribution: 0 },
+                         { id: rampantGrowthId, totalDamage: 0, connectedHits: 3, downContribution: 0 },
+                 ];
+
+                 const original = buildReportFromFights([fight]);
+                 const synthetic = buildReportFromFights([{ summary: summarizeRawFight(raw), raw }]);
+                 const naturalFortitude = synthetic.stats.topSkills.find((s) => s.name === 'Natural Fortitude');
+                 const expectedTriggers = 7;
+                 const expectedDamage = expectedTriggers * 1779;
+                 expect(naturalFortitude).toBeTruthy();
+                 expect(naturalFortitude!.damage).toBe(expectedDamage);
+                 expect(naturalFortitude!.hits).toBe(expectedTriggers);
+
+                 const before = original.stats.offensePlayers.find((p) => p.account === player.account);
+                 const after = synthetic.stats.offensePlayers.find((p) => p.account === player.account && p.profession === 'Untamed');
+                 expect(before).toBeTruthy();
+                 expect(after).toBeTruthy();
+                 expect(after!.offenseTotals.damage).toBe((before!.offenseTotals.damage || 0) + expectedDamage);
+           });
+
            it('builds a squad rotation timeline covering the same players', () => {
                  expect(report.stats.rotations?.fights.length).toBeGreaterThan(0);
                  const rotFight = report.stats.rotations!.fights[0];
