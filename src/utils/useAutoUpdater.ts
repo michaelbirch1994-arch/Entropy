@@ -15,7 +15,8 @@ export interface UpdateState {
   error: string | null;
 }
 
-type TauriUpdate = Awaited<ReturnType<typeof import("@tauri-apps/plugin-updater")["check"]>>;
+type TauriUpdaterModule = typeof import("@tauri-apps/plugin-updater");
+type TauriUpdate = Awaited<ReturnType<TauriUpdaterModule["check"]>>;
 
 function describeUpdaterError(e: unknown): string {
   if (e instanceof Error && e.message) return e.message;
