@@ -1505,6 +1505,14 @@ function computeFightTables(fights: FightInput[]): {
           defenses?: Array<{ downCount?: number; deadCount?: number; damageTaken?: number; damageBarrier?: number }>;
           statsAll?: Array<{ killed?: number; downed?: number; totalDamage?: number; boonStrips?: number }>;
           support?: Array<{ boonStrips?: number; condiCleanse?: number }>;
+          extHealingStats?: {
+                  outgoingHealing?: Array<{ healing?: number }>;
+                  outgoingHealingAllies?: Array<Array<{ healing?: number }>>;
+          };
+          extBarrierStats?: {
+                  outgoingBarrier?: Array<{ barrier?: number }>;
+                  outgoingBarrierAllies?: Array<Array<{ barrier?: number }>>;
+          };
     };
 
   const fightBreakdown: FightRow[] = [];
@@ -1519,8 +1527,12 @@ function computeFightTables(fights: FightInput[]): {
         const enemyCount = Math.max(players.length - squad.length, 0);
 
                      let alliesDown = 0, alliesDead = 0, enemyKills = 0, enemyDowns = 0;
-        let outDamage = 0, inDamage = 0, outStrips = 0, inBarrier = 0;
+        let outDamage = 0, inDamage = 0, outHealing = 0, outBarrier = 0, outStrips = 0, inBarrier = 0;
         const squadClassCountsFight: Record<string, number> = {};
+        const sumPhaseArray = (rows: any[] | undefined, field: string) =>
+                Array.isArray(rows) ? rows.reduce((sum, row) => sum + (Number(row?.[field]) || 0), 0) : 0;
+        const sumAllyPhaseMatrix = (rows: any[][] | undefined, field: string) =>
+                Array.isArray(rows) ? rows.reduce((sum, phases) => sum + sumPhaseArray(phases, field), 0) : 0;
 
                      for (const p of squad) {
                              const def = p.defenses?.[0];
@@ -1533,6 +1545,15 @@ function computeFightTables(fights: FightInput[]): {
                              enemyDowns += Number(st?.downed) || 0;
                              outDamage += Number(st?.totalDamage) || 0;
                              outStrips += Number(p.support?.[0]?.boonStrips) || 0;
+                             // Prefer the direct phase total when EI provides it. Fall back to the
+                             // ally matrix, which is how older EI/healing-addon payloads expose the
+                             // same outgoing healing/barrier split.
+                             outHealing +=
+                                     sumPhaseArray(p.extHealingStats?.outgoingHealing, 'healing') ||
+                                     sumAllyPhaseMatrix(p.extHealingStats?.outgoingHealingAllies, 'healing');
+                             outBarrier +=
+                                     sumPhaseArray(p.extBarrierStats?.outgoingBarrier, 'barrier') ||
+                                     sumAllyPhaseMatrix(p.extBarrierStats?.outgoingBarrierAllies, 'barrier');
                              const prof = String(p.profession || "Unknown");
                              squadClassCountsFight[prof] = (squadClassCountsFight[prof] || 0) + 1;
                      }
@@ -1567,6 +1588,9 @@ function computeFightTables(fights: FightInput[]): {
                              enemyDowns,
                              totalOutgoingDamage: outDamage,
                              totalIncomingDamage: inDamage,
+                             totalOutgoingHealing: outHealing,
+                             totalOutgoingBarrier: outBarrier,
+                             effectiveHealing: outHealing + outBarrier - inDamage,
                              totalOutgoingStrips: outStrips,
                              totalIncomingStrips: 0,
                              totalBoonsApplied: 0,

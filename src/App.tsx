@@ -37,13 +37,21 @@ import AxiForgeLabView from "./views/AxiForgeLabView";
 import { buildReportHtmlExport } from "./lib/exportReportHtml";
 import type { WvWReport } from "./types/report";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
-import { Activity, BrainCircuit, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, FlaskConical, Link2, Upload, X } from "lucide-react";
+import { Activity, BrainCircuit, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, FlaskConical, Link2, MessageCircle, Send, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
 import RawLogImporter from "./components/ui/RawLogImporter";
 import EntropyWordmarkReveal from "./components/ui/EntropyWordmarkReveal";
 import UpdateToast from "./components/ui/UpdateToast";
 import { useAutoUpdater } from "./utils/useAutoUpdater";
+import {
+  buildDiscordReportPayload,
+  clearDiscordWebhookUrl,
+  isDiscordWebhookUrl,
+  loadDiscordWebhookUrl,
+  saveDiscordWebhookUrl,
+  sendDiscordWebhook,
+} from "./utils/discordWebhook";
 
 
 
@@ -275,6 +283,9 @@ function buildEntropyShareLink(report: WvWReport): string | null {
 }
 
 
+type DiscordShareStatus = "idle" | "missing" | "sending" | "sent" | "failed" | "saved" | "cleared";
+
+
 
 
 function ReportShell() {
@@ -284,6 +295,11 @@ function ReportShell() {
   // was previously the only route back.
   const [atHome, setAtHome] = useState(false);
   const [exportStatus, setExportStatus] = useState<"idle" | "copied" | "downloaded" | "failed">("idle");
+  const [discordWebhookUrl, setDiscordWebhookUrl] = useState(() => loadDiscordWebhookUrl());
+  const [discordDraftUrl, setDiscordDraftUrl] = useState(() => loadDiscordWebhookUrl());
+  const [discordOpen, setDiscordOpen] = useState(false);
+  const [discordStatus, setDiscordStatus] = useState<DiscordShareStatus>("idle");
+  const [discordError, setDiscordError] = useState("");
   const { activeView, setActiveView } = useView();
 
 
@@ -310,6 +326,18 @@ function ReportShell() {
   function flashExportStatus(status: typeof exportStatus) {
     setExportStatus(status);
     window.setTimeout(() => setExportStatus("idle"), 2500);
+  }
+
+
+  function flashDiscordStatus(status: DiscordShareStatus, message = "") {
+    setDiscordStatus(status);
+    setDiscordError(message);
+    if (status !== "sending" && status !== "missing") {
+      window.setTimeout(() => {
+        setDiscordStatus("idle");
+        setDiscordError("");
+      }, 3000);
+    }
   }
 
 
@@ -346,10 +374,55 @@ function ReportShell() {
   }
 
 
+  function handleSaveDiscordWebhook() {
+    const trimmed = discordDraftUrl.trim();
+    if (!isDiscordWebhookUrl(trimmed)) {
+      flashDiscordStatus("missing", "Paste a valid Discord webhook URL from your Discord channel settings.");
+      return;
+    }
+
+    saveDiscordWebhookUrl(trimmed);
+    setDiscordWebhookUrl(trimmed);
+    flashDiscordStatus("saved");
+  }
+
+
+  function handleClearDiscordWebhook() {
+    clearDiscordWebhookUrl();
+    setDiscordWebhookUrl("");
+    setDiscordDraftUrl("");
+    flashDiscordStatus("cleared");
+  }
+
+
+  async function handleShareToDiscord(webhookOverride?: string) {
+    if (!report) return;
+
+    const webhookUrl = (webhookOverride ?? discordWebhookUrl).trim();
+    if (!isDiscordWebhookUrl(webhookUrl)) {
+      setDiscordOpen(true);
+      flashDiscordStatus("missing", "Save a Discord webhook URL first, then send the report.");
+      return;
+    }
+
+    try {
+      setDiscordStatus("sending");
+      setDiscordError("");
+      const viewerUrl = buildEntropyShareLink(report);
+      await sendDiscordWebhook(webhookUrl, buildDiscordReportPayload(report, viewerUrl));
+      flashDiscordStatus("sent");
+    } catch (err) {
+      flashDiscordStatus("failed", err instanceof Error ? err.message : "Discord share failed.");
+    }
+  }
+
+
 
 
   const exportLabel =
     exportStatus === "copied" ? "Link copied" : exportStatus === "downloaded" ? "HTML saved" : exportStatus === "failed" ? "Export failed" : "Export link";
+  const discordLabel =
+    discordStatus === "sending" ? "Sending" : discordStatus === "sent" ? "Sent" : discordStatus === "failed" ? "Failed" : discordStatus === "saved" ? "Saved" : "Discord";
   const viewIcon = VIEW_ICONS[activeView] ?? <Activity className="w-4 h-4" />;
 
 
@@ -416,6 +489,26 @@ function ReportShell() {
                   <Link2 className="w-3 h-3" />
                   {exportLabel}
                 </button>
+                <button
+                  onClick={() => handleShareToDiscord()}
+                  title="Post a compact Entropy summary embed to your saved Discord webhook."
+                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-violet-300 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-violet-500/30 bg-black/30 transition-colors disabled:opacity-60"
+                  disabled={discordStatus === "sending"}
+                >
+                  <MessageCircle className="w-3 h-3" />
+                  {discordLabel}
+                </button>
+                <button
+                  onClick={() => {
+                    setDiscordDraftUrl(discordWebhookUrl);
+                    setDiscordOpen(true);
+                  }}
+                  title="Configure the Discord webhook used by the share button."
+                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-violet-300 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-violet-500/30 bg-black/30 transition-colors"
+                >
+                  <Send className="w-3 h-3" />
+                  Webhook
+                </button>
                 {source && (
                   <span
                     className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border ${
@@ -443,6 +536,98 @@ function ReportShell() {
               </div>
             </div>
           </header>
+        )}
+
+        {discordOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+            <div className="w-full max-w-xl rounded-2xl border border-violet-400/20 bg-slate-950/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-100">Discord webhook</h2>
+                  <p className="mt-1 text-xs leading-5 text-slate-400">
+                    Save a channel webhook here, then Entropy can post a compact report summary embed. The full report JSON is never sent.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDiscordOpen(false)}
+                  className="rounded-lg border border-white/[0.06] bg-black/30 p-2 text-slate-500 transition hover:border-rose-400/30 hover:text-rose-300"
+                  aria-label="Close Discord webhook settings"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <label className="mt-5 block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                Discord webhook URL
+              </label>
+              <input
+                value={discordDraftUrl}
+                onChange={(event) => {
+                  setDiscordDraftUrl(event.target.value);
+                  if (discordStatus === "missing" || discordStatus === "failed") {
+                    setDiscordStatus("idle");
+                    setDiscordError("");
+                  }
+                }}
+                placeholder="https://discord.com/api/webhooks/..."
+                className="mt-2 w-full rounded-xl border border-white/[0.08] bg-black/40 px-3 py-2 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-violet-400/40"
+              />
+
+              {(discordError || discordStatus === "saved" || discordStatus === "cleared" || discordStatus === "sent") && (
+                <p
+                  className={`mt-3 text-xs ${
+                    discordStatus === "failed" || discordStatus === "missing"
+                      ? "text-rose-300"
+                      : discordStatus === "sent" || discordStatus === "saved"
+                        ? "text-emerald-300"
+                        : "text-slate-400"
+                  }`}
+                >
+                  {discordError ||
+                    (discordStatus === "sent"
+                      ? "Report sent to Discord."
+                      : discordStatus === "saved"
+                        ? "Webhook saved locally."
+                        : "Webhook cleared.")}
+                </p>
+              )}
+
+              <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleClearDiscordWebhook}
+                  className="rounded-xl border border-white/[0.06] bg-black/30 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-400 transition hover:border-rose-400/30 hover:text-rose-300"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveDiscordWebhook}
+                  className="rounded-xl border border-violet-400/20 bg-violet-500/[0.08] px-4 py-2 text-xs font-bold uppercase tracking-wider text-violet-200 transition hover:bg-violet-500/[0.16]"
+                >
+                  Save webhook
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const trimmed = discordDraftUrl.trim();
+                    if (!isDiscordWebhookUrl(trimmed)) {
+                      flashDiscordStatus("missing", "Paste a valid Discord webhook URL from your Discord channel settings.");
+                      return;
+                    }
+                    saveDiscordWebhookUrl(trimmed);
+                    setDiscordWebhookUrl(trimmed);
+                    await handleShareToDiscord(trimmed);
+                  }}
+                  disabled={discordStatus === "sending" || !report}
+                  className="rounded-xl border border-amber-400/20 bg-amber-500/[0.08] px-4 py-2 text-xs font-bold uppercase tracking-wider text-amber-200 transition hover:bg-amber-500/[0.16] disabled:opacity-60"
+                >
+                  {discordStatus === "sending" ? "Sending..." : "Save + send"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
 
