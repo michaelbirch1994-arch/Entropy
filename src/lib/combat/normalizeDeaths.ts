@@ -25,8 +25,6 @@
 import { classifyDegree, type ParsedReport } from '../bridge-metrics/positioning';
 import type { CombatAgent, CombatEvent, CombatEventSet } from './CombatEvent';
 
-const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
-
 function agentOf(p: any, playerIndex?: number): CombatAgent {
   return {
     name: p?.name ?? 'Unknown',

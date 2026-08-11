@@ -1,8 +1,7 @@
 name: CI
 
-# Catches broken builds and regressions before they show up as a blank
-# StackBlitz preview or a silently-broken view in production. Runs on every
-# push and pull request against main.
+# Catches broken builds and regressions before they reach production.
+# Runs on every push and pull request against main.
 
 on:
   push:

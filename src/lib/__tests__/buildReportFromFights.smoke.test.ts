@@ -62,7 +62,7 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(player).toBeTruthy();
 
                  const skillId = 987654;
-                 (raw as any).skillMap = { ...((raw as any).skillMap ?? {}), [`s${skillId}`]: { name: 'Savage Slash', icon: 'https://example.invalid/savage-slash.png' } };
+                 (raw as any).skillMap = { ...((raw as any).skillMap), [`s${skillId}`]: { name: 'Savage Slash', icon: 'https://example.invalid/savage-slash.png' } };
                  player.profession = 'Untamed';
                  player.totalDamageDist = player.totalDamageDist ?? [[]];
                  player.totalDamageDist[0] = [
@@ -94,7 +94,7 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  const relentlessWhirlId = 900002;
                  const rampantGrowthId = 900003;
                  (raw as any).skillMap = {
-                         ...((raw as any).skillMap ?? {}),
+                         ...((raw as any).skillMap),
                          [`s${solarBrillianceId}`]: { name: 'Solar Brilliance', icon: 'https://example.invalid/solar-brilliance.png' },
                          [`s${relentlessWhirlId}`]: { name: 'Relentless Whirl', icon: 'https://example.invalid/relentless-whirl.png' },
                          [`s${rampantGrowthId}`]: { name: 'Rampant Growth', icon: 'https://example.invalid/rampant-growth.png' },

@@ -1,32 +1,59 @@
-# React + TypeScript + Vite
+# Entropy
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Guild Wars 2 WvW log parser and raid report viewer. Upload ArcDPS `.zevtc` / `.evtc` logs (or paste [dps.report](https://dps.report) permalinks) to build squad-level fight analytics in the browser.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Import raw ArcDPS combat logs via drag-and-drop, file picker, or connected log folder (Chromium File System Access API)
+- Upload to dps.report for Elite Insights parsing, then aggregate multi-fight sessions
+- Overview, KDR, fight breakdown, top players/skills, buffs, composition, rotations, DPS graphs, replay, and more
+- Export HTML snapshots and optional Discord webhook sharing
+- Local report archive and player profile cache (IndexedDB / localStorage)
 
-## React Compiler
+## Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19 + TypeScript + Vite
+- Tailwind CSS 4
+- Recharts + Framer Motion
 
-## Expanding the Oxlint configuration
+## Develop
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Build
+
+```bash
+npm run build
+npm run preview
+```
+
+## Deploy (Vercel)
+
+This repo is set up as a static Vite app. On Vercel:
+
+1. Import the GitHub repo
+2. Framework preset: Vite (or leave defaults — `vercel.json` sets build/output)
+3. Deploy
+
+Optional env:
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_ENTROPY_SHARE_VIEWER_URL` | Canonical public URL used when sharing reports (defaults to the current origin) |
+
+## Scripts
+
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Local Vite dev server |
+| `npm run build` | Type-check + production build to `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm test` | Run Vitest unit tests |
+| `npm run lint` | Oxlint |
+
+## License
+
+GPL-3.0 — see `LICENSE-GPL-3.0.txt` and `THIRD_PARTY_NOTICES.md`.

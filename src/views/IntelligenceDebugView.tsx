@@ -7,9 +7,7 @@ import {
   Flame,
   FileWarning,
   Gauge,
-  ListChecks,
   MapPinned,
-  Radar,
   ShieldAlert,
   Swords,
 } from "lucide-react";

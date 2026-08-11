@@ -22,12 +22,7 @@ function metricValueForHealing(source: TopHealingSource, sort: SortKey) {
 }
 
 // Wraps the skill/buff icon with a graceful fallback. A plain <img> is used
-// (not a fetch()-then-blob-URL indirection) because img-src already permits
-// any https:// source in every place this app actually runs - the web build
-// ships with no CSP at all, and the packaged Tauri app's img-src explicitly
-// allows "https:". A fetch()-based approach is governed by the stricter
-// connect-src instead, which only allowlists a handful of API hosts, so it
-// silently failed for every single icon in the desktop app.
+// so render-time network failures can fall back to a ranked placeholder.
 function SkillIcon({ src, index }: { src?: string; index: number }) {
   const [failed, setFailed] = useState(false);
   if (!src || failed) {

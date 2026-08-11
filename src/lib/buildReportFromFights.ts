@@ -138,7 +138,7 @@ function resolveHealingCoverage(hasHealAddon: boolean, healing: number): Healing
     if (hasHealAddon) return 'full';
     return healing > 0 ? 'partial' : 'none';
 }
-import { buildBoonTables, type BoonTable, BUFF_CLASSIFICATIONS } from './bridge-metrics/boonGeneration';
+import { buildBoonTables, BUFF_CLASSIFICATIONS } from './bridge-metrics/boonGeneration';
 import { classifyPlayerRoles } from './bridge-metrics/classifyPlayerRoles';
 import { getProfessionColor } from './bridge-metrics/professionUtils';
 import { parseReplayData } from './parseReplayData';
@@ -819,7 +819,7 @@ function computeDpsGraph(fights: FightInput[]): DpsGraphData {
 
                      if (series.length === 0) return;
 
-                     const squad = new Array(maxLen).fill(0);
+                     const squad = Array.from({ length: maxLen }, () => 0);
         for (const s of series) {
                 let last = 0;
                 for (let i = 0; i < maxLen; i++) {

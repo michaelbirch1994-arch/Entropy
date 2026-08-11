@@ -37,13 +37,11 @@ import AxiForgeLabView from "./views/AxiForgeLabView";
 import { buildReportHtmlExport } from "./lib/exportReportHtml";
 import type { WvWReport } from "./types/report";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
-import { Activity, BrainCircuit, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, FlaskConical, Link2, MessageCircle, Send, Upload, X } from "lucide-react";
+import { Activity, CircleAlert as AlertCircle, FlaskConical, Link2, MessageCircle, Send, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
 import RawLogImporter from "./components/ui/RawLogImporter";
 import EntropyWordmarkReveal from "./components/ui/EntropyWordmarkReveal";
-import UpdateToast from "./components/ui/UpdateToast";
-import { useAutoUpdater } from "./utils/useAutoUpdater";
 import {
   buildDiscordReportPayload,
   clearDiscordWebhookUrl,
@@ -238,20 +236,15 @@ function downloadHtmlSnapshot(title: string, html: string) {
 }
 
 
-const DEFAULT_SHARE_VIEWER_URL = "https://michaelbirch1994-arch.github.io/Entropy/";
-
-
 function getConfiguredShareViewerUrl(): string {
   const configured = import.meta.env.VITE_ENTROPY_SHARE_VIEWER_URL;
   if (typeof configured === "string" && configured.trim()) return configured.trim();
-
 
   if (typeof window !== "undefined" && /^https?:$/i.test(window.location.protocol)) {
     return window.location.href;
   }
 
-
-  return DEFAULT_SHARE_VIEWER_URL;
+  return "/";
 }
 
 
@@ -696,14 +689,6 @@ function ReportShell() {
 
 
 export default function App() {
-  // Runs once per launch, no-op outside the desktop app - see
-  // src/utils/useAutoUpdater.ts for why this checks on startup only
-  // instead of polling.
-  const updateState = useAutoUpdater();
-
-
-
-
   return (
     <ViewProvider>
       <CompareProvider>
@@ -712,7 +697,6 @@ export default function App() {
             <StatsDisplayProvider>
               <AllyScopeProvider>
                 <ReportShell />
-                <UpdateToast {...updateState} />
               </AllyScopeProvider>
             </StatsDisplayProvider>
           </DamageScopeProvider>

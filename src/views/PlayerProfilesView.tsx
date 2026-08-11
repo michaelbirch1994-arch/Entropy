@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Panel from "../components/ui/Panel";
-import { Users, Swords, Trophy, Sparkles, Flame } from "lucide-react";
+import { Users, Trophy, Sparkles, Flame } from "lucide-react";
 import { getAllProfiles, topClass, computeBadges, currentWinStreak, type PlayerProfile } from "../lib/playerProfileStore";
 import { fmtCompact, fmtFixedGrouped, fmtNum, profChip } from "../utils/format";
 import ProfessionIcon from "../components/ui/ProfessionIcon";

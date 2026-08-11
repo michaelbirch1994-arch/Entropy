@@ -1,5 +1,5 @@
 import { classifyDegree, OUT_OF_POSITION, type ParsedReport } from '../bridge-metrics/positioning';
-import { eventIdentity, type CombatAgent, type CombatEvent, type CombatEventSet } from '../combat/CombatEvent';
+import { eventIdentity, type CombatAgent, type CombatEventSet } from '../combat/CombatEvent';
 import { resolveAgentIdentityKey, describeAgent } from '../combat/agentIdentity';
 import type { CriticalEvent } from './types';
 
