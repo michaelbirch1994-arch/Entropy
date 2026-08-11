@@ -124,7 +124,6 @@ function buildPlayerSourceBreakdown({
       positiveRow("Total barrier", barrierTotal, "bg-teal-400"),
       positiveRow("Group barrier", healingTotals?.groupBarrier, "bg-cyan-400"),
       positiveRow("Self barrier", healingTotals?.selfBarrier, "bg-sky-400"),
-      positiveRow("Off-squad barrier", healingTotals?.offSquadBarrier, "bg-fuchsia-400"),
     ),
     support: rows(
       positiveRow("Cleanses", supportTotals?.condiCleanse, "bg-cyan-400"),
