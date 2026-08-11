@@ -18,7 +18,7 @@ export default function CommanderStatsView() {
             No commander stats available for this report.
             <p className="text-[11px] text-slate-600 mt-1">
               This section isn't computed yet for reports built from raw .zevtc / dps.report imports - only for
-              full AxiBridge report.json uploads.
+              legacy report.json uploads.
             </p>
           </div>
         </Panel>
