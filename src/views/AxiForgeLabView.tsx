@@ -1,512 +1,721 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  AlertCircle,
   Braces,
   CheckCircle2,
+  Clipboard,
   ClipboardPaste,
+  Code2,
   Eraser,
   ExternalLink,
-  FlaskConical,
-  HeartPulse,
-  Plus,
+  Loader2,
+  Save,
   Shield,
   Sparkles,
   Swords,
-  TriangleAlert,
-  Users,
   Wand2,
-  X,
 } from "lucide-react";
-import { decodeAxiForgeCode, detectAxiForgeCodeKind, type AxiForgeDecodeResult } from "../lib/axiforge/axiForgeAdapter";
-import ProfessionIcon from "../components/ui/ProfessionIcon";
+import {
+  decodeAxiForgeCode,
+  detectAxiForgeCodeKind,
+  encodeAxiForgeBuildCode,
+  type AxiForgeDecodeResult,
+} from "../lib/axiforge/axiForgeAdapter";
+import {
+  fetchGw2Professions,
+  fetchGw2Skills,
+  fetchGw2Specializations,
+  fetchGw2Traits,
+  wikiSearchUrl,
+} from "../lib/gw2/gw2Api";
+import type {
+  BuilderSummaryItem,
+  EntropyBuilderState,
+  Gw2ApiFact,
+  Gw2Profession,
+  Gw2Skill,
+  Gw2SkillSlot,
+  Gw2Specialization,
+  Gw2Trait,
+} from "../types/buildEditor";
+
+const EMPTY_STATE: EntropyBuilderState = {
+  professionId: "Guardian",
+  gameMode: "wvw",
+  specializationIds: [null, null, null],
+  traitChoices: {},
+  healSkillId: null,
+  utilitySkillIds: [null, null, null],
+  eliteSkillId: null,
+};
+
+const GAME_MODES = [
+  { id: "wvw", label: "WvW" },
+  { id: "pve", label: "PvE" },
+  { id: "pvp", label: "PvP" },
+] as const;
+
+function traitKey(trackIndex: number, tier: number): string {
+  return `${trackIndex}:${tier}`;
+}
 
 function kindLabel(kind: AxiForgeDecodeResult["kind"]): string {
   if (kind === "build") return "Build code";
-  if (kind === "comp") return "Comp code";
+  if (kind === "comp") return "Squad code";
   return "Unknown format";
 }
 
-const PROFESSIONS = [
-  "Guardian",
-  "Dragonhunter",
-  "Firebrand",
-  "Willbender",
-  "Luminary",
-  "Warrior",
-  "Berserker",
-  "Spellbreaker",
-  "Bladesworn",
-  "Paragon",
-  "Revenant",
-  "Herald",
-  "Renegade",
-  "Vindicator",
-  "Conduit",
-  "Engineer",
-  "Scrapper",
-  "Holosmith",
-  "Mechanist",
-  "Amalgam",
-  "Ranger",
-  "Druid",
-  "Soulbeast",
-  "Untamed",
-  "Galeshot",
-  "Thief",
-  "Daredevil",
-  "Deadeye",
-  "Specter",
-  "Antiquary",
-  "Elementalist",
-  "Tempest",
-  "Weaver",
-  "Catalyst",
-  "Evoker",
-  "Necromancer",
-  "Reaper",
-  "Scourge",
-  "Harbinger",
-  "Ritualist",
-  "Mesmer",
-  "Chronomancer",
-  "Mirage",
-  "Virtuoso",
-  "Troubadour",
-];
+function factLabel(fact: Gw2ApiFact): string {
+  const parts = [fact.text, fact.status, fact.description].filter(Boolean);
+  const value = fact.value ?? fact.percent ?? fact.apply_count ?? fact.duration;
+  if (value !== undefined) parts.push(String(value));
+  return parts.join(" · ");
+}
 
-const SQUAD_TAGS = [
-  { id: "stability", label: "Stability", tone: "amber" },
-  { id: "aegis", label: "Aegis", tone: "amber" },
-  { id: "protection", label: "Protection", tone: "sky" },
-  { id: "resistance", label: "Resistance", tone: "sky" },
-  { id: "resolution", label: "Resolution", tone: "sky" },
-  { id: "might", label: "Might", tone: "orange" },
-  { id: "fury", label: "Fury", tone: "orange" },
-  { id: "quickness", label: "Quickness", tone: "violet" },
-  { id: "superspeed", label: "Superspeed", tone: "violet" },
-  { id: "alacrity", label: "Alacrity", tone: "violet" },
-  { id: "healing", label: "Healing", tone: "emerald" },
-  { id: "barrier", label: "Barrier", tone: "emerald" },
-  { id: "cleanse", label: "Cleanse", tone: "emerald" },
-  { id: "rez", label: "Rez", tone: "emerald" },
-  { id: "stunbreak", label: "Stunbreak", tone: "rose" },
-  { id: "cc", label: "CC", tone: "rose" },
-  { id: "strips", label: "Strips", tone: "rose" },
-  { id: "damage", label: "Damage", tone: "red" },
-  { id: "range", label: "Range", tone: "slate" },
-] as const;
+function skillSlotLabel(slot: Gw2SkillSlot, index?: number): string {
+  if (slot === "Utility" && index !== undefined) return `Utility ${index + 1}`;
+  return slot;
+}
 
-type SquadTagId = (typeof SQUAD_TAGS)[number]["id"];
-
-type SquadRole = "Support" | "DPS" | "Hybrid" | "Utility";
-
-interface SquadBuildSlot {
-  id: string;
-  party: number;
-  name: string;
+function asDecodedBuild(value: unknown): Partial<{
   profession: string;
-  role: SquadRole;
-  buildLink: string;
-  tags: SquadTagId[];
-  notes: string;
+  gameMode: EntropyBuilderState["gameMode"];
+  specializations: { id?: number; traitChoices?: number[] }[];
+  skills: { healId?: number; utilityIds?: number[]; eliteId?: number };
+}> | null {
+  if (!value || typeof value !== "object") return null;
+  return value as Partial<{
+    profession: string;
+    gameMode: EntropyBuilderState["gameMode"];
+    specializations: { id?: number; traitChoices?: number[] }[];
+    skills: { healId?: number; utilityIds?: number[]; eliteId?: number };
+  }>;
 }
 
-const SAMPLE_BUILD_LINK = "https://gw2skills.net/editor/?POwEYKyoutssC2CLhhwIxyVyrVWir3D-DWJYjRN/hEkCoaRQMTBfddoEBYP8WafzCA-w";
-
-const INITIAL_SQUAD: SquadBuildSlot[] = [
-  {
-    id: "slot-1",
-    party: 1,
-    name: "GW2Skills build",
-    profession: "Revenant",
-    role: "Hybrid",
-    buildLink: SAMPLE_BUILD_LINK,
-    tags: ["damage", "strips", "cc", "rez"],
-    notes: "External GW2Skills link preserved. Adjust class/boon tags after confirming the exact build.",
-  },
-  {
-    id: "slot-2",
-    party: 1,
-    name: "Firebrand support",
-    profession: "Firebrand",
-    role: "Support",
-    buildLink: "",
-    tags: ["stability", "aegis", "protection", "cleanse", "healing", "rez"],
-    notes: "Core party support shell; replace with real Entropy Builder/GW2Skills build link.",
-  },
-  {
-    id: "slot-3",
-    party: 1,
-    name: "Scrapper support",
-    profession: "Scrapper",
-    role: "Support",
-    buildLink: "",
-    tags: ["quickness", "superspeed" as SquadTagId, "cleanse", "healing", "barrier", "rez"].filter((tag): tag is SquadTagId => SQUAD_TAGS.some((item) => item.id === tag)),
-    notes: "Cleanse/sustain slot. Tags are editable; this is a planning placeholder.",
-  },
-];
-
-function tagClass(tone: string, active = true): string {
-  if (!active) return "border-white/10 bg-white/[0.03] text-slate-500";
-  if (tone === "amber") return "border-amber-400/25 bg-amber-500/10 text-amber-200";
-  if (tone === "sky") return "border-sky-400/25 bg-sky-500/10 text-sky-200";
-  if (tone === "orange") return "border-orange-400/25 bg-orange-500/10 text-orange-200";
-  if (tone === "violet") return "border-violet-400/25 bg-violet-500/10 text-violet-200";
-  if (tone === "emerald") return "border-emerald-400/25 bg-emerald-500/10 text-emerald-200";
-  if (tone === "rose") return "border-rose-400/25 bg-rose-500/10 text-rose-200";
-  if (tone === "red") return "border-red-400/25 bg-red-500/10 text-red-200";
-  return "border-slate-400/20 bg-slate-500/10 text-slate-300";
+function safeJson(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return "Decoded data cannot be displayed as JSON.";
+  }
 }
 
-function isExternalBuildLink(value: string): boolean {
-  return /^https?:\/\//i.test(value.trim());
-}
-
-function emptySlot(id: string, party: number): SquadBuildSlot {
+function buildEncodeShape(
+  builder: EntropyBuilderState,
+  specsById: Map<number, Gw2Specialization>,
+  traitsBySpecId: Map<number, Gw2Trait[]>,
+  skillsById: Map<number, Gw2Skill>,
+) {
   return {
-    id,
-    party,
-    name: "New build",
-    profession: "Guardian",
-    role: "Support",
-    buildLink: "",
-    tags: [],
-    notes: "",
+    profession: builder.professionId,
+    gameMode: builder.gameMode,
+    specializations: builder.specializationIds.map((specId, trackIndex) => {
+      if (!specId) return { id: 0 };
+      const spec = specsById.get(specId);
+      const majorTraitsByTier: Record<number, { id: number }[]> = {};
+      const majorChoices: Record<number, number | null> = {};
+      for (const tier of [1, 2, 3]) {
+        majorTraitsByTier[tier] = (traitsBySpecId.get(specId) ?? [])
+          .filter((trait) => trait.slot === "Major" && trait.tier === tier)
+          .sort((a, b) => a.order - b.order)
+          .map((trait) => ({ id: trait.id }));
+        majorChoices[tier] = builder.traitChoices[traitKey(trackIndex, tier)] ?? null;
+      }
+      return {
+        id: specId,
+        name: spec?.name ?? `Specialization ${specId}`,
+        elite: spec?.elite ?? false,
+        majorTraitsByTier,
+        majorChoices,
+      };
+    }),
+    skills: {
+      heal: builder.healSkillId ? { id: builder.healSkillId, name: skillsById.get(builder.healSkillId)?.name } : null,
+      utility: builder.utilitySkillIds.map((id) => (id ? { id, name: skillsById.get(id)?.name } : null)),
+      elite: builder.eliteSkillId ? { id: builder.eliteSkillId, name: skillsById.get(builder.eliteSkillId)?.name } : null,
+    },
+    underwaterSkills: { heal: null, utility: [null, null, null], elite: null },
+    equipment: {
+      statPackage: "",
+      slots: {},
+      weapons: { mainhand1: "", offhand1: "", mainhand2: "", offhand2: "", aquatic1: "", aquatic2: "" },
+      runes: { head: "0", shoulders: "0", chest: "0", hands: "0", legs: "0", feet: "0" },
+      sigils: { mainhand1: ["0"], offhand1: [], mainhand2: [], offhand2: [], aquatic1: [], aquatic2: [] },
+      infusions: {},
+      relic: "",
+      food: "",
+      utility: "",
+      enrichment: "",
+    },
   };
 }
 
-function squadCoverage(slots: SquadBuildSlot[]) {
-  return SQUAD_TAGS.map((tag) => ({
-    ...tag,
-    count: slots.filter((slot) => slot.tags.includes(tag.id)).length,
-  }));
+function IconTile({
+  icon,
+  name,
+  active,
+  disabled,
+  onClick,
+  onInspect,
+}: {
+  icon?: string;
+  name: string;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  onInspect?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      onMouseEnter={onInspect}
+      onFocus={onInspect}
+      className={`group flex min-h-16 items-center gap-3 rounded-2xl border p-3 text-left transition ${
+        active
+          ? "border-amber-300/45 bg-amber-400/10 text-amber-100 shadow-[0_0_28px_-18px_rgba(251,191,36,0.95)]"
+          : "border-white/[0.07] bg-black/30 text-slate-300 hover:border-sky-300/30 hover:bg-sky-500/[0.06]"
+      } ${disabled ? "cursor-not-allowed opacity-35" : ""}`}
+    >
+      <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
+        {icon ? <img src={icon} alt="" className="h-8 w-8 object-contain" /> : <Sparkles className="h-5 w-5 text-slate-500" />}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-bold">{name}</span>
+        <span className="mt-0.5 block text-[10px] uppercase tracking-wider text-slate-500 group-hover:text-sky-300/80">
+          Click to select
+        </span>
+      </span>
+    </button>
+  );
 }
 
-function partyLabel(party: number): string {
-  return `Party ${party}`;
-}
-
-function SquadBuilder() {
-  const [slots, setSlots] = useState<SquadBuildSlot[]>(INITIAL_SQUAD);
-  const coverage = useMemo(() => squadCoverage(slots), [slots]);
-  const parties = [1, 2, 3, 4, 5];
-
-  function updateSlot(id: string, patch: Partial<SquadBuildSlot>) {
-    setSlots((current) => current.map((slot) => (slot.id === id ? { ...slot, ...patch } : slot)));
+function WikiSummaryPanel({ selected }: { selected: BuilderSummaryItem | null }) {
+  if (!selected) {
+    return (
+      <aside className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
+        <div className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-slate-200">
+          <Braces className="h-4 w-4 text-sky-300" />
+          Wiki Summary
+        </div>
+        <p className="mt-4 text-sm leading-6 text-slate-400">
+          Hover or click a profession, specialization, trait, or skill to inspect what it brings.
+        </p>
+      </aside>
+    );
   }
 
-  function toggleTag(slot: SquadBuildSlot, tag: SquadTagId) {
-    const nextTags = slot.tags.includes(tag)
-      ? slot.tags.filter((item) => item !== tag)
-      : [...slot.tags, tag];
-    updateSlot(slot.id, { tags: nextTags });
-  }
-
-  function addSlot(party: number) {
-    setSlots((current) => [...current, emptySlot(`slot-${Date.now()}`, party)]);
-  }
-
-  function removeSlot(id: string) {
-    setSlots((current) => current.filter((slot) => slot.id !== id));
-  }
+  const item = selected.item;
+  const facts = "facts" in item ? item.facts ?? [] : [];
+  const description = "description" in item ? item.description : "";
+  const icon =
+    selected.kind === "profession"
+      ? selected.item.icon_big ?? selected.item.icon
+      : "icon" in item
+        ? item.icon
+        : undefined;
 
   return (
-    <section className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-100">
-            <Users className="h-5 w-5 text-sky-300" /> Squad builder
-          </div>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-            Draft parties, attach Entropy Builder or GW2Skills links, and mark what each build contributes. This is planner data only;
-            it does not alter reports or Intelligence output.
-          </p>
+    <aside className="sticky top-6 rounded-[2rem] border border-sky-300/10 bg-black/45 p-5 shadow-[0_18px_60px_-28px_rgba(56,189,248,0.75)]">
+      <div className="flex items-start gap-4">
+        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+          {icon ? <img src={icon} alt="" className="h-12 w-12 object-contain" /> : <Sparkles className="h-6 w-6 text-sky-300" />}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-sky-200">
-            {slots.length} builds
-          </span>
-          <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-200">
-            {coverage.filter((item) => item.count > 0).length}/{coverage.length} covered
-          </span>
+        <div className="min-w-0">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-sky-300">{selected.kind}</div>
+          <h3 className="mt-1 truncate text-lg font-black text-slate-100">{item.name}</h3>
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 rounded-2xl border border-white/[0.06] bg-black/25 p-4">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-300">
-          <Sparkles className="h-4 w-4 text-emerald-300" /> Squad coverage
-        </div>
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-          {coverage.map((item) => (
-            <div key={item.id} className="grid grid-cols-[92px_1fr_36px] items-center gap-3 rounded-xl border border-white/[0.06] bg-black/25 px-3 py-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{item.label}</span>
-              <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-                <div
-                  className={`h-full rounded-full ${item.count > 0 ? "bg-emerald-300" : "bg-slate-700"}`}
-                  style={{ width: `${Math.min(100, Math.max(item.count > 0 ? 18 : 8, item.count * 25))}%` }}
-                />
-              </div>
-              <span className="text-right font-mono text-[11px] font-bold text-slate-400">{item.count}</span>
+      {description && <p className="mt-4 whitespace-pre-line text-sm leading-6 text-slate-300">{description}</p>}
+
+      {facts.length > 0 && (
+        <div className="mt-5 space-y-2">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Effects</div>
+          {facts.slice(0, 7).map((fact, index) => (
+            <div key={`${fact.type ?? "fact"}-${index}`} className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-xs text-slate-300">
+              {fact.icon && <img src={fact.icon} alt="" className="mr-2 inline h-4 w-4 align-text-bottom" />}
+              {factLabel(fact) || fact.type || "Effect"}
             </div>
           ))}
         </div>
-      </div>
+      )}
 
-      <div className="mt-5 grid gap-4">
-        {parties.map((party) => {
-          const partySlots = slots.filter((slot) => slot.party === party);
-          return (
-            <div key={party} className="rounded-2xl border border-white/[0.06] bg-[#070b16]/70 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">{partyLabel(party)}</h3>
-                  <p className="text-xs text-slate-500">{partySlots.length}/5 planned slots</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => addSlot(party)}
-                  disabled={partySlots.length >= 5}
-                  className="flex items-center gap-2 rounded-xl border border-sky-400/25 bg-sky-500/10 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Add build
-                </button>
-              </div>
-
-              <div className="mt-4 grid gap-3">
-                {partySlots.map((slot) => (
-                  <div key={slot.id} className="rounded-2xl border border-white/[0.06] bg-black/30 p-4">
-                    <div className="grid gap-3 xl:grid-cols-[1.1fr_0.8fr]">
-                      <div className="grid gap-3 md:grid-cols-[1fr_190px_130px]">
-                        <label className="grid gap-1.5">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Build name</span>
-                          <input
-                            value={slot.name}
-                            onChange={(event) => updateSlot(slot.id, { name: event.target.value })}
-                            className="rounded-xl border border-white/10 bg-black/45 px-3 py-2 text-sm text-slate-200 outline-none focus:border-sky-400/40"
-                          />
-                        </label>
-                        <label className="grid gap-1.5">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Class</span>
-                          <div className="relative">
-                            <select
-                              value={slot.profession}
-                              onChange={(event) => updateSlot(slot.id, { profession: event.target.value })}
-                              className="w-full appearance-none rounded-xl border border-white/10 bg-black/45 px-3 py-2 pr-9 text-sm text-slate-200 outline-none focus:border-sky-400/40"
-                            >
-                              {PROFESSIONS.map((profession) => (
-                                <option key={profession} value={profession}>{profession}</option>
-                              ))}
-                            </select>
-                            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                              <ProfessionIcon profession={slot.profession} className="h-4 w-4" />
-                            </div>
-                          </div>
-                        </label>
-                        <label className="grid gap-1.5">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Role</span>
-                          <select
-                            value={slot.role}
-                            onChange={(event) => updateSlot(slot.id, { role: event.target.value as SquadRole })}
-                            className="rounded-xl border border-white/10 bg-black/45 px-3 py-2 text-sm text-slate-200 outline-none focus:border-sky-400/40"
-                          >
-                            <option>Support</option>
-                            <option>DPS</option>
-                            <option>Hybrid</option>
-                            <option>Utility</option>
-                          </select>
-                        </label>
-                      </div>
-
-                      <div className="flex items-start gap-3 xl:justify-end">
-                        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-slate-200">
-                          <ProfessionIcon profession={slot.profession} className="h-7 w-7" />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeSlot(slot.id)}
-                          className="rounded-xl border border-rose-400/20 bg-rose-500/[0.06] p-2 text-rose-300 transition hover:bg-rose-500/10"
-                          aria-label={`Remove ${slot.name}`}
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_0.9fr]">
-                      <label className="grid gap-1.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Build link or code</span>
-                        <input
-                          value={slot.buildLink}
-                          onChange={(event) => updateSlot(slot.id, { buildLink: event.target.value })}
-                          placeholder="Entropy Builder code or https://gw2skills.net/editor/..."
-                          className="rounded-xl border border-white/10 bg-black/45 px-3 py-2 font-mono text-xs text-slate-200 outline-none focus:border-sky-400/40"
-                        />
-                      </label>
-                      <label className="grid gap-1.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Notes</span>
-                        <input
-                          value={slot.notes}
-                          onChange={(event) => updateSlot(slot.id, { notes: event.target.value })}
-                          placeholder="What to check, party assignment, swap notes..."
-                          className="rounded-xl border border-white/10 bg-black/45 px-3 py-2 text-sm text-slate-200 outline-none focus:border-sky-400/40"
-                        />
-                      </label>
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {SQUAD_TAGS.map((tag) => {
-                        const active = slot.tags.includes(tag.id);
-                        return (
-                          <button
-                            key={tag.id}
-                            type="button"
-                            onClick={() => toggleTag(slot, tag.id)}
-                            className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition ${tagClass(tag.tone, active)}`}
-                          >
-                            {tag.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
-                      <span className="flex items-center gap-1.5">
-                        {slot.role === "Support" ? <Shield className="h-3.5 w-3.5" /> : slot.role === "DPS" ? <Swords className="h-3.5 w-3.5" /> : <Wand2 className="h-3.5 w-3.5" />}
-                        {slot.profession} · {slot.role}
-                      </span>
-                      {isExternalBuildLink(slot.buildLink) && (
-                        <a href={slot.buildLink} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-sky-300 hover:text-sky-200">
-                          Open build <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {partySlots.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-slate-500">
-                    No builds assigned to this party yet.
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
+      <a
+        href={wikiSearchUrl(item.name)}
+        target="_blank"
+        rel="noreferrer"
+        className="mt-5 inline-flex items-center gap-2 rounded-xl border border-sky-300/20 bg-sky-500/[0.06] px-3 py-2 text-xs font-bold uppercase tracking-wider text-sky-200 transition hover:bg-sky-500/[0.12]"
+      >
+        Open wiki <ExternalLink className="h-3.5 w-3.5" />
+      </a>
+    </aside>
   );
 }
 
 export default function AxiForgeLabView() {
+  const [builder, setBuilder] = useState<EntropyBuilderState>(EMPTY_STATE);
+  const [professions, setProfessions] = useState<Gw2Profession[]>([]);
+  const [professionSpecs, setProfessionSpecs] = useState<Gw2Specialization[]>([]);
+  const [selectedSpecTraits, setSelectedSpecTraits] = useState<Gw2Trait[]>([]);
+  const [professionSkills, setProfessionSkills] = useState<Gw2Skill[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [code, setCode] = useState("");
-  const [result, setResult] = useState<AxiForgeDecodeResult | null>(null);
-  const detectedKind = useMemo(() => detectAxiForgeCodeKind(code), [code]);
+  const [decodeResult, setDecodeResult] = useState<AxiForgeDecodeResult | null>(null);
+  const [encodedCode, setEncodedCode] = useState("");
+  const [status, setStatus] = useState<string | null>(null);
+  const [selectedSummary, setSelectedSummary] = useState<BuilderSummaryItem | null>(null);
 
-  const preview = useMemo(() => {
-    if (!result?.ok) return null;
-    try {
-      return JSON.stringify(result.value, null, 2);
-    } catch {
-      return null;
+  const detectedKind = useMemo(() => detectAxiForgeCodeKind(code), [code]);
+  const selectedProfession = useMemo(
+    () => professions.find((profession) => profession.id === builder.professionId) ?? null,
+    [builder.professionId, professions],
+  );
+  const specsById = useMemo(() => new Map(professionSpecs.map((spec) => [spec.id, spec])), [professionSpecs]);
+  const traitsBySpecId = useMemo(() => {
+    const map = new Map<number, Gw2Trait[]>();
+    for (const trait of selectedSpecTraits) {
+      const current = map.get(trait.specialization) ?? [];
+      current.push(trait);
+      map.set(trait.specialization, current);
     }
-  }, [result]);
+    return map;
+  }, [selectedSpecTraits]);
+  const skillsById = useMemo(() => new Map(professionSkills.map((skill) => [skill.id, skill])), [professionSkills]);
+  const selectedSpecObjects = useMemo(
+    () => builder.specializationIds.map((id) => (id ? specsById.get(id) ?? null : null)),
+    [builder.specializationIds, specsById],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchGw2Professions()
+      .then((items) => {
+        if (cancelled) return;
+        setProfessions(items);
+        if (!items.some((item) => item.id === builder.professionId) && items[0]) {
+          setBuilder((current) => ({ ...current, professionId: items[0].id }));
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) setCatalogError(error instanceof Error ? error.message : "Unable to load GW2 build data.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedProfession) return;
+    let cancelled = false;
+    setCatalogError(null);
+    Promise.all([
+      fetchGw2Specializations(selectedProfession.specializations),
+      fetchGw2Skills(selectedProfession.skills.map((skill) => skill.id)),
+    ])
+      .then(([specs, skills]) => {
+        if (cancelled) return;
+        setProfessionSpecs(specs);
+        setProfessionSkills(skills);
+        setBuilder((current) => ({
+          ...current,
+          specializationIds: current.specializationIds.map((id) => (id && specs.some((spec) => spec.id === id) ? id : null)) as [
+            number | null,
+            number | null,
+            number | null,
+          ],
+          healSkillId: current.healSkillId && skills.some((skill) => skill.id === current.healSkillId) ? current.healSkillId : null,
+          utilitySkillIds: current.utilitySkillIds.map((id) => (id && skills.some((skill) => skill.id === id) ? id : null)) as [
+            number | null,
+            number | null,
+            number | null,
+          ],
+          eliteSkillId: current.eliteSkillId && skills.some((skill) => skill.id === current.eliteSkillId) ? current.eliteSkillId : null,
+        }));
+      })
+      .catch((error) => {
+        if (!cancelled) setCatalogError(error instanceof Error ? error.message : "Unable to load profession data.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProfession?.id]);
+
+  useEffect(() => {
+    const traitIds = selectedSpecObjects.flatMap((spec) => spec?.major_traits ?? []);
+    let cancelled = false;
+    fetchGw2Traits(traitIds)
+      .then((traits) => {
+        if (!cancelled) setSelectedSpecTraits(traits);
+      })
+      .catch((error) => {
+        if (!cancelled) setCatalogError(error instanceof Error ? error.message : "Unable to load traits.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSpecObjects.map((spec) => spec?.id ?? 0).join(":")]);
+
+  function chooseProfession(profession: Gw2Profession) {
+    setBuilder({
+      ...EMPTY_STATE,
+      professionId: profession.id,
+      gameMode: builder.gameMode,
+    });
+    setSelectedSummary({ kind: "profession", item: profession });
+    setEncodedCode("");
+    setDecodeResult(null);
+  }
+
+  function chooseSpec(trackIndex: number, spec: Gw2Specialization) {
+    setBuilder((current) => {
+      const specializationIds = [...current.specializationIds] as EntropyBuilderState["specializationIds"];
+      specializationIds[trackIndex] = spec.id;
+      const traitChoices = { ...current.traitChoices };
+      for (const tier of [1, 2, 3]) traitChoices[traitKey(trackIndex, tier)] = null;
+      return { ...current, specializationIds, traitChoices };
+    });
+    setSelectedSummary({ kind: "specialization", item: spec });
+    setEncodedCode("");
+  }
+
+  function chooseTrait(trackIndex: number, trait: Gw2Trait) {
+    setBuilder((current) => ({
+      ...current,
+      traitChoices: { ...current.traitChoices, [traitKey(trackIndex, trait.tier)]: trait.id },
+    }));
+    setSelectedSummary({ kind: "trait", item: trait });
+    setEncodedCode("");
+  }
+
+  function chooseSkill(slot: Gw2SkillSlot, id: number | null, utilityIndex?: number) {
+    setBuilder((current) => {
+      if (slot === "Heal") return { ...current, healSkillId: id };
+      if (slot === "Elite") return { ...current, eliteSkillId: id };
+      if (slot === "Utility" && utilityIndex !== undefined) {
+        const utilitySkillIds = [...current.utilitySkillIds] as EntropyBuilderState["utilitySkillIds"];
+        utilitySkillIds[utilityIndex] = id;
+        return { ...current, utilitySkillIds };
+      }
+      return current;
+    });
+    const skill = id ? skillsById.get(id) : null;
+    if (skill) setSelectedSummary({ kind: "skill", item: skill });
+    setEncodedCode("");
+  }
 
   function handleDecode() {
-    setResult(decodeAxiForgeCode(code));
+    const result = decodeAxiForgeCode(code);
+    setDecodeResult(result);
+    setEncodedCode("");
+    if (!result.ok) return;
+
+    const decoded = asDecodedBuild(result.value);
+    if (!decoded?.profession) return;
+    const utilityIds = decoded.skills?.utilityIds ?? [];
+    setBuilder((current) => ({
+      ...current,
+      professionId: decoded.profession ?? current.professionId,
+      gameMode: decoded.gameMode ?? current.gameMode,
+      specializationIds: [0, 1, 2].map((index) => decoded.specializations?.[index]?.id || null) as [
+        number | null,
+        number | null,
+        number | null,
+      ],
+      traitChoices: {},
+      healSkillId: decoded.skills?.healId || null,
+      utilitySkillIds: [utilityIds[0] || null, utilityIds[1] || null, utilityIds[2] || null],
+      eliteSkillId: decoded.skills?.eliteId || null,
+    }));
+    setStatus("Imported build code into the editor. Trait rows are ready for review.");
   }
 
   function handleClear() {
     setCode("");
-    setResult(null);
+    setDecodeResult(null);
+    setEncodedCode("");
+    setStatus(null);
   }
 
+  async function handleEncode() {
+    try {
+      const shape = buildEncodeShape(builder, specsById, traitsBySpecId, skillsById);
+      const output = encodeAxiForgeBuildCode(shape);
+      setEncodedCode(output);
+      await navigator.clipboard?.writeText(output);
+      setStatus("Build code copied to clipboard.");
+    } catch {
+      setStatus("Build code could not be created yet. Choose a profession, specializations, and skills first.");
+    }
+  }
+
+  const skillGroups = useMemo(
+    () => ({
+      Heal: professionSkills.filter((skill) => skill.slot === "Heal"),
+      Utility: professionSkills.filter((skill) => skill.slot === "Utility"),
+      Elite: professionSkills.filter((skill) => skill.slot === "Elite"),
+    }),
+    [professionSkills],
+  );
+
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-6">
-      <section className="rounded-[2rem] border border-white/[0.06] bg-black/45 p-6 shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)]">
-        <div className="flex items-start gap-4">
-          <div className="rounded-2xl border border-sky-400/25 bg-sky-500/10 p-3 text-sky-300">
-            <FlaskConical className="h-6 w-6" />
+    <div className="mx-auto max-w-7xl space-y-6">
+      <section className="overflow-hidden rounded-[2rem] border border-white/[0.06] bg-black/45 shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)]">
+        <div className="flex flex-col gap-5 border-b border-white/[0.06] p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl border border-sky-400/25 bg-sky-500/10 p-3 text-sky-300">
+              <Wand2 className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black uppercase tracking-widest text-slate-100">Entropy Builder</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
+                Build a profession template, inspect traits and skills from live GW2 data, and export a compact build code for the squad workspace.
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-black uppercase tracking-widest text-slate-100">Entropy Builder</h2>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-400">
-              Decode Entropy Builder codes, preserve external build links, and draft squad compositions before connecting them to reports.
-            </p>
+          <div className="flex flex-wrap gap-2">
+            {GAME_MODES.map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() => setBuilder((current) => ({ ...current, gameMode: mode.id }))}
+                className={`rounded-xl border px-4 py-2 text-xs font-black uppercase tracking-wider transition ${
+                  builder.gameMode === mode.id
+                    ? "border-amber-300/40 bg-amber-400/10 text-amber-200"
+                    : "border-white/10 bg-black/30 text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {mode.label}
+              </button>
+            ))}
           </div>
         </div>
-      </section>
 
-      <section className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-6">
-        <label htmlFor="axiforge-code" className="text-xs font-bold uppercase tracking-wider text-slate-300">
-          Build or comp code
-        </label>
-        <textarea
-          id="axiforge-code"
-          value={code}
-          onChange={(event) => {
-            setCode(event.target.value);
-            setResult(null);
-          }}
-          placeholder="Paste an Entropy Builder build/comp code here. GW2Skills links belong in the squad builder below."
-          spellCheck={false}
-          className="mt-3 min-h-36 w-full resize-y rounded-2xl border border-white/10 bg-black/45 p-4 font-mono text-sm text-slate-200 outline-none transition focus:border-sky-400/40 focus:ring-2 focus:ring-sky-500/10"
-        />
-
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <span className={`rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${
-            detectedKind === "unknown"
-              ? "border-white/10 bg-white/[0.03] text-slate-400"
-              : "border-sky-400/20 bg-sky-500/10 text-sky-300"
+        {(loading || catalogError) && (
+          <div className={`m-5 flex items-center gap-3 rounded-2xl border p-4 text-sm ${
+            catalogError ? "border-rose-400/20 bg-rose-500/[0.08] text-rose-200" : "border-sky-300/15 bg-sky-500/[0.06] text-sky-200"
           }`}>
-            {code.trim() ? kindLabel(detectedKind) : "Waiting for code"}
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleClear}
-              disabled={!code && !result}
-              className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-400 transition hover:border-white/20 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Eraser className="h-4 w-4" /> Clear
-            </button>
-            <button
-              type="button"
-              onClick={handleDecode}
-              disabled={!code.trim()}
-              className="flex items-center gap-2 rounded-xl border border-sky-400/25 bg-sky-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <ClipboardPaste className="h-4 w-4" /> Decode
-            </button>
+            {catalogError ? <AlertCircle className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
+            {catalogError ?? "Loading live GW2 build data..."}
           </div>
-        </div>
+        )}
       </section>
 
-      {result && !result.ok && (
-        <section role="alert" className="flex items-start gap-3 rounded-2xl border border-rose-400/20 bg-rose-500/[0.08] p-4 text-rose-200">
-          <TriangleAlert className="mt-0.5 h-5 w-5 flex-shrink-0" />
-          <div>
-            <div className="text-sm font-bold">This code could not be decoded.</div>
-            <p className="mt-1 text-sm text-rose-200/75">Check that the complete Entropy Builder build or comp code was pasted, then try again.</p>
-          </div>
-        </section>
-      )}
-
-      {result?.ok && (
-        <section className="overflow-hidden rounded-[2rem] border border-emerald-400/15 bg-black/35">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-4">
-            <div className="flex items-center gap-2 text-sm font-bold text-emerald-300">
-              <CheckCircle2 className="h-4 w-4" /> Decoded {kindLabel(result.kind).toLowerCase()}
+      <div className="grid gap-6 xl:grid-cols-[1fr_22rem]">
+        <div className="space-y-6">
+          <section className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
+            <div className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-wider text-slate-200">
+              <Shield className="h-4 w-4 text-amber-300" />
+              Profession
             </div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-              <Braces className="h-4 w-4" /> JSON preview
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {professions.map((profession) => (
+                <IconTile
+                  key={profession.id}
+                  icon={profession.icon_big ?? profession.icon}
+                  name={profession.name}
+                  active={builder.professionId === profession.id}
+                  onClick={() => chooseProfession(profession)}
+                  onInspect={() => setSelectedSummary({ kind: "profession", item: profession })}
+                />
+              ))}
             </div>
-          </div>
-          <pre className="max-h-[32rem] overflow-auto whitespace-pre-wrap break-words p-5 font-mono text-xs leading-6 text-slate-300">
-            {preview ?? "Decoded data cannot be displayed as JSON."}
-          </pre>
-        </section>
-      )}
+          </section>
 
-      <SquadBuilder />
+          <section className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
+            <div className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-wider text-slate-200">
+              <Sparkles className="h-4 w-4 text-sky-300" />
+              Specializations & Traits
+            </div>
+            <div className="space-y-5">
+              {[0, 1, 2].map((trackIndex) => {
+                const selectedSpec = selectedSpecObjects[trackIndex];
+                return (
+                  <div key={trackIndex} className="rounded-3xl border border-white/[0.06] bg-white/[0.025] p-4">
+                    <div className="mb-3 text-xs font-black uppercase tracking-wider text-slate-400">Track {trackIndex + 1}</div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {professionSpecs.map((spec) => {
+                        const usedElsewhere = builder.specializationIds.some((id, index) => index !== trackIndex && id === spec.id);
+                        return (
+                          <IconTile
+                            key={spec.id}
+                            icon={spec.icon}
+                            name={spec.name}
+                            active={builder.specializationIds[trackIndex] === spec.id}
+                            disabled={usedElsewhere}
+                            onClick={() => chooseSpec(trackIndex, spec)}
+                            onInspect={() => setSelectedSummary({ kind: "specialization", item: spec })}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    {selectedSpec && (
+                      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                        {[1, 2, 3].map((tier) => {
+                          const tierTraits = (traitsBySpecId.get(selectedSpec.id) ?? []).filter((trait) => trait.slot === "Major" && trait.tier === tier);
+                          return (
+                            <div key={tier} className="rounded-2xl border border-white/[0.06] bg-black/25 p-3">
+                              <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Tier {tier}</div>
+                              <div className="space-y-2">
+                                {tierTraits.map((trait) => (
+                                  <IconTile
+                                    key={trait.id}
+                                    icon={trait.icon}
+                                    name={trait.name}
+                                    active={builder.traitChoices[traitKey(trackIndex, tier)] === trait.id}
+                                    onClick={() => chooseTrait(trackIndex, trait)}
+                                    onInspect={() => setSelectedSummary({ kind: "trait", item: trait })}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
+            <div className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-wider text-slate-200">
+              <Swords className="h-4 w-4 text-rose-300" />
+              Skill Bar
+            </div>
+            <div className="grid gap-4 lg:grid-cols-5">
+              {(["Heal", "Utility", "Utility", "Utility", "Elite"] as const).map((slot, index) => {
+                const utilityIndex = slot === "Utility" ? index - 1 : undefined;
+                const selectedId = slot === "Heal" ? builder.healSkillId : slot === "Elite" ? builder.eliteSkillId : builder.utilitySkillIds[utilityIndex ?? 0];
+                const options = skillGroups[slot].filter((skill) => slot !== "Utility" || !builder.utilitySkillIds.includes(skill.id) || selectedId === skill.id);
+                return (
+                  <div key={`${slot}-${index}`} className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                      {skillSlotLabel(slot, utilityIndex)}
+                    </label>
+                    <select
+                      value={selectedId ?? ""}
+                      onChange={(event) => chooseSkill(slot, event.target.value ? Number(event.target.value) : null, utilityIndex)}
+                      className="mt-2 w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-sm text-slate-200 outline-none focus:border-sky-300/40"
+                    >
+                      <option value="">Choose skill</option>
+                      {options.map((skill) => (
+                        <option key={skill.id} value={skill.id}>{skill.name}</option>
+                      ))}
+                    </select>
+                    {selectedId && skillsById.get(selectedId) && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSummary({ kind: "skill", item: skillsById.get(selectedId)! })}
+                        className="mt-3 flex w-full items-center gap-2 rounded-xl border border-white/[0.06] bg-black/25 p-2 text-left text-xs text-slate-300 hover:border-sky-300/25"
+                      >
+                        {skillsById.get(selectedId)?.icon && <img src={skillsById.get(selectedId)?.icon} alt="" className="h-8 w-8 rounded-lg" />}
+                        <span className="line-clamp-2">{skillsById.get(selectedId)?.name}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
+              <div className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-wider text-slate-200">
+                <ClipboardPaste className="h-4 w-4 text-sky-300" />
+                Import Code
+              </div>
+              <textarea
+                value={code}
+                onChange={(event) => {
+                  setCode(event.target.value);
+                  setDecodeResult(null);
+                }}
+                placeholder="Paste a compact build or squad code here..."
+                spellCheck={false}
+                className="min-h-32 w-full resize-y rounded-2xl border border-white/10 bg-black/45 p-4 font-mono text-xs text-slate-200 outline-none transition focus:border-sky-400/40 focus:ring-2 focus:ring-sky-500/10"
+              />
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <span className={`rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${
+                  detectedKind === "unknown" ? "border-white/10 bg-white/[0.03] text-slate-400" : "border-sky-400/20 bg-sky-500/10 text-sky-300"
+                }`}>
+                  {code.trim() ? kindLabel(detectedKind) : "Waiting for code"}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-slate-400 transition hover:border-white/20 hover:text-slate-200"
+                  >
+                    <Eraser className="h-4 w-4" /> Clear
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDecode}
+                    disabled={!code.trim()}
+                    className="flex items-center gap-2 rounded-xl border border-sky-400/25 bg-sky-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-sky-200 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ClipboardPaste className="h-4 w-4" /> Decode
+                  </button>
+                </div>
+              </div>
+
+              {decodeResult && !decodeResult.ok && (
+                <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/[0.08] p-4 text-sm text-rose-200">
+                  This code could not be decoded. Check that the whole code was pasted, then try again.
+                </div>
+              )}
+
+              {decodeResult?.ok && (
+                <pre className="mt-4 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-2xl border border-emerald-300/10 bg-black/45 p-4 font-mono text-xs leading-6 text-slate-300">
+                  {safeJson(decodeResult.value)}
+                </pre>
+              )}
+            </div>
+
+            <div className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
+              <div className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-wider text-slate-200">
+                <Code2 className="h-4 w-4 text-amber-300" />
+                Export Build
+              </div>
+              <p className="text-sm leading-6 text-slate-400">
+                Export copies the current build shell as a compact code. Equipment and squad publishing will layer onto this same model next.
+              </p>
+              <button
+                type="button"
+                onClick={handleEncode}
+                className="mt-4 flex items-center gap-2 rounded-xl border border-amber-300/25 bg-amber-400/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-amber-200 transition hover:bg-amber-400/20"
+              >
+                <Save className="h-4 w-4" /> Copy build code
+              </button>
+              {encodedCode && (
+                <div className="mt-4 rounded-2xl border border-white/[0.06] bg-black/45 p-4">
+                  <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Ready
+                  </div>
+                  <code className="block break-all font-mono text-xs text-slate-300">{encodedCode}</code>
+                </div>
+              )}
+              {status && (
+                <div className="mt-4 flex items-start gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3 text-sm text-slate-300">
+                  <Clipboard className="mt-0.5 h-4 w-4 text-sky-300" />
+                  {status}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+
+        <WikiSummaryPanel selected={selectedSummary} />
+      </div>
     </div>
   );
 }
