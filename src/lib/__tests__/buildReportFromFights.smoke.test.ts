@@ -134,6 +134,44 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(Array.isArray(report.stats.buffGeneration)).toBe(true);
            });
 
+           it('treats Stability as EI-style average stacks, not presence percent', () => {
+                 const raw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const player = (raw.players ?? []).find((p: any) => !p.notInSquad) as any;
+                 expect(player).toBeTruthy();
+
+                 const stabilityId = 1122;
+                 (raw as any).buffMap = {
+                         ...((raw as any).buffMap ?? {}),
+                         [`b${stabilityId}`]: {
+                                 name: 'Stability',
+                                 icon: 'https://example.invalid/stability.png',
+                                 classification: 'Boon',
+                                 stacking: true,
+                         },
+                 };
+                 player.buffUptimes = [
+                         ...((player.buffUptimes ?? []) as any[]),
+                         {
+                                 id: stabilityId,
+                                 buffData: [{ uptime: 0.12, presence: 3 }],
+                         },
+                 ];
+
+                 const synthetic = buildReportFromFights([{ summary: summarizeRawFight(raw), raw }]);
+                 const boons = synthetic.stats.buffCategoryUptimes?.Boons ?? synthetic.stats.boonUptimes;
+                 const stability = boons.columns.find((c) => c.id === stabilityId);
+                 expect(stability).toBeTruthy();
+                 expect(stability!.stacking).toBe(true);
+
+                 const row = boons.rows.find((r) => r.account === player.account);
+                 expect(row).toBeTruthy();
+                 expect(row!.uptimes[stabilityId]).toBeCloseTo(0.12);
+
+                 const stabilityInsight = synthetic.stats.synergyInsights?.find((i) => i.id === 'stability');
+                 expect(stabilityInsight?.detail).toContain('Stability stacks');
+                 expect(stabilityInsight?.detail).not.toContain('% Stability uptime');
+           });
+
            it('populates per-fight effective-healing drilldown skill sources', () => {
                  const firstFight = report.stats.fightBreakdown[0];
                  expect(firstFight).toBeTruthy();

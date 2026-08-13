@@ -1,15 +1,12 @@
 // Turns a set of raw Elite Insights fight logs (as fetched from dps.report by
-// RawLogImporter) into a full Entropy WvWReport, using the vendored
-// @axiapps/bridge-metrics aggregation core plus a from-scratch reimplementation
-// of the report-assembly logic that lives only in AxiBridge's app-coupled
-// incrementalAggregation.ts (leaderboards, MVP scoring, role classification
-// wiring, squad/enemy class breakdowns, attendance).
+// RawLogImporter) into a full Entropy WvWReport: leaderboards, MVP scoring,
+// role classification wiring, squad/enemy class breakdowns, attendance, and
+// derived dashboard metrics.
 //
 // Deliberately out of scope for this pass (left as empty defaults so the
 // interface stays satisfied without crashing any view): per-fight breakdown
 // table, commander stats, boon generation tables/leaderboards, map/timeline
-// data. These require porting additional non-portable AxiBridge modules —
-// see THIRD_PARTY_NOTICES.md and the "Phase 2 full parity" scoping note.
+// data. These require additional Entropy-native ingestion and UI passes.
 
 import { computePlayerAggregation, type PlayerStats } from './bridge-metrics/computePlayerAggregation';
 import type { HealingCoverage, PlayerSkillBreakdown, PlayerSkillSource } from '../types/report';
@@ -255,7 +252,7 @@ export interface FightInput {
     raw: RawFightLog;
 }
 
-// --- MVP weight table (mirrors AxiBridge's DEFAULT_MVP_WEIGHT_PROFILES) ---
+// --- MVP weight table ---
 
 type Bucket = 'offensive' | 'general' | 'defensive';
 
@@ -571,21 +568,16 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                           if (!Number.isFinite(id)) continue;
                           idToClass.set(id, cls);
                           const meta = buffMetaByClass.get(cls)!;
-                          // EI's BuffDesc.stacking distinguishes intensity-stacking buffs (Might,
-          // Stability, every condition) from duration-stacking ones. It decides
-          // whether this buff's `uptime` value is a percentage or an average
-          // stack count - see the note on BoonUptimeColumn.stacking.
+                          // EI's BuffDesc.stacking distinguishes intensity-stacking buffs
+          // (Might, Stability, every condition) from duration-stacking ones.
+          // It decides whether this buff's `uptime` value is a percentage or
+          // an average stack count - see the note on BoonUptimeColumn.stacking.
                           if (!meta.has(id)) {
                               const name = def.name || `Buff ${id}`;
                               meta.set(id, {
                                   name,
                                   icon: def.icon,
-                                  // Stability is mechanically stack-counted, but
-                                  // the value commanders care about here is
-                                  // "did the player have any Stability", i.e.
-                                  // presence %. Buff Generation still shows
-                                  // actual generated stacks/seconds.
-                                  stacking: name === 'Stability' ? false : !!def.stacking,
+                                  stacking: !!def.stacking,
                               });
                           }
                 }
@@ -613,9 +605,7 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                           const cls = idToClass.get(id);
                           if (!cls) continue;
                           const meta = buffMetaByClass.get(cls)?.get(id);
-                          const uptime = meta?.name === 'Stability'
-                              ? Number(entry?.buffData?.[0]?.presence ?? entry?.buffData?.[0]?.uptime)
-                              : Number(entry?.buffData?.[0]?.uptime);
+                          const uptime = Number(entry?.buffData?.[0]?.uptime);
                           if (!Number.isFinite(uptime)) continue;
 
                   const accMapByAccount = accByClass.get(cls)!;
@@ -924,7 +914,7 @@ function computeDpsGraph(fights: FightInput[]): DpsGraphData {
 // `downContribution` field (the same field the vendored bridge-metrics code
 // reads for the player-level total in combatMetrics.ts) - down contribution is
 // an outgoing-damage concept, so it's only accumulated for outgoing skills.
-function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topIncomingSkills: TopSkill[] } {
+function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topIncomingSkills: TopSkill[]; topSkillsByDamage: TopSkill[]; topSkillsByDownContribution: TopSkill[] } {
     const naturalFortitude = computeNaturalFortitudeDamage(fights);
     const skillMeta = new Map<number, { name: string; icon?: string }>();
     const outgoing = new Map<number, { damage: number; hits: number; downContribution: number }>();
@@ -1012,7 +1002,7 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
         accumulate(outgoing, NATURAL_FORTITUDE_SYNTHETIC_SKILL_ID, naturalFortitude.damage, naturalFortitude.hits, 0);
   }
 
-  function toTopSkills(map: Map<number, { damage: number; hits: number; downContribution: number }>): TopSkill[] {
+  function toRows(map: Map<number, { damage: number; hits: number; downContribution: number }>): TopSkill[] {
         return Array.from(map.entries())
           .map(([id, v]) => ({
                     name: skillMeta.get(id)?.name ?? `Skill ${id}`,
@@ -1022,12 +1012,20 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                     hits: v.hits,
                     downContribution: v.downContribution,
           }))
-          .filter((s) => s.damage > 0 || s.hits > 0)
-          .sort((a, b) => b.damage - a.damage)
-          .slice(0, 30);
+          .filter((s) => s.damage > 0 || s.hits > 0 || s.downContribution > 0);
   }
 
-  return { topSkills: toTopSkills(outgoing), topIncomingSkills: toTopSkills(incoming) };
+  const outgoingRows = toRows(outgoing);
+  const incomingRows = toRows(incoming);
+  const byDamage = (rows: TopSkill[]) => [...rows].sort((a, b) => b.damage - a.damage || b.downContribution - a.downContribution).slice(0, 30);
+  const byDownContribution = (rows: TopSkill[]) => [...rows].sort((a, b) => b.downContribution - a.downContribution || b.damage - a.damage).slice(0, 30);
+
+  return {
+        topSkills: byDamage(outgoingRows),
+        topIncomingSkills: byDamage(incomingRows),
+        topSkillsByDamage: byDamage(outgoingRows),
+        topSkillsByDownContribution: byDownContribution(outgoingRows),
+  };
 }
 
 // Per-fight 2D scrubbable replay data, promoted into the combined report so
@@ -1456,16 +1454,19 @@ function computeSynergyInsights(
     const insights: SynergyInsight[] = [];
     const boons = buffCategoryUptimes['Boons'];
 
-  function avgUptime(boonName: string): number | null {
+  function avgBoonValue(boonName: string): { value: number; stacking: boolean } | null {
         if (!boons) return null;
         const col = boons.columns.find((c) => c.name === boonName);
         if (!col) return null;
         const withData = boons.rows.filter((r) => r.uptimes[col.id] !== undefined);
         if (withData.length === 0) return null;
-        return withData.reduce((sum, r) => sum + (r.uptimes[col.id] || 0), 0) / withData.length;
+        return {
+          value: withData.reduce((sum, r) => sum + (r.uptimes[col.id] || 0), 0) / withData.length,
+          stacking: !!col.stacking,
+        };
   }
 
-  const quickness = avgUptime('Quickness');
+  const quickness = avgBoonValue('Quickness')?.value ?? null;
     if (quickness !== null) {
           if (quickness < 20) {
                   insights.push({ id: 'quickness', severity: 'critical', title: 'Very low Quickness uptime', detail: `Squad averaged only ${quickness.toFixed(0)}% Quickness uptime - DPS is likely being left on the table without a dedicated quickness support.` });
@@ -1480,12 +1481,18 @@ function computeSynergyInsights(
   // in squad comps), so a "low Alacrity uptime" insight is just noise here -
   // skip it. Quickness/Stability are the boons worth flagging in WvW.
 
-  const stability = avgUptime('Stability');
+  const stability = avgBoonValue('Stability');
     if (stability !== null) {
-          if (stability < 15) {
-                  insights.push({ id: 'stability', severity: 'critical', title: 'Very low Stability uptime', detail: `Squad averaged only ${stability.toFixed(0)}% Stability uptime - vulnerable to CC chains and pulls/knockbacks.` });
-          } else if (stability < 30) {
-                  insights.push({ id: 'stability', severity: 'warn', title: 'Low Stability uptime', detail: `Squad averaged ${stability.toFixed(0)}% Stability uptime.` });
+          if (stability.stacking) {
+                if (stability.value < 0.15) {
+                        insights.push({ id: 'stability', severity: 'critical', title: 'Very low Stability coverage', detail: `Squad averaged only ${stability.value.toFixed(2)} Stability stacks - vulnerable to CC chains and pulls/knockbacks.` });
+                } else if (stability.value < 0.35) {
+                        insights.push({ id: 'stability', severity: 'warn', title: 'Low Stability coverage', detail: `Squad averaged ${stability.value.toFixed(2)} Stability stacks. Stability is an intensity-stacking boon, so Entropy shows EI-style average stacks here instead of a percent.` });
+                }
+          } else if (stability.value < 15) {
+                  insights.push({ id: 'stability', severity: 'critical', title: 'Very low Stability uptime', detail: `Squad averaged only ${stability.value.toFixed(0)}% Stability uptime - vulnerable to CC chains and pulls/knockbacks.` });
+          } else if (stability.value < 30) {
+                  insights.push({ id: 'stability', severity: 'warn', title: 'Low Stability uptime', detail: `Squad averaged ${stability.value.toFixed(0)}% Stability uptime.` });
           }
     }
 
@@ -1740,7 +1747,7 @@ function computeFightTables(fights: FightInput[]): {
                 })
                 .filter((entry) => entry.damage > 0)
                 .sort((a, b) => b.damage - a.damage)
-                .slice(0, 10);
+                .slice(0, 20);
         const topOutgoingHealingSkills: TopHealingSource[] = Array.from(healingSkillTotals.entries())
                 .map(([id, total]) => {
                         const meta = resolveMeta(id);
@@ -1748,7 +1755,7 @@ function computeFightTables(fights: FightInput[]): {
                 })
                 .filter((entry) => entry.healing > 0)
                 .sort((a, b) => b.healing - a.healing)
-                .slice(0, 10);
+                .slice(0, 20);
 
                      mapCounts.set(mapName, (mapCounts.get(mapName) || 0) + 1);
 
@@ -2014,10 +2021,15 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
               const squadTimeMs = firstTs > 0 && lastTs > 0
                 ? Math.max(0, (lastTs + lastDurationMs) - firstTs)
                         : Number(entry.squadActiveMs || entry.totalFightMs || 0);
+              const primaryGroup = Object.entries(entry.groupTimeMs || {})
+                .map(([group, timeMs]) => ({ group: Number(group), timeMs: Number(timeMs || 0) }))
+                .filter((row) => Number.isFinite(row.group) && row.group > 0 && row.timeMs > 0)
+                .sort((a, b) => b.timeMs - a.timeMs || a.group - b.group)[0]?.group;
               return {
                         account: entry.account || 'Unknown',
                         characterNames: Array.from(entry.characterNames || []).filter(Boolean).sort((a, b) => a.localeCompare(b)),
                         classTimes,
+                        group: primaryGroup,
                         combatTimeMs: Number(entry.squadActiveMs || entry.totalFightMs || 0),
                         squadTimeMs,
               };
@@ -2057,8 +2069,6 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
         maxStab: getTop(leaderboards.stability, playerEntries),
         closestToTag: getTop(leaderboards.closestToTag, playerEntries),
         ...computeTopSkills(fights),
-        topSkillsByDamage: [],
-        topSkillsByDownContribution: [],
         mapData,
         timelineData,
         offensePlayers: playerEntries.map((s) => ({
@@ -2123,7 +2133,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
         engagementSegments: persistedIntelligence.engagementSegments,
         intelligenceFindings: persistedIntelligence.intelligenceFindings,
         // Self- vs. group- vs. squad-generation split for stacking/non-stacking
-        // boons - reuses AxiBridge's vendored boonGeneration engine as-is, reading
+        // boons - reads Entropy's normalized boon-generation source data,
         // player.selfBuffs/groupBuffs/squadBuffs straight from the raw log (each
         // an array of { id, buffData: [{ generation, wasted }] }, confirmed
         // against EI's JsonPlayer.SelfBuffs / GroupBuffs / SquadBuffs JSON doc).

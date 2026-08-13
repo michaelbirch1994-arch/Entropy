@@ -203,7 +203,7 @@ export default function SurvivalSupport({
  * Data provenance — where every number on this panel came from.
  *
  * Collapsed by default. This becomes essential once Entropy merges EI, Healing
- * Stats, native EVTC, AxiBridge and dps.report into one view: without it, a
+ * Stats, native EVTC, and dps.report into one view: without it, a
  * combined figure is unauditable. Each check states what was verified rather than
  * asserting a vague quality score.
  */

@@ -1,4 +1,4 @@
-// Types matching the AxiBridge WvW report.json structure.
+// Types matching Entropy's WvW report.json structure.
 
 import type { BoonTable } from "../lib/bridge-metrics/boonGeneration";
 import type { CriticalEvent, IntelligenceFinding } from "../lib/intelligence/types";
@@ -395,14 +395,12 @@ export interface BoonUptimeColumn {
     name: string;
     icon?: string;
     /**
-     * True for intensity-stacking buffs (Might and every
+     * True for intensity-stacking buffs (Might, Stability, and every
      * condition). Elite Insights overloads its per-buff `uptime` field: for
      * duration-stacking buffs it is a percentage of the phase (0-100), but
      * for intensity-stacking buffs it is the AVERAGE NUMBER OF STACKS held,
      * which is not a percentage at all and must not be rendered with a %
-     * suffix. Stability is intentionally treated as presence % in Entropy,
-     * because raid leads usually mean "time with any stack" when asking for
-     * Stability uptime.
+     * suffix.
      */
   stacking?: boolean;
 }
@@ -413,7 +411,7 @@ export interface BoonUptimeRow {
     professionList: string[];
     group: number;
     logsJoined: number;
-    /** boon id -> average % uptime (0-100) across the fights this player joined. */
+    /** buff id -> average uptime % or average stack count across the fights this player joined. */
   uptimes: Record<number, number>;
 }
 
@@ -705,7 +703,7 @@ export interface ReportStats {
     fightBreakdown: FightRow[];
     commanderStats: { rows: CommanderRow[] };
     roleClassifications: RoleClassification[];
-    attendanceData: { account: string; characterNames: string[]; combatTimeMs: number; squadTimeMs: number; classTimes: { profession: string; timeMs: number }[] }[];
+    attendanceData: { account: string; characterNames: string[]; combatTimeMs: number; squadTimeMs: number; classTimes: { profession: string; timeMs: number }[]; group?: number }[];
     /** Only populated for reports built from raw logs (RawLogImporter); absent on classic report.json files. */
   boonUptimes?: BoonUptimeData;
     /** Uptime tables for every EI buff classification (Boon, Condition, Offensive, Defensive, Support, Debuff, Gear, Enhancement, Nourishment, Other Consumable, Other), keyed by classification name. Raw-log reports only. */

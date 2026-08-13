@@ -1,6 +1,6 @@
 /**
  * Report-level aggregation over PUBLISHED report.json payloads ({ meta, stats }).
- * Defensive by design: published schemas vary across AxiBridge versions, so every
+ * Defensive by design: published schemas vary across Entropy report versions, so every
  * field read is optional and failures surface as warnings or ReportSchemaError —
  * never silent drops.
  */
@@ -57,7 +57,7 @@ export interface RunSummary {
 export const extractRunSummary = (report: unknown): RunSummary => {
     const payload = report as { meta?: any; stats?: any } | null;
     const id = String(payload?.meta?.id ?? '').trim();
-    if (!id) throw new ReportSchemaError('report has no meta.id — not an AxiBridge report.json');
+    if (!id) throw new ReportSchemaError('report has no meta.id - not an Entropy report.json');
     const stats = payload?.stats ?? {};
     const warnings: string[] = [];
 

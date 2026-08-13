@@ -2,7 +2,7 @@
 // getJson (or a locally-run EI parse) returns for one .zevtc file. This is
 // intentionally a small subset: Entropy's raw-log importer only needs enough
 // to show a per-fight summary card, not the full combat breakdown that
-// AxiBridge's aggregation engine would consume.
+// Entropy's aggregation pipeline consumes.
 
 export interface RawFightPlayer {
   name: string;

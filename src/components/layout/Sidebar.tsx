@@ -20,12 +20,11 @@ import {
   Crosshair,
   Skull,
   Star,
-Archive,
-GitCompare,
-FlaskConical,
-Search,
-Pin,
-BrainCircuit,
+  Archive,
+  GitCompare,
+  FlaskConical,
+  Search,
+  Pin,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import EntropyLogo from "../ui/EntropyLogo";
@@ -96,25 +95,14 @@ const MENU: NavSection[] = [
     ],
   },
   {
-    title: "INTELLIGENCE",
-    icon: <BrainCircuit className="w-4 h-4" />,
-    items: [{ id: "intelligence", label: "Intelligence" }],
-    flat: true,
-  },
-  {
-    title: "ARCHIVE",
-    icon: <Archive className="w-4 h-4" />,
+    title: "EXTRAS",
+    icon: <Star className="w-4 h-4" />,
     items: [
-      { id: "archive", label: "Report Archive" },
-      { id: "compare", label: "Compare Reports" },
+      { id: "intelligence", label: "Intelligence", keywords: ["ml", "predictive", "findings"] },
+      { id: "archive", label: "Report Archive", keywords: ["history", "saved"] },
+      { id: "compare", label: "Compare Reports", keywords: ["diff", "reports"] },
+      { id: "axiforge-lab", label: "Entropy Builder", keywords: ["builder", "build editor", "tools"] },
     ],
-    flat: true,
-  },
-  {
-    title: "TOOLS",
-    icon: <FlaskConical className="w-4 h-4" />,
-    items: [{ id: "axiforge-lab", label: "Entropy Builder", keywords: ["builder", "build editor", "axiforge"] }],
-    flat: true,
   },
 ];
 

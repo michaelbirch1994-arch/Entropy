@@ -9,7 +9,9 @@ import ProfessionIcon from "../components/ui/ProfessionIcon";
 import { Users, Swords, Shield, Heart, Zap, Target, Activity, Crosshair, Gauge, MapPin } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, ReferenceLine } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } from "../utils/chartTheme";
-import type { GeneralPlayer, HealingPlayer, HealingCoverage, OffensePlayer, DefensePlayer } from "../types/report";
+import type { GeneralPlayer, HealingPlayer, HealingCoverage, OffensePlayer } from "../types/report";
+
+type SquadOverviewSortKey = "player" | "class" | "damage" | "dps" | "downContribution" | "healing" | "cleanses" | "strips" | "logs";
 
 /**
  * Render a healing figure honestly.
@@ -86,31 +88,6 @@ function buildPressureRows(players: OffensePlayer[], scope: ReturnType<typeof us
   return base.map((p) => ({ ...p, pressureScore: normalizeScore(p.pressureRaw, max), pressurePct: safeDiv(p.pressureRaw, max) }));
 }
 
-function buildHealingRows(healers: HealingPlayer[], defenders: DefensePlayer[], allyScope: ReturnType<typeof useAllyScope>["scope"]) {
-  const defenseByAccount = new Map(defenders.map((p) => [p.account, p]));
-  return healers.map((h) => {
-    const healing = pickAllyScopeValue(allyScope, h.healingTotals.healing, h.healingTotals.squadHealing);
-    const barrier = pickAllyScopeValue(allyScope, h.healingTotals.barrier, h.healingTotals.squadBarrier);
-    const downedHealing = pickAllyScopeValue(allyScope, h.healingTotals.downedHealing, h.healingTotals.squadDownedHealing);
-    const sustain = healing + barrier;
-    const taken = defenseByAccount.get(h.account)?.defenseTotals.damageTaken ?? 0;
-    const effectiveHealing = sustain - taken;
-    const coverage: HealingCoverage = h.healingCoverage ?? (h.hasHealAddon ? "full" : sustain > 0 ? "partial" : "none");
-    return {
-      account: h.account,
-      profession: h.profession,
-      healing,
-      barrier,
-      downedHealing,
-      sustain,
-      taken,
-      effectiveHealing,
-      effectiveness: safeDiv(effectiveHealing, taken),
-      coverage,
-    };
-  }).filter((r) => r.sustain > 0 || r.taken > 0).sort((a, b) => b.effectiveHealing - a.effectiveHealing);
-}
-
 function buildDistanceRows(players: GeneralPlayer[]) {
   return players
     .filter((p) => !/commander/i.test(p.account) && p.distCount > 0 && p.totalDist >= 0)
@@ -125,20 +102,13 @@ function buildDistanceRows(players: GeneralPlayer[]) {
     .sort((a, b) => b.avgDistance - a.avgDistance);
 }
 
-function MetricBar({ value, tone = "bg-blue-400" }: { value: number; tone?: string }) {
-  return (
-    <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
-      <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(3, Math.min(100, value * 100))}%` }} />
-    </div>
-  );
-}
-
 export default function SquadStatsView() {
   const { report } = useReport();
   const { scope } = useDamageScope();
 const { scope: allyScope } = useAllyScope();
   const [selectedHealingIndex, setSelectedHealingIndex] = useState(0);
   const [hoveredDistanceAccount, setHoveredDistanceAccount] = useState<string | null>(null);
+  const [overviewSort, setOverviewSort] = useState<{ key: SquadOverviewSortKey; dir: "asc" | "desc" } | null>(null);
   if (!report) return null;
   const s = report.stats;
 
@@ -179,8 +149,10 @@ const { scope: allyScope } = useAllyScope();
     ...fight,
     score: normalizeScore(fight.raw, maxFightPressure),
   }));
-  const healingRows = buildHealingRows(s.healingPlayers, s.defensePlayers, allyScope);
-  const topHealingRows = healingRows.slice(0, 8);
+  const pressureSkillRows = [...((s.topSkillsByDownContribution?.length ? s.topSkillsByDownContribution : s.topSkills) ?? [])]
+    .filter((skill) => (skill.downContribution ?? 0) > 0 || (skill.damage ?? 0) > 0)
+    .sort((a, b) => (b.downContribution ?? 0) - (a.downContribution ?? 0) || (b.damage ?? 0) - (a.damage ?? 0))
+    .slice(0, 20);
   const totalDamageTaken = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
   const effectiveHealingTotal = totalHealing + totalBarrier - totalDamageTaken;
   const healingEffectiveness = safeDiv(effectiveHealingTotal, totalDamageTaken);
@@ -212,6 +184,66 @@ const { scope: allyScope } = useAllyScope();
   const tightCount = distanceRows.filter((p) => p.avgDistance <= 600).length;
   const pressureLeader = topPressureRows[0];
   const hoveredDistance = topDistanceRows.find((p) => p.account === hoveredDistanceAccount);
+  const squadOverviewRows = (() => {
+    const rows = s.offensePlayers.map((p) => {
+      const heal = s.healingPlayers.find((h) => h.account === p.account);
+      const sup = s.supportPlayers.find((sp) => sp.account === p.account);
+      const damage = pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll);
+      const dps = safeDiv(damage, p.totalFightMs / 1000);
+      return {
+        account: p.account,
+        profession: p.profession,
+        damage,
+        dps,
+        downContribution: p.offenseTotals.downContribution ?? 0,
+        heal,
+        healing: heal ? pickAllyScopeValue(allyScope, heal.healingTotals.healing, heal.healingTotals.squadHealing) : 0,
+        cleanses: sup?.supportTotals.condiCleanse ?? 0,
+        strips: sup?.supportTotals.boonStrips ?? 0,
+        logs: s.generalPlayers.find((g) => g.account === p.account)?.logsJoined ?? 0,
+      };
+    });
+    if (!overviewSort) return rows.sort((a, b) => b.damage - a.damage || a.account.localeCompare(b.account)).slice(0, 25);
+    const dir = overviewSort.dir === "asc" ? 1 : -1;
+    return rows
+      .sort((a, b) => {
+        if (overviewSort.key === "player") return a.account.localeCompare(b.account) * dir;
+        if (overviewSort.key === "class") return a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account);
+        const valueFor = (row: typeof rows[number]) => {
+          switch (overviewSort.key) {
+            case "damage": return row.damage;
+            case "dps": return row.dps;
+            case "downContribution": return row.downContribution;
+            case "healing": return row.healing;
+            case "cleanses": return row.cleanses;
+            case "strips": return row.strips;
+            case "logs": return row.logs;
+            default: return 0;
+          }
+        };
+        return (valueFor(a) - valueFor(b)) * dir || a.account.localeCompare(b.account);
+      })
+      .slice(0, 25);
+  })();
+  const toggleOverviewSort = (key: SquadOverviewSortKey) => {
+    setOverviewSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "desc" };
+      if (prev.dir === "desc") return { key, dir: "asc" };
+      return null;
+    });
+  };
+  const SortHeader = ({ label, k, align = "left" }: { label: string; k: SquadOverviewSortKey; align?: "left" | "right" }) => (
+    <th className={`p-2.5 ${align === "right" ? "text-right" : ""}`}>
+      <button
+        type="button"
+        onClick={() => toggleOverviewSort(k)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-slate-300 ${overviewSort?.key === k ? "text-sky-400" : ""}`}
+      >
+        {label}
+        <span className="text-[8px] opacity-70">{overviewSort?.key === k ? (overviewSort.dir === "desc" ? "▼" : "▲") : "↕"}</span>
+      </button>
+    </th>
+  );
 
   return (
     <div className="space-y-5 animate-view pb-12">
@@ -257,7 +289,7 @@ const { scope: allyScope } = useAllyScope();
           accent="text-rose-400"
           action={pressureChartData.length ? `${pressureChartData.length} fights` : "no fights"}
         >
-          <div className="grid grid-cols-1 xl:grid-cols-[1.25fr_0.95fr] gap-5">
+          <div className="space-y-4">
             <div className="h-72">
               {pressureChartData.length ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -278,31 +310,30 @@ const { scope: allyScope } = useAllyScope();
                 </div>
               )}
             </div>
-            <div className="space-y-3">
-              {topPressureRows.length ? topPressureRows.map((p) => (
-                <div key={p.account} className="rounded-xl border border-slate-800/70 bg-[#080d19]/70 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0 flex items-center gap-2">
-                      <ProfessionIcon profession={p.profession} className="h-4 w-4 shrink-0" />
-                      <div className="truncate text-sm font-bold text-slate-200">{p.account}</div>
+            <div className="rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-300">Top pressure skills</div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-500">{pressureSkillRows.length} / 20</div>
+              </div>
+              {pressureSkillRows.length ? (
+                <div className="max-h-[32rem] overflow-y-auto custom-scrollbar">
+                  {pressureSkillRows.map((skill, index) => (
+                    <div key={`pressure:${skill.id}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
+                      <span className="font-mono text-[10px] font-black text-slate-600">#{index + 1}</span>
+                      <span className="min-w-0 flex items-center gap-2 text-slate-300">
+                        {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
+                        <span className="truncate">{skill.name}</span>
+                      </span>
+                      <span className="text-right font-mono text-[11px] font-bold text-rose-200">
+                        {fmtCompact(skill.downContribution ?? 0)}
+                        <span className="ml-2 text-slate-500">{fmtCompact(skill.damage ?? 0)} dmg</span>
+                      </span>
                     </div>
-                    <div className="font-mono text-sm font-black text-rose-300">{p.pressureScore}/100</div>
-                  </div>
-                  <div className="mt-2">
-                    <MetricBar value={p.pressurePct} tone="bg-rose-400" />
-                  </div>
-                  <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
-                    <span>Downs <b className="text-sky-300">{fmtNum(p.enemyDowns)}</b></span>
-                    <span>Kills <b className="text-amber-300">{fmtNum(p.kills)}</b></span>
-                    <span>Down C. <b className="text-rose-300">{fmtCompact(p.downContribution)}</b></span>
-                  </div>
-                  <div className="mt-2 text-[10px] uppercase tracking-wider text-slate-600">
-                    Down contribution + downs + kills + 5% damage, normalized to leader
-                  </div>
+                  ))}
                 </div>
-              )) : (
-                <div className="rounded-xl border border-dashed border-slate-800 p-5 text-xs text-slate-500">
-                  No player pressure rows are available.
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-800 p-4 text-xs text-slate-500">
+                  No pressure skill breakdown is available for this report yet.
                 </div>
               )}
             </div>
@@ -316,7 +347,7 @@ const { scope: allyScope } = useAllyScope();
           accent="text-emerald-400"
           action={totalDamageTaken > 0 ? `${fmtCompact(effectiveHealingTotal)} effective` : "no incoming"}
         >
-          <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.95fr] gap-5">
+          <div className="space-y-4">
             <div className="h-72">
               {healingChartData.length ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -387,62 +418,43 @@ const { scope: allyScope } = useAllyScope();
                   : "This report was built before per-fight outgoing healing existed; exact fight-by-fight healing appears after reparsing with this build."}
               </div>
               {selectedHealingFight && (
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                   <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-3">
-                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">Outgoing healing / barrier skills</div>
-                    {selectedHealingFight.outgoingSkills.length ? selectedHealingFight.outgoingSkills.slice(0, 6).map((skill) => (
-                      <div key={`heal:${skill.id}`} className="flex items-center justify-between gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">Top outgoing healing / barrier skills</div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500">{Math.min(20, selectedHealingFight.outgoingSkills.length)} / 20</div>
+                    </div>
+                    {selectedHealingFight.outgoingSkills.length ? selectedHealingFight.outgoingSkills.slice(0, 20).map((skill, index) => (
+                      <div key={`heal:${skill.id}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
+                        <span className="font-mono text-[10px] font-black text-slate-600">#{index + 1}</span>
                         <span className="min-w-0 flex items-center gap-2 text-slate-300">
                           {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
                           <span className="truncate">{skill.name}</span>
                         </span>
-                        <span className="font-mono font-bold text-emerald-200">{fmtCompact(skill.healing)} <span className="text-[10px] text-slate-500">{fmtNum(skill.hits)} hits</span></span>
+                        <span className="text-right font-mono font-bold text-emerald-200">{fmtCompact(skill.healing)} <span className="text-[10px] text-slate-500">{fmtNum(skill.hits)} hits</span></span>
                       </div>
                     )) : (
                       <div className="text-[11px] text-slate-500">Exact per-fight healing sources need a report parsed with this build.</div>
                     )}
                   </div>
                   <div className="rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
-                    <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-rose-300">Incoming damage skills</div>
-                    {selectedHealingFight.incomingSkills.length ? selectedHealingFight.incomingSkills.slice(0, 6).map((skill) => (
-                      <div key={`incoming:${skill.id}`} className="flex items-center justify-between gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-300">Top incoming damage skills</div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500">{Math.min(20, selectedHealingFight.incomingSkills.length)} / 20</div>
+                    </div>
+                    {selectedHealingFight.incomingSkills.length ? selectedHealingFight.incomingSkills.slice(0, 20).map((skill, index) => (
+                      <div key={`incoming:${skill.id}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
+                        <span className="font-mono text-[10px] font-black text-slate-600">#{index + 1}</span>
                         <span className="min-w-0 flex items-center gap-2 text-slate-300">
                           {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
                           <span className="truncate">{skill.name}</span>
                         </span>
-                        <span className="font-mono font-bold text-rose-200">{fmtCompact(skill.damage)} <span className="text-[10px] text-slate-500">{fmtNum(skill.hits)} hits</span></span>
+                        <span className="text-right font-mono font-bold text-rose-200">{fmtCompact(skill.damage)} <span className="text-[10px] text-slate-500">{fmtNum(skill.hits)} hits</span></span>
                       </div>
                     )) : (
                       <div className="text-[11px] text-slate-500">Exact per-fight incoming sources need a report parsed with this build.</div>
                     )}
                   </div>
-                </div>
-              )}
-              {topHealingRows.length ? topHealingRows.map((p) => {
-                const tone = p.coverage === "full" ? "text-emerald-300" : p.coverage === "partial" ? "text-amber-300" : "text-slate-500";
-                return (
-                  <div key={p.account} className="rounded-xl border border-slate-800/70 bg-[#080d19]/70 p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex items-center gap-2">
-                        <ProfessionIcon profession={p.profession} className="h-4 w-4 shrink-0" />
-                        <div className="truncate text-sm font-bold text-slate-200">{p.account}</div>
-                      </div>
-                      <div className={`font-mono text-xs uppercase tracking-wider ${tone}`}>{fmtCompact(p.effectiveHealing)}</div>
-                    </div>
-                    <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
-                      <span>Heal <b className="text-emerald-300">{fmtCompact(p.healing)}</b></span>
-                      <span>Barrier <b className="text-teal-300">{fmtCompact(p.barrier)}</b></span>
-                      <span>Incoming <b className="text-rose-300">{fmtCompact(p.taken)}</b></span>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-500">
-                      <span>{p.coverage} coverage</span>
-                      <span>heal + barrier - incoming</span>
-                    </div>
-                  </div>
-                );
-              }) : (
-                <div className="rounded-xl border border-dashed border-slate-800 p-5 text-xs text-slate-500">
-                  No healing effectiveness rows are available.
                 </div>
               )}
             </div>
@@ -546,35 +558,32 @@ const { scope: allyScope } = useAllyScope();
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
-                <th className="p-2.5">Player</th>
-                <th className="p-2.5">Class</th>
-                <th className="p-2.5 text-right">Damage</th>
-                <th className="p-2.5 text-right">DPS</th>
-                <th className="p-2.5 text-right">Down Contrib</th>
-                <th className="p-2.5 text-right">Healing</th>
-                <th className="p-2.5 text-right">Cleanses</th>
-                <th className="p-2.5 text-right">Strips</th>
-                <th className="p-2.5 text-right">Logs</th>
+                <SortHeader label="Player" k="player" />
+                <SortHeader label="Class" k="class" />
+                <SortHeader label="Damage" k="damage" align="right" />
+                <SortHeader label="DPS" k="dps" align="right" />
+                <SortHeader label="Down Contrib" k="downContribution" align="right" />
+                <SortHeader label="Healing" k="healing" align="right" />
+                <SortHeader label="Cleanses" k="cleanses" align="right" />
+                <SortHeader label="Strips" k="strips" align="right" />
+                <SortHeader label="Logs" k="logs" align="right" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/30 font-mono">
-              {s.offensePlayers.slice(0, 25).map((p) => {
-                const heal = s.healingPlayers.find((h) => h.account === p.account);
-                const sup = s.supportPlayers.find((sp) => sp.account === p.account);
-                const dps = pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll) / (p.totalFightMs / 1000);
+              {squadOverviewRows.map((p) => {
                 return (
                   <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
                     <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
                     <td className="p-2.5 text-slate-400">{p.profession}</td>
-                    <td className="p-2.5 text-right text-orange-400">{fmtCompact(pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll))}</td>
-                    <td className="p-2.5 text-right text-slate-200 font-bold">{fmtFixedGrouped(dps, 0)}</td>
-                    <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.offenseTotals.downContribution)}</td>
+                    <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.damage)}</td>
+                    <td className="p-2.5 text-right text-slate-200 font-bold">{fmtFixedGrouped(p.dps, 0)}</td>
+                    <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.downContribution)}</td>
                     <td className="p-2.5 text-right text-emerald-400">
-                      {heal ? renderHealing(heal, pickAllyScopeValue(allyScope, heal.healingTotals.healing, heal.healingTotals.squadHealing)) : "—"}
+                      {p.heal ? renderHealing(p.heal, p.healing) : "-"}
                     </td>
-                    <td className="p-2.5 text-right text-cyan-400">{sup ? fmtNum(sup.supportTotals.condiCleanse) : "—"}</td>
-                    <td className="p-2.5 text-right text-amber-400">{sup ? fmtNum(sup.supportTotals.boonStrips) : "—"}</td>
-                    <td className="p-2.5 text-right text-slate-500">{s.generalPlayers.find((g) => g.account === p.account)?.logsJoined ?? "—"}</td>
+                    <td className="p-2.5 text-right text-cyan-400">{p.cleanses > 0 ? fmtNum(p.cleanses) : "-"}</td>
+                    <td className="p-2.5 text-right text-amber-400">{p.strips > 0 ? fmtNum(p.strips) : "-"}</td>
+                    <td className="p-2.5 text-right text-slate-500">{p.logs || "-"}</td>
                   </tr>
                 );
               })}

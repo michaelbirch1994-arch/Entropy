@@ -18,18 +18,18 @@ export default function KdrView() {
       {/* KDR summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Squad KDR"
+          label="Our KDR"
           value={fmtFixed(squadKdr, 2)}
           icon={<TrendingUp className="w-3.5 h-3.5 text-emerald-400" />}
           accent="text-emerald-400"
-          sub={`${fmtNum(s.totalSquadKills)} kills / ${fmtNum(s.totalSquadDeaths)} deaths`}
+          sub={`${fmtNum(s.totalSquadKills)} enemy kills / ${fmtNum(s.totalSquadDeaths)} allied deaths`}
         />
         <StatCard
-          label="Enemy KDR"
+          label="Enemy KDR Against Us"
           value={fmtFixed(enemyKdr, 2)}
           icon={<TrendingDown className="w-3.5 h-3.5 text-rose-400" />}
           accent="text-rose-400"
-          sub={`${fmtNum(s.totalEnemyKills)} kills / ${fmtNum(s.totalEnemyDeaths)} deaths`}
+          sub={`${fmtNum(s.totalEnemyKills)} allied deaths / ${fmtNum(s.totalEnemyDeaths)} enemy deaths`}
         />
         <StatCard
           label="Win Rate"
@@ -49,7 +49,7 @@ export default function KdrView() {
 
       {/* Kill/Death comparison */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <Panel title="Squad Performance" icon={<Swords className="w-4 h-4" />} accent="text-emerald-400">
+        <Panel title="Our Trade Record" subtitle="Enemy deaths credited as our kills, divided by allied deaths." icon={<Swords className="w-4 h-4" />} accent="text-emerald-400">
           <div className="space-y-4">
             <KdrBar label="Kills" value={s.totalSquadKills} max={Math.max(s.totalSquadKills, s.totalSquadDeaths)} color="bg-emerald-500" />
             <KdrBar label="Downs" value={s.totalSquadDowns} max={Math.max(s.totalSquadDowns, s.totalEnemyDowns)} color="bg-sky-500" />
@@ -57,7 +57,7 @@ export default function KdrView() {
           </div>
         </Panel>
 
-        <Panel title="Enemy Performance" icon={<Skull className="w-4 h-4" />} accent="text-rose-400">
+        <Panel title="Enemy Trade Record" subtitle="Allied deaths counted as enemy kills, divided by enemy deaths." icon={<Skull className="w-4 h-4" />} accent="text-rose-400">
           <div className="space-y-4">
             <KdrBar label="Kills" value={s.totalEnemyKills} max={Math.max(s.totalSquadKills, s.totalEnemyKills)} color="bg-rose-500" />
             <KdrBar label="Downs" value={s.totalEnemyDowns} max={Math.max(s.totalSquadDowns, s.totalEnemyDowns)} color="bg-orange-500" />

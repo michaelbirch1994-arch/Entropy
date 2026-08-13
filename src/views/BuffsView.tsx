@@ -17,10 +17,13 @@ function uptimeColor(pct: number): string {
 // (BUFF_TAB_ORDER) so the two pages can never present these categories in a
 // different order from each other.
 const TAB_ORDER = BUFF_TAB_ORDER;
+type SortKey = "player" | "class" | number;
+type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
 
 export default function BuffsView() {
   const { report } = useReport();
   const [tab, setTab] = useState<string>("Boons");
+  const [sort, setSort] = useState<SortState>(null);
   if (!report) return null;
   const s = report.stats;
 
@@ -51,6 +54,31 @@ export default function BuffsView() {
   }
 
   const { columns, rows } = data;
+  const sortedRows = (() => {
+    const base = [...rows].sort((a, b) => a.account.localeCompare(b.account));
+    if (!sort) return base;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return base.sort((a, b) => {
+      if (sort.key === "player") return a.account.localeCompare(b.account) * dir;
+      if (sort.key === "class") return a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account);
+      if (typeof sort.key !== "number") return 0;
+      const av = a.uptimes[sort.key];
+      const bv = b.uptimes[sort.key];
+      const an = Number.isFinite(av) ? Number(av) : -Infinity;
+      const bn = Number.isFinite(bv) ? Number(bv) : -Infinity;
+      return (an - bn) * dir || a.account.localeCompare(b.account);
+    });
+  })();
+
+  const toggleSort = (key: SortKey) => {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "desc" };
+      if (prev.dir === "desc") return { key, dir: "asc" };
+      return null;
+    });
+  };
+
+  const sortGlyph = (key: SortKey) => (!sort || sort.key !== key ? "↕" : sort.dir === "desc" ? "▼" : "▲");
 
   // Precompute each stacking column's values once so relativeStackColor doesn't
   // rescan every row for every cell (O(players * columns) instead of squared).
@@ -59,7 +87,7 @@ export default function BuffsView() {
   const columnValuesById: Record<string, Array<number | undefined>> = {};
   for (const c of columns) {
     if (!c.stacking) continue;
-    columnValuesById[c.id] = rows.map((r) => r.uptimes[c.id]);
+    columnValuesById[c.id] = sortedRows.map((r) => r.uptimes[c.id]);
   }
 
   return (
@@ -84,33 +112,41 @@ export default function BuffsView() {
 
       <Panel
         title={activeTab}
-        subtitle="Duration buffs show % of the fight held; Stability uses presence %; other intensity-stacking buffs show average stacks across every fight joined"
+        subtitle="Duration buffs show % of the fight held; intensity-stacking buffs like Might and Stability show average stacks across every fight joined"
         icon={<Sparkles className="w-3.5 h-3.5" />}
-        action={`${rows.length} players`}
+        action={`${sortedRows.length} players`}
         bodyClassName="p-0"
       >
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500">
-                <th className="text-left font-bold px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">Player</th>
-                <th className="text-left font-bold px-2 py-3">Class</th>
+                <th className="text-left font-bold px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">
+                  <button type="button" onClick={() => toggleSort("player")} className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-slate-300">
+                    Player <span className="text-[8px] opacity-70">{sortGlyph("player")}</span>
+                  </button>
+                </th>
+                <th className="text-left font-bold px-2 py-3">
+                  <button type="button" onClick={() => toggleSort("class")} className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-slate-300">
+                    Class <span className="text-[8px] opacity-70">{sortGlyph("class")}</span>
+                  </button>
+                </th>
                 {columns.map((c) => (
                   <th key={c.id} className="text-center font-bold px-2 py-3 min-w-[64px]" title={c.name}>
-                    <div className="flex flex-col items-center gap-1">
+                    <button type="button" onClick={() => toggleSort(c.id)} className="flex w-full flex-col items-center gap-1 hover:text-slate-300">
                       {c.icon ? (
                         <img src={c.icon} alt={c.name} className="w-4 h-4 rounded-sm" loading="lazy" />
                       ) : (
                         <span className="w-4 h-4" />
                       )}
-                      <span className="normal-case font-semibold text-slate-400">{c.name}</span>
-                    </div>
+                      <span className="normal-case font-semibold text-slate-400">{c.name} <span className="text-[8px] opacity-70">{sortGlyph(c.id)}</span></span>
+                    </button>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, i) => (
+              {sortedRows.map((row, i) => (
                 <tr
                   key={row.account}
                   className={`border-b border-slate-800/40 hover:bg-white/[0.02] transition-colors ${i % 2 === 0 ? "bg-white/[0.01]" : ""}`}
@@ -125,7 +161,7 @@ export default function BuffsView() {
                   </td>
                   {columns.map((c) => {
                     const val = row.uptimes[c.id];
-                    // Stacking buffs don't share a 0-100% scale (Might caps at 25,
+                    // Stacking buffs don't share a 0-100% scale (Might and Stability cap at 25,
                     // most conditions have no practical
                     // cap), so they're colored relative to this column's own
                     // values rather than against the duration-buff thresholds.
