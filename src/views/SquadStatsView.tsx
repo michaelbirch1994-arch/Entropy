@@ -105,7 +105,8 @@ function buildDistanceRows(players: GeneralPlayer[]) {
 export default function SquadStatsView() {
   const { report } = useReport();
   const { scope } = useDamageScope();
-const { scope: allyScope } = useAllyScope();
+  const { scope: allyScope } = useAllyScope();
+  const [selectedPressureIndex, setSelectedPressureIndex] = useState(0);
   const [selectedHealingIndex, setSelectedHealingIndex] = useState(0);
   const [hoveredDistanceAccount, setHoveredDistanceAccount] = useState<string | null>(null);
   const [overviewSort, setOverviewSort] = useState<{ key: SquadOverviewSortKey; dir: "asc" | "desc" } | null>(null);
@@ -138,6 +139,9 @@ const { scope: allyScope } = useAllyScope();
     const raw = (fight.totalOutgoingDamage ?? 0) * 0.05 + (fight.enemyDowns ?? 0) * 50000 + (fight.enemyDeaths ?? 0) * 80000;
     return {
       name: fight.label || `F${index + 1}`,
+      index,
+      fullLabel: fight.fullLabel || fight.mapName || `Fight ${index + 1}`,
+      outgoingDamage: fight.totalOutgoingDamage ?? 0,
       damage: Math.round((fight.totalOutgoingDamage ?? 0) / 1000000),
       downs: fight.enemyDowns ?? 0,
       kills: fight.enemyDeaths ?? 0,
@@ -153,6 +157,7 @@ const { scope: allyScope } = useAllyScope();
     .filter((skill) => (skill.downContribution ?? 0) > 0 || (skill.damage ?? 0) > 0)
     .sort((a, b) => (b.downContribution ?? 0) - (a.downContribution ?? 0) || (b.damage ?? 0) - (a.damage ?? 0))
     .slice(0, 20);
+  const selectedPressureFight = pressureChartData[Math.min(selectedPressureIndex, Math.max(pressureChartData.length - 1, 0))];
   const totalDamageTaken = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
   const effectiveHealingTotal = totalHealing + totalBarrier - totalDamageTaken;
   const healingEffectiveness = safeDiv(effectiveHealingTotal, totalDamageTaken);
@@ -160,6 +165,8 @@ const { scope: allyScope } = useAllyScope();
     const healing = Number(fight.totalOutgoingHealing ?? 0);
     const barrier = Number(fight.totalOutgoingBarrier ?? fight.incomingBarrierAbsorbed ?? 0);
     const incomingDamage = Number(fight.totalIncomingDamage ?? 0);
+    const exactOutgoingSkills = fight.topOutgoingHealingSkills ?? [];
+    const exactIncomingSkills = fight.topIncomingDamageSkills ?? [];
     return {
       name: fight.label || `F${index + 1}`,
       index,
@@ -168,8 +175,10 @@ const { scope: allyScope } = useAllyScope();
       barrier,
       incomingDamage,
       effectiveHealing: Number(fight.effectiveHealing ?? (healing + barrier - incomingDamage)),
-      outgoingSkills: fight.topOutgoingHealingSkills ?? [],
-      incomingSkills: fight.topIncomingDamageSkills ?? [],
+      outgoingSkills: exactOutgoingSkills.length ? exactOutgoingSkills : (s.topHealingSkills ?? []),
+      incomingSkills: exactIncomingSkills.length ? exactIncomingSkills : (s.topIncomingSkills ?? []),
+      hasExactOutgoingSkills: exactOutgoingSkills.length > 0,
+      hasExactIncomingSkills: exactIncomingSkills.length > 0,
     };
   });
   const hasPerFightHealing = s.fightBreakdown.some((fight) => typeof fight.totalOutgoingHealing === "number");
@@ -293,15 +302,23 @@ const { scope: allyScope } = useAllyScope();
             <div className="h-72">
               {pressureChartData.length ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={pressureChartData} margin={{ left: 6, right: 16, top: 12, bottom: 6 }}>
+                  <LineChart
+                    data={pressureChartData}
+                    margin={{ left: 6, right: 16, top: 12, bottom: 6 }}
+                    onClick={(event) => {
+                      const payloadIndex = event?.activePayload?.[0]?.payload?.index;
+                      if (typeof payloadIndex === "number") setSelectedPressureIndex(payloadIndex);
+                      else if (typeof event?.activeTooltipIndex === "number") setSelectedPressureIndex(event.activeTooltipIndex);
+                    }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                     <XAxis dataKey="name" tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" interval="preserveStartEnd" />
                     <YAxis tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" />
                     <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
                     <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />
-                    <Line type="monotone" dataKey="score" name="Pressure Score / 100" stroke="#fb7185" strokeWidth={2.25} dot={{ r: 2 }} />
-                    <Line type="monotone" dataKey="downs" name="Enemy Downs" stroke="#38bdf8" strokeWidth={1.75} dot={{ r: 2 }} />
-                    <Line type="monotone" dataKey="kills" name="Enemy Kills" stroke="#f59e0b" strokeWidth={1.75} dot={{ r: 2 }} />
+                    <Line type="monotone" dataKey="score" name="Pressure Score / 100" stroke="#fb7185" strokeWidth={2.25} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} />
+                    <Line type="monotone" dataKey="downs" name="Enemy Downs" stroke="#38bdf8" strokeWidth={1.75} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} />
+                    <Line type="monotone" dataKey="kills" name="Enemy Kills" stroke="#f59e0b" strokeWidth={1.75} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
@@ -310,6 +327,31 @@ const { scope: allyScope } = useAllyScope();
                 </div>
               )}
             </div>
+            {selectedPressureFight && (
+              <div className="rounded-xl border border-slate-800/70 bg-[#080d19]/70 p-3 text-xs text-slate-400">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Selected pressure fight</div>
+                    <div className="mt-1 text-sm font-black text-slate-100">
+                      {selectedPressureFight.name} · {selectedPressureFight.fullLabel}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPressureIndex(0)}
+                    className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300"
+                  >
+                    Reset
+                  </button>
+                </div>
+                <div className="mt-3 grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
+                  <span>Score <b className="block text-rose-300">{selectedPressureFight.score}/100</b></span>
+                  <span>Damage <b className="block text-orange-300">{fmtCompact(selectedPressureFight.outgoingDamage)}</b></span>
+                  <span>Downs <b className="block text-sky-300">{fmtNum(selectedPressureFight.downs)}</b></span>
+                  <span>Kills <b className="block text-amber-300">{fmtNum(selectedPressureFight.kills)}</b></span>
+                </div>
+              </div>
+            )}
             <div className="rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <div className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-300">Top pressure skills</div>
@@ -318,14 +360,14 @@ const { scope: allyScope } = useAllyScope();
               {pressureSkillRows.length ? (
                 <div className="max-h-[32rem] overflow-y-auto custom-scrollbar">
                   {pressureSkillRows.map((skill, index) => (
-                    <div key={`pressure:${skill.id}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
+                    <div key={`pressure:${skill.id}:${index}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
                       <span className="font-mono text-[10px] font-black text-slate-600">#{index + 1}</span>
                       <span className="min-w-0 flex items-center gap-2 text-slate-300">
                         {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
                         <span className="truncate">{skill.name}</span>
                       </span>
                       <span className="text-right font-mono text-[11px] font-bold text-rose-200">
-                        {fmtCompact(skill.downContribution ?? 0)}
+                        {fmtCompact(skill.downContribution ?? 0)} down
                         <span className="ml-2 text-slate-500">{fmtCompact(skill.damage ?? 0)} dmg</span>
                       </span>
                     </div>
@@ -355,7 +397,9 @@ const { scope: allyScope } = useAllyScope();
                     data={healingChartData}
                     margin={{ left: 8, right: 18, top: 12, bottom: 8 }}
                     onClick={(event) => {
-                      if (typeof event?.activeTooltipIndex === "number") setSelectedHealingIndex(event.activeTooltipIndex);
+                      const payloadIndex = event?.activePayload?.[0]?.payload?.index;
+                      if (typeof payloadIndex === "number") setSelectedHealingIndex(payloadIndex);
+                      else if (typeof event?.activeTooltipIndex === "number") setSelectedHealingIndex(event.activeTooltipIndex);
                     }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -412,6 +456,11 @@ const { scope: allyScope } = useAllyScope();
                       <span>Healing <b className="block text-emerald-300">{fmtCompact(selectedHealingFight.healing)}</b></span>
                       <span>Barrier <b className="block text-teal-300">{fmtCompact(selectedHealingFight.barrier)}</b></span>
                     </div>
+                    {(!selectedHealingFight.hasExactOutgoingSkills || !selectedHealingFight.hasExactIncomingSkills) && (
+                      <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-2 text-[11px] text-amber-200/90">
+                        Exact per-fight source rows were not available for this point, so Entropy is showing the best report-level source fallback instead of an empty panel.
+                      </div>
+                    )}
                   </>
                 ) : hasPerFightHealing
                   ? "Click a point on the graph to inspect that fight."
@@ -425,7 +474,7 @@ const { scope: allyScope } = useAllyScope();
                       <div className="text-[10px] uppercase tracking-wider text-slate-500">{Math.min(20, selectedHealingFight.outgoingSkills.length)} / 20</div>
                     </div>
                     {selectedHealingFight.outgoingSkills.length ? selectedHealingFight.outgoingSkills.slice(0, 20).map((skill, index) => (
-                      <div key={`heal:${skill.id}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
+                      <div key={`heal:${skill.id}:${index}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
                         <span className="font-mono text-[10px] font-black text-slate-600">#{index + 1}</span>
                         <span className="min-w-0 flex items-center gap-2 text-slate-300">
                           {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
@@ -443,7 +492,7 @@ const { scope: allyScope } = useAllyScope();
                       <div className="text-[10px] uppercase tracking-wider text-slate-500">{Math.min(20, selectedHealingFight.incomingSkills.length)} / 20</div>
                     </div>
                     {selectedHealingFight.incomingSkills.length ? selectedHealingFight.incomingSkills.slice(0, 20).map((skill, index) => (
-                      <div key={`incoming:${skill.id}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
+                      <div key={`incoming:${skill.id}:${index}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
                         <span className="font-mono text-[10px] font-black text-slate-600">#{index + 1}</span>
                         <span className="min-w-0 flex items-center gap-2 text-slate-300">
                           {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
