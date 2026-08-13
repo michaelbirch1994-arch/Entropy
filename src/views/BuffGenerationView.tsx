@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
@@ -13,6 +13,10 @@ const CATEGORY_LABELS = {
   groupBuffs: "Group",
   squadBuffs: "Squad",
 } as const;
+
+type SortDirection = "desc" | "asc";
+type SortKey = "player" | "class" | keyof typeof CATEGORY_LABELS | "wasted" | "overstack";
+type SortState = { key: SortKey; direction: SortDirection } | null;
 
 const BAR_COLORS = [CHART_COLORS.amber, CHART_COLORS.sky, CHART_COLORS.rose, CHART_COLORS.emerald, CHART_COLORS.teal, CHART_COLORS.orange, CHART_COLORS.cyan, CHART_COLORS.blue, CHART_COLORS.red];
 
@@ -57,6 +61,7 @@ export default function BuffGenerationView() {
   // so existing users see no change until they explore further.
   const [tab, setTab] = useState<string>("Boons");
   const [selectedBoonId, setSelectedBoonId] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortState>(null);
 
   // Which classification tabs actually have data this report, in the same
   // curated order as the Buffs page (BUFF_TAB_ORDER) so the two line up.
@@ -92,9 +97,27 @@ export default function BuffGenerationView() {
   const selectedBreakdown = useMemo(() => {
     if (!selectedTable) return null;
     const table = selectedTable;
-    const rows = [...table.rows].sort(
-      (a, b) => getBoonMetricValue(b, "squadBuffs", table.stacking, "uptime") - getBoonMetricValue(a, "squadBuffs", table.stacking, "uptime")
-    );
+    const defaultRows = [...table.rows].sort((a, b) => a.account.localeCompare(b.account));
+    const rows = sort
+      ? [...defaultRows].sort((a, b) => {
+          const direction = sort.direction === "desc" ? -1 : 1;
+          if (sort.key === "player") return a.account.localeCompare(b.account) * direction;
+          if (sort.key === "class") return a.profession.localeCompare(b.profession) * direction || a.account.localeCompare(b.account);
+          const valueA =
+            sort.key === "wasted"
+              ? getBoonWastedValue(a, "squadBuffs", table.stacking)
+              : sort.key === "overstack"
+                ? getBoonOverstackValue(a, "squadBuffs", table.stacking)
+                : getBoonMetricValue(a, sort.key, table.stacking, "uptime");
+          const valueB =
+            sort.key === "wasted"
+              ? getBoonWastedValue(b, "squadBuffs", table.stacking)
+              : sort.key === "overstack"
+                ? getBoonOverstackValue(b, "squadBuffs", table.stacking)
+                : getBoonMetricValue(b, sort.key, table.stacking, "uptime");
+          return (valueA === valueB ? a.account.localeCompare(b.account) : valueA - valueB) * direction;
+        })
+      : defaultRows;
     const unit = table.stacking ? "avg stacks" : "%";
     const totalSquadOutput = rows.reduce((sum, row) => sum + getBoonMetricValue(row, "squadBuffs", table.stacking, "uptime"), 0);
     const totalWasted = rows.reduce((sum, row) => sum + getBoonWastedValue(row, "squadBuffs", table.stacking), 0);
@@ -115,8 +138,44 @@ export default function BuffGenerationView() {
       : null;
 
     return { table, rows, unit, totalSquadOutput, totalWasted, totalOverstack, columnValuesByCategory };
-  }, [selectedTable]);
+  }, [selectedTable, sort]);
   const iconsByName = useMemo(() => Object.fromEntries(chartData.map((d) => [d.name, d.icon])), [chartData]);
+
+  function toggleSort(key: SortKey) {
+    setSort((current) => {
+      if (!current || current.key !== key) return { key, direction: "desc" };
+      if (current.direction === "desc") return { key, direction: "asc" };
+      return null;
+    });
+  }
+
+  function SortHeader({
+    sortKey,
+    children,
+    className = "",
+    title,
+  }: {
+    sortKey: SortKey;
+    children: ReactNode;
+    className?: string;
+    title?: string;
+  }) {
+    const active = sort?.key === sortKey;
+    return (
+      <th className={className} title={title}>
+        <button
+          type="button"
+          onClick={() => toggleSort(sortKey)}
+          className={`inline-flex items-center justify-center gap-1 rounded-md px-1.5 py-1 font-bold transition-colors ${
+            active ? "text-amber-300" : "text-slate-500 hover:text-slate-300"
+          }`}
+        >
+          {children}
+          <span className="w-3 text-[9px]">{active ? (sort.direction === "desc" ? "▼" : "▲") : "↕"}</span>
+        </button>
+      </th>
+    );
+  }
 
   if (!report) return null;
 
@@ -267,19 +326,23 @@ export default function BuffGenerationView() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500">
-                    <th className="text-left font-bold px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">Player</th>
-                    <th className="text-left font-bold px-2 py-3">Class</th>
+                    <SortHeader sortKey="player" className="text-left px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">
+                      Player
+                    </SortHeader>
+                    <SortHeader sortKey="class" className="text-left px-2 py-3">
+                      Class
+                    </SortHeader>
                     {(Object.keys(CATEGORY_LABELS) as Array<keyof typeof CATEGORY_LABELS>).map((cat) => (
-                      <th key={cat} className="text-center font-bold px-3 py-3">
+                      <SortHeader key={cat} sortKey={cat} className="text-center px-3 py-3">
                         {CATEGORY_LABELS[cat]}
-                      </th>
+                      </SortHeader>
                     ))}
-                    <th className="text-center font-bold px-3 py-3 text-amber-500/70" title="Squad-facing generation that was reapplied before the buff needed refreshing - redundant, but not necessarily harmful">
+                    <SortHeader sortKey="wasted" className="text-center px-3 py-3 text-amber-500/70" title="Squad-facing generation that was reapplied before the buff needed refreshing - redundant, but not necessarily harmful">
                       Reapplied
-                    </th>
-                    <th className="text-center font-bold px-3 py-3 text-rose-500/70" title="Squad-facing generation that was discarded because the target was already past this buff's stack/effect cap">
+                    </SortHeader>
+                    <SortHeader sortKey="overstack" className="text-center px-3 py-3 text-rose-500/70" title="Squad-facing generation that was discarded because the target was already past this buff's stack/effect cap">
                       Overcapped
-                    </th>
+                    </SortHeader>
                   </tr>
                 </thead>
                 <tbody>

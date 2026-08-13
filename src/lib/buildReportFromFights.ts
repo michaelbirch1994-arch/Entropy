@@ -126,6 +126,66 @@ function serializePlayerSkillBreakdowns(
     return out;
 }
 
+function cleanMitigationTotals(totals: any) {
+    return {
+        totalHits: Number(totals?.totalHits ?? 0),
+        blocked: Number(totals?.blocked ?? 0),
+        evaded: Number(totals?.evaded ?? 0),
+        glanced: Number(totals?.glanced ?? 0),
+        missed: Number(totals?.missed ?? 0),
+        invulned: Number(totals?.invulned ?? 0),
+        interrupted: Number(totals?.interrupted ?? 0),
+        totalMitigation: Number(totals?.totalMitigation ?? 0),
+        minMitigation: Number(totals?.minMitigation ?? 0),
+        isEstimated: Boolean(totals?.isEstimated),
+    };
+}
+
+function hasMitigationValue(row: { mitigationTotals: ReturnType<typeof cleanMitigationTotals> }) {
+    const totals = row.mitigationTotals;
+    return totals.totalHits > 0
+        || totals.totalMitigation > 0
+        || totals.blocked > 0
+        || totals.evaded > 0
+        || totals.glanced > 0
+        || totals.missed > 0
+        || totals.invulned > 0
+        || totals.interrupted > 0;
+}
+
+function serializeDamageMitigationPlayers(
+    agg: ReturnType<typeof computePlayerAggregation>,
+): DamageMitigationPlayer[] {
+    return Array.from(agg.damageMitigationPlayersMap.values())
+        .map((row) => ({
+            account: row.account,
+            name: row.name,
+            profession: row.profession,
+            professionList: row.professionList ?? [],
+            activeMs: Number(row.activeMs ?? 0),
+            mitigationTotals: cleanMitigationTotals(row.mitigationTotals),
+        }))
+        .filter(hasMitigationValue)
+        .sort((a, b) => b.mitigationTotals.totalMitigation - a.mitigationTotals.totalMitigation || a.account.localeCompare(b.account));
+}
+
+function serializeDamageMitigationMinions(
+    agg: ReturnType<typeof computePlayerAggregation>,
+): DamageMitigationMinion[] {
+    return Array.from(agg.damageMitigationMinionsMap.values())
+        .map((row) => ({
+            account: row.account,
+            name: row.name,
+            profession: row.profession,
+            professionList: row.professionList ?? [],
+            activeMs: Number(row.activeMs ?? 0),
+            mitigationTotals: cleanMitigationTotals(row.mitigationTotals),
+            minion: row.minion,
+        }))
+        .filter(hasMitigationValue)
+        .sort((a, b) => b.mitigationTotals.totalMitigation - a.mitigationTotals.totalMitigation || a.account.localeCompare(b.account));
+}
+
 /**
  * Classify how complete a player's healing figures are.
  *
@@ -168,6 +228,8 @@ import type {
     TopHealingSource,
     DeathRecapEntry,
     FightHighlight,
+    DamageMitigationPlayer,
+    DamageMitigationMinion,
 } from '../types/report';
 
 // Stamped onto every report. Metrics are computed at build time, not at
@@ -175,7 +237,7 @@ import type {
 // that version produced - updating the app does not retroactively fix it.
 // Bump this whenever a change alters computed output, so the UI can tell the
 // user to re-import instead of silently showing them stale figures.
-export const METRICS_VERSION = 'entropy-raw-v4';
+export const METRICS_VERSION = 'entropy-raw-v5';
 
 const NATURAL_FORTITUDE_SYNTHETIC_SKILL_ID = -1001779;
 const NATURAL_FORTITUDE_DAMAGE_PER_UNLEASHED_SKILL_HIT = 1779;
@@ -513,7 +575,19 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
           // Stability, every condition) from duration-stacking ones. It decides
           // whether this buff's `uptime` value is a percentage or an average
           // stack count - see the note on BoonUptimeColumn.stacking.
-          if (!meta.has(id)) meta.set(id, { name: def.name || `Buff ${id}`, icon: def.icon, stacking: !!def.stacking });
+                          if (!meta.has(id)) {
+                              const name = def.name || `Buff ${id}`;
+                              meta.set(id, {
+                                  name,
+                                  icon: def.icon,
+                                  // Stability is mechanically stack-counted, but
+                                  // the value commanders care about here is
+                                  // "did the player have any Stability", i.e.
+                                  // presence %. Buff Generation still shows
+                                  // actual generated stacks/seconds.
+                                  stacking: name === 'Stability' ? false : !!def.stacking,
+                              });
+                          }
                 }
         }
 
@@ -532,13 +606,16 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                 if (typeof p.group === 'number') groupByAccount.set(account, p.group);
 
 
-          const buffUptimes = (p.buffUptimes ?? []) as Array<{ id?: number; buffData?: Array<{ uptime?: number }> }>;
+          const buffUptimes = (p.buffUptimes ?? []) as Array<{ id?: number; buffData?: Array<{ uptime?: number; presence?: number }> }>;
                 for (const entry of buffUptimes) {
                           const id = Number(entry?.id);
                           if (!Number.isFinite(id)) continue;
                           const cls = idToClass.get(id);
                           if (!cls) continue;
-                          const uptime = Number(entry?.buffData?.[0]?.uptime);
+                          const meta = buffMetaByClass.get(cls)?.get(id);
+                          const uptime = meta?.name === 'Stability'
+                              ? Number(entry?.buffData?.[0]?.presence ?? entry?.buffData?.[0]?.uptime)
+                              : Number(entry?.buffData?.[0]?.uptime);
                           if (!Number.isFinite(uptime)) continue;
 
                   const accMapByAccount = accByClass.get(cls)!;
@@ -1992,6 +2069,8 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
                 account: s.account, profession: s.profession, professionList: s.professionList ?? [],
                 defenseTotals: s.defenseTotals as any, totalFightMs: s.totalFightMs,
         })),
+        damageMitigationPlayers: serializeDamageMitigationPlayers(agg),
+        damageMitigationMinions: serializeDamageMitigationMinions(agg),
         supportPlayers: playerEntries.map((s) => ({
                 account: s.account, profession: s.profession, professionList: s.professionList ?? [],
                 supportTotals: s.supportTotals as any, activeMs: s.supportActiveMs, logsJoined: s.logsJoined,

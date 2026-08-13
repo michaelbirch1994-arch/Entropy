@@ -17,6 +17,16 @@ export default function DefensiveView() {
   const { scope: allyScope } = useAllyScope();
   const s = report?.stats;
 
+  const mitigationByAccount = useMemo(() => {
+    const rows = s?.damageMitigationPlayers ?? [];
+    const map = new Map<string, (typeof rows)[number]>();
+    rows.forEach((row) => {
+      map.set(row.account, row);
+      if (row.profession && row.profession !== "Unknown") map.set(`${row.account}::${row.profession}`, row);
+    });
+    return map;
+  }, [s]);
+
   const totals = useMemo(() => {
     if (!s) return null;
 
@@ -41,6 +51,11 @@ export default function DefensiveView() {
       0
     );
     const totalDamageTaken = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
+    const totalMitigatedDamage = (s.damageMitigationPlayers ?? []).reduce((a, p) => a + (p.mitigationTotals.totalMitigation ?? 0), 0);
+    const totalBlocks = s.defensePlayers.reduce(
+      (a, p) => a + ((mitigationByAccount.get(`${p.account}::${p.profession}`) ?? mitigationByAccount.get(p.account))?.mitigationTotals.blocked ?? p.defenseTotals.blockedCount ?? 0),
+      0
+    );
     // Barrier absorbed (damageBarrier) is an incoming/defensive stat - damage
     // that never landed because a barrier ate it - distinct from "Total
     // Barrier" above (barrier the player *generated* for others). Both are
@@ -56,6 +71,7 @@ export default function DefensiveView() {
     const healingActiveSec = s.healingPlayers.reduce((a, p) => a + (p.activeMs ?? 0), 0) / 1000;
     const supportActiveSec = s.supportPlayers.reduce((a, p) => a + (p.activeMs ?? 0), 0) / 1000;
     const defenseActiveSec = s.defensePlayers.reduce((a, p) => a + (Number(p.totalFightMs) || 0), 0) / 1000;
+    const mitigationActiveSec = (s.damageMitigationPlayers ?? []).reduce((a, p) => a + (Number(p.activeMs) || 0), 0) / 1000;
 
     return {
       totalCleanses,
@@ -64,12 +80,15 @@ export default function DefensiveView() {
       totalHealing,
       totalBarrier,
       totalDamageTaken,
+      totalMitigatedDamage,
+      totalBlocks,
       totalBarrierAbsorbed,
       healingActiveSec,
       supportActiveSec,
       defenseActiveSec,
+      mitigationActiveSec: mitigationActiveSec || defenseActiveSec,
     };
-  }, [s, allyScope]);
+  }, [s, allyScope, mitigationByAccount]);
 
   const supportRows = useMemo(() => {
     if (!s || tab !== "support") return [];
@@ -139,13 +158,15 @@ export default function DefensiveView() {
   return (
     <div className="space-y-5 animate-view pb-12">
       {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-9 gap-4">
         <StatCard label={lbl("Total Healing")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalHealing, totals.healingActiveSec))} icon={<Heart className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
         <StatCard label={lbl("Total Barrier")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrier, totals.healingActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-teal-400" />} accent="text-teal-400" />
         <StatCard label={lbl("Barrier Absorbed")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrierAbsorbed, totals.defenseActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-teal-300" />} accent="text-teal-300" />
+        <StatCard label={lbl("Mitigated Damage")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalMitigatedDamage, totals.mitigationActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-blue-400" />} accent="text-blue-400" />
         <StatCard label={lbl("Cleanses")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalCleanses, totals.supportActiveSec))} icon={<Droplet className="w-3.5 h-3.5 text-cyan-400" />} accent="text-cyan-400" />
         <StatCard label={lbl("Boon Strips")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalStrips, totals.supportActiveSec))} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
         <StatCard label={lbl("Resurrects")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalRes, totals.supportActiveSec))} icon={<Wind className="w-3.5 h-3.5 text-sky-400" />} accent="text-sky-400" />
+        <StatCard label={lbl("Blocks")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalBlocks, totals.defenseActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-indigo-400" />} accent="text-indigo-400" />
         <StatCard label={lbl("Damage Taken")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalDamageTaken, totals.defenseActiveSec))} icon={<Target className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" />
       </div>
 
@@ -301,6 +322,8 @@ export default function DefensiveView() {
                   <th className="p-2.5 text-right">Condi Dmg</th>
                   <th className="p-2.5 text-right">Hits</th>
                   <th className="p-2.5 text-right" title="Damage absorbed by barrier">Barrier Absorbed</th>
+                  <th className="p-2.5 text-right" title="Damage prevented by blocks, evades, misses, invulnerability, interrupts, and glancing hits">Mitigated Dmg</th>
+                  <th className="p-2.5 text-right" title="Blocked incoming hits">Blocks</th>
                   <th className="p-2.5 text-right" title="Number of dodges">Dodges</th>
                   <th className="p-2.5 text-right" title="Number of times was invulnerable to damage">Invulned</th>
                   <th className="p-2.5 text-right" title="Number of times interrupted">Interrupted</th>
@@ -309,23 +332,28 @@ export default function DefensiveView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">
-                {defenseRows.map((p, i) => (
-                  <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
-                    <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
-                    <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
-                    <td className="p-2.5"><ClassCell profession={p.profession} /></td>
-                    <td className="p-2.5 text-right text-rose-400 font-bold">{fmtCompact(p.defenseTotals.damageTaken)}</td>
-                    <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.defenseTotals.powerDamageTaken)}</td>
-                    <td className="p-2.5 text-right text-fuchsia-400">{fmtCompact(p.defenseTotals.conditionDamageTaken)}</td>
-                    <td className="p-2.5 text-right text-slate-400">{fmtNum(p.defenseTotals.damageTakenCount)}</td>
-                    <td className="p-2.5 text-right text-teal-400">{fmtCompact(p.defenseTotals.damageBarrier ?? 0)}</td>
-                    <td className="p-2.5 text-right text-cyan-400">{fmtNum(p.defenseTotals.dodgeCount ?? 0)}</td>
-                    <td className="p-2.5 text-right text-sky-400">{fmtNum(p.defenseTotals.invulnedCount ?? 0)}</td>
-                    <td className="p-2.5 text-right text-purple-400">{fmtNum(p.defenseTotals.interruptedCount ?? 0)}</td>
-                    <td className="p-2.5 text-right text-amber-400">{fmtNum(p.defenseTotals.downCount ?? 0)}</td>
-                    <td className="p-2.5 text-right text-slate-300">{fmtNum(p.defenseTotals.deadCount ?? 0)}</td>
-                  </tr>
-                ))}
+                {defenseRows.map((p, i) => {
+                  const mitigation = (mitigationByAccount.get(`${p.account}::${p.profession}`) ?? mitigationByAccount.get(p.account))?.mitigationTotals;
+                  return (
+                    <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
+                      <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
+                      <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
+                      <td className="p-2.5"><ClassCell profession={p.profession} /></td>
+                      <td className="p-2.5 text-right text-rose-400 font-bold">{fmtCompact(p.defenseTotals.damageTaken)}</td>
+                      <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.defenseTotals.powerDamageTaken)}</td>
+                      <td className="p-2.5 text-right text-fuchsia-400">{fmtCompact(p.defenseTotals.conditionDamageTaken)}</td>
+                      <td className="p-2.5 text-right text-slate-400">{fmtNum(p.defenseTotals.damageTakenCount)}</td>
+                      <td className="p-2.5 text-right text-teal-400">{fmtCompact(p.defenseTotals.damageBarrier ?? 0)}</td>
+                      <td className="p-2.5 text-right text-blue-400">{fmtCompact(mitigation?.totalMitigation ?? 0)}</td>
+                      <td className="p-2.5 text-right text-indigo-400">{fmtNum(mitigation?.blocked ?? p.defenseTotals.blockedCount ?? 0)}</td>
+                      <td className="p-2.5 text-right text-cyan-400">{fmtNum(p.defenseTotals.dodgeCount ?? 0)}</td>
+                      <td className="p-2.5 text-right text-sky-400">{fmtNum(p.defenseTotals.invulnedCount ?? 0)}</td>
+                      <td className="p-2.5 text-right text-purple-400">{fmtNum(p.defenseTotals.interruptedCount ?? 0)}</td>
+                      <td className="p-2.5 text-right text-amber-400">{fmtNum(p.defenseTotals.downCount ?? 0)}</td>
+                      <td className="p-2.5 text-right text-slate-300">{fmtNum(p.defenseTotals.deadCount ?? 0)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
