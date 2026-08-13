@@ -60,6 +60,17 @@ function pct(value: number) {
   return `${Math.round(value * 100)}%`;
 }
 
+function getChartClickIndex(event: unknown): number | null {
+  const chartEvent = event as {
+    activePayload?: Array<{ payload?: { index?: unknown } }>;
+    activeTooltipIndex?: unknown;
+  } | null | undefined;
+  const payloadIndex = chartEvent?.activePayload?.[0]?.payload?.index;
+  if (typeof payloadIndex === "number") return payloadIndex;
+  if (typeof chartEvent?.activeTooltipIndex === "number") return chartEvent.activeTooltipIndex;
+  return null;
+}
+
 function normalizeScore(value: number, max: number) {
   if (!Number.isFinite(value) || value <= 0 || max <= 0) return 0;
   return Math.round((value / max) * 100);
@@ -306,9 +317,8 @@ export default function SquadStatsView() {
                     data={pressureChartData}
                     margin={{ left: 6, right: 16, top: 12, bottom: 6 }}
                     onClick={(event) => {
-                      const payloadIndex = event?.activePayload?.[0]?.payload?.index;
-                      if (typeof payloadIndex === "number") setSelectedPressureIndex(payloadIndex);
-                      else if (typeof event?.activeTooltipIndex === "number") setSelectedPressureIndex(event.activeTooltipIndex);
+                      const index = getChartClickIndex(event);
+                      if (index !== null) setSelectedPressureIndex(index);
                     }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -397,9 +407,8 @@ export default function SquadStatsView() {
                     data={healingChartData}
                     margin={{ left: 8, right: 18, top: 12, bottom: 8 }}
                     onClick={(event) => {
-                      const payloadIndex = event?.activePayload?.[0]?.payload?.index;
-                      if (typeof payloadIndex === "number") setSelectedHealingIndex(payloadIndex);
-                      else if (typeof event?.activeTooltipIndex === "number") setSelectedHealingIndex(event.activeTooltipIndex);
+                      const index = getChartClickIndex(event);
+                      if (index !== null) setSelectedHealingIndex(index);
                     }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
