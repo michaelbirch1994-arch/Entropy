@@ -245,7 +245,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
                 placeholder="Quick switch..."
                 className="w-full bg-transparent text-xs text-slate-200 placeholder:text-slate-600 outline-none"
               />
-              <kbd className="rounded border border-white/[0.08] px-1.5 py-0.5 text-[9px] text-slate-500">⌘K</kbd>
+              <kbd className="rounded border border-white/[0.08] px-1.5 py-0.5 text-[9px] text-slate-500">Ctrl K</kbd>
             </div>
             {searchResults.length > 0 && (
               <div className="mt-2 space-y-1 border-t border-white/[0.06] pt-2">
