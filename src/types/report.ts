@@ -1,4 +1,4 @@
-// Types matching the AxiBridge WvW report.json structure.
+// Types matching Entropy's WvW report.json structure.
 
 import type { BoonTable } from "../lib/bridge-metrics/boonGeneration";
 import type { CriticalEvent, IntelligenceFinding } from "../lib/intelligence/types";

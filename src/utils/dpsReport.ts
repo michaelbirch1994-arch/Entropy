@@ -13,7 +13,7 @@
 // Both endpoints return a single fight's raw EI JSON — the same shape as
 // what you'd get from running Elite Insights locally on one .zevtc file.
 // This is NOT the aggregated multi-fight report.json that Entropy's main
-// viewer renders; it's the raw input AxiBridge's aggregation engine
+// viewer renders; it's the raw input Entropy's aggregation pipeline
 // consumes. See RawFightSummary / summarizeRawFight for what Entropy does
 // with it today (a lightweight per-fight summary, not a full dashboard).
 

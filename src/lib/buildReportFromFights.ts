@@ -252,7 +252,7 @@ export interface FightInput {
     raw: RawFightLog;
 }
 
-// --- MVP weight table (mirrors AxiBridge's DEFAULT_MVP_WEIGHT_PROFILES) ---
+// --- MVP weight table ---
 
 type Bucket = 'offensive' | 'general' | 'defensive';
 
@@ -2122,7 +2122,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
         engagementSegments: persistedIntelligence.engagementSegments,
         intelligenceFindings: persistedIntelligence.intelligenceFindings,
         // Self- vs. group- vs. squad-generation split for stacking/non-stacking
-        // boons - reuses AxiBridge's vendored boonGeneration engine as-is, reading
+        // boons - reads Entropy's normalized boon-generation source data,
         // player.selfBuffs/groupBuffs/squadBuffs straight from the raw log (each
         // an array of { id, buffData: [{ generation, wasted }] }, confirmed
         // against EI's JsonPlayer.SelfBuffs / GroupBuffs / SquadBuffs JSON doc).
