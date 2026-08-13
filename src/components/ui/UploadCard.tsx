@@ -93,7 +93,7 @@ export default function UploadCard({ onFile, onUrl, error, loading }: UploadCard
         </div>
         <div className="text-center">
           <p className="text-sm font-bold text-slate-200">
-            {dragging ? "Drop to load report" : "Drag & drop a prebuilt report.json"}
+            {dragging ? "Drop to load report" : "Drag & drop an Entropy report"}
           </p>
           <p className="text-xs text-slate-500 mt-1.5">
             or <span className="text-amber-400 font-semibold cursor-pointer">click to browse</span>
@@ -101,12 +101,12 @@ export default function UploadCard({ onFile, onUrl, error, loading }: UploadCard
         </div>
         <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-500 mt-2 bg-white/[0.02] px-3 py-1.5 rounded-lg border border-white/[0.04]">
           <FileJson className="w-3.5 h-3.5 text-amber-500/50" />
-          <span>Legacy report.json format</span>
+          <span>.entropy-report.json or report.json</span>
         </div>
         <input
           ref={inputRef}
           type="file"
-          accept="application/json,.json"
+          accept="application/json,.json,.entropy-report.json"
           className="hidden"
           onChange={(e) => handleFiles(e.target.files)}
         />
@@ -129,7 +129,7 @@ export default function UploadCard({ onFile, onUrl, error, loading }: UploadCard
                 value={urlValue}
                 onChange={(e) => { setUrlValue(e.target.value); setUrlError(null); }}
                 onKeyDown={(e) => { if (e.key === "Enter") handleUrlSubmit(); }}
-                placeholder="https://example.com/combined_report.json"
+                placeholder="https://example.com/report.entropy-report.json"
                 className="w-full bg-white/[0.03] border border-amber-500/10 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-200 placeholder:text-slate-500 outline-none focus:border-amber-500/40 focus:ring-1 focus:ring-amber-500/20 transition-all"
               />
             </div>
