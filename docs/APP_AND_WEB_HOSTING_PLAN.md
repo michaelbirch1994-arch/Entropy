@@ -13,6 +13,7 @@ This split keeps the web app fast and shareable without forcing browser/Vercel r
 - If a report has dps.report permalinks, Export copies a short viewer URL using the configured viewer base.
 - If no short viewer link can be created, Export downloads a portable `.entropy-report.json` artifact.
 - The app can now import both raw `report.json` and wrapped `.entropy-report.json` artifacts.
+- Hosted viewer URLs can now load `?permalinks=...` dps.report collections or `?artifact=...` / `?reportUrl=...` / `?url=...` externally hosted Entropy report artifacts.
 - The artifact schema is versioned as `entropy.report-artifact.v1`.
 
 ## Recommended hosting shape
@@ -25,7 +26,8 @@ Entropy Desktop
   later uploads artifact to storage
 
 Vercel Entropy Viewer
-  loads /report?id=...
+  loads ?permalinks=...
+  loads ?artifact=...
   fetches artifact from storage
   renders report-only UI
   powers Discord links
@@ -61,9 +63,9 @@ Best long-term platform path:
 
 ## Next implementation slices
 
-1. Add a Vercel viewer route that can load a local `.entropy-report.json` file.
-2. Add hosted artifact upload behind a feature flag.
-3. Add a `Share to Web` button that uploads and returns a short URL.
-4. Make Discord webhook include the short hosted report URL.
-5. Add privacy toggles before upload: full names, account names, guild tags, enemy names.
-6. Add cleanup controls for hosted reports.
+1. Add hosted artifact upload behind a feature flag.
+2. Add a `Share to Web` button that uploads and returns a short URL.
+3. Make Discord webhook include the short hosted report URL.
+4. Add privacy toggles before upload: full names, account names, guild tags, enemy names.
+5. Add cleanup controls for hosted reports.
+6. Split the hosted viewer bundle so heavy desktop-only/builder-only surfaces lazy-load.
