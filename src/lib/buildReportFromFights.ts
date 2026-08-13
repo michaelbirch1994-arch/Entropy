@@ -599,6 +599,7 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
 
 
           const buffUptimes = (p.buffUptimes ?? []) as Array<{ id?: number; buffData?: Array<{ uptime?: number; presence?: number }> }>;
+          const fightBuffValues = new Map<number, number>();
                 for (const entry of buffUptimes) {
                           const id = Number(entry?.id);
                           if (!Number.isFinite(id)) continue;
@@ -607,6 +608,17 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                           const meta = buffMetaByClass.get(cls)?.get(id);
                           const uptime = Number(entry?.buffData?.[0]?.uptime);
                           if (!Number.isFinite(uptime)) continue;
+                          // EI normally emits one phase-0 uptime row per buff, but
+                          // defensive test fixtures and some transformed logs may
+                          // carry duplicate ids. Treat the last row for a buff as
+                          // the fight-level value and add it once below, instead of
+                          // averaging duplicate rows inside the same fight.
+                          fightBuffValues.set(id, uptime);
+                }
+
+                fightBuffValues.forEach((uptime, id) => {
+                          const cls = idToClass.get(id);
+                          if (!cls) return;
 
                   const accMapByAccount = accByClass.get(cls)!;
                           let accMap = accMapByAccount.get(account);
@@ -621,7 +633,7 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                   cur.sum += uptime;
                           cur.count += 1;
                           accMap.set(id, cur);
-                }
+                });
         }
   }
 
