@@ -914,7 +914,7 @@ function computeDpsGraph(fights: FightInput[]): DpsGraphData {
 // `downContribution` field (the same field the vendored bridge-metrics code
 // reads for the player-level total in combatMetrics.ts) - down contribution is
 // an outgoing-damage concept, so it's only accumulated for outgoing skills.
-function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topIncomingSkills: TopSkill[] } {
+function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topIncomingSkills: TopSkill[]; topSkillsByDamage: TopSkill[]; topSkillsByDownContribution: TopSkill[] } {
     const naturalFortitude = computeNaturalFortitudeDamage(fights);
     const skillMeta = new Map<number, { name: string; icon?: string }>();
     const outgoing = new Map<number, { damage: number; hits: number; downContribution: number }>();
@@ -1002,7 +1002,7 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
         accumulate(outgoing, NATURAL_FORTITUDE_SYNTHETIC_SKILL_ID, naturalFortitude.damage, naturalFortitude.hits, 0);
   }
 
-  function toTopSkills(map: Map<number, { damage: number; hits: number; downContribution: number }>): TopSkill[] {
+  function toRows(map: Map<number, { damage: number; hits: number; downContribution: number }>): TopSkill[] {
         return Array.from(map.entries())
           .map(([id, v]) => ({
                     name: skillMeta.get(id)?.name ?? `Skill ${id}`,
@@ -1012,12 +1012,20 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                     hits: v.hits,
                     downContribution: v.downContribution,
           }))
-          .filter((s) => s.damage > 0 || s.hits > 0)
-          .sort((a, b) => b.damage - a.damage)
-          .slice(0, 30);
+          .filter((s) => s.damage > 0 || s.hits > 0 || s.downContribution > 0);
   }
 
-  return { topSkills: toTopSkills(outgoing), topIncomingSkills: toTopSkills(incoming) };
+  const outgoingRows = toRows(outgoing);
+  const incomingRows = toRows(incoming);
+  const byDamage = (rows: TopSkill[]) => [...rows].sort((a, b) => b.damage - a.damage || b.downContribution - a.downContribution).slice(0, 30);
+  const byDownContribution = (rows: TopSkill[]) => [...rows].sort((a, b) => b.downContribution - a.downContribution || b.damage - a.damage).slice(0, 30);
+
+  return {
+        topSkills: byDamage(outgoingRows),
+        topIncomingSkills: byDamage(incomingRows),
+        topSkillsByDamage: byDamage(outgoingRows),
+        topSkillsByDownContribution: byDownContribution(outgoingRows),
+  };
 }
 
 // Per-fight 2D scrubbable replay data, promoted into the combined report so
@@ -1739,7 +1747,7 @@ function computeFightTables(fights: FightInput[]): {
                 })
                 .filter((entry) => entry.damage > 0)
                 .sort((a, b) => b.damage - a.damage)
-                .slice(0, 10);
+                .slice(0, 20);
         const topOutgoingHealingSkills: TopHealingSource[] = Array.from(healingSkillTotals.entries())
                 .map(([id, total]) => {
                         const meta = resolveMeta(id);
@@ -1747,7 +1755,7 @@ function computeFightTables(fights: FightInput[]): {
                 })
                 .filter((entry) => entry.healing > 0)
                 .sort((a, b) => b.healing - a.healing)
-                .slice(0, 10);
+                .slice(0, 20);
 
                      mapCounts.set(mapName, (mapCounts.get(mapName) || 0) + 1);
 
@@ -2061,8 +2069,6 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
         maxStab: getTop(leaderboards.stability, playerEntries),
         closestToTag: getTop(leaderboards.closestToTag, playerEntries),
         ...computeTopSkills(fights),
-        topSkillsByDamage: [],
-        topSkillsByDownContribution: [],
         mapData,
         timelineData,
         offensePlayers: playerEntries.map((s) => ({
