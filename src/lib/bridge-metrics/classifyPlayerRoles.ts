@@ -1,8 +1,5 @@
-// Vendored (with import paths adjusted for Entropy) from AxiBridge's
-// src/renderer/stats/classifyPlayerRoles.ts. Not part of the published
-// @axiapps/bridge-metrics package, but small and self-contained enough to
-// bring along verbatim aside from import paths. GPL-3.0-only, see
-// THIRD_PARTY_NOTICES.md.
+// Entropy role-classification helper for separating likely support and damage
+// players from already-normalized combat, healing, and boon-output metrics.
 
 import type { BoonTable } from './boonGeneration';
 import type { PlayerRoleClassification, RoleClassificationFactor } from './roles';

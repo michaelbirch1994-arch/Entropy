@@ -45,13 +45,11 @@ kbd {
 .class-icon-native {
   display: inline-block;
   aspect-ratio: 1 / 1;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   vertical-align: middle;
-  border-radius: 0.2rem;
+  border-radius: 0;
   image-rendering: auto;
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
 /* Scrollbar */

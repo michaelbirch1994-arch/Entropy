@@ -1,15 +1,12 @@
 // Turns a set of raw Elite Insights fight logs (as fetched from dps.report by
-// RawLogImporter) into a full Entropy WvWReport, using the vendored
-// @axiapps/bridge-metrics aggregation core plus a from-scratch reimplementation
-// of the report-assembly logic that lives only in AxiBridge's app-coupled
-// incrementalAggregation.ts (leaderboards, MVP scoring, role classification
-// wiring, squad/enemy class breakdowns, attendance).
+// RawLogImporter) into a full Entropy WvWReport: leaderboards, MVP scoring,
+// role classification wiring, squad/enemy class breakdowns, attendance, and
+// derived dashboard metrics.
 //
 // Deliberately out of scope for this pass (left as empty defaults so the
 // interface stays satisfied without crashing any view): per-fight breakdown
 // table, commander stats, boon generation tables/leaderboards, map/timeline
-// data. These require porting additional non-portable AxiBridge modules —
-// see THIRD_PARTY_NOTICES.md and the "Phase 2 full parity" scoping note.
+// data. These require additional Entropy-native ingestion and UI passes.
 
 import { computePlayerAggregation, type PlayerStats } from './bridge-metrics/computePlayerAggregation';
 import type { HealingCoverage, PlayerSkillBreakdown, PlayerSkillSource } from '../types/report';
