@@ -35,7 +35,7 @@ import CompareView from "./views/CompareView";
 import IntelligenceDebugView from "./views/IntelligenceDebugView";
 import AxiForgeLabView from "./views/AxiForgeLabView";
 import { downloadReportArtifact } from "./lib/shareReportArtifact";
-import type { WvWReport } from "./types/report";
+import { buildEntropyShareLink } from "./lib/shareLinks";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
 import { Activity, BrainCircuit, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, FlaskConical, Link2, MessageCircle, Send, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
@@ -218,51 +218,6 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
 }
 
 
-
-
-const DEFAULT_SHARE_VIEWER_URL = "https://michaelbirch1994-arch.github.io/Entropy/";
-
-
-function getConfiguredShareViewerUrl(): string {
-  const configured = import.meta.env.VITE_ENTROPY_SHARE_VIEWER_URL;
-  if (typeof configured === "string" && configured.trim()) return configured.trim();
-
-
-  if (typeof window !== "undefined" && /^https?:$/i.test(window.location.protocol)) {
-    return window.location.href;
-  }
-
-
-  return DEFAULT_SHARE_VIEWER_URL;
-}
-
-
-function getReportPermalinks(report: WvWReport): string[] {
-  const seen = new Set<string>();
-  const rows = report.stats?.fightBreakdown ?? [];
-
-
-  for (const row of rows) {
-    const permalink = typeof row.permalink === "string" ? row.permalink.trim() : "";
-    if (permalink) seen.add(permalink);
-  }
-
-
-  return [...seen];
-}
-
-
-function buildEntropyShareLink(report: WvWReport): string | null {
-  const permalinks = getReportPermalinks(report);
-  if (permalinks.length === 0) return null;
-
-
-  const url = new URL(getConfiguredShareViewerUrl());
-  url.search = "";
-  url.hash = "";
-  url.searchParams.set("permalinks", permalinks.join(","));
-  return url.toString();
-}
 
 
 type DiscordShareStatus = "idle" | "missing" | "sending" | "sent" | "failed" | "saved" | "cleared";

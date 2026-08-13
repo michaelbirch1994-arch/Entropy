@@ -12,6 +12,7 @@ import { buildReportFromFights } from "../lib/buildReportFromFights";
 import { fetchDpsReportJson } from "../utils/dpsReport";
 import { summarizeRawFight } from "../types/rawFight";
 import { ENTROPY_REPORT_ARTIFACT_SCHEMA } from "../lib/shareReportArtifact";
+import { parseReportLoadQuery } from "../lib/shareLinks";
 
 
 export type { ReportSource };
@@ -44,19 +45,6 @@ const ReportContext = createContext<ReportContextValue>({
   setReport: async () => {},
   clearReport: async () => {},
 });
-
-
-function getReportQueryFromUrl(): { reportId: string | null; permalinks: string[] } {
-  if (typeof window === "undefined") return { reportId: null, permalinks: [] };
-  const params = new URLSearchParams(window.location.search);
-  const reportId = params.get("report");
-  const permalinks = (params.get("permalinks") ?? "")
-    .split(",")
-    .map((id) => id.trim())
-    .filter((id): id is string => /^[A-Za-z0-9_-]+$/.test(id));
-
-  return { reportId, permalinks: [...new Set(permalinks)] };
-}
 
 
 function parseReport(text: string, labelForError: string): WvWReport {
@@ -106,7 +94,10 @@ export function ReportProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    const { reportId: id, permalinks } = getReportQueryFromUrl();
+    const { reportId: id, permalinks, artifactUrl } =
+      typeof window === "undefined"
+        ? { reportId: null, permalinks: [], artifactUrl: null }
+        : parseReportLoadQuery(window.location.search);
     setReportId(id);
 
 
@@ -139,6 +130,25 @@ export function ReportProvider({ children }: { children: ReactNode }) {
             savedAt: Date.now(),
             report: data,
           });
+          return;
+        }
+
+        if (artifactUrl) {
+          const res = await fetch(artifactUrl);
+          if (!res.ok) throw new Error(`Shared report artifact not found (${res.status})`);
+          const data = parseReport(await res.text(), artifactUrl);
+          if (cancelled) return;
+          setReportState(data);
+          setSource("url");
+          setLoading(false);
+          void saveToArchive(data);
+          void putActiveReport({
+            id: reportCacheId(data, "url"),
+            source: "url",
+            savedAt: Date.now(),
+            report: data,
+          });
+          void recordReportIntoProfiles(data);
           return;
         }
 
