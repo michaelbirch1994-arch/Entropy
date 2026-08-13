@@ -11,6 +11,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } from "../utils/chartTheme";
 import type { GeneralPlayer, HealingPlayer, HealingCoverage, OffensePlayer, DefensePlayer } from "../types/report";
 
+type SquadOverviewSortKey = "player" | "class" | "damage" | "dps" | "downContribution" | "healing" | "cleanses" | "strips" | "logs";
+
 /**
  * Render a healing figure honestly.
  *
@@ -139,6 +141,7 @@ export default function SquadStatsView() {
 const { scope: allyScope } = useAllyScope();
   const [selectedHealingIndex, setSelectedHealingIndex] = useState(0);
   const [hoveredDistanceAccount, setHoveredDistanceAccount] = useState<string | null>(null);
+  const [overviewSort, setOverviewSort] = useState<{ key: SquadOverviewSortKey; dir: "asc" | "desc" } | null>(null);
   if (!report) return null;
   const s = report.stats;
 
@@ -212,6 +215,66 @@ const { scope: allyScope } = useAllyScope();
   const tightCount = distanceRows.filter((p) => p.avgDistance <= 600).length;
   const pressureLeader = topPressureRows[0];
   const hoveredDistance = topDistanceRows.find((p) => p.account === hoveredDistanceAccount);
+  const squadOverviewRows = (() => {
+    const rows = s.offensePlayers.map((p) => {
+      const heal = s.healingPlayers.find((h) => h.account === p.account);
+      const sup = s.supportPlayers.find((sp) => sp.account === p.account);
+      const damage = pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll);
+      const dps = safeDiv(damage, p.totalFightMs / 1000);
+      return {
+        account: p.account,
+        profession: p.profession,
+        damage,
+        dps,
+        downContribution: p.offenseTotals.downContribution ?? 0,
+        heal,
+        healing: heal ? pickAllyScopeValue(allyScope, heal.healingTotals.healing, heal.healingTotals.squadHealing) : 0,
+        cleanses: sup?.supportTotals.condiCleanse ?? 0,
+        strips: sup?.supportTotals.boonStrips ?? 0,
+        logs: s.generalPlayers.find((g) => g.account === p.account)?.logsJoined ?? 0,
+      };
+    });
+    if (!overviewSort) return rows.sort((a, b) => b.damage - a.damage || a.account.localeCompare(b.account)).slice(0, 25);
+    const dir = overviewSort.dir === "asc" ? 1 : -1;
+    return rows
+      .sort((a, b) => {
+        if (overviewSort.key === "player") return a.account.localeCompare(b.account) * dir;
+        if (overviewSort.key === "class") return a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account);
+        const valueFor = (row: typeof rows[number]) => {
+          switch (overviewSort.key) {
+            case "damage": return row.damage;
+            case "dps": return row.dps;
+            case "downContribution": return row.downContribution;
+            case "healing": return row.healing;
+            case "cleanses": return row.cleanses;
+            case "strips": return row.strips;
+            case "logs": return row.logs;
+            default: return 0;
+          }
+        };
+        return (valueFor(a) - valueFor(b)) * dir || a.account.localeCompare(b.account);
+      })
+      .slice(0, 25);
+  })();
+  const toggleOverviewSort = (key: SquadOverviewSortKey) => {
+    setOverviewSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "desc" };
+      if (prev.dir === "desc") return { key, dir: "asc" };
+      return null;
+    });
+  };
+  const SortHeader = ({ label, k, align = "left" }: { label: string; k: SquadOverviewSortKey; align?: "left" | "right" }) => (
+    <th className={`p-2.5 ${align === "right" ? "text-right" : ""}`}>
+      <button
+        type="button"
+        onClick={() => toggleOverviewSort(k)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-slate-300 ${overviewSort?.key === k ? "text-sky-400" : ""}`}
+      >
+        {label}
+        <span className="text-[8px] opacity-70">{overviewSort?.key === k ? (overviewSort.dir === "desc" ? "▼" : "▲") : "↕"}</span>
+      </button>
+    </th>
+  );
 
   return (
     <div className="space-y-5 animate-view pb-12">
@@ -546,35 +609,32 @@ const { scope: allyScope } = useAllyScope();
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
-                <th className="p-2.5">Player</th>
-                <th className="p-2.5">Class</th>
-                <th className="p-2.5 text-right">Damage</th>
-                <th className="p-2.5 text-right">DPS</th>
-                <th className="p-2.5 text-right">Down Contrib</th>
-                <th className="p-2.5 text-right">Healing</th>
-                <th className="p-2.5 text-right">Cleanses</th>
-                <th className="p-2.5 text-right">Strips</th>
-                <th className="p-2.5 text-right">Logs</th>
+                <SortHeader label="Player" k="player" />
+                <SortHeader label="Class" k="class" />
+                <SortHeader label="Damage" k="damage" align="right" />
+                <SortHeader label="DPS" k="dps" align="right" />
+                <SortHeader label="Down Contrib" k="downContribution" align="right" />
+                <SortHeader label="Healing" k="healing" align="right" />
+                <SortHeader label="Cleanses" k="cleanses" align="right" />
+                <SortHeader label="Strips" k="strips" align="right" />
+                <SortHeader label="Logs" k="logs" align="right" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/30 font-mono">
-              {s.offensePlayers.slice(0, 25).map((p) => {
-                const heal = s.healingPlayers.find((h) => h.account === p.account);
-                const sup = s.supportPlayers.find((sp) => sp.account === p.account);
-                const dps = pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll) / (p.totalFightMs / 1000);
+              {squadOverviewRows.map((p) => {
                 return (
                   <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
                     <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
                     <td className="p-2.5 text-slate-400">{p.profession}</td>
-                    <td className="p-2.5 text-right text-orange-400">{fmtCompact(pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll))}</td>
-                    <td className="p-2.5 text-right text-slate-200 font-bold">{fmtFixedGrouped(dps, 0)}</td>
-                    <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.offenseTotals.downContribution)}</td>
+                    <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.damage)}</td>
+                    <td className="p-2.5 text-right text-slate-200 font-bold">{fmtFixedGrouped(p.dps, 0)}</td>
+                    <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.downContribution)}</td>
                     <td className="p-2.5 text-right text-emerald-400">
-                      {heal ? renderHealing(heal, pickAllyScopeValue(allyScope, heal.healingTotals.healing, heal.healingTotals.squadHealing)) : "—"}
+                      {p.heal ? renderHealing(p.heal, p.healing) : "-"}
                     </td>
-                    <td className="p-2.5 text-right text-cyan-400">{sup ? fmtNum(sup.supportTotals.condiCleanse) : "—"}</td>
-                    <td className="p-2.5 text-right text-amber-400">{sup ? fmtNum(sup.supportTotals.boonStrips) : "—"}</td>
-                    <td className="p-2.5 text-right text-slate-500">{s.generalPlayers.find((g) => g.account === p.account)?.logsJoined ?? "—"}</td>
+                    <td className="p-2.5 text-right text-cyan-400">{p.cleanses > 0 ? fmtNum(p.cleanses) : "-"}</td>
+                    <td className="p-2.5 text-right text-amber-400">{p.strips > 0 ? fmtNum(p.strips) : "-"}</td>
+                    <td className="p-2.5 text-right text-slate-500">{p.logs || "-"}</td>
                   </tr>
                 );
               })}
