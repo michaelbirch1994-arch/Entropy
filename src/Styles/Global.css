@@ -42,22 +42,16 @@ kbd {
   font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
 
-/* Crisp small profession/spec PNGs.
-   The icons are high-resolution transparent silhouettes; at 16-32px they look
-   best when rendered in exact square boxes with contrast-optimized downscaling
-   instead of browser-default soft interpolation. */
-.image-crisp {
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
 .class-icon-native {
   display: inline-block;
-  object-fit: contain;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
   object-position: center;
   vertical-align: middle;
+  border-radius: 0.2rem;
+  image-rendering: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Scrollbar */

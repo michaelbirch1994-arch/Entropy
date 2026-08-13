@@ -144,6 +144,35 @@ export interface DefensePlayer {
     [k: string]: unknown;
 }
 
+export interface DamageMitigationTotals {
+    totalHits: number;
+    blocked: number;
+    evaded: number;
+    glanced: number;
+    missed: number;
+    invulned: number;
+    interrupted: number;
+    /** Estimated or directly-reported damage prevented by blocks/evades/misses/invuln/glances/etc. */
+    totalMitigation: number;
+    /** Lower-bound estimate when EI only exposes minimum avoided damage context. */
+    minMitigation: number;
+    /** True when Entropy estimated avoided damage from incoming enemy skill averages. */
+    isEstimated: boolean;
+}
+
+export interface DamageMitigationPlayer {
+    account: string;
+    name: string;
+    profession: string;
+    professionList: string[];
+    activeMs: number;
+    mitigationTotals: DamageMitigationTotals;
+}
+
+export interface DamageMitigationMinion extends DamageMitigationPlayer {
+    minion: string;
+}
+
 export interface SupportTotals {
     condiCleanse: number;
     condiCleanseTime: number;
@@ -366,12 +395,14 @@ export interface BoonUptimeColumn {
     name: string;
     icon?: string;
     /**
-     * True for intensity-stacking buffs (Might, Stability, and every
+     * True for intensity-stacking buffs (Might and every
      * condition). Elite Insights overloads its per-buff `uptime` field: for
      * duration-stacking buffs it is a percentage of the phase (0-100), but
      * for intensity-stacking buffs it is the AVERAGE NUMBER OF STACKS held,
      * which is not a percentage at all and must not be rendered with a %
-     * suffix. dps.report makes the same split in its buff tables.
+     * suffix. Stability is intentionally treated as presence % in Entropy,
+     * because raid leads usually mean "time with any stack" when asking for
+     * Stability uptime.
      */
   stacking?: boolean;
 }
@@ -646,6 +677,10 @@ export interface ReportStats {
     timelineData: TimelinePoint[];
     offensePlayers: OffensePlayer[];
     defensePlayers: DefensePlayer[];
+    /** Per-player incoming damage mitigation (blocks/evades/misses/invuln and avoided damage). Raw-log reports only. */
+  damageMitigationPlayers?: DamageMitigationPlayer[];
+    /** Per-player minion/pet incoming damage mitigation. Raw-log reports only. */
+  damageMitigationMinions?: DamageMitigationMinion[];
     supportPlayers: SupportPlayer[];
     healingPlayers: HealingPlayer[];
     /**

@@ -36,7 +36,7 @@ export default function ClassIcon({
       loading="lazy"
       draggable={false}
       className={clsx(
-        "class-icon-native image-crisp inline-block shrink-0 object-contain align-middle",
+        "class-icon-native inline-block shrink-0 align-middle",
         SIZE_CLASS[size],
         className,
       )}

@@ -72,10 +72,8 @@ export function fmtPerSec(value: number, activeMs: number): number {
     return value / (activeMs / 1000);
 }
 
-// Profession -> GW2 armor weight / color family.
-// Guardian (blue), Warrior (orange), Revenant (green), Engineer (teal),
-// Ranger (green), Thief (brown), Elementalist (red), Necromancer (green),
-// Mesmer (pink). Elite specs inherit.
+// Profession -> Entropy class-icon color family. Elite specs inherit their base
+// profession color so text chips line up with the bundled square class icons.
 export const PROFESSION_FAMILY: Record<string, string> = {
     // Guardian
     Guardian: "guardian", Dragonhunter: "guardian", Firebrand: "guardian", Willbender: "guardian", Luminary: "guardian",
@@ -99,11 +97,11 @@ export const PROFESSION_FAMILY: Record<string, string> = {
 
 export const PROFESSION_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
     guardian: { bg: "bg-sky-950/50", text: "text-sky-400", border: "border-sky-500/30", dot: "bg-sky-400" },
-    warrior: { bg: "bg-orange-950/50", text: "text-orange-400", border: "border-orange-500/30", dot: "bg-orange-400" },
-    revenant: { bg: "bg-emerald-950/50", text: "text-emerald-400", border: "border-emerald-500/30", dot: "bg-emerald-400" },
-    engineer: { bg: "bg-teal-950/50", text: "text-teal-400", border: "border-teal-500/30", dot: "bg-teal-400" },
+    warrior: { bg: "bg-yellow-950/50", text: "text-yellow-400", border: "border-yellow-500/30", dot: "bg-yellow-400" },
+    revenant: { bg: "bg-red-950/50", text: "text-red-500", border: "border-red-700/40", dot: "bg-red-700" },
+    engineer: { bg: "bg-orange-950/50", text: "text-orange-400", border: "border-orange-500/30", dot: "bg-orange-400" },
     ranger: { bg: "bg-lime-950/50", text: "text-lime-400", border: "border-lime-500/30", dot: "bg-lime-400" },
-    thief: { bg: "bg-amber-950/50", text: "text-amber-400", border: "border-amber-500/30", dot: "bg-amber-400" },
+    thief: { bg: "bg-rose-950/50", text: "text-rose-300", border: "border-rose-400/30", dot: "bg-rose-300" },
     elementalist: { bg: "bg-red-950/50", text: "text-red-400", border: "border-red-500/30", dot: "bg-red-400" },
     necro: { bg: "bg-green-950/50", text: "text-green-400", border: "border-green-500/30", dot: "bg-green-400" },
     mesmer: { bg: "bg-fuchsia-950/50", text: "text-fuchsia-400", border: "border-fuchsia-500/30", dot: "bg-fuchsia-400" },
