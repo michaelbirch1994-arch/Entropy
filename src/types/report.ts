@@ -395,14 +395,12 @@ export interface BoonUptimeColumn {
     name: string;
     icon?: string;
     /**
-     * True for intensity-stacking buffs (Might and every
+     * True for intensity-stacking buffs (Might, Stability, and every
      * condition). Elite Insights overloads its per-buff `uptime` field: for
      * duration-stacking buffs it is a percentage of the phase (0-100), but
      * for intensity-stacking buffs it is the AVERAGE NUMBER OF STACKS held,
      * which is not a percentage at all and must not be rendered with a %
-     * suffix. Stability is intentionally treated as presence % in Entropy,
-     * because raid leads usually mean "time with any stack" when asking for
-     * Stability uptime.
+     * suffix.
      */
   stacking?: boolean;
 }
@@ -413,7 +411,7 @@ export interface BoonUptimeRow {
     professionList: string[];
     group: number;
     logsJoined: number;
-    /** boon id -> average % uptime (0-100) across the fights this player joined. */
+    /** buff id -> average uptime % or average stack count across the fights this player joined. */
   uptimes: Record<number, number>;
 }
 

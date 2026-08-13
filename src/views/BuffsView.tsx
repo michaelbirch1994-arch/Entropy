@@ -84,7 +84,7 @@ export default function BuffsView() {
 
       <Panel
         title={activeTab}
-        subtitle="Duration buffs show % of the fight held; Stability uses presence %; other intensity-stacking buffs show average stacks across every fight joined"
+        subtitle="Duration buffs show % of the fight held; intensity-stacking buffs like Might and Stability show average stacks across every fight joined"
         icon={<Sparkles className="w-3.5 h-3.5" />}
         action={`${rows.length} players`}
         bodyClassName="p-0"
@@ -125,7 +125,7 @@ export default function BuffsView() {
                   </td>
                   {columns.map((c) => {
                     const val = row.uptimes[c.id];
-                    // Stacking buffs don't share a 0-100% scale (Might caps at 25,
+                    // Stacking buffs don't share a 0-100% scale (Might and Stability cap at 25,
                     // most conditions have no practical
                     // cap), so they're colored relative to this column's own
                     // values rather than against the duration-buff thresholds.

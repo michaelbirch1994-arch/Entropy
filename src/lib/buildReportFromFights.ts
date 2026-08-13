@@ -571,21 +571,16 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                           if (!Number.isFinite(id)) continue;
                           idToClass.set(id, cls);
                           const meta = buffMetaByClass.get(cls)!;
-                          // EI's BuffDesc.stacking distinguishes intensity-stacking buffs (Might,
-          // Stability, every condition) from duration-stacking ones. It decides
-          // whether this buff's `uptime` value is a percentage or an average
-          // stack count - see the note on BoonUptimeColumn.stacking.
+                          // EI's BuffDesc.stacking distinguishes intensity-stacking buffs
+          // (Might, Stability, every condition) from duration-stacking ones.
+          // It decides whether this buff's `uptime` value is a percentage or
+          // an average stack count - see the note on BoonUptimeColumn.stacking.
                           if (!meta.has(id)) {
                               const name = def.name || `Buff ${id}`;
                               meta.set(id, {
                                   name,
                                   icon: def.icon,
-                                  // Stability is mechanically stack-counted, but
-                                  // the value commanders care about here is
-                                  // "did the player have any Stability", i.e.
-                                  // presence %. Buff Generation still shows
-                                  // actual generated stacks/seconds.
-                                  stacking: name === 'Stability' ? false : !!def.stacking,
+                                  stacking: !!def.stacking,
                               });
                           }
                 }
@@ -613,9 +608,7 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                           const cls = idToClass.get(id);
                           if (!cls) continue;
                           const meta = buffMetaByClass.get(cls)?.get(id);
-                          const uptime = meta?.name === 'Stability'
-                              ? Number(entry?.buffData?.[0]?.presence ?? entry?.buffData?.[0]?.uptime)
-                              : Number(entry?.buffData?.[0]?.uptime);
+                          const uptime = Number(entry?.buffData?.[0]?.uptime);
                           if (!Number.isFinite(uptime)) continue;
 
                   const accMapByAccount = accByClass.get(cls)!;
@@ -1456,16 +1449,19 @@ function computeSynergyInsights(
     const insights: SynergyInsight[] = [];
     const boons = buffCategoryUptimes['Boons'];
 
-  function avgUptime(boonName: string): number | null {
+  function avgBoonValue(boonName: string): { value: number; stacking: boolean } | null {
         if (!boons) return null;
         const col = boons.columns.find((c) => c.name === boonName);
         if (!col) return null;
         const withData = boons.rows.filter((r) => r.uptimes[col.id] !== undefined);
         if (withData.length === 0) return null;
-        return withData.reduce((sum, r) => sum + (r.uptimes[col.id] || 0), 0) / withData.length;
+        return {
+          value: withData.reduce((sum, r) => sum + (r.uptimes[col.id] || 0), 0) / withData.length,
+          stacking: !!col.stacking,
+        };
   }
 
-  const quickness = avgUptime('Quickness');
+  const quickness = avgBoonValue('Quickness')?.value ?? null;
     if (quickness !== null) {
           if (quickness < 20) {
                   insights.push({ id: 'quickness', severity: 'critical', title: 'Very low Quickness uptime', detail: `Squad averaged only ${quickness.toFixed(0)}% Quickness uptime - DPS is likely being left on the table without a dedicated quickness support.` });
@@ -1480,12 +1476,18 @@ function computeSynergyInsights(
   // in squad comps), so a "low Alacrity uptime" insight is just noise here -
   // skip it. Quickness/Stability are the boons worth flagging in WvW.
 
-  const stability = avgUptime('Stability');
+  const stability = avgBoonValue('Stability');
     if (stability !== null) {
-          if (stability < 15) {
-                  insights.push({ id: 'stability', severity: 'critical', title: 'Very low Stability uptime', detail: `Squad averaged only ${stability.toFixed(0)}% Stability uptime - vulnerable to CC chains and pulls/knockbacks.` });
-          } else if (stability < 30) {
-                  insights.push({ id: 'stability', severity: 'warn', title: 'Low Stability uptime', detail: `Squad averaged ${stability.toFixed(0)}% Stability uptime.` });
+          if (stability.stacking) {
+                if (stability.value < 0.15) {
+                        insights.push({ id: 'stability', severity: 'critical', title: 'Very low Stability coverage', detail: `Squad averaged only ${stability.value.toFixed(2)} Stability stacks - vulnerable to CC chains and pulls/knockbacks.` });
+                } else if (stability.value < 0.35) {
+                        insights.push({ id: 'stability', severity: 'warn', title: 'Low Stability coverage', detail: `Squad averaged ${stability.value.toFixed(2)} Stability stacks. Stability is an intensity-stacking boon, so Entropy shows EI-style average stacks here instead of a percent.` });
+                }
+          } else if (stability.value < 15) {
+                  insights.push({ id: 'stability', severity: 'critical', title: 'Very low Stability uptime', detail: `Squad averaged only ${stability.value.toFixed(0)}% Stability uptime - vulnerable to CC chains and pulls/knockbacks.` });
+          } else if (stability.value < 30) {
+                  insights.push({ id: 'stability', severity: 'warn', title: 'Low Stability uptime', detail: `Squad averaged ${stability.value.toFixed(0)}% Stability uptime.` });
           }
     }
 
