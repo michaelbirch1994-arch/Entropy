@@ -2013,10 +2013,15 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
               const squadTimeMs = firstTs > 0 && lastTs > 0
                 ? Math.max(0, (lastTs + lastDurationMs) - firstTs)
                         : Number(entry.squadActiveMs || entry.totalFightMs || 0);
+              const primaryGroup = Object.entries(entry.groupTimeMs || {})
+                .map(([group, timeMs]) => ({ group: Number(group), timeMs: Number(timeMs || 0) }))
+                .filter((row) => Number.isFinite(row.group) && row.group > 0 && row.timeMs > 0)
+                .sort((a, b) => b.timeMs - a.timeMs || a.group - b.group)[0]?.group;
               return {
                         account: entry.account || 'Unknown',
                         characterNames: Array.from(entry.characterNames || []).filter(Boolean).sort((a, b) => a.localeCompare(b)),
                         classTimes,
+                        group: primaryGroup,
                         combatTimeMs: Number(entry.squadActiveMs || entry.totalFightMs || 0),
                         squadTimeMs,
               };

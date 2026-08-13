@@ -9,10 +9,15 @@ import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 
 type Tab = "defense" | "support" | "healing";
+type DefensiveSortKey =
+  | "player" | "class" | "cleanses" | "strips" | "stunBreaks" | "resurrects" | "logs"
+  | "healing" | "squadHealing" | "barrier" | "downedHealing"
+  | "damageTaken" | "powerDamage" | "condiDamage" | "hits" | "barrierAbsorbed" | "mitigatedDamage" | "blocks" | "dodges" | "invulned" | "interrupted" | "downs" | "deaths";
 
 export default function DefensiveView() {
   const { report } = useReport();
   const [tab, setTab] = useState<Tab>("support");
+  const [sort, setSort] = useState<{ key: DefensiveSortKey; dir: "asc" | "desc" } | null>(null);
   const { mode } = useStatsDisplay();
   const { scope: allyScope } = useAllyScope();
   const s = report?.stats;
@@ -92,17 +97,42 @@ export default function DefensiveView() {
 
   const supportRows = useMemo(() => {
     if (!s || tab !== "support") return [];
-    return [...s.supportPlayers].sort((a, b) => (b.supportTotals.condiCleanse ?? 0) - (a.supportTotals.condiCleanse ?? 0));
-  }, [s, tab]);
+    const rows = [...s.supportPlayers].sort((a, b) => (b.supportTotals.condiCleanse ?? 0) - (a.supportTotals.condiCleanse ?? 0));
+    if (!sort) return rows;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    const numeric: Partial<Record<DefensiveSortKey, (p: typeof rows[number]) => number>> = {
+      cleanses: (p) => p.supportTotals.condiCleanse ?? 0,
+      strips: (p) => p.supportTotals.boonStrips ?? 0,
+      stunBreaks: (p) => p.supportTotals.stunBreak ?? 0,
+      resurrects: (p) => p.supportTotals.resurrects ?? 0,
+      logs: (p) => p.logsJoined ?? 0,
+    };
+    if (sort.key === "player") return rows.sort((a, b) => a.account.localeCompare(b.account) * dir);
+    if (sort.key === "class") return rows.sort((a, b) => a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account));
+    const get = numeric[sort.key];
+    return get ? rows.sort((a, b) => (get(a) - get(b)) * dir || a.account.localeCompare(b.account)) : rows;
+  }, [s, tab, sort]);
 
   const healingRows = useMemo(() => {
     if (!s || tab !== "healing") return [];
-    return [...s.healingPlayers].sort(
+    const rows = [...s.healingPlayers].sort(
       (a, b) =>
         pickAllyScopeValue(allyScope, b.healingTotals.healing, b.healingTotals.squadHealing) -
         pickAllyScopeValue(allyScope, a.healingTotals.healing, a.healingTotals.squadHealing)
     );
-  }, [s, tab, allyScope]);
+    if (!sort) return rows;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    const numeric: Partial<Record<DefensiveSortKey, (p: typeof rows[number]) => number>> = {
+      healing: (p) => pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing),
+      squadHealing: (p) => p.healingTotals.squadHealing ?? 0,
+      barrier: (p) => pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier),
+      downedHealing: (p) => p.healingTotals.downedHealing ?? 0,
+    };
+    if (sort.key === "player") return rows.sort((a, b) => a.account.localeCompare(b.account) * dir);
+    if (sort.key === "class") return rows.sort((a, b) => a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account));
+    const get = numeric[sort.key];
+    return get ? rows.sort((a, b) => (get(a) - get(b)) * dir || a.account.localeCompare(b.account)) : rows;
+  }, [s, tab, allyScope, sort]);
 
   const healingMvpRows = useMemo(() => {
     if (!s || tab !== "healing") return [];
@@ -130,8 +160,29 @@ export default function DefensiveView() {
 
   const defenseRows = useMemo(() => {
     if (!s || tab !== "defense") return [];
-    return [...s.defensePlayers].sort((a, b) => (b.defenseTotals.damageTaken ?? 0) - (a.defenseTotals.damageTaken ?? 0));
-  }, [s, tab]);
+    const rows = [...s.defensePlayers].sort((a, b) => (b.defenseTotals.damageTaken ?? 0) - (a.defenseTotals.damageTaken ?? 0));
+    if (!sort) return rows;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    const mitigationFor = (p: typeof rows[number]) => (mitigationByAccount.get(`${p.account}::${p.profession}`) ?? mitigationByAccount.get(p.account))?.mitigationTotals;
+    const numeric: Partial<Record<DefensiveSortKey, (p: typeof rows[number]) => number>> = {
+      damageTaken: (p) => p.defenseTotals.damageTaken ?? 0,
+      powerDamage: (p) => p.defenseTotals.powerDamageTaken ?? 0,
+      condiDamage: (p) => p.defenseTotals.conditionDamageTaken ?? 0,
+      hits: (p) => p.defenseTotals.damageTakenCount ?? 0,
+      barrierAbsorbed: (p) => p.defenseTotals.damageBarrier ?? 0,
+      mitigatedDamage: (p) => mitigationFor(p)?.totalMitigation ?? 0,
+      blocks: (p) => mitigationFor(p)?.blocked ?? p.defenseTotals.blockedCount ?? 0,
+      dodges: (p) => p.defenseTotals.dodgeCount ?? 0,
+      invulned: (p) => p.defenseTotals.invulnedCount ?? 0,
+      interrupted: (p) => p.defenseTotals.interruptedCount ?? 0,
+      downs: (p) => p.defenseTotals.downCount ?? 0,
+      deaths: (p) => p.defenseTotals.deadCount ?? 0,
+    };
+    if (sort.key === "player") return rows.sort((a, b) => a.account.localeCompare(b.account) * dir);
+    if (sort.key === "class") return rows.sort((a, b) => a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account));
+    const get = numeric[sort.key];
+    return get ? rows.sort((a, b) => (get(a) - get(b)) * dir || a.account.localeCompare(b.account)) : rows;
+  }, [s, tab, sort, mitigationByAccount]);
 
   if (!report || !s || !totals) return null;
 
@@ -147,6 +198,25 @@ export default function DefensiveView() {
   const fmtStat = (v: number, decimals = 0) => (isPerSecond ? fmtFixed(v, decimals || 2) : fmtCompact(v));
   const fmtStatN = (v: number, decimals = 0) => (isPerSecond ? fmtFixed(v, decimals || 2) : fmtNum(v));
   const lbl = (base: string) => (isPerSecond ? `${base}/s` : base);
+  const toggleSort = (key: DefensiveSortKey) => {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "desc" };
+      if (prev.dir === "desc") return { key, dir: "asc" };
+      return null;
+    });
+  };
+  const SortHeader = ({ label, k, align = "left", title }: { label: string; k: DefensiveSortKey; align?: "left" | "right"; title?: string }) => (
+    <th className={`p-2.5 ${align === "right" ? "text-right" : ""}`} title={title}>
+      <button
+        type="button"
+        onClick={() => toggleSort(k)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-slate-300 ${sort?.key === k ? "text-sky-400" : ""}`}
+      >
+        {label}
+        <span className="text-[8px] opacity-70">{sort?.key === k ? (sort.dir === "desc" ? "▼" : "▲") : "↕"}</span>
+      </button>
+    </th>
+  );
 
   const ClassCell = ({ profession }: { profession: string }) => (
     <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(profession)}`}>
@@ -198,13 +268,13 @@ export default function DefensiveView() {
               <thead>
                 <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
                   <th className="p-2.5">#</th>
-                  <th className="p-2.5">Player</th>
-                  <th className="p-2.5">Class</th>
-                  <th className="p-2.5 text-right">Cleanses</th>
-                  <th className="p-2.5 text-right">Strips</th>
-                  <th className="p-2.5 text-right">Stun Breaks</th>
-                  <th className="p-2.5 text-right">Resurrects</th>
-                  <th className="p-2.5 text-right">Logs</th>
+                  <SortHeader label="Player" k="player" />
+                  <SortHeader label="Class" k="class" />
+                  <SortHeader label="Cleanses" k="cleanses" align="right" />
+                  <SortHeader label="Strips" k="strips" align="right" />
+                  <SortHeader label="Stun Breaks" k="stunBreaks" align="right" />
+                  <SortHeader label="Resurrects" k="resurrects" align="right" />
+                  <SortHeader label="Logs" k="logs" align="right" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">
@@ -282,12 +352,12 @@ export default function DefensiveView() {
               <thead>
                 <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
                   <th className="p-2.5">#</th>
-                  <th className="p-2.5">Player</th>
-                  <th className="p-2.5">Class</th>
-                  <th className="p-2.5 text-right">Healing</th>
-                  <th className="p-2.5 text-right">Squad Heal</th>
-                  <th className="p-2.5 text-right">Barrier</th>
-                  <th className="p-2.5 text-right">Downed Heal</th>
+                  <SortHeader label="Player" k="player" />
+                  <SortHeader label="Class" k="class" />
+                  <SortHeader label="Healing" k="healing" align="right" />
+                  <SortHeader label="Squad Heal" k="squadHealing" align="right" />
+                  <SortHeader label="Barrier" k="barrier" align="right" />
+                  <SortHeader label="Downed Heal" k="downedHealing" align="right" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">
@@ -315,20 +385,20 @@ export default function DefensiveView() {
               <thead>
                 <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
                   <th className="p-2.5">#</th>
-                  <th className="p-2.5">Player</th>
-                  <th className="p-2.5">Class</th>
-                  <th className="p-2.5 text-right">Damage Taken</th>
-                  <th className="p-2.5 text-right">Power Dmg</th>
-                  <th className="p-2.5 text-right">Condi Dmg</th>
-                  <th className="p-2.5 text-right">Hits</th>
-                  <th className="p-2.5 text-right" title="Damage absorbed by barrier">Barrier Absorbed</th>
-                  <th className="p-2.5 text-right" title="Damage prevented by blocks, evades, misses, invulnerability, interrupts, and glancing hits">Mitigated Dmg</th>
-                  <th className="p-2.5 text-right" title="Blocked incoming hits">Blocks</th>
-                  <th className="p-2.5 text-right" title="Number of dodges">Dodges</th>
-                  <th className="p-2.5 text-right" title="Number of times was invulnerable to damage">Invulned</th>
-                  <th className="p-2.5 text-right" title="Number of times interrupted">Interrupted</th>
-                  <th className="p-2.5 text-right">Downs</th>
-                  <th className="p-2.5 text-right">Deaths</th>
+                  <SortHeader label="Player" k="player" />
+                  <SortHeader label="Class" k="class" />
+                  <SortHeader label="Damage Taken" k="damageTaken" align="right" />
+                  <SortHeader label="Power Dmg" k="powerDamage" align="right" />
+                  <SortHeader label="Condi Dmg" k="condiDamage" align="right" />
+                  <SortHeader label="Hits" k="hits" align="right" />
+                  <SortHeader label="Barrier Absorbed" k="barrierAbsorbed" align="right" title="Damage absorbed by barrier" />
+                  <SortHeader label="Mitigated Dmg" k="mitigatedDamage" align="right" title="Damage prevented by blocks, evades, misses, invulnerability, interrupts, and glancing hits" />
+                  <SortHeader label="Blocks" k="blocks" align="right" title="Blocked incoming hits" />
+                  <SortHeader label="Dodges" k="dodges" align="right" title="Number of dodges" />
+                  <SortHeader label="Invulned" k="invulned" align="right" title="Number of times was invulnerable to damage" />
+                  <SortHeader label="Interrupted" k="interrupted" align="right" title="Number of times interrupted" />
+                  <SortHeader label="Downs" k="downs" align="right" />
+                  <SortHeader label="Deaths" k="deaths" align="right" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">

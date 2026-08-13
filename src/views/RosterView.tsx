@@ -4,6 +4,7 @@ import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
 import { fmtNum, fmtDur, profChip, profStyle } from "../utils/format";
 import { Users, Clock, Heart, Eye } from "lucide-react";
+import ProfessionIcon from "../components/ui/ProfessionIcon";
 
 type SortKey = "account" | "characters" | "classes" | "combat" | "squad" | "uptime";
 
@@ -41,6 +42,26 @@ export default function RosterView() {
     return [...attendance].sort((a, b) => cmp[sort.key](a, b) * dir);
   })();
 
+  const partyGroups = (() => {
+    const groups = new Map<number, typeof attendance>();
+    attendance.forEach((p) => {
+      const group = Number.isFinite(Number(p.group)) && Number(p.group) > 0 ? Number(p.group) : 0;
+      const list = groups.get(group) ?? [];
+      list.push(p);
+      groups.set(group, list);
+    });
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => (a === 0 ? 1 : b === 0 ? -1 : a - b))
+      .map(([group, players]) => ({
+        group,
+        players: [...players].sort((a, b) => {
+          const profA = a.classTimes[0]?.profession ?? "";
+          const profB = b.classTimes[0]?.profession ?? "";
+          return profA.localeCompare(profB) || a.account.localeCompare(b.account);
+        }),
+      }));
+  })();
+
   const toggleSort = (key: SortKey) =>
     setSort((prev) =>
       prev.key === key
@@ -59,9 +80,16 @@ export default function RosterView() {
         }`}
       >
         {label}
-        <span className="text-[8px] opacity-70">{sort.key === k ? (sort.dir === "asc" ? "▲" : "▼") : "↕"}</span>
+        <span className="text-[8px] opacity-70">{sort.key === k ? (sort.dir === "asc" ? "up" : "down") : "sort"}</span>
       </button>
     </th>
+  );
+
+  const PlayerClassChip = ({ profession }: { profession: string }) => (
+    <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(profession)}`}>
+      <ProfessionIcon profession={profession} className="h-3.5 w-3.5 shrink-0" />
+      {profession}
+    </span>
   );
 
   return (
@@ -73,6 +101,53 @@ export default function RosterView() {
         <StatCard label="Full Attendance" value={fullAtt} icon={<Heart className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" sub=">90% combat uptime" />
         <StatCard label="Total Fights" value={fmtNum(s.total)} icon={<Eye className="w-3.5 h-3.5 text-cyan-400" />} accent="text-cyan-400" />
       </div>
+
+      <Panel
+        title="Raid Parties"
+        subtitle="Roster grouped by the in-game subgroup each player spent the most active time in."
+        icon={<Users className="w-4 h-4" />}
+        accent="text-sky-400"
+        action={`${partyGroups.length} groups`}
+      >
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {partyGroups.map(({ group, players }) => (
+            <div key={group || "unknown"} className="rounded-xl border border-slate-800/70 bg-slate-950/35 p-3">
+              <div className="mb-3 flex items-center justify-between border-b border-slate-800/50 pb-2">
+                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
+                  {group > 0 ? `Party ${group}` : "Unassigned"}
+                </div>
+                <div className="rounded-md border border-slate-700/70 bg-slate-900/80 px-2 py-0.5 text-[10px] font-mono text-slate-400">
+                  {players.length}
+                </div>
+              </div>
+              <div className="space-y-2">
+                {players.map((p) => {
+                  const uptime = uptimeOf(p) * 100;
+                  const mainProf = p.classTimes[0]?.profession ?? "Unknown";
+                  const st = profStyle(mainProf);
+                  return (
+                    <div key={p.account} className="rounded-lg border border-white/[0.04] bg-white/[0.02] p-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="truncate text-[11px] font-semibold text-slate-200">{p.account}</div>
+                          <div className="truncate text-[10px] text-slate-500">{p.characterNames[0] ?? "No character name"}</div>
+                        </div>
+                        <PlayerClassChip profession={mainProf} />
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800/60">
+                          <div className={`h-full rounded-full ${st.dot}`} style={{ width: `${Math.min(100, Math.max(0, uptime))}%` }} />
+                        </div>
+                        <span className="w-9 text-right font-mono text-[10px] font-bold text-slate-400">{uptime.toFixed(0)}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Panel>
 
       {/* Roster table */}
       <Panel title="Roster Intel" icon={<Users className="w-4 h-4" />} accent="text-sky-400" action={`${attendance.length} PLAYERS`} bodyClassName="p-0">
@@ -96,13 +171,11 @@ export default function RosterView() {
                   return (
                     <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
                       <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
-                      <td className="p-2.5 text-slate-400">{p.characterNames.join(", ") || "—"}</td>
+                      <td className="p-2.5 text-slate-400">{p.characterNames.join(", ") || "-"}</td>
                       <td className="p-2.5">
                         <div className="flex flex-wrap gap-1">
                           {p.classTimes.slice(0, 3).map((c) => (
-                            <span key={c.profession} className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(c.profession)}`}>
-                              {c.profession}
-                            </span>
+                            <PlayerClassChip key={c.profession} profession={c.profession} />
                           ))}
                           {p.classTimes.length > 3 && (
                             <span className="text-[10px] text-slate-500">+{p.classTimes.length - 3}</span>

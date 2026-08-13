@@ -703,7 +703,7 @@ export interface ReportStats {
     fightBreakdown: FightRow[];
     commanderStats: { rows: CommanderRow[] };
     roleClassifications: RoleClassification[];
-    attendanceData: { account: string; characterNames: string[]; combatTimeMs: number; squadTimeMs: number; classTimes: { profession: string; timeMs: number }[] }[];
+    attendanceData: { account: string; characterNames: string[]; combatTimeMs: number; squadTimeMs: number; classTimes: { profession: string; timeMs: number }[]; group?: number }[];
     /** Only populated for reports built from raw logs (RawLogImporter); absent on classic report.json files. */
   boonUptimes?: BoonUptimeData;
     /** Uptime tables for every EI buff classification (Boon, Condition, Offensive, Defensive, Support, Debuff, Gear, Enhancement, Nourishment, Other Consumable, Other), keyed by classification name. Raw-log reports only. */

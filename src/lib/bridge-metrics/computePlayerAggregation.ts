@@ -53,6 +53,7 @@ export interface PlayerStats {
         professions: Set<string>;
         professionList?: string[];
         professionTimeMs: Record<string, number>;
+        groupTimeMs: Record<number, number>;
         squadActiveMs: number;
         firstSeenFightTs: number;
         lastSeenFightTs: number;
@@ -669,7 +670,7 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
                                                                     kills: 0, enemyDowns: 0, damageTaken: 0, breakbar: 0, blocks: 0, evades: 0, misses: 0, totalFightMs: 0,
                                                                     offenseTotals: {}, offenseRateWeights: {}, defenseActiveMs: 0, defenseTotals: {}, defenseMinionDamageTaken: {}, supportActiveMs: 0, supportTotals: {},
                                                                     healingActiveMs: 0, healingTotals: {}, hasHealAddon: false, profession: identity.profession, professions: new Set(),
-                                                                    professionTimeMs: {}, squadActiveMs: 0, firstSeenFightTs: 0, lastSeenFightTs: 0, lastSeenFightDurationMs: 0, isCommander: false, damage: 0, dps: 0, damageAll: 0, dpsAll: 0, revives: 0, outgoingConditions: {}, incomingConditions: {}, damageModTotals: {}, incomingDamageModTotals: {}
+                                                                    professionTimeMs: {}, groupTimeMs: {}, squadActiveMs: 0, firstSeenFightTs: 0, lastSeenFightTs: 0, lastSeenFightDurationMs: 0, isCommander: false, damage: 0, dps: 0, damageAll: 0, dpsAll: 0, revives: 0, outgoingConditions: {}, incomingConditions: {}, damageModTotals: {}, incomingDamageModTotals: {}
                                                                                         , roleClassification: { role: 'damage' as const, supportScore: 0, confidenceScore: 0, threshold: 0, factors: [] }
                                                 });
                                 }
@@ -719,6 +720,10 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
                     if (details.durationMS) s.totalFightMs += details.durationMS;
                     const activeMs = Array.isArray(p.activeTimes) && typeof p.activeTimes[0] === 'number' ? p.activeTimes[0] : details.durationMS || 0;
                     s.squadActiveMs += activeMs;
+                    const group = Number((p as any).group);
+                    if (Number.isFinite(group) && group > 0) {
+                                    s.groupTimeMs[Math.round(group)] = (s.groupTimeMs[Math.round(group)] || 0) + activeMs;
+                    }
                     const fightTs = resolveFightTimestamp(details, log);
                     const fightDurationMs = Number(details?.durationMS || 0);
                     if (fightTs > 0) {
