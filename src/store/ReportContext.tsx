@@ -11,6 +11,7 @@ import { saveToArchive } from "../utils/reportArchive";
 import { buildReportFromFights } from "../lib/buildReportFromFights";
 import { fetchDpsReportJson } from "../utils/dpsReport";
 import { summarizeRawFight } from "../types/rawFight";
+import { ENTROPY_REPORT_ARTIFACT_SCHEMA } from "../lib/shareReportArtifact";
 
 
 export type { ReportSource };
@@ -65,17 +66,26 @@ function parseReport(text: string, labelForError: string): WvWReport {
   } catch {
     throw new Error(`${labelForError} is not valid JSON.`);
   }
+  const candidate =
+    typeof data === "object" &&
+    data !== null &&
+    "schema" in data &&
+    (data as { schema?: unknown }).schema === ENTROPY_REPORT_ARTIFACT_SCHEMA &&
+    "report" in data
+      ? (data as { report?: unknown }).report
+      : data;
+
   if (
-    typeof data !== "object" ||
-    data === null ||
-    !("meta" in data) ||
-    !("stats" in data)
+    typeof candidate !== "object" ||
+    candidate === null ||
+    !("meta" in candidate) ||
+    !("stats" in candidate)
   ) {
     throw new Error(
-      `${labelForError} does not look like a WvW report (missing meta/stats).`,
+      `${labelForError} does not look like an Entropy report (missing meta/stats).`,
     );
   }
-  return data as WvWReport;
+  return candidate as WvWReport;
 }
 
 

@@ -34,7 +34,7 @@ import ArchiveView from "./views/ArchiveView";
 import CompareView from "./views/CompareView";
 import IntelligenceDebugView from "./views/IntelligenceDebugView";
 import AxiForgeLabView from "./views/AxiForgeLabView";
-import { buildReportHtmlExport } from "./lib/exportReportHtml";
+import { downloadReportArtifact } from "./lib/shareReportArtifact";
 import type { WvWReport } from "./types/report";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
 import { Activity, BrainCircuit, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, FlaskConical, Link2, MessageCircle, Send, Upload, X } from "lucide-react";
@@ -220,24 +220,6 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
 
 
 
-function safeFileName(title: string): string {
-  return title.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "") || "entropy-report";
-}
-
-
-
-
-function downloadHtmlSnapshot(title: string, html: string) {
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${safeFileName(title)}-snapshot.html`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-
 const DEFAULT_SHARE_VIEWER_URL = "https://michaelbirch1994-arch.github.io/Entropy/";
 
 
@@ -284,6 +266,7 @@ function buildEntropyShareLink(report: WvWReport): string | null {
 
 
 type DiscordShareStatus = "idle" | "missing" | "sending" | "sent" | "failed" | "saved" | "cleared";
+type ExportStatus = "idle" | "copied" | "downloaded" | "failed";
 
 
 
@@ -294,7 +277,7 @@ function ReportShell() {
   // throwing away the report you already have - Clear is destructive and
   // was previously the only route back.
   const [atHome, setAtHome] = useState(false);
-  const [exportStatus, setExportStatus] = useState<"idle" | "copied" | "downloaded" | "failed">("idle");
+  const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
   const [discordWebhookUrl, setDiscordWebhookUrl] = useState(() => loadDiscordWebhookUrl());
   const [discordDraftUrl, setDiscordDraftUrl] = useState(() => loadDiscordWebhookUrl());
   const [discordOpen, setDiscordOpen] = useState(false);
@@ -323,7 +306,7 @@ function ReportShell() {
 
 
 
-  function flashExportStatus(status: typeof exportStatus) {
+  function flashExportStatus(status: ExportStatus) {
     setExportStatus(status);
     window.setTimeout(() => setExportStatus("idle"), 2500);
   }
@@ -345,27 +328,20 @@ function ReportShell() {
 
   async function handleExportReport() {
     if (!report) return;
-    const html = buildReportHtmlExport(report);
-    const standaloneLink = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
-
-
-
 
     try {
-      if (standaloneLink.length > 1_500_000 || !navigator.clipboard?.writeText) {
-        downloadHtmlSnapshot(report.meta.title, html);
-        flashExportStatus("downloaded");
+      const viewerLink = buildEntropyShareLink(report);
+      if (viewerLink && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(viewerLink);
+        flashExportStatus("copied");
         return;
       }
 
-
-
-
-      await navigator.clipboard.writeText(standaloneLink);
-      flashExportStatus("copied");
+      downloadReportArtifact(report);
+      flashExportStatus("downloaded");
     } catch {
       try {
-        downloadHtmlSnapshot(report.meta.title, html);
+        downloadReportArtifact(report);
         flashExportStatus("downloaded");
       } catch {
         flashExportStatus("failed");
@@ -420,7 +396,7 @@ function ReportShell() {
 
 
   const exportLabel =
-    exportStatus === "copied" ? "Link copied" : exportStatus === "downloaded" ? "HTML saved" : exportStatus === "failed" ? "Export failed" : "Export link";
+    exportStatus === "copied" ? "Viewer link copied" : exportStatus === "downloaded" ? "Report saved" : exportStatus === "failed" ? "Export failed" : "Export";
   const discordLabel =
     discordStatus === "sending" ? "Sending" : discordStatus === "sent" ? "Sent" : discordStatus === "failed" ? "Failed" : discordStatus === "saved" ? "Saved" : "Discord";
   const viewIcon = VIEW_ICONS[activeView] ?? <Activity className="w-4 h-4" />;
@@ -483,7 +459,7 @@ function ReportShell() {
                 </button>
                 <button
                   onClick={handleExportReport}
-                  title="Copy a short Entropy viewer link when the report came from dps.report; otherwise save an HTML snapshot."
+                  title="Copy a short Entropy viewer link when dps.report permalinks exist; otherwise save a portable Entropy report artifact for web hosting."
                   className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-sky-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-sky-500/30 bg-black/30 transition-colors"
                 >
                   <Link2 className="w-3 h-3" />
