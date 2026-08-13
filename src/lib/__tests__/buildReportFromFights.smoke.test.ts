@@ -159,6 +159,10 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
 
                  const synthetic = buildReportFromFights([{ summary: summarizeRawFight(raw), raw }]);
                  const boons = synthetic.stats.buffCategoryUptimes?.Boons ?? synthetic.stats.boonUptimes;
+                 expect(boons).toBeTruthy();
+                 if (!boons) {
+                         throw new Error('Expected boon uptime data to be populated');
+                 }
                  const stability = boons.columns.find((c) => c.id === stabilityId);
                  expect(stability).toBeTruthy();
                  expect(stability!.stacking).toBe(true);
