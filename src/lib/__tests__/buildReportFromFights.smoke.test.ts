@@ -187,6 +187,36 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(firstFight.topOutgoingHealingSkills![0].name).toBeTruthy();
            });
 
+           it('prefers per-fight incoming skill sources from totalDamageTakenDist when both incoming shapes exist', () => {
+                 const raw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const player = (raw.players ?? []).find((p: any) => !p.notInSquad) as any;
+                 expect(player).toBeTruthy();
+
+                 const skillId = 7654321;
+                 const legacySkillId = 7654320;
+                 (raw as any).skillMap = {
+                         ...((raw as any).skillMap ?? {}),
+                         [`s${legacySkillId}`]: { name: 'Legacy Incoming Shape', icon: 'https://example.invalid/legacy.png' },
+                         [`s${skillId}`]: { name: 'Regression Incoming Spike', icon: 'https://example.invalid/incoming.png' },
+                 };
+                 player.totalDamageTaken = [[
+                         { id: legacySkillId, totalDamage: 999999, connectedHits: 99, downContribution: 1 },
+                 ]];
+                 player.totalDamageTakenDist = [[
+                         { id: skillId, totalDamage: 123456, connectedHits: 42, downContribution: 9876 },
+                 ]];
+
+                 const synthetic = buildReportFromFights([{ summary: summarizeRawFight(raw), raw }]);
+                 const firstFight = synthetic.stats.fightBreakdown[0];
+                 const incoming = firstFight.topIncomingDamageSkills?.find((skill) => skill.id === skillId);
+                 expect(incoming).toBeTruthy();
+                 expect(incoming!.name).toBe('Regression Incoming Spike');
+                 expect(incoming!.damage).toBe(123456);
+                 expect(incoming!.hits).toBe(42);
+                 expect(incoming!.downContribution).toBe(9876);
+                 expect(firstFight.topIncomingDamageSkills?.some((skill) => skill.id === legacySkillId)).toBe(false);
+           });
+
            it('never crashes building death recaps even with no deaths in a short log', () => {
                  expect(Array.isArray(report.stats.deathRecaps)).toBe(true);
            });

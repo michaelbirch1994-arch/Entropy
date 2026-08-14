@@ -317,9 +317,9 @@ export default function SquadStatsView() {
   );
 
   return (
-    <div className="space-y-5 animate-view pb-12">
+    <div className="theme-view-layout space-y-5 animate-view pb-12">
       {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="theme-stat-grid grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard label="Total Damage" value={fmtCompact(totalDamage)} icon={<Swords className="w-3.5 h-3.5 text-orange-400" />} accent="text-orange-400" />
         <StatCard label="Down Contrib" value={fmtCompact(totalDownContrib)} icon={<Target className="w-3.5 h-3.5 text-sky-400" />} accent="text-sky-400" />
         <StatCard label="Total Healing" value={fmtCompact(totalHealing)} icon={<Heart className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
@@ -328,7 +328,7 @@ export default function SquadStatsView() {
         <StatCard label="Strips" value={fmtNum(totalStrips)} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="theme-stat-grid grid grid-cols-1 xl:grid-cols-3 gap-4">
         <StatCard
           label="Kill Pressure"
           value={pressureLeader ? `${pressureLeader.pressureScore}/100` : "n/a"}
@@ -352,7 +352,7 @@ export default function SquadStatsView() {
         />
       </div>
 
-      <div className="grid grid-cols-1 2xl:grid-cols-2 gap-5">
+      <div className="theme-analysis-grid grid grid-cols-1 2xl:grid-cols-2 gap-5">
         <Panel
           title="Kill Pressure"
           subtitle="Damage that actually converts into downs and kills, instead of only raw padding."
@@ -360,8 +360,8 @@ export default function SquadStatsView() {
           accent="text-rose-400"
           action={pressureChartData.length ? `${pressureChartData.length} fights` : "no fights"}
         >
-          <div className="space-y-4">
-            <div className="h-72 cursor-crosshair">
+          <div className="theme-drilldown-panel space-y-4">
+            <div className="theme-chart-stage h-72 cursor-crosshair">
               {pressureChartData.length ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
@@ -390,7 +390,7 @@ export default function SquadStatsView() {
               )}
             </div>
             {selectedPressureFight && (
-              <div className="rounded-xl border border-slate-800/70 bg-[#080d19]/70 p-3 text-xs text-slate-400">
+              <div className="theme-selected-fight rounded-xl border border-slate-800/70 bg-[#080d19]/70 p-3 text-xs text-slate-400">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Selected pressure fight</div>
@@ -419,8 +419,8 @@ export default function SquadStatsView() {
                 )}
               </div>
             )}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-              <div className="rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
+            <div className="theme-source-grid grid grid-cols-1 xl:grid-cols-2 gap-3">
+              <div className="theme-source-card rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-300">Outgoing pressure skills</div>
                   <div className="text-[10px] uppercase tracking-wider text-slate-500">{pressureSkillRows.length}</div>
@@ -431,7 +431,7 @@ export default function SquadStatsView() {
                   </div>
                 )}
               </div>
-              <div className="rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
+              <div className="theme-source-card rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-300">Incoming skills during fight</div>
                   <div className="text-[10px] uppercase tracking-wider text-slate-500">{pressureIncomingRows.length}</div>
@@ -453,8 +453,8 @@ export default function SquadStatsView() {
           accent="text-emerald-400"
           action={totalDamageTaken > 0 ? `${fmtCompact(effectiveHealingTotal)} effective` : "no incoming"}
         >
-          <div className="space-y-4">
-            <div className="h-72">
+          <div className="theme-drilldown-panel space-y-4">
+            <div className="theme-chart-stage h-72">
               {healingChartData.length ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
@@ -499,7 +499,7 @@ export default function SquadStatsView() {
               )}
             </div>
             <div className="space-y-3">
-              <div className="rounded-xl border border-slate-800/70 bg-[#080d19]/70 p-3 text-xs text-slate-400">
+              <div className="theme-selected-fight rounded-xl border border-slate-800/70 bg-[#080d19]/70 p-3 text-xs text-slate-400">
                 {selectedHealingFight ? (
                   <>
                     <div className="flex items-start justify-between gap-3">
@@ -531,8 +531,8 @@ export default function SquadStatsView() {
                   : "This report was built before per-fight outgoing healing existed; exact fight-by-fight healing appears after reparsing with this build."}
               </div>
               {selectedHealingFight && (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-3">
+                <div className="theme-source-grid grid grid-cols-1 xl:grid-cols-2 gap-3">
+                  <div className="theme-source-card rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">Top outgoing healing / barrier skills</div>
                       <div className="text-[10px] uppercase tracking-wider text-slate-500">{selectedHealingFight.outgoingSkills.length}</div>
@@ -541,7 +541,7 @@ export default function SquadStatsView() {
                       <div className="text-[11px] text-slate-500">Exact per-fight healing sources need a report parsed with this build.</div>
                     )}
                   </div>
-                  <div className="rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
+                  <div className="theme-source-card rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-300">Top incoming damage skills</div>
                       <div className="text-[10px] uppercase tracking-wider text-slate-500">{selectedHealingFight.incomingSkills.length}</div>
@@ -565,8 +565,8 @@ export default function SquadStatsView() {
         action={distanceRows.length ? `${distanceRows.length} players` : "no distance data"}
       >
         {distanceRows.length ? (
-          <div className="grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6 items-center">
-            <div className="relative mx-auto aspect-square w-full max-w-[380px] rounded-full border border-slate-700/80 bg-[radial-gradient(circle,rgba(52,211,153,0.18)_0_24%,rgba(245,158,11,0.14)_25%_48%,rgba(251,113,133,0.12)_49%_72%,rgba(15,23,42,0.6)_73%)] shadow-inner">
+          <div className="theme-distance-layout grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6 items-center">
+            <div className="theme-distance-radar relative mx-auto aspect-square w-full max-w-[380px] rounded-full border border-slate-700/80 bg-[radial-gradient(circle,rgba(52,211,153,0.18)_0_24%,rgba(245,158,11,0.14)_25%_48%,rgba(251,113,133,0.12)_49%_72%,rgba(15,23,42,0.6)_73%)] shadow-inner">
               <div className="absolute inset-[24%] rounded-full border border-emerald-400/35" />
               <div className="absolute inset-[8%] rounded-full border border-amber-400/35" />
               <div className="absolute left-1/2 top-1/2 grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-blue-400/40 bg-blue-500/15 text-[10px] font-black uppercase tracking-wider text-blue-200">
@@ -603,11 +603,11 @@ export default function SquadStatsView() {
                 );
               })}
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <div className="theme-source-grid grid grid-cols-1 lg:grid-cols-2 gap-3">
               {topDistanceRows.map((p) => {
                 const tone = distanceTone(p.avgDistance);
                 return (
-                  <div key={p.account} className={`rounded-xl border ${tone.border} ${tone.fill} p-3`}>
+                  <div key={p.account} className={`theme-source-card rounded-xl border ${tone.border} ${tone.fill} p-3`}>
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0 flex items-center gap-2">
                         <ProfessionIcon profession={p.profession} className="h-4 w-4 shrink-0" />
@@ -633,7 +633,7 @@ export default function SquadStatsView() {
 
       {/* DPS chart */}
       <Panel title="Top 10 DPS" icon={<Swords className="w-4 h-4" />} accent="text-orange-400">
-        <div className="h-72">
+        <div className="theme-chart-stage h-72">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
@@ -649,7 +649,7 @@ export default function SquadStatsView() {
 
       {/* Squad summary table */}
       <Panel title="Squad Roster Overview" icon={<Users className="w-4 h-4" />} accent="text-sky-400" bodyClassName="p-0">
-        <div className="overflow-x-auto custom-scrollbar">
+        <div className="theme-table-shell overflow-x-auto custom-scrollbar">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
