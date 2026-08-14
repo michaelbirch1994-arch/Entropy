@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useReport } from "../store/ReportContext";
 import { profChip, fmtNum } from "../utils/format";
 import Panel from "../components/ui/Panel";
@@ -28,8 +29,12 @@ const KIND_DOT: Record<string, string> = {
   counter: "bg-slate-500",
 };
 
+type SortKey = "player" | "class" | number;
+type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
+
 export default function DamageModifiersView() {
   const { report } = useReport();
+  const [sort, setSort] = useState<SortState>(null);
   if (!report) return null;
   const data = report.stats.damageModifiers;
 
@@ -55,6 +60,35 @@ export default function DamageModifiersView() {
   }
 
   const { columns, rows } = data;
+  const sortedRows = (() => {
+    const base = [...rows].sort((a, b) => a.account.localeCompare(b.account) || a.profession.localeCompare(b.profession));
+    if (!sort) return base;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return base.sort((a, b) => {
+      if (sort.key === "player") return a.account.localeCompare(b.account) * dir || a.profession.localeCompare(b.profession);
+      if (sort.key === "class") return a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account);
+      if (typeof sort.key !== "number") return 0;
+      const av = a.values[sort.key]?.damage ?? 0;
+      const bv = b.values[sort.key]?.damage ?? 0;
+      const ah = a.values[sort.key]?.hits ?? 0;
+      const bh = b.values[sort.key]?.hits ?? 0;
+      return (av - bv) * dir || (ah - bh) * dir || a.account.localeCompare(b.account) || a.profession.localeCompare(b.profession);
+    });
+  })();
+
+  const toggleSort = (key: SortKey) => {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "desc" };
+      if (prev.dir === "desc") return { key, dir: "asc" };
+      return null;
+    });
+  };
+
+  const sortLabel = (key: SortKey) => (!sort || sort.key !== key ? "SORT" : sort.dir === "desc" ? "DESC" : "ASC");
+  const sortButtonClass = (key: SortKey, extra = "") =>
+    `inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
+      sort?.key === key ? "text-amber-300" : "text-slate-500 hover:text-slate-300"
+    } ${extra}`;
 
   return (
     <div className="space-y-5 animate-view pb-12">
@@ -62,7 +96,7 @@ export default function DamageModifiersView() {
         title="Damage Modifiers"
         subtitle="Which traits/sigils/runes fired for each player, and how much damage each one contributed - summed across every fight"
         icon={<Percent className="w-3.5 h-3.5" />}
-        action={`${rows.length} players`}
+        action={`${sortedRows.length} players`}
         bodyClassName="p-0"
       >
         <div className="px-4 pt-4 pb-1 space-y-2.5">
@@ -93,8 +127,16 @@ export default function DamageModifiersView() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500">
-                <th className="text-left font-bold px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">Player</th>
-                <th className="text-left font-bold px-2 py-3">Class</th>
+                <th className="text-left font-bold px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">
+                  <button type="button" onClick={() => toggleSort("player")} className={sortButtonClass("player")}>
+                    Player <span className="text-[8px] opacity-70">{sortLabel("player")}</span>
+                  </button>
+                </th>
+                <th className="text-left font-bold px-2 py-3">
+                  <button type="button" onClick={() => toggleSort("class")} className={sortButtonClass("class")}>
+                    Class <span className="text-[8px] opacity-70">{sortLabel("class")}</span>
+                  </button>
+                </th>
                 {columns.map((c) => {
                   const kind = kindOf(c);
                   const tooltip = [c.name, c.description, `${KIND_LABEL[kind]}`, `${c.playersWithIt} player${c.playersWithIt === 1 ? "" : "s"} triggered this`]
@@ -102,7 +144,7 @@ export default function DamageModifiersView() {
                     .join(" — ");
                   return (
                     <th key={c.id} className="text-center font-bold px-2 py-3 min-w-[76px]" title={tooltip}>
-                      <div className="flex flex-col items-center gap-1">
+                      <button type="button" onClick={() => toggleSort(c.id)} className={sortButtonClass(c.id, "flex w-full flex-col items-center")}>
                         {c.icon ? (
                           <img src={c.icon} alt={c.name} className="w-4 h-4 rounded-sm" loading="lazy" />
                         ) : (
@@ -111,16 +153,18 @@ export default function DamageModifiersView() {
                         <span className="normal-case font-semibold text-slate-400 text-center leading-tight">{c.name}</span>
                         <span className="flex items-center gap-1">
                           <span className={`inline-block w-1.5 h-1.5 rounded-full ${KIND_DOT[kind]}`} />
-                          <span className="text-[10px] text-slate-500 normal-case">{c.playersWithIt}p</span>
+                          <span className="text-[10px] text-slate-500 normal-case">
+                            {c.playersWithIt}p <span className="text-[8px] opacity-70">{sortLabel(c.id)}</span>
+                          </span>
                         </span>
-                      </div>
+                      </button>
                     </th>
                   );
                 })}
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, i) => (
+              {sortedRows.map((row, i) => (
                 <tr
                   key={`${row.account}-${row.profession}`}
                   className={`border-b border-slate-800/40 hover:bg-white/[0.02] transition-colors ${i % 2 === 0 ? "bg-white/[0.01]" : ""}`}
