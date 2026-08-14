@@ -55,6 +55,24 @@ const FINDINGS_PREVIEW_COUNT = 6;
 const CRITICAL_EVENTS_PREVIEW_COUNT = 16;
 
 type ExpandableSection = "findings" | "criticalEvents";
+type SeverityFilter = "all" | FindingSeverity;
+type PressureFilter = "all" | IntelligenceEngagementInsight["pressureLabel"];
+
+const SEVERITY_FILTERS: Array<{ id: SeverityFilter; label: string }> = [
+  { id: "all", label: "All findings" },
+  { id: "critical", label: "Critical" },
+  { id: "significant", label: "Significant" },
+  { id: "notable", label: "Notable" },
+  { id: "info", label: "Info" },
+];
+
+const PRESSURE_FILTERS: Array<{ id: PressureFilter; label: string }> = [
+  { id: "all", label: "All pressure" },
+  { id: "critical", label: "Critical" },
+  { id: "danger", label: "Danger" },
+  { id: "watch", label: "Watch" },
+  { id: "quiet", label: "Quiet" },
+];
 
 const UNKNOWN_FIGHT: FightContext = {
   id: "unknown",
@@ -206,6 +224,30 @@ function Pill({
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${className}`}>
       {children}
     </span>
+  );
+}
+
+function FilterButton({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition ${
+        active
+          ? "border-sky-300/40 bg-sky-400/[0.12] text-sky-200 shadow-[0_0_22px_-14px_rgba(56,189,248,0.9)]"
+          : "border-white/[0.08] bg-white/[0.03] text-slate-500 hover:border-white/15 hover:text-slate-300"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -563,6 +605,8 @@ export default function IntelligenceDebugView() {
     findings: false,
     criticalEvents: false,
   });
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
+  const [pressureFilter, setPressureFilter] = useState<PressureFilter>("all");
   const dashboard = useMemo(() => (report ? buildIntelligenceDashboard(report) : null), [report]);
 
   function toggleSection(section: ExpandableSection) {
@@ -590,10 +634,14 @@ export default function IntelligenceDebugView() {
     const bf = contextForTimelineItem(b, segmentById, fightContexts);
     return af.index - bf.index || a.timestampMs - b.timestampMs;
   });
-  const scopedEngagements = dashboard.engagements.filter((engagement) => isInSelectedFight(fightContexts, engagement.fightId, selectedFightId));
-  const scopedFindings = dashboard.findings.filter((finding) => isInSelectedFight(fightContexts, finding.relatedFight, selectedFightId));
+  const fightScopedEngagements = dashboard.engagements.filter((engagement) => isInSelectedFight(fightContexts, engagement.fightId, selectedFightId));
+  const fightScopedFindings = dashboard.findings.filter((finding) => isInSelectedFight(fightContexts, finding.relatedFight, selectedFightId));
+  const scopedEngagements = fightScopedEngagements.filter((engagement) => pressureFilter === "all" || engagement.pressureLabel === pressureFilter);
+  const scopedFindings = fightScopedFindings.filter((finding) => severityFilter === "all" || finding.severity === severityFilter);
   const scopedCriticalEvents = dashboard.criticalEvents.filter((event) => isInSelectedFight(fightContexts, event.fightId, selectedFightId));
   const scopedTimeline = chronologicalTimeline.filter((item) => {
+    const insight = segmentById.get(item.id);
+    if (pressureFilter !== "all" && insight?.pressureLabel !== pressureFilter) return false;
     if (selectedFightId === ALL_FIGHTS_ID) return true;
     return contextForTimelineItem(item, segmentById, fightContexts).id === selectedFightId;
   });
@@ -618,6 +666,7 @@ export default function IntelligenceDebugView() {
     criticalEvents: dashboard.totals.criticalEvents,
   };
   const engagementScopeText = selectedFight ? `in ${selectedFight.label}` : `across ${fightList.length || "unknown"} fights`;
+  const filtersActive = severityFilter !== "all" || pressureFilter !== "all";
 
   return (
     <div className="space-y-6 pb-12">
@@ -664,6 +713,57 @@ export default function IntelligenceDebugView() {
           </div>
         </section>
       )}
+
+      <section className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="text-[11px] font-black uppercase tracking-[0.28em] text-slate-500">Focus controls</div>
+            <h3 className="mt-1 text-lg font-black uppercase tracking-wider text-slate-100">Filter the viewer</h3>
+            <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
+              Narrow Intelligence to the signal you care about without changing the selected fight. This keeps findings, pressure windows, timeline rows, and action queue from jumbling together.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Pill>{scopedEngagements.length}/{fightScopedEngagements.length} pressure windows</Pill>
+            <Pill>{scopedFindings.length}/{fightScopedFindings.length} findings</Pill>
+            {filtersActive && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSeverityFilter("all");
+                  setPressureFilter("all");
+                }}
+                className="rounded-full border border-amber-400/20 bg-amber-500/[0.08] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-amber-200 transition hover:bg-amber-500/[0.14]"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 xl:grid-cols-2">
+          <div>
+            <div className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Finding severity</div>
+            <div className="flex flex-wrap gap-2">
+              {SEVERITY_FILTERS.map((filter) => (
+                <FilterButton key={filter.id} active={severityFilter === filter.id} onClick={() => setSeverityFilter(filter.id)}>
+                  {filter.label}
+                </FilterButton>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Pressure level</div>
+            <div className="flex flex-wrap gap-2">
+              {PRESSURE_FILTERS.map((filter) => (
+                <FilterButton key={filter.id} active={pressureFilter === filter.id} onClick={() => setPressureFilter(filter.id)}>
+                  {filter.label}
+                </FilterButton>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={<Gauge className="h-5 w-5" />} label="Highest pressure" value={highestPressure ? `${highestPressure.pressureScore}/100` : "0/100"} detail={highestPressure ? `${fightContextFor(fightContexts, highestPressure.fightId).label} · ${highestPressure.label}` : "No engagement windows available for this selection."} />
