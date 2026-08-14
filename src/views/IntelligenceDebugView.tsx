@@ -53,8 +53,11 @@ const ALL_FIGHTS_ID = "all";
 const FIGHT_SELECTOR_PREVIEW_COUNT = 11;
 const FINDINGS_PREVIEW_COUNT = 6;
 const CRITICAL_EVENTS_PREVIEW_COUNT = 16;
+const FINDING_SEVERITY_FILTERS: FindingSeverityFilter[] = ["all", "critical", "significant", "notable", "info"];
 
 type ExpandableSection = "findings" | "criticalEvents";
+type FindingSeverityFilter = "all" | FindingSeverity;
+type CriticalEventKindFilter = "all" | string;
 
 const UNKNOWN_FIGHT: FightContext = {
   id: "unknown",
@@ -556,9 +559,100 @@ function CriticalEventCard({ event, fightContext }: { event: CriticalEvent; figh
   );
 }
 
+function FightNarrativePanel({
+  context,
+  engagements,
+  findings,
+  criticalEvents,
+  actions,
+}: {
+  context: FightContext;
+  engagements: IntelligenceEngagementInsight[];
+  findings: IntelligenceFinding[];
+  criticalEvents: CriticalEvent[];
+  actions: IntelligenceAction[];
+}) {
+  const worstWindow = engagements[0];
+  const criticalFindings = findings.filter((finding) => finding.severity === "critical" || finding.severity === "significant");
+  const eventKinds = Array.from(
+    criticalEvents.reduce((counts, event) => {
+      counts.set(event.kind, (counts.get(event.kind) ?? 0) + 1);
+      return counts;
+    }, new Map<string, number>()),
+  ).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+  const resultText = context.result === "win"
+    ? "The squad won this fight, so treat this as polish: find the pressure windows that still cost downs and tighten them."
+    : context.result === "loss"
+      ? "The squad lost this fight, so treat the pressure windows below as the first places to review positioning, stability, recovery, and target focus."
+      : "Entropy has fight data here, but no clear win/loss result. Use the pressure windows and events as the reliable review anchors.";
+
+  const whatHappened = worstWindow
+    ? `${context.label} peaked at ${worstWindow.pressureScore}/100 pressure around ${formatTime(worstWindow.timestampMs)} with ${formatNumber(worstWindow.downs)} downs, ${formatNumber(worstWindow.deaths)} deaths, and ${formatNumber(worstWindow.criticalEvents)} linked events.`
+    : `${context.label} has no detected pressure window, which usually means the available report evidence did not support a specific failure cluster.`;
+
+  const primaryIssue = criticalFindings[0]?.summary
+    ?? (eventKinds[0] ? `${eventKinds[0][0]} events were the most common critical signal in this fight.` : "No major finding rose above the current evidence threshold.");
+
+  const improvement = actions[0]?.detail
+    ?? (worstWindow
+      ? "Review the highest-pressure timestamp first, then compare squad positioning, stability coverage, and recovery cooldown timing around that moment."
+      : "If this fight still felt rough in-game, re-check replay positioning and death recaps; the current Intelligence evidence did not produce a stronger deterministic recommendation.");
+
+  return (
+    <section className="rounded-[2rem] border border-amber-400/15 bg-gradient-to-br from-amber-500/[0.08] via-black/30 to-sky-500/[0.05] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] font-black uppercase tracking-[0.28em] text-amber-300">Entropy fight readout</div>
+          <h3 className="mt-1 text-xl font-black uppercase tracking-wider text-slate-100">{context.label}: {context.name}</h3>
+          <p className="mt-2 max-w-4xl text-sm leading-7 text-slate-300">{resultText}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Pill><Swords className="h-3 w-3" /> {context.squadCount || "?"}v{context.enemyCount || "?"}</Pill>
+          <Pill>{formatNumber(findings.length)} findings</Pill>
+          <Pill>{formatNumber(criticalEvents.length)} events</Pill>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 xl:grid-cols-3">
+        <div className="rounded-2xl border border-white/[0.06] bg-black/30 p-4">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-sky-300">
+            <Radar className="h-4 w-4" /> What happened
+          </div>
+          <p className="mt-3 text-sm leading-6 text-slate-300">{whatHappened}</p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.06] bg-black/30 p-4">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-rose-300">
+            <ShieldAlert className="h-4 w-4" /> Likely issue
+          </div>
+          <p className="mt-3 text-sm leading-6 text-slate-300">{primaryIssue}</p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.06] bg-black/30 p-4">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-300">
+            <ListChecks className="h-4 w-4" /> What to improve
+          </div>
+          <p className="mt-3 text-sm leading-6 text-slate-300">{improvement}</p>
+        </div>
+      </div>
+
+      {eventKinds.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {eventKinds.slice(0, 6).map(([kind, count]) => (
+            <Pill key={kind} className="border-white/10 bg-white/[0.04] text-slate-300">
+              {kind}: {count}
+            </Pill>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function IntelligenceDebugView() {
   const { report } = useReport();
   const [selectedFightId, setSelectedFightId] = useState(ALL_FIGHTS_ID);
+  const [findingSeverityFilter, setFindingSeverityFilter] = useState<FindingSeverityFilter>("all");
+  const [criticalEventKindFilter, setCriticalEventKindFilter] = useState<CriticalEventKindFilter>("all");
   const [expandedSections, setExpandedSections] = useState<Record<ExpandableSection, boolean>>({
     findings: false,
     criticalEvents: false,
@@ -567,6 +661,13 @@ export default function IntelligenceDebugView() {
 
   function toggleSection(section: ExpandableSection) {
     setExpandedSections((current) => ({ ...current, [section]: !current[section] }));
+  }
+
+  function handleSelectFight(fightId: string) {
+    setSelectedFightId(fightId);
+    setFindingSeverityFilter("all");
+    setCriticalEventKindFilter("all");
+    setExpandedSections({ findings: false, criticalEvents: false });
   }
 
   if (!report || !dashboard) {
@@ -593,6 +694,21 @@ export default function IntelligenceDebugView() {
   const scopedEngagements = dashboard.engagements.filter((engagement) => isInSelectedFight(fightContexts, engagement.fightId, selectedFightId));
   const scopedFindings = dashboard.findings.filter((finding) => isInSelectedFight(fightContexts, finding.relatedFight, selectedFightId));
   const scopedCriticalEvents = dashboard.criticalEvents.filter((event) => isInSelectedFight(fightContexts, event.fightId, selectedFightId));
+  const findingSeverityCounts = scopedFindings.reduce(
+    (counts, finding) => ({ ...counts, [finding.severity]: (counts[finding.severity] ?? 0) + 1 }),
+    {} as Partial<Record<FindingSeverity, number>>,
+  );
+  const criticalEventKindCounts = scopedCriticalEvents.reduce((counts, event) => {
+    counts.set(event.kind, (counts.get(event.kind) ?? 0) + 1);
+    return counts;
+  }, new Map<string, number>());
+  const criticalEventKinds = Array.from(criticalEventKindCounts.keys()).sort((a, b) => a.localeCompare(b));
+  const filteredFindings = findingSeverityFilter === "all"
+    ? scopedFindings
+    : scopedFindings.filter((finding) => finding.severity === findingSeverityFilter);
+  const filteredCriticalEvents = criticalEventKindFilter === "all"
+    ? scopedCriticalEvents
+    : scopedCriticalEvents.filter((event) => event.kind === criticalEventKindFilter);
   const scopedTimeline = chronologicalTimeline.filter((item) => {
     if (selectedFightId === ALL_FIGHTS_ID) return true;
     return contextForTimelineItem(item, segmentById, fightContexts).id === selectedFightId;
@@ -603,8 +719,8 @@ export default function IntelligenceDebugView() {
     : dashboard.actions.filter((action: IntelligenceAction) => action.basedOn.some((id) => scopedFindingIds.has(id)));
   const topEngagements = scopedEngagements.slice(0, 3);
   const highestPressure = scopedEngagements[0];
-  const visibleFindings = expandedSections.findings ? scopedFindings : scopedFindings.slice(0, FINDINGS_PREVIEW_COUNT);
-  const visibleCriticalEvents = expandedSections.criticalEvents ? scopedCriticalEvents : scopedCriticalEvents.slice(0, CRITICAL_EVENTS_PREVIEW_COUNT);
+  const visibleFindings = expandedSections.findings ? filteredFindings : filteredFindings.slice(0, FINDINGS_PREVIEW_COUNT);
+  const visibleCriticalEvents = expandedSections.criticalEvents ? filteredCriticalEvents : filteredCriticalEvents.slice(0, CRITICAL_EVENTS_PREVIEW_COUNT);
   const scopedTotals = {
     downs: scopedEngagements.reduce((sum, engagement) => sum + engagement.downs, 0),
     deaths: scopedEngagements.reduce((sum, engagement) => sum + engagement.deaths, 0),
@@ -648,7 +764,7 @@ export default function IntelligenceDebugView() {
         </div>
       </section>
 
-      <FightSelector fights={fightList} selectedFightId={selectedFightId} onSelect={setSelectedFightId} totals={allTotals} />
+      <FightSelector fights={fightList} selectedFightId={selectedFightId} onSelect={handleSelectFight} totals={allTotals} />
 
       {selectedFight && (
         <section className="rounded-[2rem] border border-sky-400/15 bg-sky-500/[0.04] p-5">
@@ -663,6 +779,16 @@ export default function IntelligenceDebugView() {
             <FightContextStrip context={selectedFight} compact />
           </div>
         </section>
+      )}
+
+      {selectedFight && (
+        <FightNarrativePanel
+          context={selectedFight}
+          engagements={scopedEngagements}
+          findings={scopedFindings}
+          criticalEvents={scopedCriticalEvents}
+          actions={scopedActions}
+        />
       )}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -756,20 +882,42 @@ export default function IntelligenceDebugView() {
         <div className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Findings</h3>
-            <Pill>{visibleFindings.length}/{scopedFindings.length} loaded</Pill>
+            <Pill>{visibleFindings.length}/{filteredFindings.length} loaded</Pill>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {FINDING_SEVERITY_FILTERS.map((severity) => {
+              const count = severity === "all" ? scopedFindings.length : findingSeverityCounts[severity] ?? 0;
+              return (
+                <button
+                  key={severity}
+                  type="button"
+                  onClick={() => {
+                    setFindingSeverityFilter(severity);
+                    setExpandedSections((current) => ({ ...current, findings: false }));
+                  }}
+                  className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition ${
+                    findingSeverityFilter === severity
+                      ? "border-sky-300/40 bg-sky-400/[0.1] text-sky-200"
+                      : "border-white/10 bg-white/[0.03] text-slate-500 hover:text-slate-300"
+                  }`}
+                >
+                  {severity} {count}
+                </button>
+              );
+            })}
           </div>
           <div className="mt-4 grid gap-3">
-            {scopedFindings.length > 0 ? visibleFindings.map((finding) => (
+            {filteredFindings.length > 0 ? visibleFindings.map((finding) => (
               <FindingCard key={finding.id} finding={finding} fightContext={fightContextFor(fightContexts, finding.relatedFight)} />
             )) : <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}
           </div>
-          {scopedFindings.length > FINDINGS_PREVIEW_COUNT && (
+          {filteredFindings.length > FINDINGS_PREVIEW_COUNT && (
             <button
               type="button"
               onClick={() => toggleSection("findings")}
               className="mt-4 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-300 transition hover:border-sky-400/30 hover:text-sky-300"
             >
-              {expandedSections.findings ? "Collapse findings" : `Show all ${scopedFindings.length} findings`}
+              {expandedSections.findings ? "Collapse findings" : `Show all ${filteredFindings.length} findings`}
             </button>
           )}
         </div>
@@ -777,21 +925,54 @@ export default function IntelligenceDebugView() {
         <div className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Critical event feed</h3>
-            <Pill>{visibleCriticalEvents.length}/{scopedCriticalEvents.length} loaded</Pill>
+            <Pill>{visibleCriticalEvents.length}/{filteredCriticalEvents.length} loaded</Pill>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setCriticalEventKindFilter("all");
+                setExpandedSections((current) => ({ ...current, criticalEvents: false }));
+              }}
+              className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition ${
+                criticalEventKindFilter === "all"
+                  ? "border-rose-300/40 bg-rose-400/[0.1] text-rose-200"
+                  : "border-white/10 bg-white/[0.03] text-slate-500 hover:text-slate-300"
+              }`}
+            >
+              all {scopedCriticalEvents.length}
+            </button>
+            {criticalEventKinds.slice(0, 8).map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => {
+                  setCriticalEventKindFilter(kind);
+                  setExpandedSections((current) => ({ ...current, criticalEvents: false }));
+                }}
+                className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition ${
+                  criticalEventKindFilter === kind
+                    ? "border-rose-300/40 bg-rose-400/[0.1] text-rose-200"
+                    : "border-white/10 bg-white/[0.03] text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                {kind} {criticalEventKindCounts.get(kind) ?? 0}
+              </button>
+            ))}
           </div>
           <div className="mt-4 grid max-h-[720px] gap-2 overflow-y-auto pr-1 custom-scrollbar">
             {visibleCriticalEvents.map((event) => (
               <CriticalEventCard key={event.id} event={event} fightContext={fightContextFor(fightContexts, event.fightId)} />
             ))}
-            {scopedCriticalEvents.length === 0 && <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}
+            {filteredCriticalEvents.length === 0 && <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}
           </div>
-          {scopedCriticalEvents.length > CRITICAL_EVENTS_PREVIEW_COUNT && (
+          {filteredCriticalEvents.length > CRITICAL_EVENTS_PREVIEW_COUNT && (
             <button
               type="button"
               onClick={() => toggleSection("criticalEvents")}
               className="mt-4 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-300 transition hover:border-sky-400/30 hover:text-sky-300"
             >
-              {expandedSections.criticalEvents ? "Collapse event feed" : `Show all ${scopedCriticalEvents.length} events`}
+              {expandedSections.criticalEvents ? "Collapse event feed" : `Show all ${filteredCriticalEvents.length} events`}
             </button>
           )}
         </div>
