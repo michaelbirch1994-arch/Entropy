@@ -1,12 +1,49 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap");
 @import "tailwindcss";
+
+@theme inline {
+  --color-theme-bg: var(--theme-bg);
+  --color-theme-surface: var(--theme-surface);
+  --color-theme-surface-elevated: var(--theme-surfaceElevated);
+  --color-theme-border: var(--theme-border);
+  --color-theme-text: var(--theme-text);
+  --color-theme-muted: var(--theme-textMuted);
+  --color-theme-accent: var(--theme-accent);
+  --color-theme-accent-dim: var(--theme-accentDim);
+  --color-theme-accent-strong: var(--theme-accentStrong);
+  --color-theme-secondary: var(--theme-secondary);
+  --color-theme-danger: var(--theme-danger);
+  --color-theme-warning: var(--theme-warning);
+  --color-theme-success: var(--theme-success);
+  --color-theme-info: var(--theme-info);
+  --color-theme-grid: var(--theme-grid);
+}
 
 :root {
   color-scheme: dark;
+  --theme-bg: #0A0705;
+  --theme-surface: #17100C;
+  --theme-surfaceElevated: #21150E;
+  --theme-border: #7A2E10;
+  --theme-text: #F2E9DD;
+  --theme-textMuted: #8C8178;
+  --theme-accent: #FF5A1F;
+  --theme-accentDim: #7A2E10;
+  --theme-accentStrong: #FF8A3D;
+  --theme-secondary: #B34B1D;
+  --theme-danger: #FF4A2F;
+  --theme-warning: #F0A93B;
+  --theme-success: #7DBB73;
+  --theme-info: #62B6D9;
+  --theme-grid: #2B1A12;
+  --theme-glow: rgba(255, 90, 31, 0.32);
+  --theme-display-font: "Fraunces", "Space Grotesk", serif;
+  --theme-body-font: "Inter", system-ui, -apple-system, sans-serif;
+  --theme-mono-font: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
 
 html {
-  background: #02030a;
+  background: var(--theme-bg);
 }
 
 html,
@@ -14,8 +51,8 @@ body,
 #root {
   height: 100%;
   margin: 0;
-  color: #e2e8f0;
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  color: var(--theme-text);
+  font-family: var(--theme-body-font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -33,13 +70,13 @@ body,
 }
 
 .font-display {
-  font-family: "Space Grotesk", "Inter", sans-serif;
+  font-family: var(--theme-display-font);
 }
 
 .font-mono,
 code,
 kbd {
-  font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  font-family: var(--theme-mono-font);
 }
 
 .class-icon-frame {
@@ -70,11 +107,110 @@ kbd {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.18);
+  background: color-mix(in srgb, var(--theme-accent) 24%, transparent);
   border-radius: 999px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(244, 114, 182, 0.32);
+  background: color-mix(in srgb, var(--theme-accentStrong) 36%, transparent);
+}
+
+.theme-app-shell {
+  color: var(--theme-text);
+  background: transparent;
+}
+
+.theme-topbar {
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 55%, transparent);
+  background: color-mix(in srgb, var(--theme-bg) 72%, transparent);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(18px);
+}
+
+.theme-sidebar {
+  border-right: 1px solid color-mix(in srgb, var(--theme-border) 60%, transparent);
+  background: color-mix(in srgb, var(--theme-bg) 76%, transparent);
+  box-shadow: 4px 0 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(18px);
+}
+
+.theme-sidebar-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 60%, transparent);
+  background: color-mix(in srgb, var(--theme-bg) 82%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.theme-logo-tile {
+  color: var(--theme-accent);
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 42%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 24%, transparent), color-mix(in srgb, var(--theme-secondary) 16%, transparent));
+  box-shadow: 0 0 18px -4px var(--theme-glow);
+}
+
+.theme-panel,
+.theme-stat-card {
+  border: 1px solid color-mix(in srgb, var(--theme-border) 55%, transparent);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--theme-accent) 10%, transparent), transparent 36%),
+    color-mix(in srgb, var(--theme-surface) 78%, transparent);
+  box-shadow: 0 8px 40px -16px rgba(0, 0, 0, 0.62), 0 0 34px -26px var(--theme-glow);
+  backdrop-filter: blur(12px);
+  transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease;
+}
+
+.theme-panel:hover,
+.theme-stat-card:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 38%, var(--theme-border));
+  box-shadow: 0 10px 44px -18px rgba(0, 0, 0, 0.66), 0 0 42px -22px var(--theme-glow);
+}
+
+.theme-quiet-button {
+  border: 1px solid color-mix(in srgb, var(--theme-border) 45%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--theme-surface) 54%, transparent);
+  color: var(--theme-textMuted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.theme-quiet-button:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 42%, transparent);
+  background: color-mix(in srgb, var(--theme-surfaceElevated) 68%, transparent);
+  color: var(--theme-accent);
+}
+
+.theme-status-pill {
+  border: 1px solid color-mix(in srgb, var(--theme-border) 50%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--theme-surface) 55%, transparent);
+  color: var(--theme-textMuted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.theme-swatch-card {
+  min-height: 13rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 52%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 78%, transparent);
+  padding: 1rem;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.theme-swatch-card:hover,
+.theme-swatch-card.is-active {
+  border-color: color-mix(in srgb, var(--theme-accent) 58%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-surfaceElevated) 70%, transparent);
+  box-shadow: 0 0 36px -24px var(--theme-glow);
+}
+
+.theme-swatch-card:hover {
+  transform: translateY(-1px);
 }
 
 @keyframes fadeSlideUp {
@@ -115,10 +251,10 @@ kbd {
        already use bg-black/30-45 + backdrop-blur - always get a
        consistently dark surface to sit on instead of occasionally
        fighting a bright patch of nebula bleeding through. */
-    linear-gradient(to bottom, rgba(2, 3, 10, 0.88) 0%, rgba(2, 3, 10, 0.18) 280px),
-    radial-gradient(ellipse 100% 80% at 52% 52%, rgba(244, 114, 182, 0.16) 0%, rgba(59, 130, 246, 0.12) 42%, rgba(2, 3, 10, 0.68) 100%),
+    linear-gradient(to bottom, color-mix(in srgb, var(--theme-bg) 88%, transparent) 0%, color-mix(in srgb, var(--theme-bg) 18%, transparent) 280px),
+    radial-gradient(ellipse 100% 80% at 52% 52%, color-mix(in srgb, var(--theme-accent) 16%, transparent) 0%, color-mix(in srgb, var(--theme-secondary) 12%, transparent) 42%, color-mix(in srgb, var(--theme-bg) 68%, transparent) 100%),
     url("/images/jwst-entropy-bg.jpg") center center / cover no-repeat;
-  background-color: #02030a;
+  background-color: var(--theme-bg);
 }
 
 .entropy-bg::before,
@@ -131,14 +267,14 @@ kbd {
 
 .entropy-bg::before {
   background-image:
-    radial-gradient(1.6px 1.6px at 40px 60px, #ffffff, transparent),
-    radial-gradient(1.2px 1.2px at 120px 140px, #ffffff, transparent),
-    radial-gradient(1.8px 1.8px at 200px 30px, #cfe0ff, transparent),
-    radial-gradient(1.2px 1.2px at 260px 200px, #ffffff, transparent),
-    radial-gradient(1.2px 1.2px at 320px 90px, #ffffff, transparent),
-    radial-gradient(1.4px 1.4px at 90px 220px, #b8c8f0, transparent),
-    radial-gradient(1px 1px at 160px 260px, #ffffff, transparent),
-    radial-gradient(1.6px 1.6px at 20px 300px, #e8d9ff, transparent);
+    radial-gradient(1.6px 1.6px at 40px 60px, var(--theme-text), transparent),
+    radial-gradient(1.2px 1.2px at 120px 140px, var(--theme-text), transparent),
+    radial-gradient(1.8px 1.8px at 200px 30px, var(--theme-accentStrong), transparent),
+    radial-gradient(1.2px 1.2px at 260px 200px, var(--theme-text), transparent),
+    radial-gradient(1.2px 1.2px at 320px 90px, var(--theme-text), transparent),
+    radial-gradient(1.4px 1.4px at 90px 220px, var(--theme-secondary), transparent),
+    radial-gradient(1px 1px at 160px 260px, var(--theme-text), transparent),
+    radial-gradient(1.6px 1.6px at 20px 300px, var(--theme-accent), transparent);
   background-size: 340px 340px;
   opacity: 0.75;
   animation: entropyDrift 140s linear infinite;
@@ -146,11 +282,11 @@ kbd {
 
 .entropy-bg::after {
   background-image:
-    radial-gradient(1px 1px at 60px 100px, #c8b2ff, transparent),
-    radial-gradient(1.7px 1.7px at 180px 40px, #ffffff, transparent),
-    radial-gradient(1.1px 1.1px at 240px 160px, #ffffff, transparent),
-    radial-gradient(1.4px 1.4px at 300px 260px, #a8c4ff, transparent),
-    radial-gradient(1px 1px at 40px 220px, #ffffff, transparent);
+    radial-gradient(1px 1px at 60px 100px, var(--theme-secondary), transparent),
+    radial-gradient(1.7px 1.7px at 180px 40px, var(--theme-text), transparent),
+    radial-gradient(1.1px 1.1px at 240px 160px, var(--theme-text), transparent),
+    radial-gradient(1.4px 1.4px at 300px 260px, var(--theme-accentStrong), transparent),
+    radial-gradient(1px 1px at 40px 220px, var(--theme-text), transparent);
   background-size: 260px 260px;
   opacity: 0.5;
   animation: entropyDrift 220s linear infinite reverse;
@@ -174,7 +310,7 @@ kbd {
   height: 680px;
   top: -200px;
   left: -140px;
-  background: radial-gradient(circle, rgba(80, 110, 255, 0.38) 0%, rgba(80, 110, 255, 0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--theme-accent) 34%, transparent) 0%, transparent 70%);
 }
 
 .entropy-nebula-2 {
@@ -182,7 +318,7 @@ kbd {
   height: 560px;
   bottom: -160px;
   right: -100px;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.32) 0%, rgba(56, 189, 248, 0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--theme-secondary) 32%, transparent) 0%, transparent 70%);
   animation-delay: -9s;
 }
 
@@ -191,7 +327,7 @@ kbd {
   height: 460px;
   top: 38%;
   right: 12%;
-  background: radial-gradient(circle, rgba(244, 114, 182, 0.28) 0%, rgba(244, 114, 182, 0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--theme-accent) 28%, transparent) 0%, transparent 70%);
   animation-delay: -4s;
 }
 
@@ -200,7 +336,7 @@ kbd {
   height: 380px;
   top: 55%;
   left: 8%;
-  background: radial-gradient(circle, rgba(251, 146, 60, 0.14) 0%, rgba(251, 146, 60, 0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--theme-accentStrong) 14%, transparent) 0%, transparent 70%);
   animation-delay: -13s;
 }
 
@@ -213,14 +349,58 @@ kbd {
 .entropy-wordmark {
   text-shadow:
     0 0 8px rgba(255, 255, 255, 0.9),
-    0 0 24px rgba(180, 200, 255, 0.6),
-    0 0 60px rgba(120, 140, 255, 0.35);
+    0 0 24px var(--theme-glow),
+    0 0 60px color-mix(in srgb, var(--theme-accent) 32%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .entropy-bg::before,
   .entropy-bg::after,
-  .entropy-nebula {
+  .entropy-nebula,
+  .theme-panel,
+  .theme-stat-card,
+  .theme-swatch-card,
+  .theme-quiet-button {
+    animation: none;
+    transition-duration: 0.01ms;
+  }
+}
+
+html[data-theme="void-signal"] .entropy-bg::after {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--theme-grid) 34%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-grid) 34%, transparent) 1px, transparent 1px);
+  background-size: 56px 56px;
+  opacity: 0.32;
+  animation: entropyDrift 90s linear infinite;
+}
+
+html[data-theme="void-signal"] .theme-panel,
+html[data-theme="void-signal"] .theme-stat-card {
+  border-radius: 0.5rem;
+}
+
+html[data-theme="steel-depth"] .theme-panel,
+html[data-theme="steel-depth"] .theme-stat-card {
+  border-radius: 0.5rem;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-grid) 42%, transparent), 0 8px 40px -18px rgba(0, 0, 0, 0.7);
+}
+
+html[data-theme="night-ops"] .theme-panel,
+html[data-theme="night-ops"] .theme-stat-card {
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-surfaceElevated) 54%, transparent), color-mix(in srgb, var(--theme-surface) 84%, transparent));
+}
+
+html[data-theme="war-room-gold"] .theme-panel,
+html[data-theme="war-room-gold"] .theme-stat-card {
+  background:
+    linear-gradient(to bottom, color-mix(in srgb, var(--theme-accent) 8%, transparent), transparent 42%),
+    color-mix(in srgb, var(--theme-surface) 82%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="void-signal"] .entropy-bg::after {
     animation: none;
   }
 }

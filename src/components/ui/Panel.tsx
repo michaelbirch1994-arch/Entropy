@@ -25,20 +25,20 @@ export default function Panel({
 }: PanelProps) {
   return (
     <section
-      className={`bg-[#0a0e1f]/50 border border-amber-500/10 rounded-2xl shadow-[0_8px_40px_-16px_rgba(0,0,0,0.6)] backdrop-blur-md transition-all duration-300 hover:border-amber-500/25 ${className}`}
+      className={`theme-panel rounded-2xl ${className}`}
     >
       {title && (
-        <header className="flex items-center justify-between border-b border-amber-500/8 px-5 py-3.5">
+        <header className="flex items-center justify-between border-b border-theme-border/50 px-5 py-3.5">
           <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-200">
-              {icon && <span className={accent ?? "text-amber-500"}>{icon}</span>}
+            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-theme-text">
+              {icon && <span className={accent ?? "text-theme-accent"}>{icon}</span>}
               {title}
             </div>
             {subtitle && (
-              <p className="text-[10px] text-slate-500 font-medium">{subtitle}</p>
+              <p className="text-[10px] text-theme-muted font-medium">{subtitle}</p>
             )}
           </div>
-          {action && <div className="text-[10px] font-mono text-slate-500">{action}</div>}
+          {action && <div className="text-[10px] font-mono text-theme-muted">{action}</div>}
         </header>
       )}
       <div className={bodyClassName || "p-5"}>{empty ?? children}</div>
