@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import { profStyle, fmtNum } from "../utils/format";
@@ -5,6 +6,9 @@ import type { ClassSlice } from "../types/report";
 import { Layers, Users, Scale } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE } from "../utils/chartTheme";
+
+type DeltaSortKey = "name" | "squadCount" | "enemyCount" | "deltaPct";
+type DeltaSortState = { key: DeltaSortKey; dir: "asc" | "desc" } | null;
 
 export default function CompositionView() {
   const { report } = useReport();
@@ -77,19 +81,52 @@ function CompositionDeltaPanel({
   enemyData: ClassSlice[];
   enemyTotal: number;
 }) {
+  const [sort, setSort] = useState<DeltaSortState>(null);
   const squadByName = new Map(squadData.map((c) => [c.name, c.value]));
   const enemyByName = new Map(enemyData.map((c) => [c.name, c.value]));
   const names = Array.from(new Set([...squadByName.keys(), ...enemyByName.keys()]));
 
-  const rows = names
-    .map((name) => {
-      const squadCount = squadByName.get(name) || 0;
-      const enemyCount = enemyByName.get(name) || 0;
-      const squadPct = squadTotal > 0 ? (squadCount / squadTotal) * 100 : 0;
-      const enemyPct = enemyTotal > 0 ? (enemyCount / enemyTotal) * 100 : 0;
-      return { name, squadCount, enemyCount, deltaPct: enemyPct - squadPct };
-    })
-    .sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct));
+  const rows = useMemo(() => {
+    const base = names
+      .map((name) => {
+        const squadCount = squadByName.get(name) || 0;
+        const enemyCount = enemyByName.get(name) || 0;
+        const squadPct = squadTotal > 0 ? (squadCount / squadTotal) * 100 : 0;
+        const enemyPct = enemyTotal > 0 ? (enemyCount / enemyTotal) * 100 : 0;
+        return { name, squadCount, enemyCount, deltaPct: enemyPct - squadPct };
+      })
+      .sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct) || a.name.localeCompare(b.name));
+    if (!sort) return base;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return base.sort((a, b) => {
+      if (sort.key === "name") return a.name.localeCompare(b.name) * dir;
+      return (a[sort.key] - b[sort.key]) * dir || a.name.localeCompare(b.name);
+    });
+  }, [enemyTotal, names, enemyByName, sort, squadByName, squadTotal]);
+
+  const toggleSort = (key: DeltaSortKey) => {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "desc" };
+      if (prev.dir === "desc") return { key, dir: "asc" };
+      return null;
+    });
+  };
+
+  const sortLabel = (key: DeltaSortKey) => (!sort || sort.key !== key ? "SORT" : sort.dir === "desc" ? "DESC" : "ASC");
+
+  const SortHeader = ({ label, k, align = "left" }: { label: string; k: DeltaSortKey; align?: "left" | "right" }) => (
+    <th className={`p-2.5 ${align === "right" ? "text-right" : ""}`}>
+      <button
+        type="button"
+        onClick={() => toggleSort(k)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
+          align === "right" ? "justify-end" : ""
+        } ${sort?.key === k ? "text-amber-300" : "text-slate-500 hover:text-slate-300"}`}
+      >
+        {label} <span className="text-[8px] opacity-70">{sortLabel(k)}</span>
+      </button>
+    </th>
+  );
 
   return (
     <Panel
@@ -103,10 +140,10 @@ function CompositionDeltaPanel({
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
-              <th className="p-2.5">Class</th>
-              <th className="p-2.5 text-right">Squad</th>
-              <th className="p-2.5 text-right">Enemy</th>
-              <th className="p-2.5 text-right">Delta (share)</th>
+              <SortHeader label="Class" k="name" />
+              <SortHeader label="Squad" k="squadCount" align="right" />
+              <SortHeader label="Enemy" k="enemyCount" align="right" />
+              <SortHeader label="Delta (share)" k="deltaPct" align="right" />
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/30 font-mono">

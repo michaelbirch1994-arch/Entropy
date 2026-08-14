@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import { profStyle } from "../utils/format";
@@ -6,6 +7,9 @@ import { Layers, Users } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE } from "../utils/chartTheme";
 import ClassIcon from "../components/ui/ClassIcon";
+
+type RoleSortKey = "account" | "profession" | "role" | "supportScore" | "confidenceScore";
+type RoleSortState = { key: RoleSortKey; dir: "asc" | "desc" } | null;
 
 function ClassList({ data, total }: { data: ClassSlice[]; total: number }) {
   return (
@@ -38,8 +42,45 @@ function ClassList({ data, total }: { data: ClassSlice[]; total: number }) {
 
 export default function ClassesView() {
   const { report } = useReport();
-  if (!report) return null;
-  const s = report.stats;
+  const [roleSort, setRoleSort] = useState<RoleSortState>(null);
+  const s = report?.stats;
+  const roleRows = useMemo(() => {
+    const base = [...(s?.roleClassifications ?? [])].sort((a, b) => a.account.localeCompare(b.account));
+    if (!roleSort) return base;
+    const dir = roleSort.dir === "asc" ? 1 : -1;
+    return base.sort((a, b) => {
+      if (roleSort.key === "account") return a.account.localeCompare(b.account) * dir;
+      if (roleSort.key === "profession") return a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account);
+      if (roleSort.key === "role") return a.role.localeCompare(b.role) * dir || a.account.localeCompare(b.account);
+      return (a[roleSort.key] - b[roleSort.key]) * dir || a.account.localeCompare(b.account);
+    });
+  }, [s?.roleClassifications, roleSort]);
+
+  const toggleRoleSort = (key: RoleSortKey) => {
+    setRoleSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "desc" };
+      if (prev.dir === "desc") return { key, dir: "asc" };
+      return null;
+    });
+  };
+
+  const roleSortLabel = (key: RoleSortKey) => (!roleSort || roleSort.key !== key ? "SORT" : roleSort.dir === "desc" ? "DESC" : "ASC");
+
+  const RoleSortHeader = ({ label, k, align = "left" }: { label: string; k: RoleSortKey; align?: "left" | "right" }) => (
+    <th className={`px-2 py-2 ${align === "right" ? "text-right" : ""}`}>
+      <button
+        type="button"
+        onClick={() => toggleRoleSort(k)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
+          align === "right" ? "justify-end" : ""
+        } ${roleSort?.key === k ? "text-emerald-300" : "text-slate-500 hover:text-slate-300"}`}
+      >
+        {label} <span className="text-[8px] opacity-70">{roleSortLabel(k)}</span>
+      </button>
+    </th>
+  );
+
+  if (!report || !s) return null;
   const squadTotal = s.squadClassData.reduce((a, c) => a + c.value, 0);
   const enemyTotal = s.enemyClassData.reduce((a, c) => a + c.value, 0);
 
@@ -113,16 +154,16 @@ export default function ClassesView() {
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
-                <th className="px-2 py-2">Player</th>
-                <th className="px-2 py-2">Class</th>
-                <th className="px-2 py-2">Role</th>
-                <th className="px-2 py-2 text-right">Score</th>
-                <th className="px-2 py-2 text-right">Confidence</th>
+                <RoleSortHeader label="Player" k="account" />
+                <RoleSortHeader label="Class" k="profession" />
+                <RoleSortHeader label="Role" k="role" />
+                <RoleSortHeader label="Score" k="supportScore" align="right" />
+                <RoleSortHeader label="Confidence" k="confidenceScore" align="right" />
                 <th className="px-2 py-2">Key Factors</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/30 font-mono">
-              {s.roleClassifications.slice(0, 20).map((r) => {
+              {roleRows.slice(0, 20).map((r) => {
                 const roleColor =
                   r.role === "support" ? "text-emerald-400 bg-emerald-950/40 border-emerald-500/30"
                   : r.role === "damage" ? "text-orange-400 bg-orange-950/40 border-orange-500/30"
