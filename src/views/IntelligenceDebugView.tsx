@@ -620,6 +620,11 @@ function FightNarrativePanel({
       return counts;
     }, new Map<string, number>()),
   ).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const keyMoments = engagements.slice(0, 4).sort((a, b) => a.timestampMs - b.timestampMs);
+  const evidenceFindings = criticalFindings.length > 0 ? criticalFindings.slice(0, 3) : findings.slice(0, 3);
+  const reviewActions = actions.slice(0, 3);
+  const totalDowns = engagements.reduce((sum, engagement) => sum + engagement.downs, 0);
+  const totalDeaths = engagements.reduce((sum, engagement) => sum + engagement.deaths, 0);
 
   const resultText = context.result === "win"
     ? "The squad won this fight, so treat this as polish: find the pressure windows that still cost downs and tighten them."
@@ -638,6 +643,9 @@ function FightNarrativePanel({
     ?? (worstWindow
       ? "Review the highest-pressure timestamp first, then compare squad positioning, stability coverage, and recovery cooldown timing around that moment."
       : "If this fight still felt rough in-game, re-check replay positioning and death recaps; the current Intelligence evidence did not produce a stronger deterministic recommendation.");
+  const fightShape = totalDowns > 0 || totalDeaths > 0
+    ? `${formatNumber(totalDowns)} total downs and ${formatNumber(totalDeaths)} deaths were detected in the scoped pressure windows.`
+    : "No down/death cluster was strong enough to become a scoped pressure window.";
 
   return (
     <section className="rounded-[2rem] border border-amber-400/15 bg-gradient-to-br from-amber-500/[0.08] via-black/30 to-sky-500/[0.05] p-5">
@@ -652,6 +660,10 @@ function FightNarrativePanel({
           <Pill>{formatNumber(findings.length)} findings</Pill>
           <Pill>{formatNumber(criticalEvents.length)} events</Pill>
         </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-white/[0.06] bg-black/25 p-4 text-sm leading-7 text-slate-300">
+        <span className="font-black text-slate-100">Fight shape:</span> {fightShape} {eventKinds[0] ? `The most repeated event signal was ${eventKinds[0][0]} (${eventKinds[0][1]}x).` : "No repeated event type dominated the feed."}
       </div>
 
       <div className="mt-5 grid gap-3 xl:grid-cols-3">
@@ -684,6 +696,71 @@ function FightNarrativePanel({
           ))}
         </div>
       )}
+
+      <div className="mt-5 grid gap-3 xl:grid-cols-3">
+        <div className="rounded-2xl border border-white/[0.06] bg-black/25 p-4">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-300">
+            <Radar className="h-4 w-4" /> Key moments
+          </div>
+          <div className="mt-3 grid gap-2">
+            {keyMoments.length > 0 ? keyMoments.map((moment) => (
+              <div key={moment.id} className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-mono text-xs font-black text-slate-200">{formatTime(moment.timestampMs)}</span>
+                  <Pill className={PRESSURE_STYLE[moment.pressureLabel].border}>{PRESSURE_STYLE[moment.pressureLabel].label}</Pill>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-slate-400">
+                  {moment.label}: {formatNumber(moment.downs)} downs, {formatNumber(moment.deaths)} deaths, {formatNumber(moment.criticalEvents)} events.
+                </p>
+              </div>
+            )) : (
+              <p className="text-xs leading-5 text-slate-500">No pressure timestamp was strong enough to call out for this fight.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/[0.06] bg-black/25 p-4">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-rose-300">
+            <ShieldAlert className="h-4 w-4" /> Evidence to check
+          </div>
+          <div className="mt-3 grid gap-2">
+            {evidenceFindings.length > 0 ? evidenceFindings.map((finding) => (
+              <div key={finding.id} className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Pill className={SEVERITY_STYLE[finding.severity]}>{finding.severity}</Pill>
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-200">{finding.title}</span>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-slate-400">{finding.summary}</p>
+              </div>
+            )) : (
+              <p className="text-xs leading-5 text-slate-500">No finding crossed the current evidence threshold for this fight.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/[0.06] bg-black/25 p-4">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-300">
+            <ListChecks className="h-4 w-4" /> Review checklist
+          </div>
+          <div className="mt-3 grid gap-2">
+            {reviewActions.length > 0 ? reviewActions.map((action, index) => (
+              <div key={action.id} className="rounded-xl border border-emerald-400/10 bg-emerald-500/[0.04] p-3">
+                <div className="text-xs font-black text-emerald-300">#{index + 1} {action.title}</div>
+                <p className="mt-2 text-xs leading-5 text-slate-400">{action.detail}</p>
+              </div>
+            )) : (
+              <>
+                <p className="text-xs leading-5 text-slate-500">No action was generated from the current finding set.</p>
+                {worstWindow && (
+                  <p className="rounded-xl border border-white/[0.06] bg-black/25 p-3 text-xs leading-5 text-slate-400">
+                    Start manually at {formatTime(worstWindow.timestampMs)} and review stability, stunbreak timing, regroup speed, and whether damage landed before support recovered.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
