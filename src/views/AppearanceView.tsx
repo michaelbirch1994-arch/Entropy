@@ -5,6 +5,12 @@ import { useTheme } from "../theme/ThemeProvider";
 
 function ThemeSwatch({ theme }: { theme: ThemePreset }) {
   const c = theme.colors;
+  const layout =
+    theme.slug === "siege-ember" ? "grid-cols-[1.4fr_0.8fr]" :
+    theme.slug === "void-signal" ? "grid-cols-4" :
+    theme.slug === "steel-depth" ? "grid-cols-2" :
+    theme.slug === "night-ops" ? "grid-cols-1" :
+    "grid-cols-6";
 
   return (
     <div
@@ -47,6 +53,22 @@ function ThemeSwatch({ theme }: { theme: ThemePreset }) {
             key={color}
             className="h-7 rounded-md border"
             style={{ background: color, borderColor: c.grid }}
+          />
+        ))}
+      </div>
+      <div className={`mt-3 grid ${layout} gap-1.5`}>
+        {Array.from({ length: theme.slug === "night-ops" ? 3 : theme.slug === "void-signal" ? 8 : 6 }).map((_, index) => (
+          <div
+            key={index}
+            className={
+              theme.slug === "siege-ember" && index === 0 ? "h-8 rounded-sm border" :
+              theme.slug === "war-room-gold" && index < 2 ? "col-span-3 h-8 rounded-sm border" :
+              "h-5 rounded-sm border"
+            }
+            style={{
+              background: index % 2 === 0 ? c.surfaceElevated : c.surface,
+              borderColor: index === 0 ? c.accent : c.grid,
+            }}
           />
         ))}
       </div>

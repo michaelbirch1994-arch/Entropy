@@ -987,7 +987,7 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                           accumulate(outgoing, id, dmg, hits, downContrib);
                 }
 
-          const inDist = (p.totalDamageTaken ?? []) as DistEntry[][];
+          const inDist = ((p.totalDamageTakenDist ?? p.totalDamageTaken) ?? []) as DistEntry[][];
                 for (const entry of inDist[0] ?? []) {
                           const id = Number(entry?.id);
                           if (!Number.isFinite(id)) continue;
@@ -1662,7 +1662,7 @@ function computeFightTables(fights: FightInput[]): {
           statsAll?: Array<{ killed?: number; downed?: number; totalDamage?: number; boonStrips?: number }>;
           support?: Array<{ boonStrips?: number; condiCleanse?: number }>;
           totalDamageDist?: Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number; downContribution?: number }>>;
-          totalDamageTaken?: Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number }>>;
+          totalDamageTaken?: Array<{ damageTaken?: number } | number> | Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number }>>;
           totalDamageTakenDist?: Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number }>>;
           extHealingStats?: {
                   outgoingHealing?: Array<{ healing?: number }>;
@@ -1765,7 +1765,7 @@ function computeFightTables(fights: FightInput[]): {
         };
         for (const p of squad) {
                 p.totalDamageDist?.[0]?.forEach(pushOutgoing);
-                (p.totalDamageTaken?.[0] ?? p.totalDamageTakenDist?.[0])?.forEach(pushIncoming);
+                (p.totalDamageTakenDist?.[0] ?? (Array.isArray(p.totalDamageTaken?.[0]) ? p.totalDamageTaken[0] : undefined))?.forEach(pushIncoming);
                 p.extHealingStats?.totalHealingDist?.[0]?.forEach((entry) => pushHealing(entry, 'totalHealing'));
                 p.extBarrierStats?.totalBarrierDist?.[0]?.forEach((entry) => pushHealing(entry, 'totalBarrier'));
         }
