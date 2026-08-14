@@ -308,6 +308,8 @@ export interface FightRow {
     effectiveHealing?: number;
     /** Top outgoing healing sources for this specific fight. Present on reports built after v0.2.23 when healing addon data exists. */
     topOutgoingHealingSkills?: TopHealingSource[];
+    /** Top outgoing damage/down-contribution sources for this specific fight. Present on reports built after v0.2.29. */
+    topOutgoingDamageSkills?: TopSkill[];
     /** Top incoming damage sources for this specific fight. Present on reports built after v0.2.23. */
     topIncomingDamageSkills?: TopSkill[];
     totalOutgoingStrips: number;
