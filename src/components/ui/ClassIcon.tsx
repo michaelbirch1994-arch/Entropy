@@ -26,20 +26,27 @@ export default function ClassIcon({
   if (!src || !name) return null;
 
   return (
-    <img
-      src={src}
-      alt={title ?? name}
+    <span
+      role="img"
+      aria-label={title ?? name}
       title={title ?? name}
-      width={384}
-      height={384}
-      decoding="async"
-      loading="lazy"
-      draggable={false}
       className={clsx(
-        "class-icon-native inline-block shrink-0 align-middle",
+        "class-icon-frame inline-flex shrink-0 items-center justify-center overflow-hidden align-middle",
         SIZE_CLASS[size],
         className,
       )}
-    />
+    >
+      <img
+        src={src}
+        alt=""
+        aria-hidden="true"
+        width={384}
+        height={384}
+        decoding="async"
+        loading="lazy"
+        draggable={false}
+        className="class-icon-native h-full w-full"
+      />
+    </span>
   );
 }
