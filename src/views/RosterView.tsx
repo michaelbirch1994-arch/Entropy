@@ -7,11 +7,12 @@ import { Users, Clock, Heart, Eye } from "lucide-react";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 
 type SortKey = "account" | "characters" | "classes" | "combat" | "squad" | "uptime";
+type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
 
 export default function RosterView() {
   const { report } = useReport();
   // Default matches the previous hard-coded ordering so nothing shifts on load.
-  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "combat", dir: "desc" });
+  const [sort, setSort] = useState<SortState>(null);
   if (!report) return null;
   const s = report.stats;
   const attendance = s.attendanceData;
@@ -27,7 +28,8 @@ export default function RosterView() {
   // early return, so a hook here would change hook order between renders.
   // A roster is tens of rows; re-sorting per render is free.
   const sorted = (() => {
-    const dir = sort.dir === "asc" ? 1 : -1;
+    const activeSort = sort ?? { key: "combat" as const, dir: "desc" as const };
+    const dir = activeSort.dir === "asc" ? 1 : -1;
     // Text columns sort alphabetically; numeric columns numerically. localeCompare
     // keeps non-ASCII account/character names in a sane order.
     const cmp: Record<SortKey, (a: typeof attendance[number], b: typeof attendance[number]) => number> = {
@@ -39,7 +41,7 @@ export default function RosterView() {
       squad: (a, b) => a.squadTimeMs - b.squadTimeMs,
       uptime: (a, b) => uptimeOf(a) - uptimeOf(b),
     };
-    return [...attendance].sort((a, b) => cmp[sort.key](a, b) * dir);
+    return [...attendance].sort((a, b) => cmp[activeSort.key](a, b) * dir || a.account.localeCompare(b.account));
   })();
 
   const partyGroups = (() => {
@@ -64,8 +66,10 @@ export default function RosterView() {
 
   const toggleSort = (key: SortKey) =>
     setSort((prev) =>
-      prev.key === key
-        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+      prev?.key === key
+        ? prev.dir === "desc"
+          ? { key, dir: "asc" }
+          : null
         : // Numeric columns are most useful largest-first on their first click.
           { key, dir: key === "account" || key === "characters" || key === "classes" ? "asc" : "desc" },
     );
@@ -76,11 +80,11 @@ export default function RosterView() {
         type="button"
         onClick={() => toggleSort(k)}
         className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-slate-300 ${
-          sort.key === k ? "text-sky-400" : ""
+          sort?.key === k ? "text-sky-400" : ""
         }`}
       >
         {label}
-        <span className="text-[8px] opacity-70">{sort.key === k ? (sort.dir === "asc" ? "up" : "down") : "sort"}</span>
+        <span className="text-[8px] opacity-70">{sort?.key === k ? (sort.dir === "asc" ? "ASC" : "DESC") : "SORT"}</span>
       </button>
     </th>
   );
