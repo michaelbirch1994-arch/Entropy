@@ -308,6 +308,8 @@ export interface FightRow {
     effectiveHealing?: number;
     /** Top outgoing healing sources for this specific fight. Present on reports built after v0.2.23 when healing addon data exists. */
     topOutgoingHealingSkills?: TopHealingSource[];
+    /** Top outgoing barrier sources for this specific fight. Present on reports built after v0.2.31 when barrier addon data exists. */
+    topOutgoingBarrierSkills?: TopBarrierSource[];
     /** Top outgoing damage/down-contribution sources for this specific fight. Present on reports built after v0.2.29. */
     topOutgoingDamageSkills?: TopSkill[];
     /** Top incoming damage sources for this specific fight. Present on reports built after v0.2.23. */
@@ -623,6 +625,14 @@ export interface TopHealingSource {
     hits: number;
     /** True when this source is a trait/buff-triggered conversion heal (EI's IndirectHealing) rather than a directly-cast skill. */
   isTrait: boolean;
+}
+
+export interface TopBarrierSource {
+    id: number;
+    name: string;
+    icon?: string;
+    barrier: number;
+    hits: number;
 }
 
 export interface PlayerSkillSource {

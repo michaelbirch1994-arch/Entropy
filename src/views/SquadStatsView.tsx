@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { useReport } from "../store/ReportContext";
 import { useDamageScope, pickDamageScopeValue } from "../store/DamageScopeContext";
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
@@ -9,7 +9,8 @@ import ProfessionIcon from "../components/ui/ProfessionIcon";
 import { Users, Swords, Shield, Heart, Zap, Target, Activity, Crosshair, Gauge, MapPin } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, ReferenceLine } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } from "../utils/chartTheme";
-import type { GeneralPlayer, HealingPlayer, HealingCoverage, OffensePlayer, TopHealingSource, TopSkill } from "../types/report";
+import { resolveChartSelectionIndex, type ChartSelectionRow } from "../utils/chartSelection";
+import type { GeneralPlayer, HealingPlayer, HealingCoverage, OffensePlayer, TopBarrierSource, TopHealingSource, TopSkill } from "../types/report";
 
 type SquadOverviewSortKey = "player" | "class" | "damage" | "dps" | "downContribution" | "healing" | "cleanses" | "strips" | "logs";
 
@@ -58,17 +59,6 @@ function safeDiv(numerator: number, denominator: number) {
 function pct(value: number) {
   if (!Number.isFinite(value)) return "0%";
   return `${Math.round(value * 100)}%`;
-}
-
-function getChartClickIndex(event: unknown): number | null {
-  const chartEvent = event as {
-    activePayload?: Array<{ payload?: { index?: unknown } }>;
-    activeTooltipIndex?: unknown;
-  } | null | undefined;
-  const payloadIndex = chartEvent?.activePayload?.[0]?.payload?.index;
-  if (typeof payloadIndex === "number") return payloadIndex;
-  if (typeof chartEvent?.activeTooltipIndex === "number") return chartEvent.activeTooltipIndex;
-  return null;
 }
 
 function normalizeScore(value: number, max: number) {
@@ -125,16 +115,23 @@ function SkillSourceRows({
   rows,
   kind,
 }: {
-  rows: Array<TopSkill | TopHealingSource>;
-  kind: "pressure" | "incoming" | "healing";
+  rows: Array<TopSkill | TopHealingSource | TopBarrierSource>;
+  kind: "pressure" | "incoming" | "healing" | "barrier";
 }) {
-  const tone = kind === "healing" ? "text-emerald-200" : kind === "incoming" ? "text-rose-200" : "text-rose-200";
+  const tone = kind === "healing" ? "text-emerald-200" : kind === "barrier" ? "text-teal-200" : "text-rose-200";
   return rows.length ? (
     <div className="max-h-[32rem] overflow-y-auto custom-scrollbar">
       {rows.map((skill, index) => {
         const asPressure = skill as TopSkill;
         const asHealing = skill as TopHealingSource;
-        const primary = kind === "healing" ? asHealing.healing : kind === "incoming" ? asPressure.damage : asPressure.downContribution ?? 0;
+        const asBarrier = skill as TopBarrierSource;
+        const primary = kind === "healing"
+          ? asHealing.healing
+          : kind === "barrier"
+            ? asBarrier.barrier
+            : kind === "incoming"
+              ? asPressure.damage
+              : asPressure.downContribution ?? 0;
         const secondary = kind === "pressure" ? asPressure.damage ?? 0 : kind === "incoming" ? asPressure.downContribution ?? 0 : 0;
         return (
           <div key={`${kind}:${skill.id}:${index}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
@@ -145,7 +142,7 @@ function SkillSourceRows({
             </span>
             <span className={`text-right font-mono text-[11px] font-bold ${tone}`}>
               {fmtCompact(primary)}
-              <span className="ml-1 text-[10px] text-slate-500">{kind === "pressure" ? "down" : kind === "incoming" ? "dmg" : "heal"}</span>
+              <span className="ml-1 text-[10px] text-slate-500">{kind === "pressure" ? "down" : kind === "incoming" ? "dmg" : kind}</span>
               {secondary > 0 && <span className="ml-2 text-slate-500">{fmtCompact(secondary)} {kind === "pressure" ? "dmg" : "down"}</span>}
               <span className="ml-2 text-slate-500">{fmtNum(skill.hits)} hits</span>
             </span>
@@ -154,6 +151,78 @@ function SkillSourceRows({
       })}
     </div>
   ) : null;
+}
+
+interface FightAxisTickProps {
+  x?: number | string;
+  y?: number | string;
+  payload?: { index?: number; value?: unknown };
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+}
+
+function FightAxisTick({ x = 0, y = 0, payload, selectedIndex, onSelect }: FightAxisTickProps) {
+  const index = payload?.index;
+  if (typeof index !== "number") return null;
+  const selected = index === selectedIndex;
+  const handleKeyDown = (event: KeyboardEvent<SVGGElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onSelect(index);
+    }
+  };
+
+  return (
+    <g
+      transform={`translate(${Number(x)},${Number(y)})`}
+      role="button"
+      tabIndex={0}
+      aria-label={`Select fight ${String(payload?.value ?? index + 1)}`}
+      aria-pressed={selected}
+      className="cursor-pointer outline-none"
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(index);
+      }}
+      onKeyDown={handleKeyDown}
+    >
+      <rect x={-13} y={3} width={26} height={18} rx={2} fill={selected ? "rgba(230,78,36,0.22)" : "transparent"} stroke={selected ? "#e64e24" : "transparent"} />
+      <text x={0} y={16} textAnchor="middle" fill={selected ? "#ff7540" : "#8f8178"} fontSize={9} fontWeight={selected ? 800 : 600}>
+        {String(payload?.value ?? index + 1)}
+      </text>
+    </g>
+  );
+}
+
+function FightSelectorStrip({
+  rows,
+  selectedIndex,
+  onSelect,
+  label,
+}: {
+  rows: readonly ChartSelectionRow[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+  label: string;
+}) {
+  return (
+    <div className="theme-fight-selector border-t border-theme-border/60 pt-3">
+      <div className="mb-2 text-[10px] font-black uppercase text-theme-muted">{label}</div>
+      <div role="group" aria-label={label} className="flex gap-1.5 overflow-x-auto pb-2 custom-scrollbar">
+        {rows.map((row, index) => (
+          <button
+            key={row.id ?? `${row.name ?? row.label ?? "fight"}-${index}`}
+            type="button"
+            aria-pressed={selectedIndex === index}
+            onClick={() => onSelect(index)}
+            className={`h-8 min-w-10 border px-2 font-mono text-[10px] font-black transition-colors ${selectedIndex === index ? "border-theme-accent bg-theme-accent/15 text-theme-accent-strong" : "border-theme-border bg-theme-surface-inset text-theme-muted hover:border-theme-border-strong hover:text-theme-text"}`}
+          >
+            {row.name ?? row.label ?? `#${index + 1}`}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function SquadStatsView() {
@@ -202,8 +271,8 @@ export default function SquadStatsView() {
       raw,
       outgoingSkills: fight.topOutgoingDamageSkills ?? [],
       incomingSkills: fight.topIncomingDamageSkills ?? [],
-      hasExactOutgoingSkills: (fight.topOutgoingDamageSkills?.length ?? 0) > 0,
-      hasExactIncomingSkills: (fight.topIncomingDamageSkills?.length ?? 0) > 0,
+      hasExactOutgoingSkills: Array.isArray(fight.topOutgoingDamageSkills),
+      hasExactIncomingSkills: Array.isArray(fight.topIncomingDamageSkills),
     };
   });
   const maxFightPressure = Math.max(...pressureChartRaw.map((fight) => fight.raw), 1);
@@ -213,11 +282,9 @@ export default function SquadStatsView() {
   }));
   const selectedPressureFight = pressureChartData[Math.min(selectedPressureIndex, Math.max(pressureChartData.length - 1, 0))];
   const pressureSkillRows = sortPressureSkills(
-    selectedPressureFight?.outgoingSkills.length
-      ? selectedPressureFight.outgoingSkills
-      : ((s.topSkillsByDownContribution?.length ? s.topSkillsByDownContribution : s.topSkills) ?? []),
+    selectedPressureFight?.outgoingSkills ?? [],
   ).filter((skill) => (skill.downContribution ?? 0) > 0 || (skill.damage ?? 0) > 0);
-  const pressureIncomingRows = [...(selectedPressureFight?.incomingSkills.length ? selectedPressureFight.incomingSkills : (s.topIncomingSkills ?? []))]
+  const pressureIncomingRows = [...(selectedPressureFight?.incomingSkills ?? [])]
     .filter((skill) => (skill.damage ?? 0) > 0 || (skill.downContribution ?? 0) > 0)
     .sort((a, b) => (b.damage ?? 0) - (a.damage ?? 0) || (b.downContribution ?? 0) - (a.downContribution ?? 0));
   const totalDamageTaken = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
@@ -228,6 +295,7 @@ export default function SquadStatsView() {
     const barrier = Number(fight.totalOutgoingBarrier ?? fight.incomingBarrierAbsorbed ?? 0);
     const incomingDamage = Number(fight.totalIncomingDamage ?? 0);
     const exactOutgoingSkills = fight.topOutgoingHealingSkills ?? [];
+    const exactBarrierSkills = fight.topOutgoingBarrierSkills ?? [];
     const exactIncomingSkills = fight.topIncomingDamageSkills ?? [];
     return {
       name: fight.label || `F${index + 1}`,
@@ -237,10 +305,12 @@ export default function SquadStatsView() {
       barrier,
       incomingDamage,
       effectiveHealing: Number(fight.effectiveHealing ?? (healing + barrier - incomingDamage)),
-      outgoingSkills: exactOutgoingSkills.length ? exactOutgoingSkills : (s.topHealingSkills ?? []),
-      incomingSkills: exactIncomingSkills.length ? exactIncomingSkills : (s.topIncomingSkills ?? []),
-      hasExactOutgoingSkills: exactOutgoingSkills.length > 0,
-      hasExactIncomingSkills: exactIncomingSkills.length > 0,
+      outgoingSkills: exactOutgoingSkills,
+      barrierSkills: exactBarrierSkills,
+      incomingSkills: exactIncomingSkills,
+      hasExactOutgoingSkills: Array.isArray(fight.topOutgoingHealingSkills),
+      hasExactBarrierSkills: Array.isArray(fight.topOutgoingBarrierSkills),
+      hasExactIncomingSkills: Array.isArray(fight.topIncomingDamageSkills),
     };
   });
   const hasPerFightHealing = s.fightBreakdown.some((fight) => typeof fight.totalOutgoingHealing === "number");
@@ -352,7 +422,7 @@ export default function SquadStatsView() {
         />
       </div>
 
-      <div className="theme-analysis-grid grid grid-cols-1 2xl:grid-cols-2 gap-5">
+      <div className="theme-analysis-grid grid grid-cols-1 gap-5">
         <Panel
           title="Kill Pressure"
           subtitle="Damage that actually converts into downs and kills, instead of only raw padding."
@@ -368,12 +438,18 @@ export default function SquadStatsView() {
                     data={pressureChartData}
                     margin={{ left: 6, right: 16, top: 12, bottom: 6 }}
                     onClick={(event) => {
-                      const index = getChartClickIndex(event);
+                      const index = resolveChartSelectionIndex(event, pressureChartData);
                       if (index !== null) setSelectedPressureIndex(index);
                     }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="name" tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" interval="preserveStartEnd" />
+                    <XAxis
+                      dataKey="name"
+                      tick={(props) => <FightAxisTick {...props} selectedIndex={selectedPressureIndex} onSelect={setSelectedPressureIndex} />}
+                      stroke="#334155"
+                      interval={0}
+                      height={34}
+                    />
                     <YAxis tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" />
                     <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
                     <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />
@@ -389,6 +465,7 @@ export default function SquadStatsView() {
                 </div>
               )}
             </div>
+            <FightSelectorStrip rows={pressureChartData} selectedIndex={selectedPressureIndex} onSelect={setSelectedPressureIndex} label="Select pressure fight" />
             {selectedPressureFight && (
               <div className="theme-selected-fight rounded-xl border border-slate-800/70 bg-[#080d19]/70 p-3 text-xs text-slate-400">
                 <div className="flex items-start justify-between gap-3">
@@ -414,7 +491,7 @@ export default function SquadStatsView() {
                 </div>
                 {(!selectedPressureFight.hasExactOutgoingSkills || !selectedPressureFight.hasExactIncomingSkills) && (
                   <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-2 text-[11px] text-amber-200/90">
-                    Exact per-fight pressure source rows were not available for this point, so Entropy is showing report-level source fallback rows.
+                    Exact per-fight pressure source rows are unavailable in this saved report. Reparse the original logs with this build to populate them.
                   </div>
                 )}
               </div>
@@ -461,16 +538,17 @@ export default function SquadStatsView() {
                     data={healingChartData}
                     margin={{ left: 8, right: 18, top: 12, bottom: 8 }}
                     onClick={(event) => {
-                      const index = getChartClickIndex(event);
+                      const index = resolveChartSelectionIndex(event, healingChartData);
                       if (index !== null) setSelectedHealingIndex(index);
                     }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                     <XAxis
                       dataKey="name"
-                      tick={{ fill: "#64748b", fontSize: 10 }}
+                      tick={(props) => <FightAxisTick {...props} selectedIndex={selectedHealingIndex} onSelect={setSelectedHealingIndex} />}
                       stroke="#334155"
-                      interval="preserveStartEnd"
+                      interval={0}
+                      height={34}
                     />
                     <YAxis
                       tickFormatter={(v) => fmtCompact(Number(v))}
@@ -498,6 +576,7 @@ export default function SquadStatsView() {
                 </div>
               )}
             </div>
+            <FightSelectorStrip rows={healingChartData} selectedIndex={selectedHealingIndex} onSelect={setSelectedHealingIndex} label="Select healing fight" />
             <div className="space-y-3">
               <div className="theme-selected-fight rounded-xl border border-slate-800/70 bg-[#080d19]/70 p-3 text-xs text-slate-400">
                 {selectedHealingFight ? (
@@ -520,9 +599,9 @@ export default function SquadStatsView() {
                       <span>Healing <b className="block text-emerald-300">{fmtCompact(selectedHealingFight.healing)}</b></span>
                       <span>Barrier <b className="block text-teal-300">{fmtCompact(selectedHealingFight.barrier)}</b></span>
                     </div>
-                    {(!selectedHealingFight.hasExactOutgoingSkills || !selectedHealingFight.hasExactIncomingSkills) && (
+                    {(!selectedHealingFight.hasExactOutgoingSkills || !selectedHealingFight.hasExactBarrierSkills || !selectedHealingFight.hasExactIncomingSkills) && (
                       <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-2 text-[11px] text-amber-200/90">
-                        Exact per-fight source rows were not available for this point, so Entropy is showing the best report-level source fallback instead of an empty panel.
+                        One or more exact per-fight source groups are unavailable in this saved report. Reparse the original logs with this build to populate them.
                       </div>
                     )}
                   </>
@@ -531,14 +610,23 @@ export default function SquadStatsView() {
                   : "This report was built before per-fight outgoing healing existed; exact fight-by-fight healing appears after reparsing with this build."}
               </div>
               {selectedHealingFight && (
-                <div className="theme-source-grid grid grid-cols-1 xl:grid-cols-2 gap-3">
+                <div className="theme-source-grid grid grid-cols-1 xl:grid-cols-3 gap-3">
                   <div className="theme-source-card rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">Top outgoing healing / barrier skills</div>
+                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">Outgoing healing skills</div>
                       <div className="text-[10px] uppercase tracking-wider text-slate-500">{selectedHealingFight.outgoingSkills.length}</div>
                     </div>
                     {selectedHealingFight.outgoingSkills.length ? <SkillSourceRows rows={selectedHealingFight.outgoingSkills} kind="healing" /> : (
                       <div className="text-[11px] text-slate-500">Exact per-fight healing sources need a report parsed with this build.</div>
+                    )}
+                  </div>
+                  <div className="theme-source-card rounded-xl border border-teal-500/15 bg-teal-500/5 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-teal-300">Outgoing barrier skills</div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500">{selectedHealingFight.barrierSkills.length}</div>
+                    </div>
+                    {selectedHealingFight.barrierSkills.length ? <SkillSourceRows rows={selectedHealingFight.barrierSkills} kind="barrier" /> : (
+                      <div className="text-[11px] text-slate-500">No exact barrier skill sources were recorded for this fight.</div>
                     )}
                   </div>
                   <div className="theme-source-card rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">

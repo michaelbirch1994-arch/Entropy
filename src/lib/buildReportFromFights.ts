@@ -223,6 +223,7 @@ import type {
     SynergyInsight,
     MechanicsData,
     TopHealingSource,
+    TopBarrierSource,
     DeathRecapEntry,
     FightHighlight,
     DamageMitigationPlayer,
@@ -1736,7 +1737,8 @@ function computeFightTables(fights: FightInput[]): {
         };
         const outgoingSkillTotals = new Map<number, { damage: number; hits: number; downContribution: number }>();
         const incomingSkillTotals = new Map<number, { damage: number; hits: number; downContribution: number }>();
-        const healingSkillTotals = new Map<number, { healing: number; hits: number }>();
+        const healingSkillTotals = new Map<number, { value: number; hits: number }>();
+        const barrierSkillTotals = new Map<number, { value: number; hits: number }>();
         const pushOutgoing = (entry: any) => {
                 const id = Number(entry?.id);
                 if (!Number.isFinite(id)) return;
@@ -1755,19 +1757,23 @@ function computeFightTables(fights: FightInput[]): {
                 current.downContribution += Number(entry?.downContribution ?? 0);
                 incomingSkillTotals.set(id, current);
         };
-        const pushHealing = (entry: any, valueField: string) => {
+        const pushSupportSource = (
+                totals: Map<number, { value: number; hits: number }>,
+                entry: any,
+                valueField: string,
+        ) => {
                 const id = Number(entry?.id);
                 if (!Number.isFinite(id)) return;
-                const current = healingSkillTotals.get(id) ?? { healing: 0, hits: 0 };
-                current.healing += Number(entry?.[valueField] ?? entry?.healing ?? 0);
+                const current = totals.get(id) ?? { value: 0, hits: 0 };
+                current.value += Number(entry?.[valueField] ?? 0);
                 current.hits += Number(entry?.hits ?? 0);
-                healingSkillTotals.set(id, current);
+                totals.set(id, current);
         };
         for (const p of squad) {
                 p.totalDamageDist?.[0]?.forEach(pushOutgoing);
                 (p.totalDamageTakenDist?.[0] ?? (Array.isArray(p.totalDamageTaken?.[0]) ? p.totalDamageTaken[0] : undefined))?.forEach(pushIncoming);
-                p.extHealingStats?.totalHealingDist?.[0]?.forEach((entry) => pushHealing(entry, 'totalHealing'));
-                p.extBarrierStats?.totalBarrierDist?.[0]?.forEach((entry) => pushHealing(entry, 'totalBarrier'));
+                p.extHealingStats?.totalHealingDist?.[0]?.forEach((entry) => pushSupportSource(healingSkillTotals, entry, 'totalHealing'));
+                p.extBarrierStats?.totalBarrierDist?.[0]?.forEach((entry) => pushSupportSource(barrierSkillTotals, entry, 'totalBarrier'));
         }
         const topOutgoingDamageSkills: TopSkill[] = Array.from(outgoingSkillTotals.entries())
                 .map(([id, total]) => {
@@ -1788,10 +1794,18 @@ function computeFightTables(fights: FightInput[]): {
         const topOutgoingHealingSkills: TopHealingSource[] = Array.from(healingSkillTotals.entries())
                 .map(([id, total]) => {
                         const meta = resolveMeta(id);
-                        return { id, name: meta.name, icon: meta.icon, healing: total.healing, hits: total.hits, isTrait: false };
+                        return { id, name: meta.name, icon: meta.icon, healing: total.value, hits: total.hits, isTrait: false };
                 })
                 .filter((entry) => entry.healing > 0)
                 .sort((a, b) => b.healing - a.healing)
+                .slice(0, 50);
+        const topOutgoingBarrierSkills: TopBarrierSource[] = Array.from(barrierSkillTotals.entries())
+                .map(([id, total]) => {
+                        const meta = resolveMeta(id);
+                        return { id, name: meta.name, icon: meta.icon, barrier: total.value, hits: total.hits };
+                })
+                .filter((entry) => entry.barrier > 0)
+                .sort((a, b) => b.barrier - a.barrier)
                 .slice(0, 50);
 
                      mapCounts.set(mapName, (mapCounts.get(mapName) || 0) + 1);
@@ -1821,6 +1835,7 @@ function computeFightTables(fights: FightInput[]): {
                              totalOutgoingBarrier: outBarrier,
                              effectiveHealing: outHealing + outBarrier - inDamage,
                              topOutgoingHealingSkills,
+                             topOutgoingBarrierSkills,
                              topOutgoingDamageSkills,
                              topIncomingDamageSkills,
                              totalOutgoingStrips: outStrips,
