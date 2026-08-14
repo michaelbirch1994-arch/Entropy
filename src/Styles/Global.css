@@ -42,13 +42,22 @@ kbd {
   font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
 
-.class-icon-native {
-  display: inline-block;
+.class-icon-frame {
   aspect-ratio: 1 / 1;
+  border-radius: 0;
+}
+
+.class-icon-native {
+  display: block;
   object-fit: contain;
   object-position: center;
-  vertical-align: middle;
-  border-radius: 0;
+  transform: scale(1.16);
+  transform-origin: center;
+  /*
+    Keep normal browser antialiasing for these 384px transparent PNGs. Pixelated
+    / crisp-edge rendering makes small class chips jagged; the frame crop above
+    handles the whitespace instead.
+  */
   image-rendering: auto;
 }
 
