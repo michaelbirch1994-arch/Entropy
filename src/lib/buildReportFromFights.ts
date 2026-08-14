@@ -1661,6 +1661,7 @@ function computeFightTables(fights: FightInput[]): {
           defenses?: Array<{ downCount?: number; deadCount?: number; damageTaken?: number; damageBarrier?: number }>;
           statsAll?: Array<{ killed?: number; downed?: number; totalDamage?: number; boonStrips?: number }>;
           support?: Array<{ boonStrips?: number; condiCleanse?: number }>;
+          totalDamageDist?: Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number; downContribution?: number }>>;
           totalDamageTaken?: Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number }>>;
           totalDamageTakenDist?: Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number }>>;
           extHealingStats?: {
@@ -1733,14 +1734,25 @@ function computeFightTables(fights: FightInput[]): {
                         icon: def?.icon,
                 };
         };
-        const incomingSkillTotals = new Map<number, { damage: number; hits: number }>();
+        const outgoingSkillTotals = new Map<number, { damage: number; hits: number; downContribution: number }>();
+        const incomingSkillTotals = new Map<number, { damage: number; hits: number; downContribution: number }>();
         const healingSkillTotals = new Map<number, { healing: number; hits: number }>();
+        const pushOutgoing = (entry: any) => {
+                const id = Number(entry?.id);
+                if (!Number.isFinite(id)) return;
+                const current = outgoingSkillTotals.get(id) ?? { damage: 0, hits: 0, downContribution: 0 };
+                current.damage += Number(entry?.totalDamage ?? 0);
+                current.hits += Number(entry?.connectedHits ?? entry?.hits ?? 0);
+                current.downContribution += Number(entry?.downContribution ?? 0);
+                outgoingSkillTotals.set(id, current);
+        };
         const pushIncoming = (entry: any) => {
                 const id = Number(entry?.id);
                 if (!Number.isFinite(id)) return;
-                const current = incomingSkillTotals.get(id) ?? { damage: 0, hits: 0 };
+                const current = incomingSkillTotals.get(id) ?? { damage: 0, hits: 0, downContribution: 0 };
                 current.damage += Number(entry?.totalDamage ?? 0);
                 current.hits += Number(entry?.connectedHits ?? entry?.hits ?? 0);
+                current.downContribution += Number(entry?.downContribution ?? 0);
                 incomingSkillTotals.set(id, current);
         };
         const pushHealing = (entry: any, valueField: string) => {
@@ -1752,18 +1764,27 @@ function computeFightTables(fights: FightInput[]): {
                 healingSkillTotals.set(id, current);
         };
         for (const p of squad) {
+                p.totalDamageDist?.[0]?.forEach(pushOutgoing);
                 (p.totalDamageTaken?.[0] ?? p.totalDamageTakenDist?.[0])?.forEach(pushIncoming);
                 p.extHealingStats?.totalHealingDist?.[0]?.forEach((entry) => pushHealing(entry, 'totalHealing'));
                 p.extBarrierStats?.totalBarrierDist?.[0]?.forEach((entry) => pushHealing(entry, 'totalBarrier'));
         }
+        const topOutgoingDamageSkills: TopSkill[] = Array.from(outgoingSkillTotals.entries())
+                .map(([id, total]) => {
+                        const meta = resolveMeta(id);
+                        return { id, name: meta.name, icon: meta.icon, damage: total.damage, hits: total.hits, downContribution: total.downContribution };
+                })
+                .filter((entry) => entry.damage > 0 || entry.downContribution > 0)
+                .sort((a, b) => b.downContribution - a.downContribution || b.damage - a.damage)
+                .slice(0, 50);
         const topIncomingDamageSkills: TopSkill[] = Array.from(incomingSkillTotals.entries())
                 .map(([id, total]) => {
                         const meta = resolveMeta(id);
-                        return { id, name: meta.name, icon: meta.icon, damage: total.damage, hits: total.hits, downContribution: 0 };
+                        return { id, name: meta.name, icon: meta.icon, damage: total.damage, hits: total.hits, downContribution: total.downContribution };
                 })
                 .filter((entry) => entry.damage > 0)
                 .sort((a, b) => b.damage - a.damage)
-                .slice(0, 20);
+                .slice(0, 50);
         const topOutgoingHealingSkills: TopHealingSource[] = Array.from(healingSkillTotals.entries())
                 .map(([id, total]) => {
                         const meta = resolveMeta(id);
@@ -1771,7 +1792,7 @@ function computeFightTables(fights: FightInput[]): {
                 })
                 .filter((entry) => entry.healing > 0)
                 .sort((a, b) => b.healing - a.healing)
-                .slice(0, 20);
+                .slice(0, 50);
 
                      mapCounts.set(mapName, (mapCounts.get(mapName) || 0) + 1);
 
@@ -1800,6 +1821,7 @@ function computeFightTables(fights: FightInput[]): {
                              totalOutgoingBarrier: outBarrier,
                              effectiveHealing: outHealing + outBarrier - inDamage,
                              topOutgoingHealingSkills,
+                             topOutgoingDamageSkills,
                              topIncomingDamageSkills,
                              totalOutgoingStrips: outStrips,
                              totalIncomingStrips: 0,

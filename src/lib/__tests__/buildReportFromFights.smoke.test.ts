@@ -176,11 +176,13 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(stabilityInsight?.detail).not.toContain('% Stability uptime');
            });
 
-           it('populates per-fight effective-healing drilldown skill sources', () => {
+           it('populates per-fight squad-stats drilldown skill sources', () => {
                  const firstFight = report.stats.fightBreakdown[0];
                  expect(firstFight).toBeTruthy();
+                 expect(firstFight.topOutgoingDamageSkills?.length).toBeGreaterThan(0);
                  expect(firstFight.topIncomingDamageSkills?.length).toBeGreaterThan(0);
                  expect(firstFight.topOutgoingHealingSkills?.length).toBeGreaterThan(0);
+                 expect(firstFight.topOutgoingDamageSkills![0].name).toBeTruthy();
                  expect(firstFight.topIncomingDamageSkills![0].name).toBeTruthy();
                  expect(firstFight.topOutgoingHealingSkills![0].name).toBeTruthy();
            });

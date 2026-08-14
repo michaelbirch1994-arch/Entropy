@@ -9,7 +9,7 @@ import ProfessionIcon from "../components/ui/ProfessionIcon";
 import { Users, Swords, Shield, Heart, Zap, Target, Activity, Crosshair, Gauge, MapPin } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, ReferenceLine } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } from "../utils/chartTheme";
-import type { GeneralPlayer, HealingPlayer, HealingCoverage, OffensePlayer } from "../types/report";
+import type { GeneralPlayer, HealingPlayer, HealingCoverage, OffensePlayer, TopHealingSource, TopSkill } from "../types/report";
 
 type SquadOverviewSortKey = "player" | "class" | "damage" | "dps" | "downContribution" | "healing" | "cleanses" | "strips" | "logs";
 
@@ -76,6 +76,14 @@ function normalizeScore(value: number, max: number) {
   return Math.round((value / max) * 100);
 }
 
+function pressureSkillScore(skill: TopSkill) {
+  return (skill.downContribution ?? 0) + (skill.damage ?? 0) * 0.05;
+}
+
+function sortPressureSkills(skills: TopSkill[]) {
+  return [...skills].sort((a, b) => pressureSkillScore(b) - pressureSkillScore(a) || (b.damage ?? 0) - (a.damage ?? 0));
+}
+
 function distanceTone(distance: number) {
   if (distance <= 600) return { label: "tight", dot: "bg-emerald-400", text: "text-emerald-300", border: "border-emerald-500/30", fill: "bg-emerald-500/10" };
   if (distance <= 1200) return { label: "wide", dot: "bg-amber-400", text: "text-amber-300", border: "border-amber-500/30", fill: "bg-amber-500/10" };
@@ -111,6 +119,41 @@ function buildDistanceRows(players: GeneralPlayer[]) {
     }))
     .filter((p) => Number.isFinite(p.avgDistance) && p.avgDistance >= 0)
     .sort((a, b) => b.avgDistance - a.avgDistance);
+}
+
+function SkillSourceRows({
+  rows,
+  kind,
+}: {
+  rows: Array<TopSkill | TopHealingSource>;
+  kind: "pressure" | "incoming" | "healing";
+}) {
+  const tone = kind === "healing" ? "text-emerald-200" : kind === "incoming" ? "text-rose-200" : "text-rose-200";
+  return rows.length ? (
+    <div className="max-h-[32rem] overflow-y-auto custom-scrollbar">
+      {rows.map((skill, index) => {
+        const asPressure = skill as TopSkill;
+        const asHealing = skill as TopHealingSource;
+        const primary = kind === "healing" ? asHealing.healing : kind === "incoming" ? asPressure.damage : asPressure.downContribution ?? 0;
+        const secondary = kind === "pressure" ? asPressure.damage ?? 0 : kind === "incoming" ? asPressure.downContribution ?? 0 : 0;
+        return (
+          <div key={`${kind}:${skill.id}:${index}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
+            <span className="font-mono text-[10px] font-black text-slate-600">#{index + 1}</span>
+            <span className="min-w-0 flex items-center gap-2 text-slate-300">
+              {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
+              <span className="truncate">{skill.name}</span>
+            </span>
+            <span className={`text-right font-mono text-[11px] font-bold ${tone}`}>
+              {fmtCompact(primary)}
+              <span className="ml-1 text-[10px] text-slate-500">{kind === "pressure" ? "down" : kind === "incoming" ? "dmg" : "heal"}</span>
+              {secondary > 0 && <span className="ml-2 text-slate-500">{fmtCompact(secondary)} {kind === "pressure" ? "dmg" : "down"}</span>}
+              <span className="ml-2 text-slate-500">{fmtNum(skill.hits)} hits</span>
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  ) : null;
 }
 
 export default function SquadStatsView() {
@@ -157,6 +200,10 @@ export default function SquadStatsView() {
       downs: fight.enemyDowns ?? 0,
       kills: fight.enemyDeaths ?? 0,
       raw,
+      outgoingSkills: fight.topOutgoingDamageSkills ?? [],
+      incomingSkills: fight.topIncomingDamageSkills ?? [],
+      hasExactOutgoingSkills: (fight.topOutgoingDamageSkills?.length ?? 0) > 0,
+      hasExactIncomingSkills: (fight.topIncomingDamageSkills?.length ?? 0) > 0,
     };
   });
   const maxFightPressure = Math.max(...pressureChartRaw.map((fight) => fight.raw), 1);
@@ -164,11 +211,15 @@ export default function SquadStatsView() {
     ...fight,
     score: normalizeScore(fight.raw, maxFightPressure),
   }));
-  const pressureSkillRows = [...((s.topSkillsByDownContribution?.length ? s.topSkillsByDownContribution : s.topSkills) ?? [])]
-    .filter((skill) => (skill.downContribution ?? 0) > 0 || (skill.damage ?? 0) > 0)
-    .sort((a, b) => (b.downContribution ?? 0) - (a.downContribution ?? 0) || (b.damage ?? 0) - (a.damage ?? 0))
-    .slice(0, 20);
   const selectedPressureFight = pressureChartData[Math.min(selectedPressureIndex, Math.max(pressureChartData.length - 1, 0))];
+  const pressureSkillRows = sortPressureSkills(
+    selectedPressureFight?.outgoingSkills.length
+      ? selectedPressureFight.outgoingSkills
+      : ((s.topSkillsByDownContribution?.length ? s.topSkillsByDownContribution : s.topSkills) ?? []),
+  ).filter((skill) => (skill.downContribution ?? 0) > 0 || (skill.damage ?? 0) > 0);
+  const pressureIncomingRows = [...(selectedPressureFight?.incomingSkills.length ? selectedPressureFight.incomingSkills : (s.topIncomingSkills ?? []))]
+    .filter((skill) => (skill.damage ?? 0) > 0 || (skill.downContribution ?? 0) > 0)
+    .sort((a, b) => (b.damage ?? 0) - (a.damage ?? 0) || (b.downContribution ?? 0) - (a.downContribution ?? 0));
   const totalDamageTaken = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
   const effectiveHealingTotal = totalHealing + totalBarrier - totalDamageTaken;
   const healingEffectiveness = safeDiv(effectiveHealingTotal, totalDamageTaken);
@@ -310,7 +361,7 @@ export default function SquadStatsView() {
           action={pressureChartData.length ? `${pressureChartData.length} fights` : "no fights"}
         >
           <div className="space-y-4">
-            <div className="h-72">
+            <div className="h-72 cursor-crosshair">
               {pressureChartData.length ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
@@ -326,6 +377,7 @@ export default function SquadStatsView() {
                     <YAxis tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" />
                     <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
                     <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />
+                    {selectedPressureFight && <ReferenceLine x={selectedPressureFight.name} stroke="#fb7185" strokeDasharray="4 4" />}
                     <Line type="monotone" dataKey="score" name="Pressure Score / 100" stroke="#fb7185" strokeWidth={2.25} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} />
                     <Line type="monotone" dataKey="downs" name="Enemy Downs" stroke="#38bdf8" strokeWidth={1.75} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} />
                     <Line type="monotone" dataKey="kills" name="Enemy Kills" stroke="#f59e0b" strokeWidth={1.75} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} />
@@ -360,34 +412,36 @@ export default function SquadStatsView() {
                   <span>Downs <b className="block text-sky-300">{fmtNum(selectedPressureFight.downs)}</b></span>
                   <span>Kills <b className="block text-amber-300">{fmtNum(selectedPressureFight.kills)}</b></span>
                 </div>
+                {(!selectedPressureFight.hasExactOutgoingSkills || !selectedPressureFight.hasExactIncomingSkills) && (
+                  <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-2 text-[11px] text-amber-200/90">
+                    Exact per-fight pressure source rows were not available for this point, so Entropy is showing report-level source fallback rows.
+                  </div>
+                )}
               </div>
             )}
-            <div className="rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-300">Top pressure skills</div>
-                <div className="text-[10px] uppercase tracking-wider text-slate-500">{pressureSkillRows.length} / 20</div>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+              <div className="rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-300">Outgoing pressure skills</div>
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500">{pressureSkillRows.length}</div>
+                </div>
+                {pressureSkillRows.length ? <SkillSourceRows rows={pressureSkillRows} kind="pressure" /> : (
+                  <div className="rounded-lg border border-dashed border-slate-800 p-4 text-xs text-slate-500">
+                    No pressure skill breakdown is available for this report yet.
+                  </div>
+                )}
               </div>
-              {pressureSkillRows.length ? (
-                <div className="max-h-[32rem] overflow-y-auto custom-scrollbar">
-                  {pressureSkillRows.map((skill, index) => (
-                    <div key={`pressure:${skill.id}:${index}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
-                      <span className="font-mono text-[10px] font-black text-slate-600">#{index + 1}</span>
-                      <span className="min-w-0 flex items-center gap-2 text-slate-300">
-                        {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
-                        <span className="truncate">{skill.name}</span>
-                      </span>
-                      <span className="text-right font-mono text-[11px] font-bold text-rose-200">
-                        {fmtCompact(skill.downContribution ?? 0)} down
-                        <span className="ml-2 text-slate-500">{fmtCompact(skill.damage ?? 0)} dmg</span>
-                      </span>
-                    </div>
-                  ))}
+              <div className="rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-300">Incoming skills during fight</div>
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500">{pressureIncomingRows.length}</div>
                 </div>
-              ) : (
-                <div className="rounded-lg border border-dashed border-slate-800 p-4 text-xs text-slate-500">
-                  No pressure skill breakdown is available for this report yet.
-                </div>
-              )}
+                {pressureIncomingRows.length ? <SkillSourceRows rows={pressureIncomingRows} kind="incoming" /> : (
+                  <div className="rounded-lg border border-dashed border-slate-800 p-4 text-xs text-slate-500">
+                    No incoming source rows are available for this selected fight.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </Panel>
@@ -431,6 +485,7 @@ export default function SquadStatsView() {
                     />
                     <ReferenceLine y={0} stroke="#334155" />
                     <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />
+                    {selectedHealingFight && <ReferenceLine x={selectedHealingFight.name} stroke="#f8fafc" strokeDasharray="4 4" />}
                     <Line type="monotone" dataKey="healing" name="Healing" stroke="#34d399" strokeWidth={2} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} connectNulls />
                     <Line type="monotone" dataKey="barrier" name={hasPerFightHealing ? "Barrier" : "Barrier Absorbed"} stroke="#2dd4bf" strokeWidth={2} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} connectNulls />
                     <Line type="monotone" dataKey="incomingDamage" name="Incoming Damage" stroke="#fb7185" strokeWidth={2} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} connectNulls />
@@ -480,36 +535,18 @@ export default function SquadStatsView() {
                   <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">Top outgoing healing / barrier skills</div>
-                      <div className="text-[10px] uppercase tracking-wider text-slate-500">{Math.min(20, selectedHealingFight.outgoingSkills.length)} / 20</div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500">{selectedHealingFight.outgoingSkills.length}</div>
                     </div>
-                    {selectedHealingFight.outgoingSkills.length ? selectedHealingFight.outgoingSkills.slice(0, 20).map((skill, index) => (
-                      <div key={`heal:${skill.id}:${index}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
-                        <span className="font-mono text-[10px] font-black text-slate-600">#{index + 1}</span>
-                        <span className="min-w-0 flex items-center gap-2 text-slate-300">
-                          {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
-                          <span className="truncate">{skill.name}</span>
-                        </span>
-                        <span className="text-right font-mono font-bold text-emerald-200">{fmtCompact(skill.healing)} <span className="text-[10px] text-slate-500">{fmtNum(skill.hits)} hits</span></span>
-                      </div>
-                    )) : (
+                    {selectedHealingFight.outgoingSkills.length ? <SkillSourceRows rows={selectedHealingFight.outgoingSkills} kind="healing" /> : (
                       <div className="text-[11px] text-slate-500">Exact per-fight healing sources need a report parsed with this build.</div>
                     )}
                   </div>
                   <div className="rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div className="text-[10px] font-black uppercase tracking-[0.18em] text-rose-300">Top incoming damage skills</div>
-                      <div className="text-[10px] uppercase tracking-wider text-slate-500">{Math.min(20, selectedHealingFight.incomingSkills.length)} / 20</div>
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500">{selectedHealingFight.incomingSkills.length}</div>
                     </div>
-                    {selectedHealingFight.incomingSkills.length ? selectedHealingFight.incomingSkills.slice(0, 20).map((skill, index) => (
-                      <div key={`incoming:${skill.id}:${index}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
-                        <span className="font-mono text-[10px] font-black text-slate-600">#{index + 1}</span>
-                        <span className="min-w-0 flex items-center gap-2 text-slate-300">
-                          {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
-                          <span className="truncate">{skill.name}</span>
-                        </span>
-                        <span className="text-right font-mono font-bold text-rose-200">{fmtCompact(skill.damage)} <span className="text-[10px] text-slate-500">{fmtNum(skill.hits)} hits</span></span>
-                      </div>
-                    )) : (
+                    {selectedHealingFight.incomingSkills.length ? <SkillSourceRows rows={selectedHealingFight.incomingSkills} kind="incoming" /> : (
                       <div className="text-[11px] text-slate-500">Exact per-fight incoming sources need a report parsed with this build.</div>
                     )}
                   </div>
