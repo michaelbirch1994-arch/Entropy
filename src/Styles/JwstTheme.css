@@ -5,40 +5,40 @@
 
 .entropy-bg {
   background:
-    linear-gradient(to bottom, rgba(3, 5, 18, 0.88) 0%, rgba(3, 5, 18, 0.38) 260px, rgba(3, 5, 18, 0.62) 100%),
-    radial-gradient(ellipse 120% 90% at 48% 42%, rgba(249, 113, 167, 0.24) 0%, rgba(124, 58, 237, 0.14) 34%, rgba(8, 13, 34, 0.72) 78%),
+    linear-gradient(to bottom, color-mix(in srgb, var(--theme-bg) 90%, transparent) 0%, color-mix(in srgb, var(--theme-bg) 44%, transparent) 260px, color-mix(in srgb, var(--theme-bg) 68%, transparent) 100%),
+    radial-gradient(ellipse 120% 90% at 48% 42%, color-mix(in srgb, var(--theme-accent) 24%, transparent) 0%, color-mix(in srgb, var(--theme-secondary) 14%, transparent) 34%, color-mix(in srgb, var(--theme-bg) 72%, transparent) 78%),
     url("https://stsci-opo.org/STScI-01HHBVDWJZX3NN6XW2JY0E723P.png") center 42% / cover no-repeat;
-  background-color: #030512;
+  background-color: var(--theme-bg);
 }
 
 .entropy-nebula-1 {
-  background: radial-gradient(circle, rgba(96, 165, 250, 0.32) 0%, rgba(96, 165, 250, 0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--theme-accent) 32%, transparent) 0%, transparent 70%);
 }
 
 .entropy-nebula-2 {
-  background: radial-gradient(circle, rgba(244, 114, 182, 0.28) 0%, rgba(244, 114, 182, 0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--theme-secondary) 28%, transparent) 0%, transparent 70%);
 }
 
 .entropy-nebula-3 {
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.24) 0%, rgba(168, 85, 247, 0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--theme-accentStrong) 24%, transparent) 0%, transparent 70%);
 }
 
 .entropy-nebula-4 {
-  background: radial-gradient(circle, rgba(251, 146, 60, 0.18) 0%, rgba(251, 146, 60, 0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--theme-warning) 18%, transparent) 0%, transparent 70%);
 }
 
 .entropy-wordmark {
   text-shadow:
     0 0 8px rgba(255, 255, 255, 0.95),
-    0 0 24px rgba(147, 197, 253, 0.7),
-    0 0 44px rgba(244, 114, 182, 0.42),
-    0 0 72px rgba(251, 146, 60, 0.22);
+    0 0 24px var(--theme-glow),
+    0 0 44px color-mix(in srgb, var(--theme-accent) 42%, transparent),
+    0 0 72px color-mix(in srgb, var(--theme-secondary) 22%, transparent);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(96, 165, 250, 0.2);
+  background: color-mix(in srgb, var(--theme-accent) 24%, transparent);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(244, 114, 182, 0.34);
+  background: color-mix(in srgb, var(--theme-accentStrong) 36%, transparent);
 }

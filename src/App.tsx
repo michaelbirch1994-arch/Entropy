@@ -34,6 +34,7 @@ import ArchiveView from "./views/ArchiveView";
 import CompareView from "./views/CompareView";
 import IntelligenceDebugView from "./views/IntelligenceDebugView";
 import AxiForgeLabView from "./views/AxiForgeLabView";
+import AppearanceView from "./views/AppearanceView";
 import { downloadReportArtifact } from "./lib/shareReportArtifact";
 import { buildEntropyShareLink } from "./lib/shareLinks";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
@@ -84,6 +85,7 @@ const VIEW_TITLES: Record<string, string> = {
   compare: "Compare Reports",
   intelligence: "Intelligence",
   "axiforge-lab": "Entropy Builder",
+  appearance: "Appearance",
 };
 
 
@@ -118,6 +120,7 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "compare": return <CompareView />;
     case "intelligence": return <IntelligenceDebugView />;
     case "axiforge-lab": return <AxiForgeLabView />;
+    case "appearance": return <AppearanceView />;
     default: return <OverviewView />;
   }
 }
@@ -368,7 +371,7 @@ function ReportShell() {
 
 
   return (
-    <div className="flex h-screen w-full text-slate-100 overflow-hidden">
+    <div className="theme-app-shell flex h-screen w-full overflow-hidden">
       <div className="entropy-bg">
         <div className="entropy-nebula entropy-nebula-1" />
         <div className="entropy-nebula entropy-nebula-2" />
@@ -388,13 +391,13 @@ function ReportShell() {
       <main className="flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar">
         {/* Header - only when report is active */}
         {report && (
-          <header className="border-b border-amber-500/10 bg-black/50 backdrop-blur-xl sticky top-0 z-30 px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+          <header className="theme-topbar sticky top-0 z-30 px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="text-amber-500">{viewIcon}</span>
+                <span className="text-theme-accent">{viewIcon}</span>
                 <div>
-                  <h1 className="text-lg font-black tracking-wider text-slate-100 uppercase font-display">{viewTitle}</h1>
-                  <p className="text-xs text-amber-400/80 font-medium tracking-wide">
+                  <h1 className="text-lg font-black tracking-wider text-theme-text uppercase font-display">{viewTitle}</h1>
+                  <p className="text-xs text-theme-accent/80 font-medium tracking-wide">
                     {headerInfo?.title} - {headerInfo?.dateLabel}
                   </p>
                 </div>
@@ -407,7 +410,7 @@ function ReportShell() {
                 <button
                   onClick={() => setAtHome(true)}
                   title="Import more logs without discarding this report"
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-amber-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-amber-500/30 bg-black/30 transition-colors"
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
                 >
                   <Upload className="w-3 h-3" />
                   Import
@@ -415,7 +418,7 @@ function ReportShell() {
                 <button
                   onClick={handleExportReport}
                   title="Copy a short Entropy viewer link when dps.report permalinks exist; otherwise save a portable Entropy report artifact for web hosting."
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-sky-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-sky-500/30 bg-black/30 transition-colors"
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
                 >
                   <Link2 className="w-3 h-3" />
                   {exportLabel}
@@ -423,7 +426,7 @@ function ReportShell() {
                 <button
                   onClick={() => handleShareToDiscord()}
                   title="Post a compact Entropy summary embed to your saved Discord webhook."
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-violet-300 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-violet-500/30 bg-black/30 transition-colors disabled:opacity-60"
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5 disabled:opacity-60"
                   disabled={discordStatus === "sending"}
                 >
                   <MessageCircle className="w-3 h-3" />
@@ -435,14 +438,14 @@ function ReportShell() {
                     setDiscordOpen(true);
                   }}
                   title="Configure the Discord webhook used by the share button."
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-violet-300 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-violet-500/30 bg-black/30 transition-colors"
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
                 >
                   <Send className="w-3 h-3" />
                   Webhook
                 </button>
                 {source && (
                   <span
-                    className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border ${
+                    className={`theme-status-pill flex items-center gap-1.5 px-2.5 py-1.5 ${
                       source === "upload"
                         ? "text-amber-400 border-amber-500/30 bg-amber-500/5"
                         : "text-sky-400 border-sky-500/30 bg-sky-500/5"
@@ -454,13 +457,13 @@ function ReportShell() {
                 )}
                 <button
                   onClick={clearReport}
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-rose-500/30 bg-black/30 transition-colors"
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5 hover:text-rose-400"
                 >
                   <X className="w-3 h-3" />
                   Clear
                 </button>
                 {headerInfo && (
-                  <div className="flex items-center gap-3 text-xs font-mono text-slate-500 bg-black/30 px-4 py-2 rounded-xl border border-white/[0.06]">
+                  <div className="theme-status-pill flex items-center gap-3 px-4 py-2 text-xs font-mono">
                     <span>v{headerInfo.version}</span>
                   </div>
                 )}
