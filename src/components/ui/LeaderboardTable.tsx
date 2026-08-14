@@ -12,7 +12,7 @@ interface LeaderboardTableProps {
 export default function LeaderboardTable({ entries, metricLabel, compact = false, unit }: LeaderboardTableProps) {
   const max = entries.length ? entries[0].value : 1;
   return (
-    <div className="overflow-x-auto">
+    <div className="theme-table-shell overflow-x-auto">
       <table className="theme-data-table w-full text-left border-collapse text-xs">
         <thead>
           <tr className="theme-table-head text-[10px] uppercase font-bold tracking-wider">

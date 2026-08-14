@@ -264,6 +264,26 @@ kbd {
   background: color-mix(in srgb, var(--theme-accent) 8%, transparent);
 }
 
+.theme-view-layout {
+  --theme-layout-gap: 1.25rem;
+  --theme-card-min: 16rem;
+  --theme-panel-min: 22rem;
+}
+
+.theme-filter-strip {
+  align-items: center;
+}
+
+.theme-stat-grid {
+  align-items: stretch;
+}
+
+.theme-table-shell {
+  border: 1px solid color-mix(in srgb, var(--theme-border) 34%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--theme-bg) 28%, transparent);
+}
+
 .theme-podium-card {
   min-height: 7rem;
 }
@@ -466,6 +486,18 @@ html[data-theme="void-signal"] .entropy-bg::after {
 }
 
 @media (min-width: 1024px) {
+  html[data-theme="siege-ember"] .theme-view-layout {
+    max-width: none;
+  }
+
+  html[data-theme="siege-ember"] .theme-stat-grid {
+    grid-template-columns: minmax(260px, 1.25fr) repeat(3, minmax(160px, 0.9fr));
+  }
+
+  html[data-theme="siege-ember"] .theme-stat-grid > .theme-stat-card:first-child {
+    grid-column: span 2;
+  }
+
   html[data-theme="siege-ember"] .theme-player-card-grid {
     grid-template-columns: minmax(320px, 1.18fr) repeat(2, minmax(250px, 0.91fr));
   }
@@ -478,6 +510,18 @@ html[data-theme="void-signal"] .entropy-bg::after {
   html[data-theme="siege-ember"] .theme-party-grid {
     grid-template-columns: 1.1fr 0.9fr 0.9fr;
   }
+}
+
+html[data-theme="siege-ember"] .theme-filter-strip {
+  border-left: 3px solid var(--theme-accent);
+  padding-left: 0.75rem;
+}
+
+html[data-theme="siege-ember"] .theme-table-shell {
+  border-radius: 1.15rem 0.35rem 1.15rem 0.35rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--theme-danger) 7%, transparent), transparent 34%),
+    color-mix(in srgb, var(--theme-surface) 76%, transparent);
 }
 
 html[data-theme="siege-ember"] .theme-player-card,
@@ -495,7 +539,27 @@ html[data-theme="void-signal"] .theme-stat-card {
   border-radius: 0.5rem;
 }
 
+html[data-theme="void-signal"] .theme-filter-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.5rem;
+}
+
 @media (min-width: 1024px) {
+  html[data-theme="void-signal"] .theme-view-layout {
+    --theme-layout-gap: 0.75rem;
+  }
+
+  html[data-theme="void-signal"] .theme-stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.75rem;
+  }
+
+  html[data-theme="void-signal"] .theme-stat-grid > .theme-stat-card {
+    min-height: 6.25rem;
+    padding: 0.875rem;
+  }
+
   html[data-theme="void-signal"] .theme-player-card-grid {
     grid-template-columns: repeat(4, minmax(210px, 1fr));
     gap: 0.75rem;
@@ -504,6 +568,15 @@ html[data-theme="void-signal"] .theme-stat-card {
   html[data-theme="void-signal"] .theme-podium-grid {
     grid-template-columns: 1.35fr 0.85fr 0.85fr;
   }
+}
+
+html[data-theme="void-signal"] .theme-table-shell {
+  border-radius: 0.5rem;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--theme-secondary) 5%, transparent) 1px, transparent 1px),
+    color-mix(in srgb, var(--theme-bg) 35%, transparent);
+  background-size: 28px 28px, 28px 28px, auto;
 }
 
 html[data-theme="void-signal"] .theme-player-card,
@@ -524,6 +597,21 @@ html[data-theme="steel-depth"] .theme-stat-card {
 }
 
 @media (min-width: 1024px) {
+  html[data-theme="steel-depth"] .theme-view-layout {
+    max-width: 1320px;
+    margin-inline: auto;
+  }
+
+  html[data-theme="steel-depth"] .theme-stat-grid {
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+  }
+
+  html[data-theme="steel-depth"] .theme-stat-grid > .theme-stat-card {
+    display: grid;
+    grid-template-columns: minmax(10rem, 1fr) auto;
+    align-items: center;
+  }
+
   html[data-theme="steel-depth"] .theme-player-card-grid {
     grid-template-columns: repeat(2, minmax(320px, 1fr));
   }
@@ -531,6 +619,14 @@ html[data-theme="steel-depth"] .theme-stat-card {
   html[data-theme="steel-depth"] .theme-party-grid {
     grid-template-columns: repeat(2, minmax(320px, 1fr));
   }
+}
+
+html[data-theme="steel-depth"] .theme-table-shell {
+  border-radius: 0.35rem;
+  border-left-width: 0.45rem;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 9%, transparent), transparent 38%),
+    color-mix(in srgb, var(--theme-surface) 82%, transparent);
 }
 
 html[data-theme="steel-depth"] .theme-player-card,
@@ -550,6 +646,21 @@ html[data-theme="night-ops"] .theme-stat-card {
 }
 
 @media (min-width: 1024px) {
+  html[data-theme="night-ops"] .theme-view-layout {
+    max-width: 1160px;
+    margin-inline: auto;
+  }
+
+  html[data-theme="night-ops"] .theme-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  html[data-theme="night-ops"] .theme-stat-grid > .theme-stat-card {
+    display: grid;
+    grid-template-columns: minmax(14rem, 0.7fr) 1fr;
+    align-items: center;
+  }
+
   html[data-theme="night-ops"] .theme-player-card-grid {
     grid-template-columns: 1fr;
   }
@@ -564,6 +675,17 @@ html[data-theme="night-ops"] .theme-stat-card {
   html[data-theme="night-ops"] .theme-player-card-body {
     margin-top: 0;
   }
+}
+
+html[data-theme="night-ops"] .theme-filter-strip {
+  justify-content: center;
+}
+
+html[data-theme="night-ops"] .theme-table-shell {
+  border-radius: 0.8rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 5%, transparent), transparent 18%),
+    color-mix(in srgb, var(--theme-bg) 42%, transparent);
 }
 
 html[data-theme="night-ops"] .theme-player-card,
@@ -583,6 +705,24 @@ html[data-theme="war-room-gold"] .theme-stat-card {
 }
 
 @media (min-width: 1024px) {
+  html[data-theme="war-room-gold"] .theme-view-layout {
+    max-width: none;
+  }
+
+  html[data-theme="war-room-gold"] .theme-stat-grid {
+    grid-template-columns: repeat(6, minmax(120px, 1fr));
+  }
+
+  html[data-theme="war-room-gold"] .theme-stat-grid > .theme-stat-card {
+    grid-column: span 2;
+  }
+
+  html[data-theme="war-room-gold"] .theme-stat-grid > .theme-stat-card:first-child,
+  html[data-theme="war-room-gold"] .theme-stat-grid > .theme-stat-card:nth-child(2) {
+    grid-column: span 3;
+    min-height: 8rem;
+  }
+
   html[data-theme="war-room-gold"] .theme-player-card-grid {
     grid-template-columns: repeat(6, minmax(130px, 1fr));
   }
@@ -599,6 +739,18 @@ html[data-theme="war-room-gold"] .theme-stat-card {
   html[data-theme="war-room-gold"] .theme-party-grid {
     grid-template-columns: repeat(4, minmax(220px, 1fr));
   }
+}
+
+html[data-theme="war-room-gold"] .theme-filter-strip {
+  justify-content: flex-end;
+}
+
+html[data-theme="war-room-gold"] .theme-table-shell {
+  border-radius: 0.65rem;
+  background:
+    linear-gradient(to bottom, color-mix(in srgb, var(--theme-accentStrong) 8%, transparent), transparent 32%),
+    color-mix(in srgb, var(--theme-surface) 78%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-accentStrong) 22%, transparent);
 }
 
 html[data-theme="war-room-gold"] .theme-player-card,
