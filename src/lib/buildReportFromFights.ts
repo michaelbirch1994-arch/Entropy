@@ -599,6 +599,7 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
 
 
           const buffUptimes = (p.buffUptimes ?? []) as Array<{ id?: number; buffData?: Array<{ uptime?: number; presence?: number }> }>;
+          const fightBuffValues = new Map<number, number>();
                 for (const entry of buffUptimes) {
                           const id = Number(entry?.id);
                           if (!Number.isFinite(id)) continue;
@@ -607,6 +608,17 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                           const meta = buffMetaByClass.get(cls)?.get(id);
                           const uptime = Number(entry?.buffData?.[0]?.uptime);
                           if (!Number.isFinite(uptime)) continue;
+                          // EI normally emits one phase-0 uptime row per buff, but
+                          // defensive test fixtures and some transformed logs may
+                          // carry duplicate ids. Treat the last row for a buff as
+                          // the fight-level value and add it once below, instead of
+                          // averaging duplicate rows inside the same fight.
+                          fightBuffValues.set(id, uptime);
+                }
+
+                fightBuffValues.forEach((uptime, id) => {
+                          const cls = idToClass.get(id);
+                          if (!cls) return;
 
                   const accMapByAccount = accByClass.get(cls)!;
                           let accMap = accMapByAccount.get(account);
@@ -621,7 +633,7 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                   cur.sum += uptime;
                           cur.count += 1;
                           accMap.set(id, cur);
-                }
+                });
         }
   }
 
@@ -1454,15 +1466,17 @@ function computeSynergyInsights(
     const insights: SynergyInsight[] = [];
     const boons = buffCategoryUptimes['Boons'];
 
-  function avgBoonValue(boonName: string): { value: number; stacking: boolean } | null {
+  function avgBoonValue(boonName: string): { value: number; stacking: boolean; lowest?: { account: string; value: number } } | null {
         if (!boons) return null;
         const col = boons.columns.find((c) => c.name === boonName);
         if (!col) return null;
         const withData = boons.rows.filter((r) => r.uptimes[col.id] !== undefined);
         if (withData.length === 0) return null;
+        const lowestRow = withData.reduce((lowest, row) => (row.uptimes[col.id] < lowest.uptimes[col.id] ? row : lowest));
         return {
           value: withData.reduce((sum, r) => sum + (r.uptimes[col.id] || 0), 0) / withData.length,
           stacking: !!col.stacking,
+          lowest: { account: lowestRow.account, value: lowestRow.uptimes[col.id] },
         };
   }
 
@@ -1488,6 +1502,8 @@ function computeSynergyInsights(
                         insights.push({ id: 'stability', severity: 'critical', title: 'Very low Stability coverage', detail: `Squad averaged only ${stability.value.toFixed(2)} Stability stacks - vulnerable to CC chains and pulls/knockbacks.` });
                 } else if (stability.value < 0.35) {
                         insights.push({ id: 'stability', severity: 'warn', title: 'Low Stability coverage', detail: `Squad averaged ${stability.value.toFixed(2)} Stability stacks. Stability is an intensity-stacking boon, so Entropy shows EI-style average stacks here instead of a percent.` });
+                } else if (stability.lowest && stability.lowest.value < 0.15) {
+                        insights.push({ id: 'stability', severity: 'warn', title: 'Stability gap detected', detail: `${stability.lowest.account} averaged only ${stability.lowest.value.toFixed(2)} Stability stacks. Stability is an intensity-stacking boon, so Entropy shows EI-style average stacks here instead of a percent.` });
                 }
           } else if (stability.value < 15) {
                   insights.push({ id: 'stability', severity: 'critical', title: 'Very low Stability uptime', detail: `Squad averaged only ${stability.value.toFixed(0)}% Stability uptime - vulnerable to CC chains and pulls/knockbacks.` });

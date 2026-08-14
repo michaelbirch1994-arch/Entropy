@@ -13,6 +13,11 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+function shortActorName(name: string | undefined): string {
+  if (!name) return "Unknown";
+  return name.split(".")[0] || name;
+}
+
 export default function ReplayView() {
   const { report } = useReport();
   const fights = report?.stats.replayFights;
@@ -28,9 +33,7 @@ export default function ReplayView() {
   // a black screen. Opt-in until the framing is reconciled with the map rect.
   const [showMap, setShowMap] = useState(false);
   const [zoom, setZoom] = useState(1);
-  // Dot radii are in map units, so they must shrink as you zoom in or the
-  // squad turns into one solid blob at high magnification.
-  const dotScale = 0.16 / Math.sqrt(zoom);
+  const [followFocus, setFollowFocus] = useState(true);
   const [showMechanics, setShowMechanics] = useState(true);
   const [showCasts, setShowCasts] = useState(false);
   const rafRef = useRef<number | null>(null);
@@ -91,6 +94,11 @@ export default function ReplayView() {
     return { baseCx, baseCy, w, h, maxPanX, maxPanY, minX: bounds.minX - pad, maxX: bounds.maxX + pad, minY: bounds.minY - pad, maxY: bounds.maxY + pad };
   }, [fight, zoom]);
 
+  // Marker radii are expressed in SVG/world units, but the user experiences
+  // them as screen pixels. Scale marker units from the current viewBox width
+  // so tight replay bounds do not explode dots into huge opaque blobs.
+  const markerUnit = frame ? Math.max(frame.w / 900, 0.08) : 1;
+
   const focusPoint = useMemo(() => {
     if (!fight) return null;
     const squadAlive = fight.data.players.filter((p) => p.inSquad && !isInInterval(p.deadIntervals, t));
@@ -121,8 +129,8 @@ export default function ReplayView() {
 
   const viewBox = useMemo(() => {
     if (!frame) return "0 0 100 100";
-    const preferredCx = zoom > 1 && focusPoint ? focusPoint.x : frame.baseCx;
-    const preferredCy = zoom > 1 && focusPoint ? focusPoint.y : frame.baseCy;
+    const preferredCx = zoom > 1 && followFocus && focusPoint ? focusPoint.x : frame.baseCx;
+    const preferredCy = zoom > 1 && followFocus && focusPoint ? focusPoint.y : frame.baseCy;
     const minCx = frame.minX + frame.w / 2;
     const maxCx = frame.maxX - frame.w / 2;
     const minCy = frame.minY + frame.h / 2;
@@ -130,13 +138,14 @@ export default function ReplayView() {
     const cx = clamp(preferredCx + pan.x, Math.min(minCx, maxCx), Math.max(minCx, maxCx));
     const cy = clamp(preferredCy + pan.y, Math.min(minCy, maxCy), Math.max(minCy, maxCy));
     return `${cx - frame.w / 2} ${cy - frame.h / 2} ${frame.w} ${frame.h}`;
-  }, [frame, focusPoint, pan, zoom]);
+  }, [frame, focusPoint, followFocus, pan, zoom]);
 
   // Mouse/touch drag-to-pan on the SVG viewport. Only active once zoomed in
   // (maxPanX/Y are 0 at zoom 1, so drags are effectively no-ops there).
   function handlePointerDown(e: PointerEvent<SVGSVGElement>) {
     if (zoom <= 1) return;
     (e.target as Element).setPointerCapture(e.pointerId);
+    setFollowFocus(false);
     dragRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
     setDragging(true);
   }
@@ -316,6 +325,8 @@ const svg = document.getElementById('svg');
 const scrub = document.getElementById('scrub');
 const clock = document.getElementById('clock');
 const playBtn = document.getElementById('playBtn');
+const PAD = Math.max((DATA.bounds.maxX - DATA.bounds.minX) * 0.08, 50);
+const UNIT = Math.max((DATA.bounds.maxX - DATA.bounds.minX + PAD * 2) / 720, 0.08);
 function interp(points, t) {
   if (!points.length) return null;
   if (t <= points[0][0]) return points[0];
@@ -332,14 +343,14 @@ function render(t) {
     if (inInterval(e.deadIntervals, t)) return;
     const p = interp(e.points, t); if (!p) return;
     const down = inInterval(e.downIntervals, t);
-    out += '<circle cx="' + p[1] + '" cy="' + p[2] + '" r="' + (down ? 18 : 12) + '" fill="#f43f5e" fill-opacity="' + (down ? 0.25 : 0.75) + '" stroke="' + (down ? '#f43f5e' : 'none') + '" stroke-width="' + (down ? 4 : 0) + '"/>';
+    out += '<circle cx="' + p[1] + '" cy="' + p[2] + '" r="' + ((down ? 9 : 6.5) * UNIT) + '" fill="#f43f5e" fill-opacity="' + (down ? 0.25 : 0.75) + '" stroke="' + (down ? '#f43f5e' : 'none') + '" stroke-width="' + ((down ? 2 : 0) * UNIT) + '"><title>' + (e.id || 'Enemy') + (down ? ' - downed' : '') + '</title></circle>';
   });
   DATA.players.forEach((pl) => {
     if (inInterval(pl.deadIntervals, t)) return;
     const p = interp(pl.points, t); if (!p) return;
     const down = inInterval(pl.downIntervals, t);
-    const r = down ? 20 : pl.isCommander ? 24 : 14;
-    out += '<circle cx="' + p[1] + '" cy="' + p[2] + '" r="' + r + '" fill="' + (pl.inSquad ? '#f59e0b' : '#64748b') + '" fill-opacity="' + (down ? 0.3 : 0.9) + '" stroke="' + (down ? '#f43f5e' : pl.isCommander ? '#fbbf24' : 'none') + '" stroke-width="' + (down || pl.isCommander ? 5 : 0) + '"/>';
+    const r = (down ? 10 : pl.isCommander ? 11 : 7) * UNIT;
+    out += '<circle cx="' + p[1] + '" cy="' + p[2] + '" r="' + r + '" fill="' + (pl.inSquad ? '#f59e0b' : '#64748b') + '" fill-opacity="' + (down ? 0.3 : 0.9) + '" stroke="' + (down ? '#f43f5e' : pl.isCommander ? '#fbbf24' : 'none') + '" stroke-width="' + ((down || pl.isCommander ? 2.25 : 0) * UNIT) + '"><title>' + (pl.account || 'Unknown') + (pl.isCommander ? ' - commander' : '') + (down ? ' - downed' : '') + '</title></circle>';
   });
   svg.innerHTML = out;
   const s = Math.max(0, Math.floor(t / 1000));
@@ -450,7 +461,7 @@ render(0);
               <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2">
                 <div className="text-[10px] uppercase tracking-wider text-sky-400/70 font-bold">Avg. Dist to Tag</div>
                 <div className="text-lg font-black text-sky-300 font-mono">
-                  {liveStats.hasCommander && liveStats.avgDistToTag != null ? Math.round(liveStats.avgDistToTag) : "â"}
+                  {liveStats.hasCommander && liveStats.avgDistToTag != null ? Math.round(liveStats.avgDistToTag) : "-"}
                 </div>
               </div>
             </div>
@@ -478,11 +489,37 @@ render(0);
               ))}
             <div className="flex items-center gap-2 ml-1">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Zoom</span>
-              <input type="range" min={1} max={8} step={0.25} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} className="w-28 accent-sky-400" />
+              <input
+                type="range"
+                min={1}
+                max={8}
+                step={0.25}
+                value={zoom}
+                onChange={(e) => {
+                  setZoom(Number(e.target.value));
+                  if (followFocus) setPan({ x: 0, y: 0 });
+                }}
+                className="w-28 accent-sky-400"
+              />
               <span className="text-[10px] font-mono text-slate-400 w-9">{zoom.toFixed(1)}x</span>
+              {zoom > 1 && (
+                <button
+                  onClick={() => {
+                    setFollowFocus((v) => !v);
+                    setPan({ x: 0, y: 0 });
+                  }}
+                  className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded border transition-colors ${
+                    followFocus
+                      ? "text-sky-300 border-sky-500/30 bg-sky-500/10"
+                      : "text-slate-500 border-slate-800 hover:text-slate-300"
+                  }`}
+                >
+                  Follow tag
+                </button>
+              )}
               {zoom !== 1 && (
                 <button
-                  onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+                  onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); setFollowFocus(true); }}
                   className="text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300 px-2 py-1 rounded border border-slate-800"
                 >
                   Reset
@@ -546,10 +583,10 @@ render(0);
                       key={`mech-${m.t}-${m.name}-${i}`}
                       cx={pt.x}
                       cy={pt.y}
-                      r={(40 + age * 70) * dotScale}
+                      r={(12 + age * 20) * markerUnit}
                       fill="none"
                       stroke="#f43f5e"
-                      strokeWidth={6 * dotScale}
+                      strokeWidth={2 * markerUnit}
                       opacity={0.75 * (1 - age)}
                     />
                   );
@@ -569,10 +606,10 @@ render(0);
                       key={`cast-${p.account}`}
                       cx={pt.x}
                       cy={pt.y}
-                      r={(18 + age * 40) * dotScale}
+                      r={(7 + age * 12) * markerUnit}
                       fill="none"
                       stroke="#fbbf24"
-                      strokeWidth={4 * dotScale}
+                      strokeWidth={1.5 * markerUnit}
                       opacity={0.6 * (1 - age)}
                     />
                   );
@@ -589,12 +626,14 @@ render(0);
                     key={e.id}
                     cx={pt.x}
                     cy={pt.y}
-                    r={(down ? 45 : 38) * dotScale}
+                    r={(down ? 9 : 6.5) * markerUnit}
                     fill="#f43f5e"
                     fillOpacity={down ? 0.25 : 0.75}
                     stroke={down ? "#f43f5e" : "none"}
-                    strokeWidth={(down ? 10 : 0) * dotScale}
-                  />
+                    strokeWidth={(down ? 2 : 0) * markerUnit}
+                  >
+                    <title>{`${e.name || "Enemy"}${down ? " — downed" : ""}`}</title>
+                  </circle>
                 );
               })}
               {fight.data.players.map((p) => {
@@ -608,12 +647,14 @@ render(0);
                     key={p.account}
                     cx={pt.x}
                     cy={pt.y}
-                    r={(down ? 55 : p.isCommander ? 65 : 45) * dotScale}
+                    r={(down ? 10 : p.isCommander ? 11 : 7) * markerUnit}
                     fill={p.inSquad ? "#f59e0b" : "#64748b"}
                     fillOpacity={down ? 0.3 : 0.9}
                     stroke={down ? "#f43f5e" : p.isCommander ? "#fbbf24" : "none"}
-                    strokeWidth={(down || p.isCommander ? 14 : 0) * dotScale}
-                  />
+                    strokeWidth={(down || p.isCommander ? 2.25 : 0) * markerUnit}
+                  >
+                    <title>{`${shortActorName(p.account)}${p.isCommander ? " — commander" : ""}${down ? " — downed" : ""}`}</title>
+                  </circle>
                 );
               })}
             </svg>
