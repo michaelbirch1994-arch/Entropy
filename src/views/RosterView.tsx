@@ -97,9 +97,9 @@ export default function RosterView() {
   );
 
   return (
-    <div className="space-y-5 animate-view pb-12">
+    <div className="theme-view-layout space-y-5 animate-view pb-12">
       {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="theme-stat-grid grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Roster Size" value={fmtNum(attendance.length)} icon={<Users className="w-3.5 h-3.5 text-theme-accent" />} accent="text-theme-accent" />
         <StatCard label="Avg Combat Time" value={fmtDur(avgCombatMs)} icon={<Clock className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
         <StatCard label="Full Attendance" value={fullAtt} icon={<Heart className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" sub=">90% combat uptime" />
@@ -155,7 +155,7 @@ export default function RosterView() {
 
       {/* Roster table */}
       <Panel title="Roster Intel" icon={<Users className="w-4 h-4" />} accent="text-theme-accent" action={`${attendance.length} PLAYERS`} bodyClassName="p-0">
-        <div className="overflow-x-auto custom-scrollbar">
+        <div className="theme-table-shell overflow-x-auto custom-scrollbar">
           <table className="theme-data-table w-full text-left text-xs">
             <thead>
               <tr className="theme-table-head text-[10px] uppercase font-bold tracking-wider">

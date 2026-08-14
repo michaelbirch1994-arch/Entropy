@@ -69,7 +69,7 @@ export default function PlayerProfilesView() {
   }
 
   return (
-    <div className="space-y-5 animate-view pb-12">
+    <div className="theme-view-layout space-y-5 animate-view pb-12">
       <Panel
         title="Player Profiles"
         subtitle="Career stats accumulated across every report you've loaded on this device"
@@ -104,7 +104,7 @@ export default function PlayerProfilesView() {
               ))}
             </div>
 
-            <div className="overflow-x-auto custom-scrollbar">
+            <div className="theme-table-shell overflow-x-auto custom-scrollbar">
               <table className="theme-data-table w-full text-left text-xs">
                 <thead>
                   <tr className="theme-table-head text-[10px] uppercase font-bold tracking-wider">

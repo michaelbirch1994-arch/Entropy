@@ -286,7 +286,7 @@ export default function TopPlayersView() {
   return (
     <div className="theme-view-layout space-y-5 animate-view pb-12" key={`top-players:${snapshotKey}`}>
       {/* Metric selector */}
-      <div className="flex flex-wrap gap-2">
+      <div className="theme-filter-strip flex flex-wrap gap-2">
         {METRICS.map((m) => {
           const Icon = m.icon;
           const isActive = metric === m.key;
