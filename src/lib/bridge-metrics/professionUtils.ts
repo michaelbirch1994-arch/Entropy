@@ -168,8 +168,16 @@ const PROFESSION_EMOJI: Record<string, string> = {
     Unknown: '⚪️'
 };
 
+export function normalizeProfessionName(profession: string | undefined | null): string {
+    return String(profession ?? '')
+        .replace(/\s*\([^)]*\)\s*$/, '')
+        .replace(/\s*\[[^\]]*\]\s*$/, '')
+        .trim();
+}
+
 export function getProfessionColor(profession: string): string {
-    return PROFESSION_COLORS[profession] || PROFESSION_COLORS['Unknown'];
+    const normalized = normalizeProfessionName(profession);
+    return PROFESSION_COLORS[normalized] || PROFESSION_COLORS[profession] || PROFESSION_COLORS['Unknown'];
 }
 
 export function hexToRgba(hex: string, alpha: number): string {
@@ -182,12 +190,14 @@ export function hexToRgba(hex: string, alpha: number): string {
 
 export function getProfessionBase(profession: string): string {
     if (!profession) return 'Unknown';
-    return PROFESSION_BASE[profession] || profession;
+    const normalized = normalizeProfessionName(profession);
+    return PROFESSION_BASE[normalized] || PROFESSION_BASE[profession] || normalized || profession;
 }
 
 export function getProfessionAbbrev(profession: string): string {
     if (!profession) return PROFESSION_ABBREVIATIONS.Unknown;
-    return PROFESSION_ABBREVIATIONS[profession] || profession.slice(0, 3).toLowerCase();
+    const normalized = normalizeProfessionName(profession);
+    return PROFESSION_ABBREVIATIONS[normalized] || PROFESSION_ABBREVIATIONS[profession] || normalized.slice(0, 3).toLowerCase();
 }
 
 export function getProfessionEmoji(profession: string): string {
