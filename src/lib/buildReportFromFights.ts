@@ -1913,12 +1913,28 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     const total = fights.length;
     const avgSquadSize = total > 0 ? Math.round(totalSquadSizeAccum / total) : 0;
     const avgEnemies = total > 0 ? Math.round(totalEnemiesAccum / total) : 0;
+  const canonicalTotals = fightBreakdown.reduce(
+        (sum, fight) => {
+                sum.squadKills += Number(fight.enemyDeaths || 0);
+                sum.squadDeaths += Number(fight.alliesDead || 0);
+                sum.squadDowns += Number(fight.enemyDowns || 0);
+                sum.enemyDowns += Number(fight.alliesDown || 0);
+                return sum;
+        },
+        { squadKills: 0, squadDeaths: 0, squadDowns: 0, enemyDowns: 0 },
+  );
+  const reportTotalSquadKills = canonicalTotals.squadKills || totalSquadKills;
+  const reportTotalSquadDeaths = canonicalTotals.squadDeaths || totalSquadDeaths;
+  const reportTotalSquadDowns = canonicalTotals.squadDowns || totalSquadDowns;
+  const reportTotalEnemyDowns = canonicalTotals.enemyDowns || totalEnemyDowns;
+  const reportTotalEnemyKills = reportTotalSquadDeaths || totalEnemyKills;
+  const reportTotalEnemyDeaths = reportTotalSquadKills || totalEnemyDeaths;
     // Real numbers, not pre-formatted strings - ReportStats declares these as
   // `number` (consumers like generateFightRecap.ts do actual arithmetic on
   // them: `s.squadKDR / s.enemyKDR`). Formatting to 2 decimals / "∞" is a
   // display concern, handled by fmtFixed at render time.
-  const squadKDR = totalSquadDeaths > 0 ? totalSquadKills / totalSquadDeaths : totalSquadKills > 0 ? Infinity : 0;
-    const enemyKDR = totalEnemyDeaths > 0 ? totalEnemyKills / totalEnemyDeaths : totalEnemyKills > 0 ? Infinity : 0;
+  const squadKDR = reportTotalSquadDeaths > 0 ? reportTotalSquadKills / reportTotalSquadDeaths : reportTotalSquadKills > 0 ? Infinity : 0;
+    const enemyKDR = reportTotalEnemyDeaths > 0 ? reportTotalEnemyKills / reportTotalEnemyDeaths : reportTotalEnemyKills > 0 ? Infinity : 0;
 
   // Resolve primary profession per player (most time played), matching upstream.
   const playerEntries: PlayerStats[] = Array.from(playerStats.values()).map((stat) => {
@@ -2071,7 +2087,12 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
 
   const stats: ReportStats = {
         total, wins, losses, avgSquadSize, avgEnemies, squadKDR, enemyKDR,
-        totalSquadKills, totalSquadDeaths, totalEnemyKills, totalEnemyDeaths, totalSquadDowns, totalEnemyDowns,
+        totalSquadKills: reportTotalSquadKills,
+        totalSquadDeaths: reportTotalSquadDeaths,
+        totalEnemyKills: reportTotalEnemyKills,
+        totalEnemyDeaths: reportTotalEnemyDeaths,
+        totalSquadDowns: reportTotalSquadDowns,
+        totalEnemyDowns: reportTotalEnemyDowns,
         leaderboards,
         maxDownContrib: getTop(leaderboards.downContrib, playerEntries),
         maxBarrier: getTop(leaderboards.barrier, playerEntries),
@@ -2139,7 +2160,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
         rotations: computeRotations(fights),
         dpsGraph: computeDpsGraph(fights),
         replayFights: computeReplayFights(fights),
-        synergyInsights: computeSynergyInsights(playerEntries, buffCategoryUptimes, roleClassifications, totalSquadKills, totalSquadDeaths, avgSquadSize),
+        synergyInsights: computeSynergyInsights(playerEntries, buffCategoryUptimes, roleClassifications, reportTotalSquadKills, reportTotalSquadDeaths, avgSquadSize),
         mechanics: computeMechanicsTimeline(fights),
         topHealingSkills: computeTopHealingSkills(fights),
         playerSkillBreakdowns: serializePlayerSkillBreakdowns(agg),
