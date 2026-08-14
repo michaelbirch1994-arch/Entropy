@@ -34,7 +34,6 @@ import ArchiveView from "./views/ArchiveView";
 import CompareView from "./views/CompareView";
 import IntelligenceDebugView from "./views/IntelligenceDebugView";
 import AxiForgeLabView from "./views/AxiForgeLabView";
-import AppearanceView from "./views/AppearanceView";
 import { downloadReportArtifact } from "./lib/shareReportArtifact";
 import { buildEntropyShareLink } from "./lib/shareLinks";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
@@ -85,7 +84,6 @@ const VIEW_TITLES: Record<string, string> = {
   compare: "Compare Reports",
   intelligence: "Intelligence",
   "axiforge-lab": "Entropy Builder",
-  appearance: "Appearance",
 };
 
 
@@ -120,7 +118,6 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "compare": return <CompareView />;
     case "intelligence": return <IntelligenceDebugView />;
     case "axiforge-lab": return <AxiForgeLabView />;
-    case "appearance": return <AppearanceView />;
     default: return <OverviewView />;
   }
 }
