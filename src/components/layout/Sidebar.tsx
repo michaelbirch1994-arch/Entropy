@@ -23,7 +23,6 @@ import {
   Archive,
   GitCompare,
   FlaskConical,
-  Palette,
   Search,
   Pin,
 } from "lucide-react";
@@ -103,7 +102,6 @@ const MENU: NavSection[] = [
       { id: "archive", label: "Report Archive", keywords: ["history", "saved"] },
       { id: "compare", label: "Compare Reports", keywords: ["diff", "reports"] },
       { id: "axiforge-lab", label: "Entropy Builder", keywords: ["builder", "build editor", "tools"] },
-      { id: "appearance", label: "Appearance", keywords: ["settings", "theme", "visual"] },
     ],
   },
 ];
@@ -365,5 +363,4 @@ export const VIEW_ICONS: Record<string, ReactNode> = {
   compare: <GitCompare className="w-4 h-4" />,
   intelligence: <Sparkles className="w-4 h-4" />,
   "axiforge-lab": <FlaskConical className="w-4 h-4" />,
-  appearance: <Palette className="w-4 h-4" />,
 };

@@ -1,0 +1,25 @@
+export const ENTROPY_THEME = {
+  typography: {
+    display: "\"Fraunces\", \"Space Grotesk\", serif",
+    body: "\"Inter\", system-ui, -apple-system, sans-serif",
+    mono: "\"JetBrains Mono\", \"Fira Code\", ui-monospace, monospace",
+  },
+  colors: {
+    bg: "#0A0705",
+    surface: "#17100C",
+    surfaceElevated: "#21150E",
+    border: "#7A2E10",
+    text: "#F2E9DD",
+    textMuted: "#8C8178",
+    accent: "#FF5A1F",
+    accentDim: "#7A2E10",
+    accentStrong: "#FF8A3D",
+    secondary: "#B34B1D",
+    danger: "#FF4A2F",
+    warning: "#F0A93B",
+    success: "#7DBB73",
+    info: "#62B6D9",
+    grid: "#2B1A12",
+    glow: "rgba(255, 90, 31, 0.32)",
+  },
+} as const;
