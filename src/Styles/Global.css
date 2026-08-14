@@ -193,6 +193,96 @@ kbd {
   text-transform: uppercase;
 }
 
+.theme-player-card,
+.theme-podium-card,
+.theme-party-card,
+.theme-source-card,
+.theme-roster-player {
+  border: 1px solid color-mix(in srgb, var(--theme-border) 58%, transparent);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--theme-accent) 12%, transparent), transparent 42%),
+    color-mix(in srgb, var(--theme-surface) 88%, transparent);
+  box-shadow: 0 18px 48px -34px rgba(0, 0, 0, 0.9), 0 0 34px -28px var(--theme-glow);
+  backdrop-filter: blur(12px);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, background 180ms ease;
+}
+
+.theme-player-card:hover,
+.theme-podium-card:hover,
+.theme-party-card:hover,
+.theme-roster-player:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 52%, var(--theme-border));
+  box-shadow: 0 22px 56px -34px rgba(0, 0, 0, 0.95), 0 0 44px -24px var(--theme-glow);
+}
+
+.theme-filter-button {
+  border-color: color-mix(in srgb, var(--theme-border) 52%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 74%, transparent);
+  color: var(--theme-textMuted);
+}
+
+.theme-filter-button:hover,
+.theme-filter-button.is-active {
+  border-color: color-mix(in srgb, var(--theme-accent) 56%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
+  color: var(--theme-accent);
+  box-shadow: 0 0 24px -18px var(--theme-glow);
+}
+
+.theme-profession-chip {
+  border-color: color-mix(in srgb, var(--theme-accent) 36%, var(--theme-border)) !important;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 16%, transparent), color-mix(in srgb, var(--theme-surfaceElevated) 86%, transparent)) !important;
+  color: var(--theme-text) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-text) 4%, transparent);
+}
+
+.theme-progress-track {
+  background: color-mix(in srgb, var(--theme-grid) 70%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-border) 24%, transparent);
+}
+
+.theme-progress-fill {
+  background: linear-gradient(90deg, var(--theme-accent), var(--theme-accentStrong)) !important;
+  box-shadow: 0 0 18px -8px var(--theme-glow);
+}
+
+.theme-data-table thead {
+  background: color-mix(in srgb, var(--theme-surfaceElevated) 42%, transparent);
+}
+
+.theme-table-head {
+  color: var(--theme-textMuted);
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 54%, transparent);
+}
+
+.theme-table-row {
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 26%, transparent);
+}
+
+.theme-table-row:hover {
+  background: color-mix(in srgb, var(--theme-accent) 8%, transparent);
+}
+
+.theme-podium-card {
+  min-height: 7rem;
+}
+
+.theme-podium-rank,
+.theme-podium-value {
+  color: var(--theme-accentStrong);
+}
+
+.theme-podium-card.is-rank-2 .theme-podium-rank,
+.theme-podium-card.is-rank-2 .theme-podium-value {
+  color: var(--theme-text);
+}
+
+.theme-podium-card.is-rank-3 .theme-podium-rank,
+.theme-podium-card.is-rank-3 .theme-podium-value {
+  color: var(--theme-accent);
+}
+
 .theme-swatch-card {
   min-height: 13rem;
   border-radius: 0.75rem;
@@ -375,9 +465,56 @@ html[data-theme="void-signal"] .entropy-bg::after {
   animation: entropyDrift 90s linear infinite;
 }
 
+@media (min-width: 1024px) {
+  html[data-theme="siege-ember"] .theme-player-card-grid {
+    grid-template-columns: minmax(320px, 1.18fr) repeat(2, minmax(250px, 0.91fr));
+  }
+
+  html[data-theme="siege-ember"] .theme-player-card-grid > .theme-player-card:first-child {
+    grid-row: span 2;
+    min-height: 22rem;
+  }
+
+  html[data-theme="siege-ember"] .theme-party-grid {
+    grid-template-columns: 1.1fr 0.9fr 0.9fr;
+  }
+}
+
+html[data-theme="siege-ember"] .theme-player-card,
+html[data-theme="siege-ember"] .theme-podium-card,
+html[data-theme="siege-ember"] .theme-party-card {
+  border-radius: 1.25rem 0.35rem 1.25rem 0.35rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 14%, transparent), transparent 34%),
+    linear-gradient(315deg, color-mix(in srgb, var(--theme-danger) 10%, transparent), transparent 48%),
+    color-mix(in srgb, var(--theme-surface) 88%, transparent);
+}
+
 html[data-theme="void-signal"] .theme-panel,
 html[data-theme="void-signal"] .theme-stat-card {
   border-radius: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  html[data-theme="void-signal"] .theme-player-card-grid {
+    grid-template-columns: repeat(4, minmax(210px, 1fr));
+    gap: 0.75rem;
+  }
+
+  html[data-theme="void-signal"] .theme-podium-grid {
+    grid-template-columns: 1.35fr 0.85fr 0.85fr;
+  }
+}
+
+html[data-theme="void-signal"] .theme-player-card,
+html[data-theme="void-signal"] .theme-podium-card,
+html[data-theme="void-signal"] .theme-party-card {
+  border-radius: 0.45rem;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--theme-secondary) 8%, transparent) 1px, transparent 1px),
+    color-mix(in srgb, var(--theme-surface) 90%, transparent);
+  background-size: 26px 26px, 26px 26px, auto;
 }
 
 html[data-theme="steel-depth"] .theme-panel,
@@ -386,10 +523,56 @@ html[data-theme="steel-depth"] .theme-stat-card {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-grid) 42%, transparent), 0 8px 40px -18px rgba(0, 0, 0, 0.7);
 }
 
+@media (min-width: 1024px) {
+  html[data-theme="steel-depth"] .theme-player-card-grid {
+    grid-template-columns: repeat(2, minmax(320px, 1fr));
+  }
+
+  html[data-theme="steel-depth"] .theme-party-grid {
+    grid-template-columns: repeat(2, minmax(320px, 1fr));
+  }
+}
+
+html[data-theme="steel-depth"] .theme-player-card,
+html[data-theme="steel-depth"] .theme-podium-card,
+html[data-theme="steel-depth"] .theme-party-card {
+  border-radius: 0.35rem;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 14%, transparent), transparent 0.45rem),
+    color-mix(in srgb, var(--theme-surface) 90%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-grid) 46%, transparent), 0 18px 44px -34px rgba(0, 0, 0, 0.95);
+}
+
 html[data-theme="night-ops"] .theme-panel,
 html[data-theme="night-ops"] .theme-stat-card {
   background:
     linear-gradient(145deg, color-mix(in srgb, var(--theme-surfaceElevated) 54%, transparent), color-mix(in srgb, var(--theme-surface) 84%, transparent));
+}
+
+@media (min-width: 1024px) {
+  html[data-theme="night-ops"] .theme-player-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  html[data-theme="night-ops"] .theme-player-card {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.78fr) 1fr;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  html[data-theme="night-ops"] .theme-player-card-body {
+    margin-top: 0;
+  }
+}
+
+html[data-theme="night-ops"] .theme-player-card,
+html[data-theme="night-ops"] .theme-podium-card,
+html[data-theme="night-ops"] .theme-party-card {
+  border-radius: 0.8rem;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 10%, transparent), transparent 38%),
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-surfaceElevated) 58%, transparent), color-mix(in srgb, var(--theme-surface) 88%, transparent));
 }
 
 html[data-theme="war-room-gold"] .theme-panel,
@@ -397,6 +580,35 @@ html[data-theme="war-room-gold"] .theme-stat-card {
   background:
     linear-gradient(to bottom, color-mix(in srgb, var(--theme-accent) 8%, transparent), transparent 42%),
     color-mix(in srgb, var(--theme-surface) 82%, transparent);
+}
+
+@media (min-width: 1024px) {
+  html[data-theme="war-room-gold"] .theme-player-card-grid {
+    grid-template-columns: repeat(6, minmax(130px, 1fr));
+  }
+
+  html[data-theme="war-room-gold"] .theme-player-card-grid > .theme-player-card {
+    grid-column: span 2;
+  }
+
+  html[data-theme="war-room-gold"] .theme-player-card-grid > .theme-player-card:nth-child(1),
+  html[data-theme="war-room-gold"] .theme-player-card-grid > .theme-player-card:nth-child(2) {
+    grid-column: span 3;
+  }
+
+  html[data-theme="war-room-gold"] .theme-party-grid {
+    grid-template-columns: repeat(4, minmax(220px, 1fr));
+  }
+}
+
+html[data-theme="war-room-gold"] .theme-player-card,
+html[data-theme="war-room-gold"] .theme-podium-card,
+html[data-theme="war-room-gold"] .theme-party-card {
+  border-radius: 0.65rem;
+  background:
+    linear-gradient(to bottom, color-mix(in srgb, var(--theme-accentStrong) 14%, transparent), transparent 36%),
+    color-mix(in srgb, var(--theme-surface) 90%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-accentStrong) 28%, transparent), 0 20px 52px -36px rgba(0, 0, 0, 0.95);
 }
 
 @media (prefers-reduced-motion: reduce) {

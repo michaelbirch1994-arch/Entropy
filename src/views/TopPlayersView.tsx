@@ -163,30 +163,30 @@ function buildPlayerSourceBreakdown({
 function SourceGroup({ title, rows }: { title: string; rows: SourceRow[] }) {
   const max = rows[0]?.value ?? 0;
   return (
-    <div className="rounded-xl border border-slate-800/70 bg-[#070b15]/70 p-3">
-      <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{title}</div>
+    <div className="theme-source-card rounded-xl p-3">
+      <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-theme-muted">{title}</div>
       {rows.length ? (
         <div className="space-y-2">
           {rows.slice(0, 8).map((row) => (
             <div key={`${title}:${row.label}`} className="space-y-1">
               <div className="flex items-center justify-between gap-3 text-[11px]">
-                <span className="min-w-0 flex items-center gap-2 truncate text-slate-300">
+                <span className="min-w-0 flex items-center gap-2 truncate text-theme-text/85">
                   {row.icon && <img src={row.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm object-cover" loading="lazy" />}
                   <span className="truncate">{row.label}</span>
                 </span>
-                <span className="flex-shrink-0 text-right font-mono font-bold text-slate-100">
+                <span className="flex-shrink-0 text-right font-mono font-bold text-theme-text">
                   {fmtCompact(row.value)}
-                  {typeof row.hits === "number" && row.hits > 0 && <span className="ml-1 text-[9px] text-slate-500">{fmtNum(row.hits)} hits</span>}
+                  {typeof row.hits === "number" && row.hits > 0 && <span className="ml-1 text-[9px] text-theme-muted">{fmtNum(row.hits)} hits</span>}
                 </span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-slate-800/80">
-                <div className={`h-full rounded-full ${row.tone}`} style={{ width: `${max > 0 ? Math.max(4, (row.value / max) * 100) : 0}%` }} />
+              <div className="theme-progress-track h-1.5 overflow-hidden rounded-full">
+                <div className={`theme-progress-fill h-full rounded-full ${row.tone}`} style={{ width: `${max > 0 ? Math.max(4, (row.value / max) * 100) : 0}%` }} />
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="text-[11px] text-slate-600">No recorded sources in this bucket.</div>
+        <div className="text-[11px] text-theme-muted/70">No recorded sources in this bucket.</div>
       )}
     </div>
   );
@@ -218,42 +218,42 @@ function PlayerMetricCard({
     <button
       type="button"
       onClick={onToggle}
-      className="rounded-2xl border border-slate-800/80 bg-[#0a101f]/90 p-4 text-left shadow-lg transition-colors hover:border-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+      className="theme-player-card rounded-2xl p-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent/40"
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="theme-player-card-head flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border ${profChip(entry.profession)}`}>
             <ProfessionIcon profession={entry.profession} className="h-6 w-6" />
           </div>
           <div className="min-w-0">
-            <div className="truncate text-sm font-bold text-slate-100">{entry.account}</div>
-            <div className="mt-0.5 text-[10px] font-mono text-slate-500">{entry.profession}</div>
+            <div className="truncate text-sm font-bold text-theme-text">{entry.account}</div>
+            <div className="mt-0.5 text-[10px] font-mono text-theme-muted">{entry.profession}</div>
           </div>
         </div>
-        <span className={`font-mono text-xs font-black ${entry.rank <= 3 ? "text-amber-400" : "text-slate-500"}`}>
+        <span className={`font-mono text-xs font-black ${entry.rank <= 3 ? "text-theme-accent-strong" : "text-theme-muted"}`}>
           #{entry.rank || index + 1}
         </span>
       </div>
 
-      <div className="mt-4">
+      <div className="theme-player-card-body mt-4">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{metricLabel}</div>
-            <div className="mt-1 font-mono text-2xl font-black text-slate-100">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-theme-muted">{metricLabel}</div>
+            <div className="mt-1 font-mono text-2xl font-black text-theme-text">
               {formatMetricValue(entry, unit)}
-              {unit && <span className="ml-1 text-[10px] font-bold text-slate-500">{unit}</span>}
+              {unit && <span className="ml-1 text-[10px] font-bold text-theme-muted">{unit}</span>}
             </div>
           </div>
-          <div className="text-right text-[10px] font-mono text-slate-500">{entry.count} logs</div>
+          <div className="text-right text-[10px] font-mono text-theme-muted">{entry.count} logs</div>
         </div>
-        <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800/60">
-          <div className={`h-full rounded-full ${style.dot} transition-all duration-500`} style={{ width: `${share}%` }} />
+        <div className="theme-progress-track mt-3 h-2 overflow-hidden rounded-full">
+          <div className={`theme-progress-fill h-full rounded-full ${style.dot} transition-all duration-500`} style={{ width: `${share}%` }} />
         </div>
-        <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-theme-muted">
           Share of current leader
         </div>
       </div>
-      <div className="mt-3 flex items-center justify-between border-t border-slate-800/60 pt-3 text-[10px] font-bold uppercase tracking-wider text-sky-400">
+      <div className="mt-3 flex items-center justify-between border-t border-theme-border/50 pt-3 text-[10px] font-bold uppercase tracking-wider text-theme-accent">
         <span>{expanded ? "Hide source breakdown" : "Show source breakdown"}</span>
         {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
       </div>
@@ -284,7 +284,7 @@ export default function TopPlayersView() {
   const snapshotKey = leaderboardSnapshotKey(metric, entries);
 
   return (
-    <div className="space-y-5 animate-view pb-12" key={`top-players:${snapshotKey}`}>
+    <div className="theme-view-layout space-y-5 animate-view pb-12" key={`top-players:${snapshotKey}`}>
       {/* Metric selector */}
       <div className="flex flex-wrap gap-2">
         {METRICS.map((m) => {
@@ -294,10 +294,10 @@ export default function TopPlayersView() {
             <button
               key={m.key}
               onClick={() => setMetric(m.key)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 border ${
+              className={`theme-filter-button flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 border ${
                 isActive
-                  ? "bg-sky-500/15 text-sky-400 border-sky-500/40 shadow-[0_0_20px_rgba(59,130,246,0.15)]"
-                  : "bg-[#0a101f] text-slate-500 border-slate-800 hover:border-slate-700 hover:text-slate-300"
+                  ? "is-active"
+                  : ""
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -308,26 +308,24 @@ export default function TopPlayersView() {
       </div>
 
       {/* Top 3 podium */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" key={`podium:${snapshotKey}`}>
+      <div className="theme-podium-grid grid grid-cols-1 md:grid-cols-3 gap-4" key={`podium:${snapshotKey}`}>
         {entries.slice(0, 3).map((e, i) => {
           const place = i + 1;
-          const colors = ["text-amber-400", "text-slate-300", "text-orange-400"];
-          const borders = ["border-amber-500/40", "border-slate-500/40", "border-orange-600/40"];
           return (
             <div
               key={`${metric}:podium:${e.account}:${e.profession}:${e.rank}:${e.value}`}
-              className={`bg-[#0a101f]/90 border ${borders[i]} rounded-2xl p-4 shadow-xl flex items-center gap-4`}
+              className={`theme-podium-card is-rank-${place} rounded-2xl p-4 flex items-center gap-4`}
             >
-              <div className={`text-3xl font-black font-mono ${colors[i]}`}>#{place}</div>
+              <div className="theme-podium-rank text-3xl font-black font-mono">#{place}</div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-slate-100 truncate">{e.account}</div>
-                <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
+                <div className="text-sm font-bold text-theme-text truncate">{e.account}</div>
+                <div className="mt-1 flex items-center gap-1.5 text-[10px] text-theme-muted font-mono">
                   <ProfessionIcon profession={e.profession} className="h-3.5 w-3.5" />
                   {e.profession}
                 </div>
-                <div className={`text-lg font-black font-mono ${colors[i]} mt-1`}>
+                <div className="theme-podium-value text-lg font-black font-mono mt-1">
                   {formatMetricValue(e, active.unit)}
-                  {active.unit && <span className="ml-1 text-[10px] text-slate-500">{active.unit}</span>}
+                  {active.unit && <span className="ml-1 text-[10px] text-theme-muted">{active.unit}</span>}
                 </div>
               </div>
             </div>
@@ -344,7 +342,7 @@ export default function TopPlayersView() {
         accent="text-sky-400"
       >
         {entries.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" key={`cards:${snapshotKey}`}>
+          <div className="theme-player-card-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" key={`cards:${snapshotKey}`}>
             {entries.slice(0, 12).map((entry, index) => (
               <PlayerMetricCard
                 key={`${metric}:card:${entry.account}:${entry.profession}:${entry.rank}:${entry.value}:${entry.count}`}
@@ -370,7 +368,7 @@ export default function TopPlayersView() {
             ))}
           </div>
         ) : (
-          <div className="py-10 text-center text-sm text-slate-500">No leaderboard data available for {active.label}.</div>
+          <div className="py-10 text-center text-sm text-theme-muted">No leaderboard data available for {active.label}.</div>
         )}
       </Panel>
 
