@@ -126,7 +126,7 @@ function findItem(viewId: string): NavItem | undefined {
 export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   const [expanded, setExpanded] = useState<string | null>(() => findSectionForView(activeView) ?? "OVERVIEW");
   const [query, setQuery] = useState("");
-  const [compact, setCompact] = useState(false);
+  const [compact, setCompact] = useState(() => window.innerWidth <= 720);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [recent, setRecent] = useState<NavItem[]>(() => {
     try {
@@ -160,6 +160,14 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth <= 720) setCompact(true);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   const toggle = (title: string) => setExpanded(expanded === title ? null : title);

@@ -44,7 +44,7 @@ interface QueueItem {
   errorMsg?: string;
 }
 
-export default function RawLogImporter() {
+export default function RawLogImporter({ cinematic = false }: { cinematic?: boolean }) {
   const { setReport } = useReport();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -278,14 +278,14 @@ export default function RawLogImporter() {
   }
 
   return (
-    <div className="w-full max-w-lg">
+    <div className={`w-full ${cinematic ? "theme-raw-ingress" : "max-w-lg"}`}>
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-amber-400 transition-colors py-2"
       >
         <span className="flex items-center gap-1.5">
           <Swords className="w-3 h-3" />
-          Import raw combat logs (.zevtc / dps.report links)
+          {cinematic ? "Combat record ingress" : "Import raw combat logs (.zevtc / dps.report links)"}
         </span>
         <span>{open ? "Hide" : "Show"}</span>
       </button>

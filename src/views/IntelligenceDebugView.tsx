@@ -7,6 +7,8 @@ import {
   Flame,
   FileWarning,
   Gauge,
+  Eye,
+  EyeOff,
   ListChecks,
   MapPinned,
   Radar,
@@ -498,6 +500,38 @@ function EngagementCard({ insight, fightContext }: { insight: IntelligenceEngage
   );
 }
 
+function EngagementRailItem({
+  insight,
+  fightContext,
+  selected,
+  onSelect,
+}: {
+  insight: IntelligenceEngagementInsight;
+  fightContext: FightContext;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const style = PRESSURE_STYLE[insight.pressureLabel];
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
+      className={`theme-intel-rail-item w-full border p-3 text-left transition ${selected ? `${style.border} ring-1 ring-current/20` : "border-white/[0.06] bg-black/25 hover:border-white/15"}`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Priority {insight.priority}</span>
+        <span className={`text-[10px] font-black uppercase ${style.text}`}>{style.label}</span>
+      </div>
+      <div className="mt-2 truncate text-sm font-black uppercase text-slate-100">{insight.label}</div>
+      <div className="mt-1 flex items-center justify-between gap-3 font-mono text-[10px] text-slate-500">
+        <span>{fightContext.label} · {formatTime(insight.timestampMs)}</span>
+        <span>{insight.downs}D / {insight.deaths}X</span>
+      </div>
+    </button>
+  );
+}
+
 function DownsDeathsChart({ engagements, fightContexts }: { engagements: IntelligenceEngagementInsight[]; fightContexts: Map<string, FightContext> }) {
   const rows = engagements.slice(0, 8);
   const maxValue = Math.max(1, ...rows.map((row) => Math.max(row.downs, row.deaths)));
@@ -767,7 +801,7 @@ function FightNarrativePanel({
 
 export default function IntelligenceDebugView() {
   const { report } = useReport();
-  const [selectedFightId, setSelectedFightId] = useState(ALL_FIGHTS_ID);
+  const [selectedFightId, setSelectedFightId] = useState(() => localStorage.getItem("entropy.selectedFightId") || ALL_FIGHTS_ID);
   const [criticalEventKindFilter, setCriticalEventKindFilter] = useState<CriticalEventKindFilter>("all");
   const [expandedSections, setExpandedSections] = useState<Record<ExpandableSection, boolean>>({
     findings: false,
@@ -775,6 +809,8 @@ export default function IntelligenceDebugView() {
   });
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const [pressureFilter, setPressureFilter] = useState<PressureFilter>("all");
+  const [selectedEngagementId, setSelectedEngagementId] = useState<string | null>(null);
+  const [showEvidenceInspector, setShowEvidenceInspector] = useState(false);
   const dashboard = useMemo(() => (report ? buildIntelligenceDashboard(report) : null), [report]);
 
   function toggleSection(section: ExpandableSection) {
@@ -783,6 +819,8 @@ export default function IntelligenceDebugView() {
 
   function handleSelectFight(fightId: string) {
     setSelectedFightId(fightId);
+    if (fightId === ALL_FIGHTS_ID) localStorage.removeItem("entropy.selectedFightId");
+    else localStorage.setItem("entropy.selectedFightId", fightId);
     setCriticalEventKindFilter("all");
     setSeverityFilter("all");
     setPressureFilter("all");
@@ -833,7 +871,8 @@ export default function IntelligenceDebugView() {
   const scopedActions = selectedFightId === ALL_FIGHTS_ID
     ? dashboard.actions
     : dashboard.actions.filter((action: IntelligenceAction) => action.basedOn.some((id) => scopedFindingIds.has(id)));
-  const topEngagements = scopedEngagements.slice(0, 3);
+  const topEngagements = scopedEngagements.slice(0, 6);
+  const activeEngagement = scopedEngagements.find((engagement) => engagement.id === selectedEngagementId) ?? topEngagements[0];
   const highestPressure = scopedEngagements[0];
   const visibleFindings = expandedSections.findings ? scopedFindings : scopedFindings.slice(0, FINDINGS_PREVIEW_COUNT);
   const visibleCriticalEvents = expandedSections.criticalEvents ? filteredCriticalEvents : filteredCriticalEvents.slice(0, CRITICAL_EVENTS_PREVIEW_COUNT);
@@ -967,17 +1006,28 @@ export default function IntelligenceDebugView() {
         <StatCard icon={<Database className="h-5 w-5" />} label="Downs / deaths" value={`${formatNumber(scopedTotals.downs)} / ${formatNumber(scopedTotals.deaths)}`} detail={selectedFight ? "From Intelligence windows in the selected fight." : "From Intelligence windows, grouped by fight."} />
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
+      <section className="theme-intelligence-command-grid grid gap-4 xl:grid-cols-[1.45fr_0.55fr]">
+        <div className="theme-intelligence-dossier border border-white/[0.06] bg-black/35 p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Priority engagements</h3>
             <Pill>{scopedEngagements.length} windows {engagementScopeText}</Pill>
           </div>
-          <div className="mt-4 grid gap-3 xl:grid-cols-3">
-            {topEngagements.length > 0 ? topEngagements.map((insight) => (
-              <EngagementCard key={insight.id} insight={insight} fightContext={fightContextFor(fightContexts, insight.fightId)} />
-            )) : <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}
-          </div>
+          {activeEngagement ? (
+            <div className="mt-4 grid gap-4 xl:grid-cols-[0.68fr_1.32fr]">
+              <div className="grid content-start gap-2">
+                {topEngagements.map((insight) => (
+                  <EngagementRailItem
+                    key={insight.id}
+                    insight={insight}
+                    fightContext={fightContextFor(fightContexts, insight.fightId)}
+                    selected={activeEngagement.id === insight.id}
+                    onSelect={() => setSelectedEngagementId(insight.id)}
+                  />
+                ))}
+              </div>
+              <EngagementCard insight={activeEngagement} fightContext={fightContextFor(fightContexts, activeEngagement.fightId)} />
+            </div>
+          ) : <div className="mt-4"><EmptyState dashboard={dashboard} scope={selectedScopeLabel} /></div>}
         </div>
 
         <CoverageBars dashboard={dashboard} />
@@ -1007,7 +1057,28 @@ export default function IntelligenceDebugView() {
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-white/[0.06] bg-black/35 p-5">
+      <section className="theme-evidence-gate border border-white/[0.07] bg-black/35 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-300">Evidence inspector</div>
+            <h3 className="mt-1 text-lg font-black uppercase text-slate-100">Timeline, findings, and raw critical events</h3>
+            <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
+              The command board stays focused on the most actionable engagement. Open the inspector when you need the complete deterministic evidence chain.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowEvidenceInspector((current) => !current)}
+            className="theme-command-button inline-flex items-center gap-2 border border-amber-400/25 bg-amber-500/[0.08] px-4 py-2 text-xs font-black uppercase tracking-wider text-amber-200"
+          >
+            {showEvidenceInspector ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showEvidenceInspector ? "Close inspector" : "Open inspector"}
+          </button>
+        </div>
+      </section>
+
+      {showEvidenceInspector && <>
+      <section className="theme-intelligence-dossier border border-white/[0.06] bg-black/35 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="text-sm font-black uppercase tracking-widest text-slate-100">Fight timeline</h3>
           <Pill>{scopedTimeline.length} linked windows</Pill>
@@ -1124,6 +1195,7 @@ export default function IntelligenceDebugView() {
           )}
         </div>
       </section>
+      </>}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } from "../utils/chartTheme";
 import { resolveChartSelectionIndex, type ChartSelectionRow } from "../utils/chartSelection";
 import type { GeneralPlayer, HealingPlayer, HealingCoverage, OffensePlayer, TopBarrierSource, TopHealingSource, TopSkill } from "../types/report";
+import { buildHealingFightDrilldowns } from "../lib/squadStatsDrilldowns";
 
 type SquadOverviewSortKey = "player" | "class" | "damage" | "dps" | "downContribution" | "healing" | "cleanses" | "strips" | "logs";
 
@@ -229,8 +230,12 @@ export default function SquadStatsView() {
   const { report } = useReport();
   const { scope } = useDamageScope();
   const { scope: allyScope } = useAllyScope();
-  const [selectedPressureIndex, setSelectedPressureIndex] = useState(0);
-  const [selectedHealingIndex, setSelectedHealingIndex] = useState(0);
+  const initialFightIndex = () => {
+    const saved = Number(localStorage.getItem("entropy.selectedFightIndex") ?? 0);
+    return Number.isInteger(saved) && saved >= 0 ? saved : 0;
+  };
+  const [selectedPressureIndex, setSelectedPressureIndex] = useState(initialFightIndex);
+  const [selectedHealingIndex, setSelectedHealingIndex] = useState(initialFightIndex);
   const [hoveredDistanceAccount, setHoveredDistanceAccount] = useState<string | null>(null);
   const [overviewSort, setOverviewSort] = useState<{ key: SquadOverviewSortKey; dir: "asc" | "desc" } | null>(null);
   if (!report) return null;
@@ -290,30 +295,10 @@ export default function SquadStatsView() {
   const totalDamageTaken = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
   const effectiveHealingTotal = totalHealing + totalBarrier - totalDamageTaken;
   const healingEffectiveness = safeDiv(effectiveHealingTotal, totalDamageTaken);
-  const healingChartData = s.fightBreakdown.slice(0, 40).map((fight, index) => {
-    const healing = Number(fight.totalOutgoingHealing ?? 0);
-    const barrier = Number(fight.totalOutgoingBarrier ?? fight.incomingBarrierAbsorbed ?? 0);
-    const incomingDamage = Number(fight.totalIncomingDamage ?? 0);
-    const exactOutgoingSkills = fight.topOutgoingHealingSkills ?? [];
-    const exactBarrierSkills = fight.topOutgoingBarrierSkills ?? [];
-    const exactIncomingSkills = fight.topIncomingDamageSkills ?? [];
-    return {
-      name: fight.label || `F${index + 1}`,
-      index,
-      fullLabel: fight.fullLabel || fight.mapName || `Fight ${index + 1}`,
-      healing,
-      barrier,
-      incomingDamage,
-      effectiveHealing: Number(fight.effectiveHealing ?? (healing + barrier - incomingDamage)),
-      outgoingSkills: exactOutgoingSkills,
-      barrierSkills: exactBarrierSkills,
-      incomingSkills: exactIncomingSkills,
-      hasExactOutgoingSkills: Array.isArray(fight.topOutgoingHealingSkills),
-      hasExactBarrierSkills: Array.isArray(fight.topOutgoingBarrierSkills),
-      hasExactIncomingSkills: Array.isArray(fight.topIncomingDamageSkills),
-    };
-  });
+  const healingChartData = buildHealingFightDrilldowns(s.fightBreakdown);
   const hasPerFightHealing = s.fightBreakdown.some((fight) => typeof fight.totalOutgoingHealing === "number");
+  const hasOutgoingBarrier = healingChartData.some((fight) => fight.outgoingBarrier !== null);
+  const hasAbsorbedBarrier = healingChartData.some((fight) => fight.absorbedBarrier !== null && fight.absorbedBarrier > 0);
   const selectedHealingFight = healingChartData[Math.min(selectedHealingIndex, Math.max(healingChartData.length - 1, 0))];
   const distanceRows = buildDistanceRows(s.generalPlayers);
   const topDistanceRows = distanceRows.slice(0, 10);
@@ -565,7 +550,8 @@ export default function SquadStatsView() {
                     <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />
                     {selectedHealingFight && <ReferenceLine x={selectedHealingFight.name} stroke="#f8fafc" strokeDasharray="4 4" />}
                     <Line type="monotone" dataKey="healing" name="Healing" stroke="#34d399" strokeWidth={2} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} connectNulls />
-                    <Line type="monotone" dataKey="barrier" name={hasPerFightHealing ? "Barrier" : "Barrier Absorbed"} stroke="#2dd4bf" strokeWidth={2} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} connectNulls />
+                    {hasOutgoingBarrier && <Line type="monotone" dataKey="outgoingBarrier" name="Outgoing Barrier" stroke="#2dd4bf" strokeWidth={2} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} />}
+                    {hasAbsorbedBarrier && <Line type="monotone" dataKey="absorbedBarrier" name="Barrier Absorbed" stroke="#67e8f9" strokeWidth={1.5} strokeDasharray="5 4" dot={false} />}
                     <Line type="monotone" dataKey="incomingDamage" name="Incoming Damage" stroke="#fb7185" strokeWidth={2} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} connectNulls />
                     <Line type="monotone" dataKey="effectiveHealing" name="Effective Healing" stroke="#f8fafc" strokeWidth={2.5} dot={{ r: 2, cursor: "pointer" }} activeDot={{ r: 5 }} connectNulls />
                   </LineChart>
@@ -594,11 +580,17 @@ export default function SquadStatsView() {
                         Reset
                       </button>
                     </div>
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] uppercase tracking-wider text-slate-500 sm:grid-cols-4">
                       <span>Incoming <b className="block text-rose-300">{fmtCompact(selectedHealingFight.incomingDamage)}</b></span>
-                      <span>Healing <b className="block text-emerald-300">{fmtCompact(selectedHealingFight.healing)}</b></span>
-                      <span>Barrier <b className="block text-teal-300">{fmtCompact(selectedHealingFight.barrier)}</b></span>
+                      <span>Healing <b className="block text-emerald-300">{selectedHealingFight.healing === null ? "n/a" : fmtCompact(selectedHealingFight.healing)}</b></span>
+                      <span>Barrier generated <b className="block text-teal-300">{selectedHealingFight.outgoingBarrier === null ? "n/a" : fmtCompact(selectedHealingFight.outgoingBarrier)}</b></span>
+                      <span>Barrier absorbed <b className="block text-cyan-300">{selectedHealingFight.absorbedBarrier === null ? "n/a" : fmtCompact(selectedHealingFight.absorbedBarrier)}</b></span>
                     </div>
+                    {selectedHealingFight.effectiveHealing === null && (
+                      <div className="mt-3 border-l-2 border-cyan-400/60 bg-cyan-500/5 px-3 py-2 text-[11px] text-cyan-100/80">
+                        Effective healing is unavailable for this fight because outgoing healing or generated barrier was not recorded. Absorbed barrier is shown separately and is never substituted.
+                      </div>
+                    )}
                     {(!selectedHealingFight.hasExactOutgoingSkills || !selectedHealingFight.hasExactBarrierSkills || !selectedHealingFight.hasExactIncomingSkills) && (
                       <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-2 text-[11px] text-amber-200/90">
                         One or more exact per-fight source groups are unavailable in this saved report. Reparse the original logs with this build to populate them.
@@ -625,8 +617,10 @@ export default function SquadStatsView() {
                       <div className="text-[10px] font-black uppercase tracking-[0.18em] text-teal-300">Outgoing barrier skills</div>
                       <div className="text-[10px] uppercase tracking-wider text-slate-500">{selectedHealingFight.barrierSkills.length}</div>
                     </div>
-                    {selectedHealingFight.barrierSkills.length ? <SkillSourceRows rows={selectedHealingFight.barrierSkills} kind="barrier" /> : (
-                      <div className="text-[11px] text-slate-500">No exact barrier skill sources were recorded for this fight.</div>
+                    {selectedHealingFight.barrierSkills.length ? <SkillSourceRows rows={selectedHealingFight.barrierSkills} kind="barrier" /> : selectedHealingFight.hasExactBarrierSkills ? (
+                      <div className="text-[11px] text-slate-500">No outgoing barrier was attributed to a skill in this fight.</div>
+                    ) : (
+                      <div className="text-[11px] text-amber-200/75">Barrier skill attribution is unavailable in this saved report. Reparse the original log to populate it.</div>
                     )}
                   </div>
                   <div className="theme-source-card rounded-xl border border-rose-500/15 bg-rose-500/5 p-3">

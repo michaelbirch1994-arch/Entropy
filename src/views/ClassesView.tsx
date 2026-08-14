@@ -3,7 +3,7 @@ import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import { profStyle } from "../utils/format";
 import type { ClassSlice } from "../types/report";
-import { Layers, Users } from "lucide-react";
+import { Activity, Layers, ShieldCheck, Swords, Users } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE } from "../utils/chartTheme";
 import ClassIcon from "../components/ui/ClassIcon";
@@ -11,14 +11,14 @@ import ClassIcon from "../components/ui/ClassIcon";
 type RoleSortKey = "account" | "profession" | "role" | "supportScore" | "confidenceScore";
 type RoleSortState = { key: RoleSortKey; dir: "asc" | "desc" } | null;
 
-function ClassList({ data, total }: { data: ClassSlice[]; total: number }) {
+function ClassList({ data, total, selected, onSelect }: { data: ClassSlice[]; total: number; selected: string | null; onSelect: (name: string) => void }) {
   return (
     <div className="space-y-2">
       {data.map((c) => {
         const pct = total > 0 ? (c.value / total) * 100 : 0;
         const s = profStyle(c.name);
         return (
-          <div key={c.name} className="flex items-center gap-3">
+          <button key={c.name} type="button" aria-pressed={selected === c.name} onClick={() => onSelect(c.name)} className={`flex w-full items-center gap-3 border-l-2 px-2 py-1 text-left transition ${selected === c.name ? "border-orange-400 bg-orange-500/[0.07]" : "border-transparent hover:border-slate-700 hover:bg-white/[0.02]"}`}>
             <div className={`h-6 w-6 rounded-md border ${s.border} ${s.bg} flex flex-shrink-0 items-center justify-center`}>
               <ClassIcon name={c.name} size="sm" />
             </div>
@@ -33,7 +33,7 @@ function ClassList({ data, total }: { data: ClassSlice[]; total: number }) {
             </div>
             <span className="text-xs font-mono text-slate-400 w-10 text-right">{c.value}</span>
             <span className="text-[10px] font-mono text-slate-500 w-12 text-right">{pct.toFixed(1)}%</span>
-          </div>
+          </button>
         );
       })}
     </div>
@@ -43,6 +43,7 @@ function ClassList({ data, total }: { data: ClassSlice[]; total: number }) {
 export default function ClassesView() {
   const { report } = useReport();
   const [roleSort, setRoleSort] = useState<RoleSortState>(null);
+  const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
   const s = report?.stats;
   const roleRows = useMemo(() => {
     const base = [...(s?.roleClassifications ?? [])].sort((a, b) => a.account.localeCompare(b.account));
@@ -83,6 +84,19 @@ export default function ClassesView() {
   if (!report || !s) return null;
   const squadTotal = s.squadClassData.reduce((a, c) => a + c.value, 0);
   const enemyTotal = s.enemyClassData.reduce((a, c) => a + c.value, 0);
+  const selectedName = selectedProfession ?? s.squadClassData[0]?.name ?? s.enemyClassData[0]?.name ?? null;
+  const selectedPlayers = selectedName ? roleRows.filter((row) => row.profession === selectedName || row.professionList?.includes(selectedName)) : [];
+  const selectedSquadCount = s.squadClassData.find((row) => row.name === selectedName)?.value ?? 0;
+  const selectedEnemyCount = s.enemyClassData.find((row) => row.name === selectedName)?.value ?? 0;
+  const fightPresence = selectedName ? s.fightBreakdown.map((fight, index) => ({
+    label: fight.label || `F${index + 1}`,
+    count: fight.squadClassCountsFight?.[selectedName] ?? 0,
+    isWin: fight.isWin,
+  })) : [];
+  const maxFightPresence = Math.max(1, ...fightPresence.map((fight) => fight.count));
+  const supportCount = (s.roleClassifications ?? []).filter((row) => row.role === "support").length;
+  const damageCount = (s.roleClassifications ?? []).filter((row) => row.role === "damage").length;
+  const highConfidenceCount = (s.roleClassifications ?? []).filter((row) => row.confidenceScore >= 0.75).length;
 
   return (
     <div className="space-y-5 animate-view pb-12">
@@ -112,7 +126,7 @@ export default function ClassesView() {
               </ResponsiveContainer>
             </div>
             <div className="w-full md:w-1/2">
-              <ClassList data={s.squadClassData} total={squadTotal} />
+              <ClassList data={s.squadClassData} total={squadTotal} selected={selectedName} onSelect={setSelectedProfession} />
             </div>
           </div>
         </Panel>
@@ -142,11 +156,54 @@ export default function ClassesView() {
               </ResponsiveContainer>
             </div>
             <div className="w-full md:w-1/2">
-              <ClassList data={s.enemyClassData} total={enemyTotal} />
+              <ClassList data={s.enemyClassData} total={enemyTotal} selected={selectedName} onSelect={setSelectedProfession} />
             </div>
           </div>
         </Panel>
       </div>
+
+      <section className="theme-class-dossier grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
+        <div className="theme-selected-fight border border-orange-400/20 bg-black/40 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-300">Profession dossier</div>
+              <h3 className="mt-1 text-xl font-black uppercase text-slate-100">{selectedName ?? "No profession selected"}</h3>
+              <p className="mt-2 text-xs text-slate-500">Select any profession in either composition list to inspect roster roles and fight presence.</p>
+            </div>
+            <div className="flex gap-2 text-center">
+              <div className="border-l-2 border-sky-400/40 bg-black/25 px-4 py-2"><div className="font-mono text-xl font-black text-sky-300">{selectedSquadCount}</div><div className="text-[9px] uppercase text-slate-500">squad</div></div>
+              <div className="border-l-2 border-rose-400/40 bg-black/25 px-4 py-2"><div className="font-mono text-xl font-black text-rose-300">{selectedEnemyCount}</div><div className="text-[9px] uppercase text-slate-500">enemy</div></div>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-2 md:grid-cols-2">
+            {selectedPlayers.length ? selectedPlayers.map((player) => (
+              <div key={player.account} className="theme-roster-strip grid grid-cols-[1fr_auto] gap-3 border border-white/[0.06] bg-black/25 px-3 py-2">
+                <div><div className="truncate text-xs font-bold text-slate-200">{player.account}</div><div className="mt-1 text-[10px] uppercase text-slate-500">{player.role} · {player.factors.slice(0, 2).map((factor) => factor.metric).join(", ") || "classification evidence unavailable"}</div></div>
+                <div className="font-mono text-xs font-black text-amber-300">{Math.round(player.confidenceScore * 100)}%</div>
+              </div>
+            )) : <div className="border-l-2 border-slate-700 px-3 py-2 text-xs text-slate-500">No classified squad player is attached to this profession.</div>}
+          </div>
+        </div>
+
+        <div className="theme-comparison-slab border border-cyan-400/15 bg-black/35 p-5">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300"><Activity className="h-4 w-4" /> Fight presence</div>
+          <div className="mt-4 grid max-h-72 gap-2 overflow-y-auto pr-1 custom-scrollbar">
+            {fightPresence.map((fight) => (
+              <div key={fight.label} className="grid grid-cols-[2.5rem_1fr_1.5rem] items-center gap-2 text-[10px]">
+                <span className="font-mono text-slate-500">{fight.label}</span>
+                <div className="h-2 bg-white/[0.05]"><div className={`h-full ${fight.isWin ? "bg-emerald-400" : "bg-orange-400"}`} style={{ width: `${(fight.count / maxFightPresence) * 100}%` }} /></div>
+                <span className="text-right font-mono font-black text-slate-300">{fight.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="theme-role-coverage grid gap-3 sm:grid-cols-3">
+        <CoverageMetric icon={<ShieldCheck className="h-4 w-4" />} label="Support classifications" value={supportCount} tone="text-emerald-300" />
+        <CoverageMetric icon={<Swords className="h-4 w-4" />} label="Damage classifications" value={damageCount} tone="text-orange-300" />
+        <CoverageMetric icon={<Users className="h-4 w-4" />} label="High-confidence roles" value={highConfidenceCount} tone="text-cyan-300" />
+      </section>
 
       {/* Role classifications */}
       <Panel title="Role Classifications" icon={<Users className="w-4 h-4" />} accent="text-emerald-400">
@@ -191,4 +248,8 @@ export default function ClassesView() {
       </Panel>
     </div>
   );
+}
+
+function CoverageMetric({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number; tone: string }) {
+  return <div className="theme-dossier-metric flex items-center justify-between border-l-2 border-orange-400/25 bg-black/30 px-4 py-3"><div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-slate-500">{icon}{label}</div><div className={`font-mono text-2xl font-black ${tone}`}>{value}</div></div>;
 }

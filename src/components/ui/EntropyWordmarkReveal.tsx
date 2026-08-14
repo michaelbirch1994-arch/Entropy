@@ -26,9 +26,9 @@ const MOTES = [
   { left: "90%", top: "60%", delay: 0.1 },
 ];
 
-export default function EntropyWordmarkReveal({ className = "" }: { className?: string }) {
+export default function EntropyWordmarkReveal({ className = "", id }: { className?: string; id?: string }) {
   return (
-    <h1 className={`relative ${className}`} aria-label="Entropy">
+    <h1 id={id} className={`relative ${className}`} aria-label="Entropy">
       {MOTES.map((m, i) => (
         <motion.span
           key={`mote-${i}`}
