@@ -6,11 +6,12 @@ import { getAllProfiles, topClass, computeBadges, currentWinStreak, type PlayerP
 import { fmtCompact, fmtFixedGrouped, fmtNum, profChip } from "../utils/format";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 
-type SortKey = "totalDamage" | "totalFightsJoined" | "bestDps" | "totalHealing" | "offensiveMvpCount";
+type TableSortKey = "account" | "mainClass" | "totalFightsJoined" | "totalDamage" | "bestDps" | "totalHealing" | "totalDownContrib" | "mvpTotal";
+type SortState = { key: TableSortKey; dir: "asc" | "desc" } | null;
 
 export default function PlayerProfilesView() {
   const [profiles, setProfiles] = useState<PlayerProfile[] | null>(null);
-  const [sortKey, setSortKey] = useState<SortKey>("totalDamage");
+  const [sort, setSort] = useState<SortState>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -24,8 +25,44 @@ export default function PlayerProfilesView() {
 
   const sorted = useMemo(() => {
     if (!profiles) return [];
-    return [...profiles].sort((a, b) => b[sortKey] - a[sortKey]);
-  }, [profiles, sortKey]);
+    const base = [...profiles].sort((a, b) => a.account.localeCompare(b.account));
+    if (!sort) return base;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return base.sort((a, b) => {
+      if (sort.key === "account") return a.account.localeCompare(b.account) * dir;
+      if (sort.key === "mainClass") return (topClass(a) ?? "").localeCompare(topClass(b) ?? "") * dir || a.account.localeCompare(b.account);
+      if (sort.key === "mvpTotal") {
+        const av = a.offensiveMvpCount + a.defensiveMvpCount;
+        const bv = b.offensiveMvpCount + b.defensiveMvpCount;
+        return (av - bv) * dir || a.account.localeCompare(b.account);
+      }
+      return (a[sort.key] - b[sort.key]) * dir || a.account.localeCompare(b.account);
+    });
+  }, [profiles, sort]);
+
+  const toggleSort = (key: TableSortKey) => {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "desc" };
+      if (prev.dir === "desc") return { key, dir: "asc" };
+      return null;
+    });
+  };
+
+  const sortLabel = (key: TableSortKey) => (!sort || sort.key !== key ? "SORT" : sort.dir === "desc" ? "DESC" : "ASC");
+
+  const SortHeader = ({ label, k, align = "left" }: { label: string; k: TableSortKey; align?: "left" | "right" }) => (
+    <th className={`p-2.5 ${align === "right" ? "text-right" : ""}`}>
+      <button
+        type="button"
+        onClick={() => toggleSort(k)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
+          align === "right" ? "justify-end" : ""
+        } ${sort?.key === k ? "text-sky-300" : "text-slate-500 hover:text-slate-300"}`}
+      >
+        {label} <span className="text-[8px] opacity-70">{sortLabel(k)}</span>
+      </button>
+    </th>
+  );
 
   if (profiles === null) {
     return <div className="flex items-center justify-center py-24 text-slate-500 text-sm">Loading career profiles...</div>;
@@ -53,13 +90,13 @@ export default function PlayerProfilesView() {
                 { k: "totalFightsJoined", l: "Fights" },
                 { k: "bestDps", l: "Best DPS" },
                 { k: "totalHealing", l: "Healing" },
-                { k: "offensiveMvpCount", l: "MVPs" },
-              ] as { k: SortKey; l: string }[]).map((opt) => (
+                { k: "mvpTotal", l: "MVPs" },
+              ] as { k: TableSortKey; l: string }[]).map((opt) => (
                 <button
                   key={opt.k}
-                  onClick={() => setSortKey(opt.k)}
+                  onClick={() => setSort({ key: opt.k, dir: "desc" })}
                   className={`px-2.5 py-1.5 rounded-lg font-bold transition-all ${
-                    sortKey === opt.k ? "bg-sky-500/15 text-sky-400" : "text-slate-500 hover:text-slate-300"
+                    sort?.key === opt.k ? "bg-sky-500/15 text-sky-400" : "text-slate-500 hover:text-slate-300"
                   }`}
                 >
                   {opt.l}
@@ -71,15 +108,15 @@ export default function PlayerProfilesView() {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
-                    <th className="p-2.5">Player</th>
-                    <th className="p-2.5">Main Class</th>
-                    <th className="p-2.5 text-right">Fights</th>
-                    <th className="p-2.5 text-right">Total Damage</th>
-                    <th className="p-2.5 text-right">Best DPS</th>
-                    <th className="p-2.5 text-right">Total Healing</th>
-                    <th className="p-2.5 text-right">Down Contrib</th>
-                    <th className="p-2.5 text-right">MVPs</th>
-              <th className="p-2.5">Badges</th>
+                    <SortHeader label="Player" k="account" />
+                    <SortHeader label="Main Class" k="mainClass" />
+                    <SortHeader label="Fights" k="totalFightsJoined" align="right" />
+                    <SortHeader label="Total Damage" k="totalDamage" align="right" />
+                    <SortHeader label="Best DPS" k="bestDps" align="right" />
+                    <SortHeader label="Total Healing" k="totalHealing" align="right" />
+                    <SortHeader label="Down Contrib" k="totalDownContrib" align="right" />
+                    <SortHeader label="MVPs" k="mvpTotal" align="right" />
+                    <th className="p-2.5">Badges</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/30 font-mono">

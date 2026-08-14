@@ -7,6 +7,9 @@ import { useView } from "../store/ViewContext";
 import { useCompare } from "../store/CompareContext";
 import { fmtCompact, fmtNum } from "../utils/format";
 
+type SortKey = "title" | "commanders" | "fights" | "record" | "totalDamage" | "avgSquadSize";
+type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
+
 export default function ArchiveView() {
   const { setReport } = useReport();
   const { setActiveView } = useView();
@@ -14,6 +17,7 @@ export default function ArchiveView() {
   const [entries, setEntries] = useState<ArchiveEntry[] | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sort, setSort] = useState<SortState>(null);
 
   function refresh() {
     getAllArchived().then(setEntries);
@@ -26,11 +30,49 @@ export default function ArchiveView() {
   const filtered = useMemo(() => {
     if (!entries) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return entries;
-    return entries.filter(
-      (e) => e.title.toLowerCase().includes(q) || e.commanders.some((c) => c.toLowerCase().includes(q)),
-    );
-  }, [entries, query]);
+    const visible = q
+      ? entries.filter(
+          (e) => e.title.toLowerCase().includes(q) || e.commanders.some((c) => c.toLowerCase().includes(q)),
+        )
+      : entries;
+    const base = [...visible].sort((a, b) => a.title.localeCompare(b.title) || a.dateLabel.localeCompare(b.dateLabel));
+    if (!sort) return base;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return base.sort((a, b) => {
+      if (sort.key === "title") return a.title.localeCompare(b.title) * dir || a.dateLabel.localeCompare(b.dateLabel);
+      if (sort.key === "commanders") return a.commanders.join(", ").localeCompare(b.commanders.join(", ")) * dir || a.title.localeCompare(b.title);
+      if (sort.key === "record") {
+        const ar = a.wins - a.losses;
+        const br = b.wins - b.losses;
+        return (ar - br) * dir || a.title.localeCompare(b.title);
+      }
+      return (a[sort.key] - b[sort.key]) * dir || a.title.localeCompare(b.title);
+    });
+  }, [entries, query, sort]);
+
+  const toggleSort = (key: SortKey) => {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "desc" };
+      if (prev.dir === "desc") return { key, dir: "asc" };
+      return null;
+    });
+  };
+
+  const sortLabel = (key: SortKey) => (!sort || sort.key !== key ? "SORT" : sort.dir === "desc" ? "DESC" : "ASC");
+
+  const SortHeader = ({ label, k, align = "left" }: { label: string; k: SortKey; align?: "left" | "right" }) => (
+    <th className={`p-2.5 ${align === "right" ? "text-right" : ""}`}>
+      <button
+        type="button"
+        onClick={() => toggleSort(k)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
+          align === "right" ? "justify-end" : ""
+        } ${sort?.key === k ? "text-sky-300" : "text-slate-500 hover:text-slate-300"}`}
+      >
+        {label} <span className="text-[8px] opacity-70">{sortLabel(k)}</span>
+      </button>
+    </th>
+  );
 
   function toggleSelected(id: string) {
     setSelected((prev) => {
@@ -120,12 +162,12 @@ export default function ArchiveView() {
                 <thead>
                   <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
                     <th className="p-2.5 w-8"></th>
-                    <th className="p-2.5">Report</th>
-                    <th className="p-2.5">Commanders</th>
-                    <th className="p-2.5 text-right">Fights</th>
-                    <th className="p-2.5 text-right">W / L</th>
-                    <th className="p-2.5 text-right">Squad Damage</th>
-                    <th className="p-2.5 text-right">Avg Squad</th>
+                    <SortHeader label="Report" k="title" />
+                    <SortHeader label="Commanders" k="commanders" />
+                    <SortHeader label="Fights" k="fights" align="right" />
+                    <SortHeader label="W / L" k="record" align="right" />
+                    <SortHeader label="Squad Damage" k="totalDamage" align="right" />
+                    <SortHeader label="Avg Squad" k="avgSquadSize" align="right" />
                     <th className="p-2.5"></th>
                   </tr>
                 </thead>
