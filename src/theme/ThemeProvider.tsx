@@ -3,10 +3,6 @@ import { ENTROPY_THEME } from "./defaultTheme";
 
 function applyEntropyTheme() {
   const root = document.documentElement;
-  const body = document.body;
-
-  delete root.dataset.theme;
-  delete body.dataset.theme;
 
   root.style.setProperty("--theme-display-font", ENTROPY_THEME.typography.display);
   root.style.setProperty("--theme-body-font", ENTROPY_THEME.typography.body);

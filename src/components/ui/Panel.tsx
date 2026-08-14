@@ -28,20 +28,20 @@ export default function Panel({
       className={`theme-panel rounded-2xl ${className}`}
     >
       {title && (
-        <header className="flex items-center justify-between border-b border-theme-border/50 px-5 py-3.5">
+        <header className="theme-panel-header flex items-center justify-between border-b border-theme-border/50 px-5 py-3.5">
           <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-theme-text">
+            <div className="theme-panel-title flex items-center gap-2 text-[11px] font-bold uppercase text-theme-text">
               {icon && <span className={accent ?? "text-theme-accent"}>{icon}</span>}
               {title}
             </div>
             {subtitle && (
-              <p className="text-[10px] text-theme-muted font-medium">{subtitle}</p>
+              <p className="theme-panel-subtitle text-[10px] text-theme-muted font-medium">{subtitle}</p>
             )}
           </div>
           {action && <div className="text-[10px] font-mono text-theme-muted">{action}</div>}
         </header>
       )}
-      <div className={bodyClassName || "p-5"}>{empty ?? children}</div>
+      <div className={`theme-panel-body ${bodyClassName || "p-5"}`}>{empty ?? children}</div>
     </section>
   );
 }

@@ -187,7 +187,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
         onClick={() => selectView(item.id)}
         aria-current={isActive ? "page" : undefined}
         title={compact ? item.label : undefined}
-        className={`group w-full text-left rounded-lg text-xs font-medium transition-all duration-200 relative ${
+        className={`theme-nav-item group w-full text-left rounded-lg text-xs font-medium transition-all duration-200 relative ${
           compact
             ? `flex h-9 items-center justify-center ${isActive ? "bg-theme-accent/15 text-theme-accent" : "text-theme-muted hover:bg-theme-surface-elevated/60 hover:text-theme-text"}`
             : `px-3 py-2 ${isActive
@@ -216,7 +216,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
           <div className="theme-logo-tile w-9 h-9 rounded-lg flex items-center justify-center">
             <EntropyLogo size={20} />
           </div>
-          {!compact && <div>
+          {!compact && <div className="theme-brand-copy">
             <h1 className="entropy-wordmark text-sm font-black tracking-widest text-theme-text uppercase font-display">Entropy</h1>
             <p className="text-[10px] text-theme-accent/70 font-bold uppercase tracking-widest">WvW Analytics</p>
           </div>}
@@ -235,7 +235,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
       {/* Nav */}
       <nav className="p-3 space-y-0.5 flex-1" role="navigation" aria-label="Main navigation">
         {!compact && (
-          <div className="sticky top-[93px] z-10 mb-3 rounded-xl border border-theme-border/40 bg-theme-surface/85 px-3 py-2 shadow-lg shadow-black/20">
+          <div className="theme-search-shell sticky top-[93px] z-10 mb-3 rounded-xl border border-theme-border/40 bg-theme-surface/85 px-3 py-2 shadow-lg shadow-black/20">
             <div className="flex items-center gap-2 text-theme-muted">
               <Search className="h-3.5 w-3.5" />
               <input
@@ -288,7 +288,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
               <button
                 onClick={() => toggle(section.title)}
                 aria-expanded={isOpen}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
+                className={`theme-nav-section w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
                   isOpen || hasCurrent
                     ? "bg-theme-accent/5 text-theme-accent border border-theme-accent/15"
                     : "text-theme-muted hover:bg-theme-surface-elevated/50 hover:text-theme-text border border-transparent"

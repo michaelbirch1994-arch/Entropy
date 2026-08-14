@@ -158,7 +158,7 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
   const { uploadReport, loadFromUrl, error, loading } = useReport();
   return (
     <div className="flex flex-col items-center justify-center min-h-full px-6 py-16">
-      <div className="w-full max-w-lg flex flex-col items-center gap-8 rounded-[2rem] border border-white/[0.06] bg-black/45 backdrop-blur-xl shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] px-8 py-10">
+      <div className="theme-import-console w-full max-w-lg flex flex-col items-center gap-8 rounded-[2rem] border border-white/[0.06] bg-black/45 backdrop-blur-xl shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] px-8 py-10">
         {/* Branding */}
         <div className="flex flex-col items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-700/20 flex items-center justify-center text-amber-400 shadow-[0_0_30px_-6px_rgba(245,158,11,0.5)] border border-amber-400/30">
@@ -369,12 +369,7 @@ function ReportShell() {
 
   return (
     <div className="theme-app-shell flex h-screen w-full overflow-hidden">
-      <div className="entropy-bg">
-        <div className="entropy-nebula entropy-nebula-1" />
-        <div className="entropy-nebula entropy-nebula-2" />
-        <div className="entropy-nebula entropy-nebula-3" />
-        <div className="entropy-nebula entropy-nebula-4" />
-      </div>
+      <div className="entropy-bg" />
 
 
 
@@ -385,21 +380,21 @@ function ReportShell() {
 
 
 
-      <main className="flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar">
+      <main className="theme-main flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar">
         {/* Header - only when report is active */}
         {report && (
           <header className="theme-topbar sticky top-0 z-30 px-6 py-4">
-            <div className="flex items-center justify-between">
+            <div className="theme-topbar-inner flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <span className="text-theme-accent">{viewIcon}</span>
                 <div>
-                  <h1 className="text-lg font-black tracking-wider text-theme-text uppercase font-display">{viewTitle}</h1>
-                  <p className="text-xs text-theme-accent/80 font-medium tracking-wide">
+                  <h1 className="theme-view-title text-lg font-black text-theme-text uppercase font-display">{viewTitle}</h1>
+                  <p className="theme-view-meta text-xs text-theme-accent/80 font-medium">
                     {headerInfo?.title} - {headerInfo?.dateLabel}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="theme-topbar-actions flex flex-wrap items-center justify-end gap-2">
                 {/* These toggles only actually affect Offensive/Squad Stats (damage scope) and Defensive (per-second + squad-only) - hidden elsewhere so they stay honest about which views they change. */}
                 {(activeView === "offensive" || activeView === "squad-stats") && <DamageScopeToggle />}
                 {(activeView === "defensive" || activeView === "offensive") && <StatsDisplayToggle />}
@@ -471,7 +466,7 @@ function ReportShell() {
 
         {discordOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-            <div className="w-full max-w-xl rounded-2xl border border-violet-400/20 bg-slate-950/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
+            <div className="theme-modal w-full max-w-xl rounded-2xl border border-violet-400/20 bg-slate-950/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-100">Discord webhook</h2>
@@ -565,7 +560,7 @@ function ReportShell() {
 
 
         {report && report.meta.appVersion !== METRICS_VERSION && !atHome && (
-          <div className="mx-6 mt-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-4 py-3 flex items-start gap-3">
+          <div className="theme-alert-plate mx-6 mt-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-4 py-3 flex items-start gap-3">
             <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
             <div className="text-xs text-amber-200/90 leading-relaxed">
               <span className="font-bold">This report was built by an earlier version.</span>{" "}
@@ -581,7 +576,7 @@ function ReportShell() {
 
 
         {/* Content */}
-        <div className={report || showTool ? "p-6" : "flex items-center justify-center min-h-full"}>
+        <div className={report || showTool ? "theme-content p-6" : "flex items-center justify-center min-h-full"}>
           {showTool ? (
             <AxiForgeLabView />
           ) : showLoading ? (
