@@ -108,6 +108,8 @@ function DeathCard({ entry }: { entry: DeathRecapEntry }) {
 }
 
 const DEFENSIVE_BOON_NAMES = ["Stability", "Protection", "Resistance", "Aegis"];
+type DeathBoonSortKey = "player" | "deaths" | number;
+type DeathBoonSortState = { key: DeathBoonSortKey; dir: "asc" | "desc" } | null;
 
 // Correlates each player's death count against their aggregate defensive-boon
 // uptime (already computed for the Buffs view) so a squad can spot "this
@@ -157,6 +159,35 @@ function useDeathBoonCorrelation(report: ReturnType<typeof useReport>["report"])
 }
 
 function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<typeof useDeathBoonCorrelation>> }) {
+  const [sort, setSort] = useState<DeathBoonSortState>(null);
+  const rows = useMemo(() => {
+    const base = [...data.rows].sort((a, b) => a.account.localeCompare(b.account));
+    if (!sort) return base;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return base.sort((a, b) => {
+      if (sort.key === "player") return a.account.localeCompare(b.account) * dir;
+      if (sort.key === "deaths") return (a.deaths - b.deaths) * dir || a.account.localeCompare(b.account);
+      const av = a.boons.find((boon) => boon.id === sort.key)?.pct ?? 0;
+      const bv = b.boons.find((boon) => boon.id === sort.key)?.pct ?? 0;
+      return (av - bv) * dir || a.account.localeCompare(b.account);
+    });
+  }, [data.rows, sort]);
+
+  const toggleSort = (key: DeathBoonSortKey) => {
+    setSort((prev) => {
+      if (!prev || prev.key !== key) return { key, dir: "desc" };
+      if (prev.dir === "desc") return { key, dir: "asc" };
+      return null;
+    });
+  };
+
+  const sortLabel = (key: DeathBoonSortKey) => (!sort || sort.key !== key ? "SORT" : sort.dir === "desc" ? "DESC" : "ASC");
+
+  const sortButtonClass = (key: DeathBoonSortKey, extra = "") =>
+    `inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
+      sort?.key === key ? "text-rose-300" : "text-slate-500 hover:text-slate-300"
+    } ${extra}`;
+
   return (
     <Panel
       title="Boon Uptime vs. Deaths"
@@ -168,17 +199,27 @@ function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<type
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500">
-              <th className="text-left font-bold px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">Player</th>
-              <th className="text-center font-bold px-2 py-3">Deaths</th>
+              <th className="text-left font-bold px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">
+                <button type="button" onClick={() => toggleSort("player")} className={sortButtonClass("player")}>
+                  Player <span className="text-[8px] opacity-70">{sortLabel("player")}</span>
+                </button>
+              </th>
+              <th className="text-center font-bold px-2 py-3">
+                <button type="button" onClick={() => toggleSort("deaths")} className={sortButtonClass("deaths")}>
+                  Deaths <span className="text-[8px] opacity-70">{sortLabel("deaths")}</span>
+                </button>
+              </th>
               {data.cols.map((c) => (
                 <th key={c.id} className="text-center font-bold px-2 py-3 min-w-[64px]">
-                  {c.name}
+                  <button type="button" onClick={() => toggleSort(c.id)} className={sortButtonClass(c.id, "justify-center")}>
+                    {c.name} <span className="text-[8px] opacity-70">{sortLabel(c.id)}</span>
+                  </button>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {data.rows.map((row, i) => (
+            {rows.map((row, i) => (
               <tr
                 key={row.account}
                 className={`border-b border-slate-800/40 hover:bg-white/[0.02] transition-colors ${i % 2 === 0 ? "bg-white/[0.01]" : ""}`}
