@@ -19,6 +19,7 @@ import { synthesizeFindings } from './intelligence/findingEngine';
 import type { CombatEvent } from './combat/CombatEvent';
 import type { CriticalEvent, IntelligenceFinding } from './intelligence/types';
 import type { EngagementSegment } from './intelligence/engagementTypes';
+import { computeDistanceToTag } from './bridge-metrics/distanceToTag';
 
 /**
  * Merge per-log incoming-healing breakdowns into one per player.
@@ -235,7 +236,7 @@ import type {
 // that version produced - updating the app does not retroactively fix it.
 // Bump this whenever a change alters computed output, so the UI can tell the
 // user to re-import instead of silently showing them stale figures.
-export const METRICS_VERSION = 'entropy-raw-v5';
+export const METRICS_VERSION = 'entropy-raw-v6';
 
 const NATURAL_FORTITUDE_SYNTHETIC_SKILL_ID = -1001779;
 const NATURAL_FORTITUDE_DAMAGE_PER_UNLEASHED_SKILL_HIT = 1779;
@@ -1923,6 +1924,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     if (fights.length === 0) throw new Error('No fights to combine.');
 
   const validLogs = fights.map((f) => ({ details: f.raw }));
+  const distanceToTag = computeDistanceToTag(fights as Array<{ raw: Record<string, unknown>; summary?: { permalink?: string } }>);
 
   const agg = computePlayerAggregation({
         validLogs,
@@ -2176,6 +2178,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
                 totalFightMs: s.totalFightMs, squadActiveMs: s.squadActiveMs,
                 totalDist: s.totalDist, distCount: s.distCount, logsJoined: s.logsJoined, stackedLogCount: s.stackedLogCount,
         })),
+        distanceToTag,
         offensiveMvp: offensiveScores.mvp,
         offensiveSilver: offensiveScores.silver,
         offensiveBronze: offensiveScores.bronze,

@@ -6,12 +6,13 @@ import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
 import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped } from "../utils/format";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
-import { Users, Swords, Shield, Heart, Zap, Target, Activity, Crosshair, Gauge, MapPin } from "lucide-react";
+import { Users, Swords, Shield, Heart, Zap, Target, Activity, Crosshair, MapPin } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, ReferenceLine } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } from "../utils/chartTheme";
 import { resolveChartSelectionIndex, type ChartSelectionRow } from "../utils/chartSelection";
-import type { GeneralPlayer, HealingPlayer, HealingCoverage, OffensePlayer, TopBarrierSource, TopHealingSource, TopSkill } from "../types/report";
+import type { HealingPlayer, HealingCoverage, OffensePlayer, TopBarrierSource, TopHealingSource, TopSkill } from "../types/report";
 import { buildHealingFightDrilldowns } from "../lib/squadStatsDrilldowns";
+import DistanceToTagPanel, { resolveDistanceToTagResult } from "../components/squad/DistanceToTagPanel";
 
 type SquadOverviewSortKey = "player" | "class" | "damage" | "dps" | "downContribution" | "healing" | "cleanses" | "strips" | "logs";
 
@@ -75,12 +76,6 @@ function sortPressureSkills(skills: TopSkill[]) {
   return [...skills].sort((a, b) => pressureSkillScore(b) - pressureSkillScore(a) || (b.damage ?? 0) - (a.damage ?? 0));
 }
 
-function distanceTone(distance: number) {
-  if (distance <= 600) return { label: "tight", dot: "bg-emerald-400", text: "text-emerald-300", border: "border-emerald-500/30", fill: "bg-emerald-500/10" };
-  if (distance <= 1200) return { label: "wide", dot: "bg-amber-400", text: "text-amber-300", border: "border-amber-500/30", fill: "bg-amber-500/10" };
-  return { label: "split", dot: "bg-rose-400", text: "text-rose-300", border: "border-rose-500/30", fill: "bg-rose-500/10" };
-}
-
 function buildPressureRows(players: OffensePlayer[], scope: ReturnType<typeof useDamageScope>["scope"]) {
   const base = players.map((p) => {
     const damage = pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll);
@@ -96,20 +91,6 @@ function buildPressureRows(players: OffensePlayer[], scope: ReturnType<typeof us
   }).sort((a, b) => b.pressureRaw - a.pressureRaw);
   const max = Math.max(...base.map((p) => p.pressureRaw), 1);
   return base.map((p) => ({ ...p, pressureScore: normalizeScore(p.pressureRaw, max), pressurePct: safeDiv(p.pressureRaw, max) }));
-}
-
-function buildDistanceRows(players: GeneralPlayer[]) {
-  return players
-    .filter((p) => !/commander/i.test(p.account) && p.distCount > 0 && p.totalDist >= 0)
-    .map((p) => ({
-      account: p.account,
-      profession: p.profession,
-      avgDistance: safeDiv(p.totalDist, p.distCount),
-      samples: p.distCount,
-      fights: p.logsJoined,
-    }))
-    .filter((p) => Number.isFinite(p.avgDistance) && p.avgDistance >= 0)
-    .sort((a, b) => b.avgDistance - a.avgDistance);
 }
 
 function SkillSourceRows({
@@ -236,7 +217,6 @@ export default function SquadStatsView() {
   };
   const [selectedPressureIndex, setSelectedPressureIndex] = useState(initialFightIndex);
   const [selectedHealingIndex, setSelectedHealingIndex] = useState(initialFightIndex);
-  const [hoveredDistanceAccount, setHoveredDistanceAccount] = useState<string | null>(null);
   const [overviewSort, setOverviewSort] = useState<{ key: SquadOverviewSortKey; dir: "asc" | "desc" } | null>(null);
   if (!report) return null;
   const s = report.stats;
@@ -300,16 +280,15 @@ export default function SquadStatsView() {
   const hasOutgoingBarrier = healingChartData.some((fight) => fight.outgoingBarrier !== null);
   const hasAbsorbedBarrier = healingChartData.some((fight) => fight.absorbedBarrier !== null && fight.absorbedBarrier > 0);
   const selectedHealingFight = healingChartData[Math.min(selectedHealingIndex, Math.max(healingChartData.length - 1, 0))];
-  const distanceRows = buildDistanceRows(s.generalPlayers);
-  const topDistanceRows = distanceRows.slice(0, 10);
+  const distanceResult = resolveDistanceToTagResult(s.distanceToTag, s.generalPlayers);
+  const distanceRows = distanceResult.rows;
   const averageTagDistance = safeDiv(
-    distanceRows.reduce((sum, p) => sum + p.avgDistance * p.samples, 0),
-    distanceRows.reduce((sum, p) => sum + p.samples, 0),
+    distanceRows.reduce((sum, player) => sum + player.avg, 0),
+    distanceRows.length,
   );
-  const splitCount = distanceRows.filter((p) => p.avgDistance > 1200).length;
-  const tightCount = distanceRows.filter((p) => p.avgDistance <= 600).length;
+  const splitCount = distanceRows.filter((player) => player.avg > 1200).length;
+  const tightCount = distanceRows.filter((player) => player.avg <= 600).length;
   const pressureLeader = topPressureRows[0];
-  const hoveredDistance = topDistanceRows.find((p) => p.account === hoveredDistanceAccount);
   const squadOverviewRows = (() => {
     const rows = s.offensePlayers.map((p) => {
       const heal = s.healingPlayers.find((h) => h.account === p.account);
@@ -639,79 +618,7 @@ export default function SquadStatsView() {
         </Panel>
       </div>
 
-      <Panel
-        title="Distance to Tag"
-        subtitle="Average commander distance from EI/replay data. Green is tight, amber is wide, red means split."
-        icon={<Gauge className="w-4 h-4" />}
-        accent="text-blue-400"
-        action={distanceRows.length ? `${distanceRows.length} players` : "no distance data"}
-      >
-        {distanceRows.length ? (
-          <div className="theme-distance-layout grid grid-cols-1 xl:grid-cols-[420px_1fr] gap-6 items-center">
-            <div className="theme-distance-radar relative mx-auto aspect-square w-full max-w-[380px] rounded-full border border-slate-700/80 bg-[radial-gradient(circle,rgba(52,211,153,0.18)_0_24%,rgba(245,158,11,0.14)_25%_48%,rgba(251,113,133,0.12)_49%_72%,rgba(15,23,42,0.6)_73%)] shadow-inner">
-              <div className="absolute inset-[24%] rounded-full border border-emerald-400/35" />
-              <div className="absolute inset-[8%] rounded-full border border-amber-400/35" />
-              <div className="absolute left-1/2 top-1/2 grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-blue-400/40 bg-blue-500/15 text-[10px] font-black uppercase tracking-wider text-blue-200">
-                Tag
-              </div>
-              {hoveredDistance && (
-                <div className="absolute left-1/2 top-4 z-10 w-56 -translate-x-1/2 rounded-xl border border-slate-700 bg-[#080d19]/95 p-3 text-center shadow-xl">
-                  <div className="truncate text-sm font-black text-slate-100">{hoveredDistance.account}</div>
-                  <div className="mt-1 flex items-center justify-center gap-1.5 text-[10px] uppercase tracking-wider text-slate-500">
-                    <ProfessionIcon profession={hoveredDistance.profession} className="h-3.5 w-3.5" />
-                    {hoveredDistance.profession}
-                  </div>
-                  <div className="mt-2 font-mono text-sm font-black text-blue-200">{fmtFixed(hoveredDistance.avgDistance, 0)} avg distance</div>
-                  <div className="text-[10px] text-slate-500">{fmtNum(hoveredDistance.samples)} samples · {fmtNum(hoveredDistance.fights)} fights</div>
-                </div>
-              )}
-              {topDistanceRows.map((p, index) => {
-                const angle = (index / Math.max(1, topDistanceRows.length)) * Math.PI * 2 - Math.PI / 2;
-                const radius = Math.min(43, Math.max(10, (p.avgDistance / 1800) * 43));
-                const tone = distanceTone(p.avgDistance);
-                const left = 50 + Math.cos(angle) * radius;
-                const top = 50 + Math.sin(angle) * radius;
-                return (
-                  <div
-                    key={p.account}
-                    className={`absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/40 ${tone.dot} shadow-[0_0_18px_rgba(255,255,255,0.15)]`}
-                    style={{ left: `${left}%`, top: `${top}%` }}
-                    onMouseEnter={() => setHoveredDistanceAccount(p.account)}
-                    onMouseLeave={() => setHoveredDistanceAccount(null)}
-                    onFocus={() => setHoveredDistanceAccount(p.account)}
-                    onBlur={() => setHoveredDistanceAccount(null)}
-                    title={`${p.account}: ${fmtFixed(p.avgDistance, 0)} average distance`}
-                  />
-                );
-              })}
-            </div>
-            <div className="theme-source-grid grid grid-cols-1 lg:grid-cols-2 gap-3">
-              {topDistanceRows.map((p) => {
-                const tone = distanceTone(p.avgDistance);
-                return (
-                  <div key={p.account} className={`theme-source-card rounded-xl border ${tone.border} ${tone.fill} p-3`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex items-center gap-2">
-                        <ProfessionIcon profession={p.profession} className="h-4 w-4 shrink-0" />
-                        <span className="truncate text-sm font-bold text-slate-200">{p.account}</span>
-                      </div>
-                      <span className={`font-mono text-sm font-black ${tone.text}`}>{fmtFixed(p.avgDistance, 0)}</span>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-500">
-                      <span>{tone.label}</span>
-                      <span>{fmtNum(p.samples)} samples · {fmtNum(p.fights)} fights</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-slate-800 p-6 text-sm text-slate-500">
-            This report does not include commander distance or replay positioning data, so Entropy is not inventing a tag-distance score.
-          </div>
-        )}
-      </Panel>
+      <DistanceToTagPanel result={distanceResult} />
 
       {/* DPS chart */}
       <Panel title="Top 10 DPS" icon={<Swords className="w-4 h-4" />} accent="text-orange-400">
