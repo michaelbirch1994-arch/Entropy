@@ -25,6 +25,11 @@ export interface ReplayPoint {
   y: number;
 }
 
+export interface ReplayFacingPoint {
+  t: number;
+  angle: number;
+}
+
 export interface ReplayPlayerTrack {
   account: string;
   name: string;
@@ -34,6 +39,7 @@ export interface ReplayPlayerTrack {
   points: ReplayPoint[];
   downIntervals: [number, number][];
   deadIntervals: [number, number][];
+  facings: ReplayFacingPoint[];
   /**
    * Cast times of skills that actually dealt damage in this fight. These
    * mark WHERE AND WHEN a skill was cast - they are not the effect's real
@@ -54,6 +60,7 @@ export interface ReplayEnemyTrack {
   points: ReplayPoint[];
   downIntervals: [number, number][];
   deadIntervals: [number, number][];
+  facings: ReplayFacingPoint[];
 }
 
 // EI ships the actual combat-replay map imagery in
@@ -112,6 +119,26 @@ function asPositionPoints(v: unknown, t0: number, pollingRate: number): ReplayPo
     const [x, y] = entry as unknown[];
     if (typeof x === "number" && typeof y === "number" && Number.isFinite(x) && Number.isFinite(y)) {
       out.push({ t: t0 + i * pollingRate, x, y });
+    }
+  });
+  return out;
+}
+
+// EI's Orientations array (JsonActorCombatReplayData.Orientations) is a flat
+// list of facing angles in degrees, sampled on the exact same cadence as
+// Positions (same t0/pollingRate reconstruction). It is the actor's true
+// facing direction, shipped directly by EI - not a movement-heading
+// approximation. The rotation convention (which way 0deg points, cw vs ccw)
+// hasn't been verified against a real replay export; if the on-map facing
+// wedge looks mirrored or rotated once tested against a live log, adjust
+// FACING_ANGLE_SIGN / FACING_ANGLE_OFFSET_DEG in ReplayView.tsx rather than
+// here.
+function asFacingPoints(v: unknown, t0: number, pollingRate: number): ReplayFacingPoint[] {
+  if (!Array.isArray(v)) return [];
+  const out: ReplayFacingPoint[] = [];
+  v.forEach((entry, i) => {
+    if (typeof entry === "number" && Number.isFinite(entry)) {
+      out.push({ t: t0 + i * pollingRate, angle: entry });
     }
   });
   return out;
@@ -202,6 +229,7 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
     const t0 = Math.ceil(start / pollingRate) * pollingRate;
     const points = asPositionPoints(crd.positions, t0, pollingRate);
     if (points.length === 0) continue;
+    const facings = asFacingPoints(crd.orientations, t0, pollingRate);
 
     for (const pt of points) {
       if (pt.x < minX) minX = pt.x;
@@ -229,6 +257,7 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
       points,
       downIntervals: asIntervals(crd.down),
       deadIntervals: asIntervals(crd.dead),
+      facings,
       casts,
     });
   }
@@ -241,6 +270,7 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
     const t0 = Math.ceil(start / pollingRate) * pollingRate;
     const points = asPositionPoints(crd.positions, t0, pollingRate);
     if (points.length === 0) return;
+    const facings = asFacingPoints(crd.orientations, t0, pollingRate);
 
     for (const pt of points) {
       if (pt.x < minX) minX = pt.x;
@@ -253,6 +283,7 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
       id: typeof t.id === "number" || typeof t.id === "string" ? String(t.id) : `target-${idx}`,
       name: typeof t.name === "string" ? t.name : "Enemy",
       points,
+      facings,
       downIntervals: asIntervals(crd.down),
       deadIntervals: asIntervals(crd.dead),
     });
@@ -312,6 +343,29 @@ export function interpolatePosition(points: ReplayPoint[], t: number): ReplayPoi
   const span = b.t - a.t || 1;
   const f = (t - a.t) / span;
   return { t, x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
+}
+
+// Circular interpolation for facing angles (degrees). A plain linear lerp
+// breaks down across the 0/360 wrap (350deg -> 10deg would lerp "the long
+// way" through 180 instead of the actual 20deg turn), so this picks the
+// shortest angular delta between the two bracketing samples first.
+export function interpolateFacing(facings: ReplayFacingPoint[], t: number): number | null {
+  if (facings.length === 0) return null;
+  if (t <= facings[0].t) return facings[0].angle;
+  if (t >= facings[facings.length - 1].t) return facings[facings.length - 1].angle;
+  let lo = 0;
+  let hi = facings.length - 1;
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1;
+    if (facings[mid].t <= t) lo = mid;
+    else hi = mid;
+  }
+  const a = facings[lo];
+  const b = facings[hi];
+  const span = b.t - a.t || 1;
+  const f = (t - a.t) / span;
+  const delta = ((b.angle - a.angle + 540) % 360) - 180;
+  return a.angle + delta * f;
 }
 
 export function isInInterval(intervals: [number, number][], t: number): boolean {

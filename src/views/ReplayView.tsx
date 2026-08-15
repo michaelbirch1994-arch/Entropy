@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { Play, Pause, Film, Crosshair, Download } from "lucide-react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
-import { interpolatePosition, isInInterval, distanceBetween } from "../lib/parseReplayData";
+import { interpolatePosition, interpolateFacing, isInInterval, distanceBetween } from "../lib/parseReplayData";
 
 function fmtClock(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -16,6 +16,19 @@ function clamp(value: number, min: number, max: number): number {
 function shortActorName(name: string | undefined): string {
   if (!name) return "Unknown";
   return name.split(".")[0] || name;
+}
+
+// EI's Orientations angle convention (which way 0deg points, cw vs ccw) is
+// unverified against a real replay export - see the comment on
+// asFacingPoints in src/lib/parseReplayData.ts. If facing spokes look
+// mirrored or rotated once checked against a live log, adjust these two
+// instead of touching the render code below.
+const FACING_ANGLE_SIGN = 1;
+const FACING_ANGLE_OFFSET_DEG = 0;
+
+function facingLineEnd(cx: number, cy: number, length: number, angleDeg: number): { x2: number; y2: number } {
+  const rad = ((FACING_ANGLE_SIGN * angleDeg + FACING_ANGLE_OFFSET_DEG) * Math.PI) / 180;
+  return { x2: cx + Math.cos(rad) * length, y2: cy + Math.sin(rad) * length };
 }
 
 export default function ReplayView() {
@@ -36,6 +49,10 @@ export default function ReplayView() {
   const [followFocus, setFollowFocus] = useState(true);
   const [showMechanics, setShowMechanics] = useState(true);
   const [showCasts, setShowCasts] = useState(false);
+  // Facing spokes default on - EI ships true per-sample orientation data
+  // (not a movement-heading guess), so unlike the cast pulses above this is
+  // cheap, always-useful signal.
+  const [showFacing, setShowFacing] = useState(true);
   const rafRef = useRef<number | null>(null);
   const lastTsRef = useRef<number | null>(null);
 
@@ -472,6 +489,7 @@ render(0);
               { on: showMap, set: setShowMap, label: "Map", available: !!fight.data.map },
               { on: showMechanics, set: setShowMechanics, label: "Mechanics", available: (fight.data.mechanics ?? []).length > 0 },
               { on: showCasts, set: setShowCasts, label: "Cast markers", available: true },
+              { on: showFacing, set: setShowFacing, label: "Facing", available: true },
             ] as { on: boolean; set: (v: boolean) => void; label: string; available: boolean }[])
               .filter((l) => l.available)
               .map((l) => (
@@ -615,6 +633,29 @@ render(0);
                   );
                 })}
 
+              {showFacing &&
+                fight.data.enemies.map((e) => {
+                  if (isInInterval(e.deadIntervals, t)) return null;
+                  const pt = interpolatePosition(e.points, t);
+                  const angle = interpolateFacing(e.facings, t);
+                  if (!pt || angle == null) return null;
+                  const r = (isInInterval(e.downIntervals, t) ? 9 : 6.5) * markerUnit;
+                  const end = facingLineEnd(pt.x, pt.y, r + 7 * markerUnit, angle);
+                  return (
+                    <line
+                      key={`facing-${e.id}`}
+                      x1={pt.x}
+                      y1={pt.y}
+                      x2={end.x2}
+                      y2={end.y2}
+                      stroke="#f43f5e"
+                      strokeWidth={1.5 * markerUnit}
+                      strokeLinecap="round"
+                      opacity={0.8}
+                    />
+                  );
+                })}
+
               {fight.data.enemies.map((e) => {
                 const pt = interpolatePosition(e.points, t);
                 if (!pt) return null;
@@ -636,6 +677,29 @@ render(0);
                   </circle>
                 );
               })}
+              {showFacing &&
+                fight.data.players.map((p) => {
+                  if (isInInterval(p.deadIntervals, t)) return null;
+                  const pt = interpolatePosition(p.points, t);
+                  const angle = interpolateFacing(p.facings, t);
+                  if (!pt || angle == null) return null;
+                  const r = (isInInterval(p.downIntervals, t) ? 10 : p.isCommander ? 11 : 7) * markerUnit;
+                  const end = facingLineEnd(pt.x, pt.y, r + 7 * markerUnit, angle);
+                  return (
+                    <line
+                      key={`facing-${p.account}`}
+                      x1={pt.x}
+                      y1={pt.y}
+                      x2={end.x2}
+                      y2={end.y2}
+                      stroke={p.inSquad ? "#f59e0b" : "#94a3b8"}
+                      strokeWidth={1.5 * markerUnit}
+                      strokeLinecap="round"
+                      opacity={0.85}
+                    />
+                  );
+                })}
+
               {fight.data.players.map((p) => {
                 const pt = interpolatePosition(p.points, t);
                 if (!pt) return null;
