@@ -637,7 +637,7 @@ render(0);
                 fight.data.enemies.map((e) => {
                   if (isInInterval(e.deadIntervals, t)) return null;
                   const pt = interpolatePosition(e.points, t);
-                  const angle = interpolateFacing(e.facings, t);
+                  const angle = interpolateFacing(e.facings ?? [], t);
                   if (!pt || angle == null) return null;
                   const r = (isInInterval(e.downIntervals, t) ? 9 : 6.5) * markerUnit;
                   const end = facingLineEnd(pt.x, pt.y, r + 7 * markerUnit, angle);
@@ -681,7 +681,7 @@ render(0);
                 fight.data.players.map((p) => {
                   if (isInInterval(p.deadIntervals, t)) return null;
                   const pt = interpolatePosition(p.points, t);
-                  const angle = interpolateFacing(p.facings, t);
+                  const angle = interpolateFacing(p.facings ?? [], t);
                   if (!pt || angle == null) return null;
                   const r = (isInInterval(p.downIntervals, t) ? 10 : p.isCommander ? 11 : 7) * markerUnit;
                   const end = facingLineEnd(pt.x, pt.y, r + 7 * markerUnit, angle);
