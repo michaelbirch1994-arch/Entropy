@@ -273,6 +273,28 @@ export interface GeneralPlayer {
     stackedLogCount: number;
 }
 
+export type DistanceToTagSource = 'replay' | 'fightAvg' | 'mixed' | 'legacy';
+
+export interface DistanceToTagRow {
+    account: string;
+    profession: string;
+    professionList: string[];
+    fightCount: number;
+    sampleCount: number;
+    avg: number;
+    p25: number;
+    median: number;
+    p75: number;
+    p95: number;
+    source: DistanceToTagSource;
+    isCommander: boolean;
+}
+
+export interface DistanceToTagResult {
+    rows: DistanceToTagRow[];
+    commanderCount: number;
+}
+
 export interface TeamBreakdown {
     teamId: string;
     count: number;
@@ -308,6 +330,10 @@ export interface FightRow {
     effectiveHealing?: number;
     /** Top outgoing healing sources for this specific fight. Present on reports built after v0.2.23 when healing addon data exists. */
     topOutgoingHealingSkills?: TopHealingSource[];
+    /** Top outgoing barrier sources for this specific fight. Present on reports built after v0.2.31 when barrier addon data exists. */
+    topOutgoingBarrierSkills?: TopBarrierSource[];
+    /** Top outgoing damage/down-contribution sources for this specific fight. Present on reports built after v0.2.29. */
+    topOutgoingDamageSkills?: TopSkill[];
     /** Top incoming damage sources for this specific fight. Present on reports built after v0.2.23. */
     topIncomingDamageSkills?: TopSkill[];
     totalOutgoingStrips: number;
@@ -623,6 +649,14 @@ export interface TopHealingSource {
   isTrait: boolean;
 }
 
+export interface TopBarrierSource {
+    id: number;
+    name: string;
+    icon?: string;
+    barrier: number;
+    hits: number;
+}
+
 export interface PlayerSkillSource {
     id: string;
     name: string;
@@ -689,6 +723,8 @@ export interface ReportStats {
      */
   survivalSupport?: import('../lib/bridge-metrics/incomingHealing').IncomingHealingBreakdown[];
     generalPlayers: GeneralPlayer[];
+    /** Source-aware squad distance statistics. Added in raw metrics v6; older reports fall back to generalPlayers. */
+  distanceToTag?: DistanceToTagResult;
     offensiveMvp: MvpCard;
     offensiveSilver: MvpCard;
     offensiveBronze: MvpCard;

@@ -126,7 +126,7 @@ function findItem(viewId: string): NavItem | undefined {
 export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   const [expanded, setExpanded] = useState<string | null>(() => findSectionForView(activeView) ?? "OVERVIEW");
   const [query, setQuery] = useState("");
-  const [compact, setCompact] = useState(false);
+  const [compact, setCompact] = useState(() => window.innerWidth <= 720);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [recent, setRecent] = useState<NavItem[]>(() => {
     try {
@@ -162,6 +162,14 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth <= 720) setCompact(true);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const toggle = (title: string) => setExpanded(expanded === title ? null : title);
   const searchResults = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -187,12 +195,12 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
         onClick={() => selectView(item.id)}
         aria-current={isActive ? "page" : undefined}
         title={compact ? item.label : undefined}
-        className={`group w-full text-left rounded-lg text-xs font-medium transition-all duration-200 relative ${
+        className={`theme-nav-item group w-full text-left rounded-lg text-xs font-medium transition-all duration-200 relative ${
           compact
-            ? `flex h-9 items-center justify-center ${isActive ? "bg-amber-500/15 text-amber-300" : "text-slate-500 hover:bg-white/[0.04] hover:text-slate-200"}`
+            ? `flex h-9 items-center justify-center ${isActive ? "bg-theme-accent/15 text-theme-accent" : "text-theme-muted hover:bg-theme-surface-elevated/60 hover:text-theme-text"}`
             : `px-3 py-2 ${isActive
-                ? "bg-amber-500/10 text-amber-300 shadow-[inset_2px_0_0_0_#f59e0b] font-semibold"
-                : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]"
+                ? "bg-theme-accent/10 text-theme-accent shadow-[inset_2px_0_0_0_var(--theme-accent)] font-semibold"
+                : "text-theme-muted hover:text-theme-text hover:bg-theme-surface-elevated/60"
               }`
         }`}
       >
@@ -201,7 +209,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
         ) : (
           <span className="flex items-center justify-between gap-2">
             <span>{item.label}</span>
-            {options?.section && <span className="text-[9px] uppercase tracking-wider text-slate-600">{options.section}</span>}
+            {options?.section && <span className="text-[9px] uppercase tracking-wider text-theme-muted/70">{options.section}</span>}
           </span>
         )}
       </button>
@@ -209,22 +217,22 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   };
 
   return (
-    <aside className={`${compact ? "w-20" : "w-64"} flex-shrink-0 border-r border-amber-500/10 bg-black/50 backdrop-blur-xl h-full flex flex-col shadow-[4px_0_40px_rgba(0,0,0,0.5)] z-40 overflow-y-auto custom-scrollbar transition-[width] duration-300`}>
+    <aside className={`${compact ? "w-20" : "w-64"} theme-sidebar flex-shrink-0 h-full flex flex-col z-40 overflow-y-auto custom-scrollbar transition-[width] duration-300`}>
       {/* Brand */}
-      <div className="p-4 border-b border-amber-500/10 sticky top-0 bg-black/60 backdrop-blur-md z-10">
+      <div className="theme-sidebar-header p-4 sticky top-0 z-10">
         <div className={`flex items-center ${compact ? "justify-center" : "gap-3"}`}>
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-700/20 flex items-center justify-center text-amber-400 shadow-[0_0_16px_-3px_rgba(245,158,11,0.5)] border border-amber-400/30">
+          <div className="theme-logo-tile w-9 h-9 rounded-lg flex items-center justify-center">
             <EntropyLogo size={20} />
           </div>
-          {!compact && <div>
-            <h1 className="entropy-wordmark text-sm font-black tracking-widest text-white uppercase font-display">Entropy</h1>
-            <p className="text-[10px] text-amber-400/70 font-bold uppercase tracking-widest">WvW Analytics</p>
+          {!compact && <div className="theme-brand-copy">
+            <h1 className="entropy-wordmark text-sm font-black tracking-widest text-theme-text uppercase font-display">Entropy</h1>
+            <p className="text-[10px] text-theme-accent/70 font-bold uppercase tracking-widest">WvW Analytics</p>
           </div>}
         </div>
         <button
           type="button"
           onClick={() => setCompact(!compact)}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:border-amber-500/20 hover:text-amber-300"
+          className="theme-quiet-button mt-3 flex w-full items-center justify-center gap-2 px-2 py-1.5"
           title={compact ? "Expand sidebar" : "Collapse sidebar"}
         >
           {compact ? <ChevronsRight className="h-3.5 w-3.5" /> : <ChevronsLeft className="h-3.5 w-3.5" />}
@@ -235,20 +243,20 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
       {/* Nav */}
       <nav className="p-3 space-y-0.5 flex-1" role="navigation" aria-label="Main navigation">
         {!compact && (
-          <div className="sticky top-[93px] z-10 mb-3 rounded-xl border border-white/[0.06] bg-slate-950/80 px-3 py-2 shadow-lg shadow-black/20">
-            <div className="flex items-center gap-2 text-slate-500">
+          <div className="theme-search-shell sticky top-[93px] z-10 mb-3 rounded-xl border border-theme-border/40 bg-theme-surface/85 px-3 py-2 shadow-lg shadow-black/20">
+            <div className="flex items-center gap-2 text-theme-muted">
               <Search className="h-3.5 w-3.5" />
               <input
                 ref={searchRef}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Quick switch..."
-                className="w-full bg-transparent text-xs text-slate-200 placeholder:text-slate-600 outline-none"
+                className="w-full bg-transparent text-xs text-theme-text placeholder:text-theme-muted/70 outline-none"
               />
-              <kbd className="rounded border border-white/[0.08] px-1.5 py-0.5 text-[9px] text-slate-500">⌘K</kbd>
+              <kbd className="rounded border border-theme-border/50 px-1.5 py-0.5 text-[9px] text-theme-muted">Ctrl K</kbd>
             </div>
             {searchResults.length > 0 && (
-              <div className="mt-2 space-y-1 border-t border-white/[0.06] pt-2">
+              <div className="mt-2 space-y-1 border-t border-theme-border/40 pt-2">
                 {searchResults.map((item) => renderItemButton(item, { section: item.section }))}
               </div>
             )}
@@ -257,7 +265,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
 
         <div className="mb-2">
           {!compact && (
-            <div className="mb-1 flex items-center gap-2 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+            <div className="mb-1 flex items-center gap-2 px-3 text-[10px] font-bold uppercase tracking-wider text-theme-muted/75">
               <Pin className="h-3 w-3" />
               Pinned / Recent
             </div>
@@ -276,8 +284,8 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
               {isFlat ? (
                 <div className={compact ? "space-y-1" : "space-y-0.5"}>
                   {!compact && (
-                    <div className={`mt-3 flex items-center gap-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${hasCurrent ? "text-amber-400" : "text-slate-600"}`}>
-                      <span className={hasCurrent ? "text-amber-500" : "text-slate-600"}>{section.icon}</span>
+                    <div className={`mt-3 flex items-center gap-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${hasCurrent ? "text-theme-accent" : "text-theme-muted/75"}`}>
+                      <span className={hasCurrent ? "text-theme-accent" : "text-theme-muted/75"}>{section.icon}</span>
                       {section.title}
                     </div>
                   )}
@@ -288,19 +296,19 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
               <button
                 onClick={() => toggle(section.title)}
                 aria-expanded={isOpen}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
+                className={`theme-nav-section w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
                   isOpen || hasCurrent
-                    ? "bg-amber-500/5 text-amber-400 border border-amber-500/10"
-                    : "text-slate-400 hover:bg-white/[0.03] hover:text-slate-200 border border-transparent"
+                    ? "bg-theme-accent/5 text-theme-accent border border-theme-accent/15"
+                    : "text-theme-muted hover:bg-theme-surface-elevated/50 hover:text-theme-text border border-transparent"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <span className={isOpen || hasCurrent ? "text-amber-500" : "text-slate-500"}>{section.icon}</span>
+                  <span className={isOpen || hasCurrent ? "text-theme-accent" : "text-theme-muted"}>{section.icon}</span>
                   {!compact && section.title}
                 </div>
                 {!compact && (
                   <ChevronDown
-                    className={`w-3.5 h-3.5 transition-transform duration-300 ${isOpen ? "rotate-180 text-amber-500" : "text-slate-500"}`}
+                    className={`w-3.5 h-3.5 transition-transform duration-300 ${isOpen ? "rotate-180 text-theme-accent" : "text-theme-muted"}`}
                   />
                 )}
               </button>
@@ -310,7 +318,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
                   isOpen ? "max-h-96 opacity-100 mt-0.5" : "max-h-0 opacity-0"
                 }`}
               >
-                <ul className="pl-9 pr-2 py-1 space-y-0.5 relative before:content-[''] before:absolute before:left-5 before:top-2 before:bottom-2 before:w-px before:bg-amber-500/10">
+                <ul className="pl-9 pr-2 py-1 space-y-0.5 relative before:content-[''] before:absolute before:left-5 before:top-2 before:bottom-2 before:w-px before:bg-theme-border/60">
                   {section.items.map((item) => {
                     return (
                       <li key={item.id}>
@@ -328,7 +336,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-amber-500/10 text-[10px] text-slate-500 font-mono text-center">
+      <div className="p-4 border-t border-theme-border/50 text-[10px] text-theme-muted font-mono text-center">
         {compact ? "E" : "Entropy"}
       </div>
     </aside>

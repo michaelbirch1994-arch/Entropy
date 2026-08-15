@@ -32,7 +32,7 @@ export default function SynergyPanel({ insights }: { insights: SynergyInsight[] 
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
-              className={`flex items-start gap-2.5 rounded-xl border ${s.border} ${s.bg} px-3.5 py-3`}
+              className={`theme-alert-plate flex items-start gap-2.5 rounded-xl border ${s.border} ${s.bg} px-3.5 py-3`}
             >
               <span className={`${s.text} flex-shrink-0 mt-0.5`}>{s.icon}</span>
               <div>

@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useReport } from "../store/ReportContext";
+import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
 import { fmtCompact } from "../utils/format";
-import { Swords, ExternalLink } from "lucide-react";
+import { Activity, BrainCircuit, ExternalLink, GitCompare, Swords, Target } from "lucide-react";
 import type { FightRow } from "../types/report";
 
 type SortKey = "fight" | "map" | "duration" | "outcome" | "squad" | "enemies" | "kills" | "deaths" | "outDamage" | "inDamage" | "strips";
 type SortState = { key: SortKey; dir: "desc" | "asc" } | null;
+type OutcomeFilter = "all" | "wins" | "losses";
 
 function parseDurationSeconds(duration: string) {
   const min = Number(duration.match(/(\d+)m/)?.[1] ?? 0);
@@ -23,12 +25,18 @@ function compareValues(a: string | number | boolean, b: string | number | boolea
 
 export default function FightBreakdownView() {
   const { report } = useReport();
+  const { setActiveView } = useView();
   const [showAll, setShowAll] = useState(false);
   const [sort, setSort] = useState<SortState>(null);
+  const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>("all");
+  const [selectedFightId, setSelectedFightId] = useState<string | null>(null);
+  const [comparisonFightId, setComparisonFightId] = useState<string | null>(null);
   const s = report?.stats;
   const fights = s?.fightBreakdown ?? [];
   const sortedFights = useMemo(() => {
-    const base = fights.map((fight, index) => ({ fight, index }));
+    const base = fights
+      .map((fight, index) => ({ fight, index }))
+      .filter(({ fight }) => outcomeFilter === "all" || (outcomeFilter === "wins" ? fight.isWin : !fight.isWin));
     if (!sort) return base;
     const valueFor = (row: { fight: FightRow; index: number }) => {
       const f = row.fight;
@@ -48,7 +56,7 @@ export default function FightBreakdownView() {
       }
     };
     return [...base].sort((a, b) => compareValues(valueFor(a), valueFor(b), sort.dir) || a.index - b.index);
-  }, [fights, sort]);
+  }, [fights, outcomeFilter, sort]);
   const shown = showAll ? sortedFights : sortedFights.slice(0, 12);
   const toggleSort = (key: SortKey) => {
     setSort((current) => {
@@ -71,6 +79,17 @@ export default function FightBreakdownView() {
   };
 
   if (!s) return null;
+  const selectedRow = fights.map((fight, index) => ({ fight, index })).find(({ fight }) => fight.id === selectedFightId) ?? null;
+  const comparisonRow = fights.map((fight, index) => ({ fight, index })).find(({ fight }) => fight.id === comparisonFightId) ?? null;
+  const openFightIn = (view: "squad-stats" | "intelligence") => {
+    if (selectedRow) {
+      localStorage.setItem("entropy.selectedFightIndex", String(selectedRow.index));
+      localStorage.setItem("entropy.selectedFightId", selectedRow.fight.id);
+    }
+    setActiveView(view);
+  };
+  const pressureRatio = (fight: FightRow) => fight.totalIncomingDamage > 0 ? fight.totalOutgoingDamage / fight.totalIncomingDamage : 0;
+  const kdr = (fight: FightRow) => fight.alliesDead > 0 ? fight.enemyDeaths / fight.alliesDead : fight.enemyDeaths;
 
   return (
     <div className="space-y-5 animate-view pb-12">
@@ -81,12 +100,29 @@ export default function FightBreakdownView() {
         action={<span>{fights.length} FIGHTS</span>}
         bodyClassName="p-0"
       >
+        <div className="theme-fight-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-theme-border/50 px-4 py-3">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter fights by outcome">
+            {(["all", "wins", "losses"] as OutcomeFilter[]).map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                aria-pressed={outcomeFilter === filter}
+                onClick={() => setOutcomeFilter(filter)}
+                className={`theme-filter-chip border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${outcomeFilter === filter ? "border-orange-400/40 bg-orange-500/10 text-orange-200" : "border-theme-border text-theme-muted"}`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-theme-muted">Select a row to inspect · mark another to compare</span>
+        </div>
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
             <thead>
               <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/40">
                 <SortHeader k="fight">#</SortHeader>
                 <th className="p-2.5 font-medium">Fight</th>
+                <th className="p-2.5 font-medium">Compare</th>
                 <SortHeader k="map">Map</SortHeader>
                 <SortHeader k="duration">Duration</SortHeader>
                 <SortHeader k="outcome">Outcome</SortHeader>
@@ -101,11 +137,11 @@ export default function FightBreakdownView() {
             </thead>
             <tbody className="divide-y divide-slate-800/30 font-mono">
               {shown.map(({ fight: f, index }) => (
-                <tr key={f.id} className="hover:bg-blue-950/20 transition-colors">
+                <tr key={f.id} className={`transition-colors ${selectedFightId === f.id ? "bg-orange-500/[0.08]" : "hover:bg-orange-950/20"}`}>
                   <td className="p-2.5 text-slate-500">{index + 1}</td>
                   <td className="p-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-slate-300 font-semibold">{f.label}</span>
+                      <button type="button" onClick={() => setSelectedFightId(f.id)} className="font-semibold text-slate-300 hover:text-orange-200">{f.label}</button>
                       {f.permalink && (
                         <a
                           href={f.permalink}
@@ -117,6 +153,18 @@ export default function FightBreakdownView() {
                         </a>
                       )}
                     </div>
+                  </td>
+                  <td className="p-2.5">
+                    <button
+                      type="button"
+                      aria-pressed={comparisonFightId === f.id}
+                      disabled={selectedFightId === f.id}
+                      onClick={() => setComparisonFightId((current) => current === f.id ? null : f.id)}
+                      title="Use this fight as the comparison"
+                      className={`inline-grid h-7 w-7 place-items-center border disabled:cursor-not-allowed disabled:opacity-30 ${comparisonFightId === f.id ? "border-cyan-400/50 bg-cyan-500/10 text-cyan-200" : "border-slate-800 text-slate-500 hover:text-slate-200"}`}
+                    >
+                      <GitCompare className="h-3.5 w-3.5" />
+                    </button>
                   </td>
                   <td className="p-2.5 text-slate-400">{f.mapName}</td>
                   <td className="p-2.5 text-slate-400">{f.duration}</td>
@@ -148,6 +196,59 @@ export default function FightBreakdownView() {
         )}
       </Panel>
 
+      {selectedRow && (
+        <section className="theme-fight-dossier grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
+          <div className="theme-selected-fight border border-orange-400/20 bg-black/45 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-300">Selected fight dossier</div>
+                <h3 className="mt-1 text-xl font-black uppercase text-slate-100">Fight {selectedRow.index + 1} · {selectedRow.fight.fullLabel}</h3>
+                <p className="mt-2 text-xs text-slate-500">Direct report totals. No scoring or methodology changes are applied in this dossier.</p>
+              </div>
+              <span className={`border px-3 py-1 text-xs font-black uppercase ${selectedRow.fight.isWin ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300" : "border-rose-400/30 bg-rose-500/10 text-rose-300"}`}>
+                {selectedRow.fight.isWin ? "Win" : "Loss"}
+              </span>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+              <DossierMetric label="Squad vs enemy" value={`${selectedRow.fight.squadCount}v${selectedRow.fight.enemyCount}`} />
+              <DossierMetric label="Kill / death ratio" value={kdr(selectedRow.fight).toFixed(2)} tone="text-amber-300" />
+              <DossierMetric label="Outgoing / incoming" value={pressureRatio(selectedRow.fight).toFixed(2)} tone="text-orange-300" />
+              <DossierMetric label="Down conversion" value={`${selectedRow.fight.enemyDowns} → ${selectedRow.fight.enemyDeaths}`} tone="text-emerald-300" />
+              <DossierMetric label="Outgoing damage" value={fmtCompact(selectedRow.fight.totalOutgoingDamage)} />
+              <DossierMetric label="Incoming damage" value={fmtCompact(selectedRow.fight.totalIncomingDamage)} tone="text-rose-300" />
+              <DossierMetric label="Outgoing strips" value={String(selectedRow.fight.totalOutgoingStrips)} tone="text-cyan-300" />
+              <DossierMetric label="Squad deaths" value={String(selectedRow.fight.alliesDead)} tone="text-rose-300" />
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button type="button" onClick={() => openFightIn("squad-stats")} className="theme-command-button inline-flex items-center gap-2 border border-orange-400/30 bg-orange-500/10 px-4 py-2 text-xs font-black uppercase text-orange-200">
+                <Activity className="h-4 w-4" /> Open pressure and sustain
+              </button>
+              <button type="button" onClick={() => openFightIn("intelligence")} className="theme-command-button inline-flex items-center gap-2 border border-cyan-400/25 bg-cyan-500/[0.08] px-4 py-2 text-xs font-black uppercase text-cyan-200">
+                <BrainCircuit className="h-4 w-4" /> Open intelligence
+              </button>
+            </div>
+          </div>
+
+          <div className="theme-comparison-slab border border-cyan-400/15 bg-black/35 p-5">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300"><GitCompare className="h-4 w-4" /> Comparison</div>
+            {comparisonRow ? (
+              <div className="mt-4 space-y-4">
+                <div>
+                  <div className="text-sm font-black text-slate-100">Fight {comparisonRow.index + 1} · {comparisonRow.fight.mapName}</div>
+                  <div className="mt-1 text-xs text-slate-500">Difference from selected fight</div>
+                </div>
+                <Delta label="Outgoing damage" value={comparisonRow.fight.totalOutgoingDamage - selectedRow.fight.totalOutgoingDamage} compact />
+                <Delta label="Incoming damage" value={comparisonRow.fight.totalIncomingDamage - selectedRow.fight.totalIncomingDamage} compact inverse />
+                <Delta label="Enemy downs" value={comparisonRow.fight.enemyDowns - selectedRow.fight.enemyDowns} />
+                <Delta label="Squad deaths" value={comparisonRow.fight.alliesDead - selectedRow.fight.alliesDead} inverse />
+              </div>
+            ) : (
+              <div className="mt-4 border-l-2 border-cyan-400/30 px-3 py-2 text-xs leading-5 text-slate-500">Use the comparison icon in another row to measure it against this fight.</div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Damage per fight chart */}
       <Panel title="Damage Per Fight" icon={<Swords className="w-4 h-4" />} accent="text-orange-400">
         <div className="space-y-2">
@@ -173,4 +274,13 @@ export default function FightBreakdownView() {
       </Panel>
     </div>
   );
+}
+
+function DossierMetric({ label, value, tone = "text-slate-100" }: { label: string; value: string; tone?: string }) {
+  return <div className="theme-dossier-metric border-l-2 border-orange-400/30 bg-black/25 px-3 py-2"><div className="text-[9px] font-black uppercase tracking-wider text-slate-500">{label}</div><div className={`mt-1 font-mono text-lg font-black ${tone}`}>{value}</div></div>;
+}
+
+function Delta({ label, value, compact = false, inverse = false }: { label: string; value: number; compact?: boolean; inverse?: boolean }) {
+  const beneficial = inverse ? value <= 0 : value >= 0;
+  return <div className="flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3 text-xs"><span className="text-slate-500">{label}</span><span className={`font-mono font-black ${beneficial ? "text-emerald-300" : "text-rose-300"}`}>{value >= 0 ? "+" : ""}{compact ? fmtCompact(value) : value}</span></div>;
 }

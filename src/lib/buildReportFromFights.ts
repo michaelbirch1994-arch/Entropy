@@ -19,6 +19,7 @@ import { synthesizeFindings } from './intelligence/findingEngine';
 import type { CombatEvent } from './combat/CombatEvent';
 import type { CriticalEvent, IntelligenceFinding } from './intelligence/types';
 import type { EngagementSegment } from './intelligence/engagementTypes';
+import { computeDistanceToTag } from './bridge-metrics/distanceToTag';
 
 /**
  * Merge per-log incoming-healing breakdowns into one per player.
@@ -223,6 +224,7 @@ import type {
     SynergyInsight,
     MechanicsData,
     TopHealingSource,
+    TopBarrierSource,
     DeathRecapEntry,
     FightHighlight,
     DamageMitigationPlayer,
@@ -234,7 +236,7 @@ import type {
 // that version produced - updating the app does not retroactively fix it.
 // Bump this whenever a change alters computed output, so the UI can tell the
 // user to re-import instead of silently showing them stale figures.
-export const METRICS_VERSION = 'entropy-raw-v5';
+export const METRICS_VERSION = 'entropy-raw-v6';
 
 const NATURAL_FORTITUDE_SYNTHETIC_SKILL_ID = -1001779;
 const NATURAL_FORTITUDE_DAMAGE_PER_UNLEASHED_SKILL_HIT = 1779;
@@ -599,6 +601,7 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
 
 
           const buffUptimes = (p.buffUptimes ?? []) as Array<{ id?: number; buffData?: Array<{ uptime?: number; presence?: number }> }>;
+          const fightBuffValues = new Map<number, number>();
                 for (const entry of buffUptimes) {
                           const id = Number(entry?.id);
                           if (!Number.isFinite(id)) continue;
@@ -607,6 +610,17 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                           const meta = buffMetaByClass.get(cls)?.get(id);
                           const uptime = Number(entry?.buffData?.[0]?.uptime);
                           if (!Number.isFinite(uptime)) continue;
+                          // EI normally emits one phase-0 uptime row per buff, but
+                          // defensive test fixtures and some transformed logs may
+                          // carry duplicate ids. Treat the last row for a buff as
+                          // the fight-level value and add it once below, instead of
+                          // averaging duplicate rows inside the same fight.
+                          fightBuffValues.set(id, uptime);
+                }
+
+                fightBuffValues.forEach((uptime, id) => {
+                          const cls = idToClass.get(id);
+                          if (!cls) return;
 
                   const accMapByAccount = accByClass.get(cls)!;
                           let accMap = accMapByAccount.get(account);
@@ -621,7 +635,7 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                   cur.sum += uptime;
                           cur.count += 1;
                           accMap.set(id, cur);
-                }
+                });
         }
   }
 
@@ -975,7 +989,7 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                           accumulate(outgoing, id, dmg, hits, downContrib);
                 }
 
-          const inDist = (p.totalDamageTaken ?? []) as DistEntry[][];
+          const inDist = ((p.totalDamageTakenDist ?? p.totalDamageTaken) ?? []) as DistEntry[][];
                 for (const entry of inDist[0] ?? []) {
                           const id = Number(entry?.id);
                           if (!Number.isFinite(id)) continue;
@@ -1454,15 +1468,17 @@ function computeSynergyInsights(
     const insights: SynergyInsight[] = [];
     const boons = buffCategoryUptimes['Boons'];
 
-  function avgBoonValue(boonName: string): { value: number; stacking: boolean } | null {
+  function avgBoonValue(boonName: string): { value: number; stacking: boolean; lowest?: { account: string; value: number } } | null {
         if (!boons) return null;
         const col = boons.columns.find((c) => c.name === boonName);
         if (!col) return null;
         const withData = boons.rows.filter((r) => r.uptimes[col.id] !== undefined);
         if (withData.length === 0) return null;
+        const lowestRow = withData.reduce((lowest, row) => (row.uptimes[col.id] < lowest.uptimes[col.id] ? row : lowest));
         return {
           value: withData.reduce((sum, r) => sum + (r.uptimes[col.id] || 0), 0) / withData.length,
           stacking: !!col.stacking,
+          lowest: { account: lowestRow.account, value: lowestRow.uptimes[col.id] },
         };
   }
 
@@ -1488,6 +1504,8 @@ function computeSynergyInsights(
                         insights.push({ id: 'stability', severity: 'critical', title: 'Very low Stability coverage', detail: `Squad averaged only ${stability.value.toFixed(2)} Stability stacks - vulnerable to CC chains and pulls/knockbacks.` });
                 } else if (stability.value < 0.35) {
                         insights.push({ id: 'stability', severity: 'warn', title: 'Low Stability coverage', detail: `Squad averaged ${stability.value.toFixed(2)} Stability stacks. Stability is an intensity-stacking boon, so Entropy shows EI-style average stacks here instead of a percent.` });
+                } else if (stability.lowest && stability.lowest.value < 0.15) {
+                        insights.push({ id: 'stability', severity: 'warn', title: 'Stability gap detected', detail: `${stability.lowest.account} averaged only ${stability.lowest.value.toFixed(2)} Stability stacks. Stability is an intensity-stacking boon, so Entropy shows EI-style average stacks here instead of a percent.` });
                 }
           } else if (stability.value < 15) {
                   insights.push({ id: 'stability', severity: 'critical', title: 'Very low Stability uptime', detail: `Squad averaged only ${stability.value.toFixed(0)}% Stability uptime - vulnerable to CC chains and pulls/knockbacks.` });
@@ -1645,7 +1663,8 @@ function computeFightTables(fights: FightInput[]): {
           defenses?: Array<{ downCount?: number; deadCount?: number; damageTaken?: number; damageBarrier?: number }>;
           statsAll?: Array<{ killed?: number; downed?: number; totalDamage?: number; boonStrips?: number }>;
           support?: Array<{ boonStrips?: number; condiCleanse?: number }>;
-          totalDamageTaken?: Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number }>>;
+          totalDamageDist?: Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number; downContribution?: number }>>;
+          totalDamageTaken?: Array<{ damageTaken?: number } | number> | Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number }>>;
           totalDamageTakenDist?: Array<Array<{ id?: number; totalDamage?: number; connectedHits?: number; hits?: number }>>;
           extHealingStats?: {
                   outgoingHealing?: Array<{ healing?: number }>;
@@ -1717,45 +1736,78 @@ function computeFightTables(fights: FightInput[]): {
                         icon: def?.icon,
                 };
         };
-        const incomingSkillTotals = new Map<number, { damage: number; hits: number }>();
-        const healingSkillTotals = new Map<number, { healing: number; hits: number }>();
+        const outgoingSkillTotals = new Map<number, { damage: number; hits: number; downContribution: number }>();
+        const incomingSkillTotals = new Map<number, { damage: number; hits: number; downContribution: number }>();
+        const healingSkillTotals = new Map<number, { value: number; hits: number }>();
+        const barrierSkillTotals = new Map<number, { value: number; hits: number }>();
+        const pushOutgoing = (entry: any) => {
+                const id = Number(entry?.id);
+                if (!Number.isFinite(id)) return;
+                const current = outgoingSkillTotals.get(id) ?? { damage: 0, hits: 0, downContribution: 0 };
+                current.damage += Number(entry?.totalDamage ?? 0);
+                current.hits += Number(entry?.connectedHits ?? entry?.hits ?? 0);
+                current.downContribution += Number(entry?.downContribution ?? 0);
+                outgoingSkillTotals.set(id, current);
+        };
         const pushIncoming = (entry: any) => {
                 const id = Number(entry?.id);
                 if (!Number.isFinite(id)) return;
-                const current = incomingSkillTotals.get(id) ?? { damage: 0, hits: 0 };
+                const current = incomingSkillTotals.get(id) ?? { damage: 0, hits: 0, downContribution: 0 };
                 current.damage += Number(entry?.totalDamage ?? 0);
                 current.hits += Number(entry?.connectedHits ?? entry?.hits ?? 0);
+                current.downContribution += Number(entry?.downContribution ?? 0);
                 incomingSkillTotals.set(id, current);
         };
-        const pushHealing = (entry: any, valueField: string) => {
+        const pushSupportSource = (
+                totals: Map<number, { value: number; hits: number }>,
+                entry: any,
+                valueField: string,
+        ) => {
                 const id = Number(entry?.id);
                 if (!Number.isFinite(id)) return;
-                const current = healingSkillTotals.get(id) ?? { healing: 0, hits: 0 };
-                current.healing += Number(entry?.[valueField] ?? entry?.healing ?? 0);
+                const current = totals.get(id) ?? { value: 0, hits: 0 };
+                current.value += Number(entry?.[valueField] ?? 0);
                 current.hits += Number(entry?.hits ?? 0);
-                healingSkillTotals.set(id, current);
+                totals.set(id, current);
         };
         for (const p of squad) {
-                (p.totalDamageTaken?.[0] ?? p.totalDamageTakenDist?.[0])?.forEach(pushIncoming);
-                p.extHealingStats?.totalHealingDist?.[0]?.forEach((entry) => pushHealing(entry, 'totalHealing'));
-                p.extBarrierStats?.totalBarrierDist?.[0]?.forEach((entry) => pushHealing(entry, 'totalBarrier'));
+                p.totalDamageDist?.[0]?.forEach(pushOutgoing);
+                (p.totalDamageTakenDist?.[0] ?? (Array.isArray(p.totalDamageTaken?.[0]) ? p.totalDamageTaken[0] : undefined))?.forEach(pushIncoming);
+                p.extHealingStats?.totalHealingDist?.[0]?.forEach((entry) => pushSupportSource(healingSkillTotals, entry, 'totalHealing'));
+                p.extBarrierStats?.totalBarrierDist?.[0]?.forEach((entry) => pushSupportSource(barrierSkillTotals, entry, 'totalBarrier'));
         }
+        const topOutgoingDamageSkills: TopSkill[] = Array.from(outgoingSkillTotals.entries())
+                .map(([id, total]) => {
+                        const meta = resolveMeta(id);
+                        return { id, name: meta.name, icon: meta.icon, damage: total.damage, hits: total.hits, downContribution: total.downContribution };
+                })
+                .filter((entry) => entry.damage > 0 || entry.downContribution > 0)
+                .sort((a, b) => b.downContribution - a.downContribution || b.damage - a.damage)
+                .slice(0, 50);
         const topIncomingDamageSkills: TopSkill[] = Array.from(incomingSkillTotals.entries())
                 .map(([id, total]) => {
                         const meta = resolveMeta(id);
-                        return { id, name: meta.name, icon: meta.icon, damage: total.damage, hits: total.hits, downContribution: 0 };
+                        return { id, name: meta.name, icon: meta.icon, damage: total.damage, hits: total.hits, downContribution: total.downContribution };
                 })
                 .filter((entry) => entry.damage > 0)
                 .sort((a, b) => b.damage - a.damage)
-                .slice(0, 20);
+                .slice(0, 50);
         const topOutgoingHealingSkills: TopHealingSource[] = Array.from(healingSkillTotals.entries())
                 .map(([id, total]) => {
                         const meta = resolveMeta(id);
-                        return { id, name: meta.name, icon: meta.icon, healing: total.healing, hits: total.hits, isTrait: false };
+                        return { id, name: meta.name, icon: meta.icon, healing: total.value, hits: total.hits, isTrait: false };
                 })
                 .filter((entry) => entry.healing > 0)
                 .sort((a, b) => b.healing - a.healing)
-                .slice(0, 20);
+                .slice(0, 50);
+        const topOutgoingBarrierSkills: TopBarrierSource[] = Array.from(barrierSkillTotals.entries())
+                .map(([id, total]) => {
+                        const meta = resolveMeta(id);
+                        return { id, name: meta.name, icon: meta.icon, barrier: total.value, hits: total.hits };
+                })
+                .filter((entry) => entry.barrier > 0)
+                .sort((a, b) => b.barrier - a.barrier)
+                .slice(0, 50);
 
                      mapCounts.set(mapName, (mapCounts.get(mapName) || 0) + 1);
 
@@ -1784,6 +1836,8 @@ function computeFightTables(fights: FightInput[]): {
                              totalOutgoingBarrier: outBarrier,
                              effectiveHealing: outHealing + outBarrier - inDamage,
                              topOutgoingHealingSkills,
+                             topOutgoingBarrierSkills,
+                             topOutgoingDamageSkills,
                              topIncomingDamageSkills,
                              totalOutgoingStrips: outStrips,
                              totalIncomingStrips: 0,
@@ -1870,6 +1924,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     if (fights.length === 0) throw new Error('No fights to combine.');
 
   const validLogs = fights.map((f) => ({ details: f.raw }));
+  const distanceToTag = computeDistanceToTag(fights as Array<{ raw: Record<string, unknown>; summary?: { permalink?: string } }>);
 
   const agg = computePlayerAggregation({
         validLogs,
@@ -1897,12 +1952,28 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
     const total = fights.length;
     const avgSquadSize = total > 0 ? Math.round(totalSquadSizeAccum / total) : 0;
     const avgEnemies = total > 0 ? Math.round(totalEnemiesAccum / total) : 0;
+  const canonicalTotals = fightBreakdown.reduce(
+        (sum, fight) => {
+                sum.squadKills += Number(fight.enemyDeaths || 0);
+                sum.squadDeaths += Number(fight.alliesDead || 0);
+                sum.squadDowns += Number(fight.enemyDowns || 0);
+                sum.enemyDowns += Number(fight.alliesDown || 0);
+                return sum;
+        },
+        { squadKills: 0, squadDeaths: 0, squadDowns: 0, enemyDowns: 0 },
+  );
+  const reportTotalSquadKills = canonicalTotals.squadKills || totalSquadKills;
+  const reportTotalSquadDeaths = canonicalTotals.squadDeaths || totalSquadDeaths;
+  const reportTotalSquadDowns = canonicalTotals.squadDowns || totalSquadDowns;
+  const reportTotalEnemyDowns = canonicalTotals.enemyDowns || totalEnemyDowns;
+  const reportTotalEnemyKills = reportTotalSquadDeaths || totalEnemyKills;
+  const reportTotalEnemyDeaths = reportTotalSquadKills || totalEnemyDeaths;
     // Real numbers, not pre-formatted strings - ReportStats declares these as
   // `number` (consumers like generateFightRecap.ts do actual arithmetic on
   // them: `s.squadKDR / s.enemyKDR`). Formatting to 2 decimals / "∞" is a
   // display concern, handled by fmtFixed at render time.
-  const squadKDR = totalSquadDeaths > 0 ? totalSquadKills / totalSquadDeaths : totalSquadKills > 0 ? Infinity : 0;
-    const enemyKDR = totalEnemyDeaths > 0 ? totalEnemyKills / totalEnemyDeaths : totalEnemyKills > 0 ? Infinity : 0;
+  const squadKDR = reportTotalSquadDeaths > 0 ? reportTotalSquadKills / reportTotalSquadDeaths : reportTotalSquadKills > 0 ? Infinity : 0;
+    const enemyKDR = reportTotalEnemyDeaths > 0 ? reportTotalEnemyKills / reportTotalEnemyDeaths : reportTotalEnemyKills > 0 ? Infinity : 0;
 
   // Resolve primary profession per player (most time played), matching upstream.
   const playerEntries: PlayerStats[] = Array.from(playerStats.values()).map((stat) => {
@@ -2055,7 +2126,12 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
 
   const stats: ReportStats = {
         total, wins, losses, avgSquadSize, avgEnemies, squadKDR, enemyKDR,
-        totalSquadKills, totalSquadDeaths, totalEnemyKills, totalEnemyDeaths, totalSquadDowns, totalEnemyDowns,
+        totalSquadKills: reportTotalSquadKills,
+        totalSquadDeaths: reportTotalSquadDeaths,
+        totalEnemyKills: reportTotalEnemyKills,
+        totalEnemyDeaths: reportTotalEnemyDeaths,
+        totalSquadDowns: reportTotalSquadDowns,
+        totalEnemyDowns: reportTotalEnemyDowns,
         leaderboards,
         maxDownContrib: getTop(leaderboards.downContrib, playerEntries),
         maxBarrier: getTop(leaderboards.barrier, playerEntries),
@@ -2102,6 +2178,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
                 totalFightMs: s.totalFightMs, squadActiveMs: s.squadActiveMs,
                 totalDist: s.totalDist, distCount: s.distCount, logsJoined: s.logsJoined, stackedLogCount: s.stackedLogCount,
         })),
+        distanceToTag,
         offensiveMvp: offensiveScores.mvp,
         offensiveSilver: offensiveScores.silver,
         offensiveBronze: offensiveScores.bronze,
@@ -2123,7 +2200,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
         rotations: computeRotations(fights),
         dpsGraph: computeDpsGraph(fights),
         replayFights: computeReplayFights(fights),
-        synergyInsights: computeSynergyInsights(playerEntries, buffCategoryUptimes, roleClassifications, totalSquadKills, totalSquadDeaths, avgSquadSize),
+        synergyInsights: computeSynergyInsights(playerEntries, buffCategoryUptimes, roleClassifications, reportTotalSquadKills, reportTotalSquadDeaths, avgSquadSize),
         mechanics: computeMechanicsTimeline(fights),
         topHealingSkills: computeTopHealingSkills(fights),
         playerSkillBreakdowns: serializePlayerSkillBreakdowns(agg),

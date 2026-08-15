@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useReport } from "../store/ReportContext";
+import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
 import { profChip } from "../utils/format";
 import type { FightHighlight } from "../types/report";
-import { Sparkles, Swords, Skull, Clock, Users, ShieldCheck, Crown } from "lucide-react";
+import { Activity, BrainCircuit, Sparkles, Swords, Skull, Clock, Users, ShieldCheck, Crown } from "lucide-react";
 
 const ICONS: Record<string, typeof Swords> = {
   blowout: Swords,
@@ -22,12 +24,12 @@ const ACCENTS: Record<string, string> = {
   "mvp-moment": "text-amber-300 border-amber-400/30 bg-amber-500/10",
 };
 
-function HighlightCard({ h }: { h: FightHighlight }) {
+function HighlightCard({ h, selected, onSelect }: { h: FightHighlight; selected: boolean; onSelect: () => void }) {
   const Icon = ICONS[h.id] ?? Sparkles;
   const accent = ACCENTS[h.id] ?? "text-amber-400 border-amber-500/20 bg-amber-500/5";
 
   return (
-    <div className={`rounded-2xl border p-5 flex flex-col gap-3 ${accent} bg-[#0a0e1f]/40 backdrop-blur-md`}>
+    <button type="button" aria-pressed={selected} onClick={onSelect} className={`theme-player-card min-h-48 border p-5 flex flex-col gap-3 text-left ${accent} ${selected ? "ring-1 ring-orange-300/40" : ""}`}>
       <div className="flex items-center gap-2.5">
         <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${accent}`}>
           <Icon className="w-4 h-4" />
@@ -48,15 +50,25 @@ function HighlightCard({ h }: { h: FightHighlight }) {
           )}
         </div>
       )}
-    </div>
+    </button>
   );
 }
 
 export default function HighlightsView() {
   const { report } = useReport();
+  const { setActiveView } = useView();
+  const [selectedIndex, setSelectedIndex] = useState(0);
   if (!report) return null;
 
   const highlights = report.stats.fightHighlights ?? [];
+  const selected = highlights[Math.min(selectedIndex, Math.max(0, highlights.length - 1))];
+  const openSelected = (view: "squad-stats" | "intelligence") => {
+    if (!selected) return;
+    const fight = report.stats.fightBreakdown[selected.fightIndex];
+    localStorage.setItem("entropy.selectedFightIndex", String(selected.fightIndex));
+    if (fight?.id) localStorage.setItem("entropy.selectedFightId", fight.id);
+    setActiveView(view);
+  };
 
   if (highlights.length === 0) {
     return (
@@ -84,11 +96,25 @@ export default function HighlightsView() {
       <div className="text-[11px] text-slate-500 px-1">
         Auto-picked from the night's fights - biggest wins, closest calls, and standout individual performances.
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {highlights.map((h) => (
-          <HighlightCard key={h.id} h={h} />
-        ))}
-      </div>
+      <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {highlights.map((h, index) => (
+            <HighlightCard key={`${h.id}:${h.fightIndex}:${index}`} h={h} selected={index === selectedIndex} onSelect={() => setSelectedIndex(index)} />
+          ))}
+        </div>
+        {selected && (
+          <aside className="theme-comparison-slab self-start border border-orange-400/20 bg-black/40 p-5 xl:sticky xl:top-5">
+            <div className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-300">Review reel</div>
+            <h3 className="mt-2 text-xl font-black uppercase text-slate-100">{selected.title}</h3>
+            <div className="mt-1 font-mono text-xs text-slate-500">Fight {selected.fightIndex + 1} · {selected.fightName}</div>
+            <p className="mt-5 border-l-2 border-orange-400/30 pl-3 text-sm leading-6 text-slate-300">{selected.description}</p>
+            <div className="mt-5 grid gap-2">
+              <button type="button" onClick={() => openSelected("squad-stats")} className="theme-command-button inline-flex items-center gap-2 border border-orange-400/30 bg-orange-500/10 px-4 py-2 text-xs font-black uppercase text-orange-200"><Activity className="h-4 w-4" /> Inspect fight metrics</button>
+              <button type="button" onClick={() => openSelected("intelligence")} className="theme-command-button inline-flex items-center gap-2 border border-cyan-400/25 bg-cyan-500/[0.08] px-4 py-2 text-xs font-black uppercase text-cyan-200"><BrainCircuit className="h-4 w-4" /> Open evidence board</button>
+            </div>
+          </aside>
+        )}
+      </section>
     </div>
   );
 }

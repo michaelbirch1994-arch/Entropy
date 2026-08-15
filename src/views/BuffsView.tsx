@@ -78,7 +78,11 @@ export default function BuffsView() {
     });
   };
 
-  const sortGlyph = (key: SortKey) => (!sort || sort.key !== key ? "↕" : sort.dir === "desc" ? "▼" : "▲");
+  const sortLabel = (key: SortKey) => (!sort || sort.key !== key ? "SORT" : sort.dir === "desc" ? "DESC" : "ASC");
+  const sortButtonClass = (key: SortKey, extra = "") =>
+    `inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
+      sort?.key === key ? "text-amber-300" : "text-slate-500 hover:text-slate-300"
+    } ${extra}`;
 
   // Precompute each stacking column's values once so relativeStackColor doesn't
   // rescan every row for every cell (O(players * columns) instead of squared).
@@ -97,7 +101,10 @@ export default function BuffsView() {
           {tabs.map((t) => (
             <button
               key={t}
-              onClick={() => setTab(t)}
+              onClick={() => {
+                setTab(t);
+                setSort(null);
+              }}
               className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all border ${
                 activeTab === t
                   ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
@@ -122,24 +129,24 @@ export default function BuffsView() {
             <thead>
               <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500">
                 <th className="text-left font-bold px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">
-                  <button type="button" onClick={() => toggleSort("player")} className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-slate-300">
-                    Player <span className="text-[8px] opacity-70">{sortGlyph("player")}</span>
+                  <button type="button" onClick={() => toggleSort("player")} className={sortButtonClass("player")}>
+                    Player <span className="text-[8px] opacity-70">{sortLabel("player")}</span>
                   </button>
                 </th>
                 <th className="text-left font-bold px-2 py-3">
-                  <button type="button" onClick={() => toggleSort("class")} className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-slate-300">
-                    Class <span className="text-[8px] opacity-70">{sortGlyph("class")}</span>
+                  <button type="button" onClick={() => toggleSort("class")} className={sortButtonClass("class")}>
+                    Class <span className="text-[8px] opacity-70">{sortLabel("class")}</span>
                   </button>
                 </th>
                 {columns.map((c) => (
                   <th key={c.id} className="text-center font-bold px-2 py-3 min-w-[64px]" title={c.name}>
-                    <button type="button" onClick={() => toggleSort(c.id)} className="flex w-full flex-col items-center gap-1 hover:text-slate-300">
+                    <button type="button" onClick={() => toggleSort(c.id)} className={sortButtonClass(c.id, "flex w-full flex-col items-center")}>
                       {c.icon ? (
                         <img src={c.icon} alt={c.name} className="w-4 h-4 rounded-sm" loading="lazy" />
                       ) : (
                         <span className="w-4 h-4" />
                       )}
-                      <span className="normal-case font-semibold text-slate-400">{c.name} <span className="text-[8px] opacity-70">{sortGlyph(c.id)}</span></span>
+                      <span className="normal-case font-semibold">{c.name} <span className="text-[8px] opacity-70">{sortLabel(c.id)}</span></span>
                     </button>
                   </th>
                 ))}

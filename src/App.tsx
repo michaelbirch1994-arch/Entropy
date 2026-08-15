@@ -157,61 +157,69 @@ function ErrorState({ message }: { message: string }) {
 function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void }) {
   const { uploadReport, loadFromUrl, error, loading } = useReport();
   return (
-    <div className="flex flex-col items-center justify-center min-h-full px-6 py-16">
-      <div className="w-full max-w-lg flex flex-col items-center gap-8 rounded-[2rem] border border-white/[0.06] bg-black/45 backdrop-blur-xl shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] px-8 py-10">
-        {/* Branding */}
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-700/20 flex items-center justify-center text-amber-400 shadow-[0_0_30px_-6px_rgba(245,158,11,0.5)] border border-amber-400/30">
-            <EntropyLogo size={34} />
+    <div className="theme-cinematic-landing">
+      <div className="theme-cinematic-scanline" aria-hidden="true" />
+
+      <section className="theme-cinematic-stage" aria-labelledby="entropy-landing-title">
+        <div className="theme-cinematic-copy">
+          <div className="theme-cinematic-kicker">
+            <span className="theme-cinematic-signal" aria-hidden="true" />
+            WvW command intelligence
           </div>
-          <div className="text-center">
-            <EntropyWordmarkReveal className="entropy-wordmark text-4xl font-black tracking-[0.15em] text-white uppercase font-display drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]" />
-            <p className="text-sm text-slate-300 mt-2 font-medium drop-shadow-[0_1px_6px_rgba(0,0,0,0.8)]">WvW Raid Analytics Platform</p>
+
+          <div className="theme-cinematic-mark" aria-hidden="true">
+            <EntropyLogo size={42} />
+          </div>
+
+          <EntropyWordmarkReveal id="entropy-landing-title" className="entropy-wordmark theme-cinematic-wordmark" />
+          <p className="theme-cinematic-declaration">
+            Read the fight. Find the break. Command the next push.
+          </p>
+          <p className="theme-cinematic-support">
+            Turn raw WvW combat records into evidence without changing the fight beneath the numbers.
+          </p>
+
+          <div className="theme-cinematic-readouts" aria-label="Supported analysis workflow">
+            <div><span>01</span><strong>Raw logs</strong></div>
+            <div><span>02</span><strong>Fight evidence</strong></div>
+            <div><span>03</span><strong>Command review</strong></div>
           </div>
         </div>
 
+        <div className="theme-ingress-console">
+          <header className="theme-ingress-header">
+            <div>
+              <span>Operation intake</span>
+              <strong>Open combat record</strong>
+            </div>
+            <div className="theme-ingress-status"><i aria-hidden="true" /> Ready</div>
+          </header>
 
+          <RawLogImporter cinematic />
 
+          <details className="theme-saved-report-gate">
+            <summary>Open a saved Entropy report</summary>
+            <div className="theme-saved-report-body">
+              <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
+            </div>
+          </details>
 
-        {/* Import card */}
-        {/* Primary raw log importer (dps.report / .zevtc) */}
-        <RawLogImporter />
-
-
-
-
-        <div className="w-full max-w-lg flex items-center gap-3 text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-          <div className="flex-1 h-px bg-sky-500/10" />
-          Saved report fallback
-          <div className="flex-1 h-px bg-sky-500/10" />
+          <footer className="theme-ingress-footer">
+            <div className="theme-ingress-formats">
+              <span><Activity className="w-3 h-3" /> .zevtc / .evtc</span>
+              <span><Link2 className="w-3 h-3" /> dps.report</span>
+              <span><Activity className="w-3 h-3" /> shared reports</span>
+            </div>
+            <button type="button" onClick={onOpenAxiForgeLab} className="theme-command-button theme-builder-entry">
+              <FlaskConical className="h-4 w-4" />
+              Entropy Builder
+            </button>
+          </footer>
         </div>
+      </section>
 
-
-
-
-        <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
-
-
-
-
-        <button
-          type="button"
-          onClick={onOpenAxiForgeLab}
-          className="flex items-center gap-2 rounded-xl border border-sky-400/20 bg-sky-500/[0.06] px-4 py-2 text-xs font-bold uppercase tracking-wider text-sky-300 transition hover:bg-sky-500/[0.12]"
-        >
-          <FlaskConical className="h-4 w-4" />
-          Open Entropy Builder
-        </button>
-
-
-
-
-        {/* Supported formats info */}
-        <div className="flex items-center gap-6 text-[10px] text-slate-400 font-mono">
-          <span className="flex items-center gap-1.5"><Activity className="w-3 h-3" /> .zevtc / .evtc</span>
-          <span className="flex items-center gap-1.5"><Link2 className="w-3 h-3" /> DPS.report URLs</span>
-          <span className="flex items-center gap-1.5"><Activity className="w-3 h-3" /> ?report= links</span>
-        </div>
+      <div className="theme-cinematic-horizon" aria-hidden="true">
+        <span>Evidence survives the burn</span>
       </div>
     </div>
   );
@@ -368,13 +376,8 @@ function ReportShell() {
 
 
   return (
-    <div className="flex h-screen w-full text-slate-100 overflow-hidden">
-      <div className="entropy-bg">
-        <div className="entropy-nebula entropy-nebula-1" />
-        <div className="entropy-nebula entropy-nebula-2" />
-        <div className="entropy-nebula entropy-nebula-3" />
-        <div className="entropy-nebula entropy-nebula-4" />
-      </div>
+    <div className="theme-app-shell flex h-screen w-full overflow-hidden">
+      <div className="entropy-bg" />
 
 
 
@@ -385,21 +388,21 @@ function ReportShell() {
 
 
 
-      <main className="flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar">
+      <main className="theme-main flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar">
         {/* Header - only when report is active */}
         {report && (
-          <header className="border-b border-amber-500/10 bg-black/50 backdrop-blur-xl sticky top-0 z-30 px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
-            <div className="flex items-center justify-between">
+          <header className="theme-topbar sticky top-0 z-30 px-6 py-4">
+            <div className="theme-topbar-inner flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <span className="text-amber-500">{viewIcon}</span>
+                <span className="text-theme-accent">{viewIcon}</span>
                 <div>
-                  <h1 className="text-lg font-black tracking-wider text-slate-100 uppercase font-display">{viewTitle}</h1>
-                  <p className="text-xs text-amber-400/80 font-medium tracking-wide">
+                  <h1 className="theme-view-title text-lg font-black text-theme-text uppercase font-display">{viewTitle}</h1>
+                  <p className="theme-view-meta text-xs text-theme-accent/80 font-medium">
                     {headerInfo?.title} - {headerInfo?.dateLabel}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="theme-topbar-actions flex flex-wrap items-center justify-end gap-2">
                 {/* These toggles only actually affect Offensive/Squad Stats (damage scope) and Defensive (per-second + squad-only) - hidden elsewhere so they stay honest about which views they change. */}
                 {(activeView === "offensive" || activeView === "squad-stats") && <DamageScopeToggle />}
                 {(activeView === "defensive" || activeView === "offensive") && <StatsDisplayToggle />}
@@ -407,7 +410,7 @@ function ReportShell() {
                 <button
                   onClick={() => setAtHome(true)}
                   title="Import more logs without discarding this report"
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-amber-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-amber-500/30 bg-black/30 transition-colors"
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
                 >
                   <Upload className="w-3 h-3" />
                   Import
@@ -415,7 +418,7 @@ function ReportShell() {
                 <button
                   onClick={handleExportReport}
                   title="Copy a short Entropy viewer link when dps.report permalinks exist; otherwise save a portable Entropy report artifact for web hosting."
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-sky-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-sky-500/30 bg-black/30 transition-colors"
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
                 >
                   <Link2 className="w-3 h-3" />
                   {exportLabel}
@@ -423,7 +426,7 @@ function ReportShell() {
                 <button
                   onClick={() => handleShareToDiscord()}
                   title="Post a compact Entropy summary embed to your saved Discord webhook."
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-violet-300 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-violet-500/30 bg-black/30 transition-colors disabled:opacity-60"
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5 disabled:opacity-60"
                   disabled={discordStatus === "sending"}
                 >
                   <MessageCircle className="w-3 h-3" />
@@ -435,14 +438,14 @@ function ReportShell() {
                     setDiscordOpen(true);
                   }}
                   title="Configure the Discord webhook used by the share button."
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-violet-300 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-violet-500/30 bg-black/30 transition-colors"
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
                 >
                   <Send className="w-3 h-3" />
                   Webhook
                 </button>
                 {source && (
                   <span
-                    className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border ${
+                    className={`theme-status-pill flex items-center gap-1.5 px-2.5 py-1.5 ${
                       source === "upload"
                         ? "text-amber-400 border-amber-500/30 bg-amber-500/5"
                         : "text-sky-400 border-sky-500/30 bg-sky-500/5"
@@ -454,13 +457,13 @@ function ReportShell() {
                 )}
                 <button
                   onClick={clearReport}
-                  className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-rose-400 px-2.5 py-1.5 rounded-lg border border-white/[0.06] hover:border-rose-500/30 bg-black/30 transition-colors"
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5 hover:text-rose-400"
                 >
                   <X className="w-3 h-3" />
                   Clear
                 </button>
                 {headerInfo && (
-                  <div className="flex items-center gap-3 text-xs font-mono text-slate-500 bg-black/30 px-4 py-2 rounded-xl border border-white/[0.06]">
+                  <div className="theme-status-pill flex items-center gap-3 px-4 py-2 text-xs font-mono">
                     <span>v{headerInfo.version}</span>
                   </div>
                 )}
@@ -471,7 +474,7 @@ function ReportShell() {
 
         {discordOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-            <div className="w-full max-w-xl rounded-2xl border border-violet-400/20 bg-slate-950/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
+            <div className="theme-modal w-full max-w-xl rounded-2xl border border-violet-400/20 bg-slate-950/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-sm font-black uppercase tracking-[0.18em] text-slate-100">Discord webhook</h2>
@@ -565,7 +568,7 @@ function ReportShell() {
 
 
         {report && report.meta.appVersion !== METRICS_VERSION && !atHome && (
-          <div className="mx-6 mt-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-4 py-3 flex items-start gap-3">
+          <div className="theme-alert-plate mx-6 mt-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-4 py-3 flex items-start gap-3">
             <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
             <div className="text-xs text-amber-200/90 leading-relaxed">
               <span className="font-bold">This report was built by an earlier version.</span>{" "}
@@ -581,7 +584,7 @@ function ReportShell() {
 
 
         {/* Content */}
-        <div className={report || showTool ? "p-6" : "flex items-center justify-center min-h-full"}>
+        <div className={showImport ? "min-h-full" : report || showTool ? "theme-content p-6" : "min-h-full"}>
           {showTool ? (
             <AxiForgeLabView />
           ) : showLoading ? (
@@ -589,13 +592,13 @@ function ReportShell() {
           ) : showError ? (
             <ErrorState message={error!} />
           ) : showImport ? (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-              <div className="w-full">
+            <motion.div className="min-h-full w-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+              <div className="min-h-full w-full">
                 {report && (
-                  <div className="flex justify-center mb-4">
+                  <div className="theme-landing-return">
                     <button
                       onClick={() => setAtHome(false)}
-                      className="text-[10px] font-bold uppercase tracking-wider text-sky-400 hover:text-sky-300 px-3 py-2 rounded-lg border border-sky-500/30 bg-sky-500/5 transition-colors"
+                      className="theme-command-button text-[10px] font-bold uppercase tracking-wider px-3 py-2 transition-colors"
                     >
                       Back to report
                     </button>

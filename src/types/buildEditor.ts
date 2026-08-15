@@ -65,14 +65,91 @@ export interface Gw2Skill {
   facts?: Gw2ApiFact[];
 }
 
+export type BuilderTraitRow = [number, number, number];
+
+export interface BuilderEquipment {
+  statPackage: string;
+  slots: Record<string, string>;
+  weapons: {
+    mainhand1: string;
+    offhand1: string;
+    mainhand2: string;
+    offhand2: string;
+    aquatic1: string;
+    aquatic2: string;
+  };
+  runes: Record<"head" | "shoulders" | "chest" | "hands" | "legs" | "feet", string>;
+  sigils: Record<"mainhand1" | "offhand1" | "mainhand2" | "offhand2" | "aquatic1" | "aquatic2", string[]>;
+  infusions: Record<string, string | string[]>;
+  relic: string;
+  food: string;
+  utility: string;
+  enrichment: string;
+}
+
 export interface EntropyBuilderState {
+  name: string;
+  role: string;
+  tags: string[];
+  notes: string;
   professionId: string;
   gameMode: Gw2GameMode;
   specializationIds: [number | null, number | null, number | null];
-  traitChoices: Record<string, number | null>;
+  traitChoices: [BuilderTraitRow, BuilderTraitRow, BuilderTraitRow];
   healSkillId: number | null;
   utilitySkillIds: [number | null, number | null, number | null];
   eliteSkillId: number | null;
+  underwaterSkills: {
+    healSkillId: number | null;
+    utilitySkillIds: [number | null, number | null, number | null];
+    eliteSkillId: number | null;
+  };
+  equipment: BuilderEquipment;
+  selectedLegends: [string, string];
+  selectedUnderwaterLegends: [string, string];
+  selectedPets: {
+    terrestrial1: number;
+    terrestrial2: number;
+    aquatic1: number;
+    aquatic2: number;
+  };
+  activeAttunement: string;
+  activeAttunement2: string;
+  activeKit: number;
+  activeWeaponSet: number;
+  allianceTacticsForm: number;
+  antiquaryArtifacts: { f2: number; f3: number; f4: number };
+}
+
+export interface SavedBuilderBuild {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  shareCode: string;
+  state: EntropyBuilderState;
+}
+
+export interface BuilderParty {
+  id: string;
+  name: string;
+  slots: Array<string | null>;
+}
+
+export interface BuilderComposition {
+  id: string;
+  name: string;
+  gameMode: Gw2GameMode;
+  parties: BuilderParty[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BuilderWorkspace {
+  draft: EntropyBuilderState;
+  builds: SavedBuilderBuild[];
+  compositions: BuilderComposition[];
+  activeCompositionId: string | null;
 }
 
 export type BuilderSummaryItem =

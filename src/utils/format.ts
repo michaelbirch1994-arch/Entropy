@@ -108,14 +108,22 @@ export const PROFESSION_COLORS: Record<string, { bg: string; text: string; borde
   default: { bg: "bg-slate-800/40", text: "text-slate-300", border: "border-slate-600/30", dot: "bg-slate-400" },
 };
 
+export function normalizeProfessionLabel(profession: string | undefined | null): string {
+    return String(profession ?? "")
+        .replace(/\s*\([^)]*\)\s*$/, "")
+        .replace(/\s*\[[^\]]*\]\s*$/, "")
+        .trim();
+}
+
 export function profStyle(profession: string) {
-    const fam = PROFESSION_FAMILY[profession] ?? "default";
+    const normalized = normalizeProfessionLabel(profession);
+    const fam = PROFESSION_FAMILY[normalized] ?? PROFESSION_FAMILY[profession] ?? "default";
     return PROFESSION_COLORS[fam] ?? PROFESSION_COLORS.default;
 }
 
 export function profChip(profession: string): string {
     const s = profStyle(profession);
-    return `${s.bg} ${s.text} ${s.border}`;
+    return `theme-profession-chip ${s.bg} ${s.text} ${s.border}`;
 }
 
 export function profIcon(profession: string): string {

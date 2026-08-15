@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import { profChip } from "../utils/format";
 import Panel from "../components/ui/Panel";
-import { Clock, Search } from "lucide-react";
+import StatCard from "../components/ui/StatCard";
+import { Activity, Clock, Repeat2, Search } from "lucide-react";
 
 function fmtClock(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -46,6 +47,17 @@ export default function RotationsView() {
   }, [fight, playerAccount]);
 
   const activePlayer = fight?.players.find((p) => p.account === activeAccount);
+  const activeMinutes = fight ? Math.max(fight.durationMs / 60000, 1 / 60) : 1;
+  const castCount = activePlayer?.casts.length ?? 0;
+  const castRate = castCount / activeMinutes;
+  const uniqueSkills = new Set(activePlayer?.casts.map((cast) => cast.skillId) ?? []).size;
+  const mostUsedSkill = useMemo(() => {
+    if (!activePlayer || !data) return null;
+    const counts = new Map<number, number>();
+    activePlayer.casts.forEach((cast) => counts.set(cast.skillId, (counts.get(cast.skillId) ?? 0) + 1));
+    const top = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0];
+    return top ? { name: data.skillMeta[top[0]]?.name ?? `Skill ${top[0]}`, count: top[1] } : null;
+  }, [activePlayer, data]);
 
   if (!report) return null;
 
@@ -147,6 +159,14 @@ export default function RotationsView() {
             <span>{fmtClock(fight.durationMs)}</span>
           </div>
         </Panel>
+      )}
+
+      {fight && activePlayer && (
+        <div className="theme-stat-grid grid gap-3 md:grid-cols-3">
+          <StatCard label="Parsed casts / minute" value={castRate.toFixed(1)} icon={<Activity className="h-3.5 w-3.5 text-orange-400" />} accent="text-orange-300" sub="All casts present in the EI rotation timeline" />
+          <StatCard label="Unique skills" value={uniqueSkills} icon={<Repeat2 className="h-3.5 w-3.5 text-cyan-400" />} accent="text-cyan-300" sub={`${castCount} parsed casts in selected fight`} />
+          <StatCard label="Most-used skill" value={mostUsedSkill?.count ?? 0} icon={<Clock className="h-3.5 w-3.5 text-amber-400" />} accent="text-amber-300" sub={mostUsedSkill?.name ?? "No parsed casts"} />
+        </div>
       )}
 
       {fight && activePlayer && (

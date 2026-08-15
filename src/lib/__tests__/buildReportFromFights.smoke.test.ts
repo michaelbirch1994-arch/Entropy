@@ -159,7 +159,10 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
 
                  const synthetic = buildReportFromFights([{ summary: summarizeRawFight(raw), raw }]);
                  const boons = synthetic.stats.buffCategoryUptimes?.Boons ?? synthetic.stats.boonUptimes;
-                 if (!boons) throw new Error('Expected boons data in synthetic report');
+                 expect(boons).toBeTruthy();
+                 if (!boons) {
+                         throw new Error('Expected boon uptime data to be populated');
+                 }
                  const stability = boons.columns.find((c) => c.id === stabilityId);
                  expect(stability).toBeTruthy();
                  expect(stability!.stacking).toBe(true);
@@ -173,13 +176,74 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(stabilityInsight?.detail).not.toContain('% Stability uptime');
            });
 
-           it('populates per-fight effective-healing drilldown skill sources', () => {
+           it('populates per-fight squad-stats drilldown skill sources', () => {
                  const firstFight = report.stats.fightBreakdown[0];
                  expect(firstFight).toBeTruthy();
+                 expect(firstFight.topOutgoingDamageSkills?.length).toBeGreaterThan(0);
                  expect(firstFight.topIncomingDamageSkills?.length).toBeGreaterThan(0);
                  expect(firstFight.topOutgoingHealingSkills?.length).toBeGreaterThan(0);
+                 expect(Array.isArray(firstFight.topOutgoingBarrierSkills)).toBe(true);
+                 expect(firstFight.topOutgoingDamageSkills![0].name).toBeTruthy();
                  expect(firstFight.topIncomingDamageSkills![0].name).toBeTruthy();
                  expect(firstFight.topOutgoingHealingSkills![0].name).toBeTruthy();
+           });
+
+           it('keeps per-fight healing and barrier skill sources separate', () => {
+                 const raw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const player = (raw.players ?? []).find((p: any) => !p.notInSquad) as any;
+                 expect(player).toBeTruthy();
+
+                 const healingSkillId = 7654301;
+                 const barrierSkillId = 7654302;
+                 (raw as any).skillMap = {
+                         ...((raw as any).skillMap ?? {}),
+                         [`s${healingSkillId}`]: { name: 'Regression Healing Source' },
+                         [`s${barrierSkillId}`]: { name: 'Regression Barrier Source' },
+                 };
+                 player.extHealingStats = {
+                         ...(player.extHealingStats ?? {}),
+                         totalHealingDist: [[{ id: healingSkillId, totalHealing: 12345, hits: 12 }]],
+                 };
+                 player.extBarrierStats = {
+                         ...(player.extBarrierStats ?? {}),
+                         totalBarrierDist: [[{ id: barrierSkillId, totalBarrier: 6789, hits: 7 }]],
+                 };
+
+                 const synthetic = buildReportFromFights([{ summary: summarizeRawFight(raw), raw }]);
+                 const firstFight = synthetic.stats.fightBreakdown[0];
+                 expect(firstFight.topOutgoingHealingSkills?.find((skill) => skill.id === healingSkillId)?.healing).toBe(12345);
+                 expect(firstFight.topOutgoingBarrierSkills?.find((skill) => skill.id === barrierSkillId)?.barrier).toBe(6789);
+                 expect(firstFight.topOutgoingHealingSkills?.some((skill) => skill.id === barrierSkillId)).toBe(false);
+           });
+
+           it('prefers per-fight incoming skill sources from totalDamageTakenDist when both incoming shapes exist', () => {
+                 const raw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const player = (raw.players ?? []).find((p: any) => !p.notInSquad) as any;
+                 expect(player).toBeTruthy();
+
+                 const skillId = 7654321;
+                 const legacySkillId = 7654320;
+                 (raw as any).skillMap = {
+                         ...((raw as any).skillMap ?? {}),
+                         [`s${legacySkillId}`]: { name: 'Legacy Incoming Shape', icon: 'https://example.invalid/legacy.png' },
+                         [`s${skillId}`]: { name: 'Regression Incoming Spike', icon: 'https://example.invalid/incoming.png' },
+                 };
+                 player.totalDamageTaken = [[
+                         { id: legacySkillId, totalDamage: 999999, connectedHits: 99, downContribution: 1 },
+                 ]];
+                 player.totalDamageTakenDist = [[
+                         { id: skillId, totalDamage: 123456, connectedHits: 42, downContribution: 9876 },
+                 ]];
+
+                 const synthetic = buildReportFromFights([{ summary: summarizeRawFight(raw), raw }]);
+                 const firstFight = synthetic.stats.fightBreakdown[0];
+                 const incoming = firstFight.topIncomingDamageSkills?.find((skill) => skill.id === skillId);
+                 expect(incoming).toBeTruthy();
+                 expect(incoming!.name).toBe('Regression Incoming Spike');
+                 expect(incoming!.damage).toBe(123456);
+                 expect(incoming!.hits).toBe(42);
+                 expect(incoming!.downContribution).toBe(9876);
+                 expect(firstFight.topIncomingDamageSkills?.some((skill) => skill.id === legacySkillId)).toBe(false);
            });
 
            it('never crashes building death recaps even with no deaths in a short log', () => {

@@ -83,7 +83,7 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label }: {
       initial={{ opacity: 0, y: 16, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.45, ease: "easeOut", delay: accent === "amber" ? 0 : 0.1 }}
-      className={`bg-[#0a101f]/55 backdrop-blur-md border rounded-2xl p-5 transition-colors duration-300 flex flex-col ${a.border} ${a.glow}`}
+      className={`theme-player-card theme-mvp-card bg-[#0a101f]/55 backdrop-blur-md border rounded-2xl p-5 transition-colors duration-300 flex flex-col ${a.border} ${a.glow}`}
     >
       <div className={`flex items-center gap-2 ${a.heading} text-[11px] font-black uppercase tracking-widest mb-4`}>
         {accent === "amber" ? <Swords className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
@@ -175,7 +175,7 @@ export default function OverviewView() {
       {s.synergyInsights && <SynergyPanel insights={s.synergyInsights} />}
 
       {/* Top stats banner */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-slate-800/60 rounded-2xl overflow-hidden border border-slate-800/80">
+      <div className="theme-kdr-strip grid grid-cols-2 md:grid-cols-4 gap-px bg-slate-800/60 rounded-2xl overflow-hidden border border-slate-800/80">
         {[
           { label: "Allied Downs", value: s.totalSquadDowns, color: "text-slate-100" },
           { label: "Allied Deaths", value: s.totalSquadDeaths, color: "text-slate-100" },
@@ -187,7 +187,7 @@ export default function OverviewView() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: i * 0.05 }}
-            className="text-center bg-[#0a101f] py-4"
+            className="theme-kdr-stat text-center bg-[#0a101f] py-4"
           >
             <span className={`text-3xl font-black font-mono ${b.color}`}>{fmtNum(b.value)}</span>
             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mt-1">{b.label}</span>
@@ -210,7 +210,7 @@ export default function OverviewView() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: 0.15 + i * 0.04 }}
             whileHover={{ y: -2 }}
-            className="bg-[#0a101f]/90 border border-slate-800/80 p-4 rounded-2xl shadow-lg hover:border-slate-700 transition-colors flex flex-col justify-between"
+            className="theme-stat-card theme-metric-card bg-[#0a101f]/90 border border-slate-800/80 p-4 rounded-2xl shadow-lg hover:border-slate-700 transition-colors flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
