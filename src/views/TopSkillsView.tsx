@@ -209,8 +209,10 @@ export default function TopSkillsView() {
     );
     const maxHeal = Math.max(...sortedHealing.map((x) => metricValueForHealing(x, sort)), 1);
 
+    // No `sort` in this key - it used to force a full remount (and replay
+    // the animate-view entrance animation) on every "Sort by" click.
     return (
-      <div className="space-y-5 animate-view pb-12" key={`healing-view:${sort}`}>
+      <div className="space-y-5 animate-view pb-12">
         <TabRow tab={tab} setTab={setTab} />
 
         <div className="flex items-center gap-2 text-[11px]">
@@ -309,7 +311,10 @@ export default function TopSkillsView() {
   const maxMatchedHealing = Math.max(...visibleHealingMatches.map((source) => source.healing), 1);
 
   return (
-    <div className="space-y-5 animate-view pb-12" key={`${tab}-view:${sort}`}>
+    // `tab` stays in the key (outgoing/incoming genuinely swap to different
+    // content), but `sort` was dropped - it used to force a full remount
+    // (and replay the entrance animation) on every "Sort by" click.
+    <div className="space-y-5 animate-view pb-12" key={`${tab}-view`}>
       <TabRow tab={tab} setTab={setTab} />
 
       {/* Sort selector */}

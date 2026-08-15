@@ -284,7 +284,13 @@ export default function TopPlayersView() {
   const snapshotKey = leaderboardSnapshotKey(metric, entries);
 
   return (
-    <div className="theme-view-layout space-y-5 animate-view pb-12" key={`top-players:${snapshotKey}`}>
+    // No snapshotKey in this key: that used to force a full unmount/remount
+    // of the whole view (replaying the animate-view fadeSlideUp entrance
+    // animation) on every metric click, which felt like a jerky page reset
+    // instead of a smooth swap of just the numbers. The inner podium/panel/
+    // card keys below still carry snapshotKey so their own list items
+    // reconcile correctly when the metric changes.
+    <div className="theme-view-layout space-y-5 animate-view pb-12">
       {/* Metric selector */}
       <div className="theme-filter-strip flex flex-wrap gap-2">
         {METRICS.map((m) => {
