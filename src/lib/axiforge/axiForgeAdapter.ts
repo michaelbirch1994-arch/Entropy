@@ -68,6 +68,6 @@ export function encodeAxiForgeBuildCode(build: unknown): string {
   return encodeShareCode(build as never);
 }
 
-export function encodeAxiForgeCompCode(comp: unknown): string {
-  return encodeCompCode(comp as never);
+export function encodeAxiForgeCompCode(comp: unknown, builds: Record<string, unknown>): string | null {
+  return encodeCompCode(comp as never, builds as never);
 }
