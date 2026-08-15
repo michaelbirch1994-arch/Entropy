@@ -55,8 +55,7 @@ export default function BuffsView() {
 
   const { columns, rows } = data;
   const sortedRows = (() => {
-    const base = [...rows].sort((a, b) => a.account.localeCompare(b.account));
-    if (!sort) return base;
+    const base = Array.from(new Map(rows.map((r) => [r.account, r])).values()).sort((a, b) => a.account.localeCompare(b.account));    if (!sort) return base;
     const dir = sort.dir === "asc" ? 1 : -1;
     return base.sort((a, b) => {
       if (sort.key === "player") return a.account.localeCompare(b.account) * dir;
