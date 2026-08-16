@@ -555,7 +555,7 @@ render(0);
               ref={svgRef}
               viewBox={viewBox}
               className="w-full h-[420px] select-none touch-none"
-              style={{ transform: "scaleY(-1)", cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "default" }}
+              style={{ transform: "scaleY(-1) translateZ(0)", willChange: "transform", cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "default" }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
