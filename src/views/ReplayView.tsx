@@ -550,7 +550,7 @@ render(0);
             </span>
           </div>
 
-          <div className="bg-black/40 rounded-xl border border-slate-800 overflow-hidden">
+          <div className="bg-black/60 rounded-xl border border-slate-700/80 overflow-hidden shadow-[inset_0_0_40px_rgba(0,0,0,0.5)]">
             <svg
               ref={svgRef}
               viewBox={viewBox}
@@ -579,7 +579,7 @@ render(0);
                     y={img.y}
                     width={w}
                     height={h}
-                    opacity={0.55}
+                    opacity={0.85}
                     preserveAspectRatio="none"
                     transform={`translate(0 ${2 * img.y + h}) scale(1 -1)`}
                   />
@@ -724,7 +724,7 @@ render(0);
             </svg>
           </div>
 
-          <div className="flex items-center gap-3 mt-4">
+          <div className="flex items-center gap-3 mt-4 bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3">
             <button
               type="button"
               onClick={() => setPlaying((v) => !v)}
