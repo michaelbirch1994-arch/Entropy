@@ -157,6 +157,17 @@ export default function ReplayView() {
     return `${cx - frame.w / 2} ${cy - frame.h / 2} ${frame.w} ${frame.h}`;
   }, [frame, focusPoint, followFocus, pan, zoom]);
 
+    // Native SVG transform (not a CSS transform on the <svg> root) for the
+    // y-up-to-y-down flip. A CSS transform on an animated SVG root is prone
+    // to a Chromium paint/compositing bug where fast attribute updates leave
+    // stale pixels behind moving shapes (streaking ghosts) - wrapping the
+    // content in a plain SVG <g> instead keeps the flip inside the normal
+    // SVG paint pipeline.
+    const [, vbYStr, , vbHStr] = viewBox.split(" ");
+    const vbY = Number(vbYStr);
+    const vbH = Number(vbHStr);
+    const flipTransform = `translate(0, ${2 * vbY + vbH}) scale(1, -1)`;
+
   // Mouse/touch drag-to-pan on the SVG viewport. Only active once zoomed in
   // (maxPanX/Y are 0 at zoom 1, so drags are effectively no-ops there).
   function handlePointerDown(e: PointerEvent<SVGSVGElement>) {
@@ -555,12 +566,13 @@ render(0);
               ref={svgRef}
               viewBox={viewBox}
               className="w-full h-[420px] select-none touch-none"
-              style={{ transform: "scaleY(-1)", cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "default" }}
+                      style={{ cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "default" }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerLeave={handlePointerUp}
             >
+                      <g transform={flipTransform}>
               {/* Real combat-replay map imagery from EI. Per-actor positions are
                   already in this same pixel space, so the image needs no scaling -
                   but the whole svg is flipped with scaleY(-1) to match EI's y-axis,
@@ -721,6 +733,7 @@ render(0);
                   </circle>
                 );
               })}
+                      </g>g>
             </svg>
           </div>
 
