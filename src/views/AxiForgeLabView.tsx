@@ -479,7 +479,7 @@ export default function AxiForgeLabView() {
           const coverage = await computeBuildBoonCoverage(build.state);
           return [boonCacheKey(build), coverage] as const;
         } catch {
-          return [boonCacheKey(build), []] as const;
+          return [boonCacheKey(build), [] as BoonCoverageEntry[]] as const;
         }
       }),
     ).then((entries) => {
