@@ -10,12 +10,15 @@ function fmtClock(ms: number): string {
   return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 }
 
-// Deterministic-ish hue per skill id so casts are visually distinguishable
-// without a fixed palette (squad rotations can reference hundreds of skills).
+// Curated palette (same set used for the map-distribution chart elsewhere
+// in Entropy) instead of a raw per-id hue - a fixed hue rotation produced
+// neon, clashing colors on a dark background. Cycling through a small
+// palette of theme-appropriate colors keeps adjacent casts visually
+// distinguishable without looking like a rainbow.
+const SKILL_TIMELINE_PALETTE = ["#f59e0b", "#38bdf8", "#f43f5e", "#34d399", "#a78bfa", "#fb923c", "#22d3ee", "#e879f9"];
 function skillColor(id: number): string {
-  const hue = (id * 47) % 360;
-  return `hsl(${hue}, 70%, 55%)`;
-}
+  return SKILL_TIMELINE_PALETTE[Math.abs(id) % SKILL_TIMELINE_PALETTE.length];
+  
 
 export default function RotationsView() {
   const { report } = useReport();
