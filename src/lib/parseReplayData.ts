@@ -5,7 +5,6 @@
 // older/alternate logs may not have it, so this returns null rather than
 // throwing when it's missing and the UI shows a "not available" state.
 //
-// Confirmed against EI's JsonActorCombatReplayData / JsonCombatReplayMetaData
 // JSON doc (baaron4.github.io/GW2-Elite-Insights-Parser). The real schema is
 // NOT [time, x, y] triples (an earlier, unverified pass through this file
 // assumed that and silently produced zero points for every fight, since
@@ -217,11 +216,8 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
 
   const players: ReplayPlayerTrack[] = [];
   const enemies: ReplayEnemyTrack[] = [];
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-
+  const allX: number[] = [];
+    const allY: number[] = [];
   for (const p of rawPlayers) {
     const crd = p.combatReplayData as Record<string, unknown> | undefined;
     if (!crd) continue;
@@ -232,10 +228,9 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
     const facings = asFacingPoints(crd.orientations, t0, pollingRate);
 
     for (const pt of points) {
-      if (pt.x < minX) minX = pt.x;
-      if (pt.x > maxX) maxX = pt.x;
-      if (pt.y < minY) minY = pt.y;
-      if (pt.y > maxY) maxY = pt.y;
+            allX.push(pt.x);
+            allY.push(pt.y);
+    }
     }
 
     const casts: { t: number; skillId: number }[] = [];
@@ -273,10 +268,9 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
     const facings = asFacingPoints(crd.orientations, t0, pollingRate);
 
     for (const pt of points) {
-      if (pt.x < minX) minX = pt.x;
-      if (pt.x > maxX) maxX = pt.x;
-      if (pt.y < minY) minY = pt.y;
-      if (pt.y > maxY) maxY = pt.y;
+            allX.push(pt.x);
+            allY.push(pt.y);
+    }
     }
 
     enemies.push({
@@ -289,7 +283,26 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
     });
   });
 
-  if (players.length === 0 || !Number.isFinite(minX)) return null;
+  if (players.length === 0 || allX.length === 0) return null;
+
+  // Bounds use a percentile-trimmed range rather than raw min/max. A single
+  // stray combat-replay sample (an actor briefly at their WvW spawn camp far
+  // across the map, a teleport/waypoint blip, or a bad EI position sample)
+  // can otherwise blow the fitted view out by orders of magnitude, shrinking
+  // the actual fight to a speck and inflating every marker/line drawn at
+  // that scale into a huge smear across the map - this produced the giant
+  // trailing "blob" artifacts some users were seeing, not a render/paint
+  // bug. Clipping to the 1st-99th percentile keeps the fitted frame sized to
+  // where the fight actually happened.
+  function percentile(values: number[], p: number): number {
+        const sorted = [...values].sort((a, b) => a - b);
+        const idx = Math.min(sorted.length - 1, Math.max(0, Math.round(p * (sorted.length - 1))));
+        return sorted[idx];
+  }
+  const minX = percentile(allX, 0.01);
+  const maxX = percentile(allX, 0.99);
+  const minY = percentile(allY, 0.01);
+  const maxY = percentile(allY, 0.99);
 
   const durationMs =
     typeof log.durationMS === "number" && log.durationMS > 0
