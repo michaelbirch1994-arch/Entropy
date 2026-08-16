@@ -231,7 +231,6 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
             allX.push(pt.x);
             allY.push(pt.y);
     }
-    }
 
     const casts: { t: number; skillId: number }[] = [];
     for (const entry of (p.rotation ?? []) as Array<{ id?: number; skills?: Array<{ castTime?: number }> }>) {
@@ -271,8 +270,7 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
             allX.push(pt.x);
             allY.push(pt.y);
     }
-    }
-
+    
     enemies.push({
       id: typeof t.id === "number" || typeof t.id === "string" ? String(t.id) : `target-${idx}`,
       name: typeof t.name === "string" ? t.name : "Enemy",
