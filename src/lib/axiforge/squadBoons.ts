@@ -6,10 +6,9 @@ import { analyzeBuildBoons, type BoonCoverageEntry } from "./boonEngine";
  * Resolve the live GW2 API data a build actually uses right now - its chosen
  * major trait per tier plus every auto-granted minor trait across its three
  * specialization lines, and its heal/utility/elite skills - then run that
- * through the boon-coverage engine. This mirrors the trait/skill resolution
- * AxiForge's own engine-bridge performs before calling analyzeBoons, and
- * reuses the same "sort majors by tier/order, then pick by traitChoices
- * index" logic that buildAxiShape() already uses for AxiCode export.
+ * through the boon-coverage engine. This mirrors the same "sort majors by
+ * tier/order, then pick by traitChoices index" trait-resolution logic that
+ * buildAxiShape() already uses for AxiCode export.
  */
 export async function computeBuildBoonCoverage(state: EntropyBuilderState): Promise<BoonCoverageEntry[]> {
   const specIds = state.specializationIds.filter((id): id is number => Boolean(id));
