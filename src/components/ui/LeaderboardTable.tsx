@@ -29,7 +29,7 @@ export default function LeaderboardTable({ entries, metricLabel, compact = false
             const s = profStyle(e.profession);
             const pct = max > 0 ? (e.value / max) * 100 : 0;
             return (
-              <tr key={e.account} className="theme-table-row transition-colors">
+              <tr key={`${e.account}:${e.profession}`} className="theme-table-row transition-colors">
                 <td className={`px-2 py-2 font-bold ${e.rank <= 3 ? "text-theme-accent-strong" : "text-theme-muted"}`}>{e.rank}</td>
                 <td className="px-2 py-2 text-theme-text font-semibold whitespace-nowrap">{e.account}</td>
                 <td className="px-2 py-2">
