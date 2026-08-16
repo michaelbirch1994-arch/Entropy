@@ -18,6 +18,7 @@ function fmtClock(ms: number): string {
 const SKILL_TIMELINE_PALETTE = ["#f59e0b", "#38bdf8", "#f43f5e", "#34d399", "#a78bfa", "#fb923c", "#22d3ee", "#e879f9"];
 function skillColor(id: number): string {
   return SKILL_TIMELINE_PALETTE[Math.abs(id) % SKILL_TIMELINE_PALETTE.length];
+}
   
 
 export default function RotationsView() {
