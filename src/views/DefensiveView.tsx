@@ -14,6 +14,14 @@ type DefensiveSortKey =
   | "healing" | "squadHealing" | "barrier" | "downedHealing"
   | "damageTaken" | "powerDamage" | "condiDamage" | "hits" | "barrierAbsorbed" | "mitigatedDamage" | "blocks" | "dodges" | "invulned" | "interrupted" | "downs" | "deaths";
 
+// s.*Players arrays can contain duplicate entries for the same account (e.g.
+// a build swap mid-report), which is easy to miss in the default sort order
+// but becomes obvious once a column sort scatters the duplicates apart -
+// mirrors the same account-dedupe fix applied in BuffsView/OffensiveView.
+function dedupeByAccount<T extends { account: string }>(rows: T[]): T[] {
+  return Array.from(new Map(rows.map((r) => [r.account, r])).values());
+}
+
 export default function DefensiveView() {
   const { report } = useReport();
   const [tab, setTab] = useState<Tab>("support");
@@ -22,15 +30,23 @@ export default function DefensiveView() {
   const { scope: allyScope } = useAllyScope();
   const s = report?.stats;
 
+  // Deduped once here so every summary card, MVP list, and sortable table
+  // built from these derives from a single row per player instead of
+  // silently double-counting totals or rendering the same player twice.
+  const supportPlayers = useMemo(() => dedupeByAccount(s?.supportPlayers ?? []), [s]);
+  const healingPlayers = useMemo(() => dedupeByAccount(s?.healingPlayers ?? []), [s]);
+  const defensePlayers = useMemo(() => dedupeByAccount(s?.defensePlayers ?? []), [s]);
+  const damageMitigationPlayers = useMemo(() => dedupeByAccount(s?.damageMitigationPlayers ?? []), [s]);
+
   const mitigationByAccount = useMemo(() => {
-    const rows = s?.damageMitigationPlayers ?? [];
+    const rows = damageMitigationPlayers;
     const map = new Map<string, (typeof rows)[number]>();
     rows.forEach((row) => {
       map.set(row.account, row);
       if (row.profession && row.profession !== "Unknown") map.set(`${row.account}::${row.profession}`, row);
     });
     return map;
-  }, [s]);
+  }, [damageMitigationPlayers]);
 
   const totals = useMemo(() => {
     if (!s) return null;
@@ -40,24 +56,24 @@ export default function DefensiveView() {
     // a pure-DPS build) has no key for it at all (`undefined`, not 0), so an
     // unguarded `a + p.x` turns the whole reduce into NaN the moment it hits
     // one. `?? 0` guards every field the same way `damageTaken` already was.
-    const totalCleanses = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.condiCleanse ?? 0), 0);
-    const totalStrips = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.boonStrips ?? 0), 0);
-    const totalRes = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.resurrects ?? 0), 0);
+    const totalCleanses = supportPlayers.reduce((a, p) => a + (p.supportTotals.condiCleanse ?? 0), 0);
+    const totalStrips = supportPlayers.reduce((a, p) => a + (p.supportTotals.boonStrips ?? 0), 0);
+    const totalRes = supportPlayers.reduce((a, p) => a + (p.supportTotals.resurrects ?? 0), 0);
     // Healing/Barrier respect the Squad Only / All Allies toggle - EI already
     // splits each player's healing/barrier into an all-allies total and a
     // squad-only subset (healingTotals.healing vs .squadHealing, same for
     // barrier), so this just picks which of that existing pair to sum.
-    const totalHealing = s.healingPlayers.reduce(
+    const totalHealing = healingPlayers.reduce(
       (a, p) => a + pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing),
       0
     );
-    const totalBarrier = s.healingPlayers.reduce(
+    const totalBarrier = healingPlayers.reduce(
       (a, p) => a + pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier),
       0
     );
-    const totalDamageTaken = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
-    const totalMitigatedDamage = (s.damageMitigationPlayers ?? []).reduce((a, p) => a + (p.mitigationTotals.totalMitigation ?? 0), 0);
-    const totalBlocks = s.defensePlayers.reduce(
+    const totalDamageTaken = defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
+    const totalMitigatedDamage = damageMitigationPlayers.reduce((a, p) => a + (p.mitigationTotals.totalMitigation ?? 0), 0);
+    const totalBlocks = defensePlayers.reduce(
       (a, p) => a + ((mitigationByAccount.get(`${p.account}::${p.profession}`) ?? mitigationByAccount.get(p.account))?.mitigationTotals.blocked ?? p.defenseTotals.blockedCount ?? 0),
       0
     );
@@ -66,17 +82,17 @@ export default function DefensiveView() {
     // Barrier" above (barrier the player *generated* for others). Both are
     // effectively healing in the sense that they're HP the squad didn't lose,
     // so surface this one alongside Total Healing/Total Barrier too.
-    const totalBarrierAbsorbed = s.defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageBarrier ?? 0), 0);
+    const totalBarrierAbsorbed = defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageBarrier ?? 0), 0);
 
     // Per Second mode divides each total by the combined active seconds of the
     // players behind it, rather than a single fight duration - a multi-fight
     // report has players joining/leaving at different times, so this is the
     // same "how fast was this actually happening" idea as DPS, generalized to
     // every summary card instead of just damage.
-    const healingActiveSec = s.healingPlayers.reduce((a, p) => a + (p.activeMs ?? 0), 0) / 1000;
-    const supportActiveSec = s.supportPlayers.reduce((a, p) => a + (p.activeMs ?? 0), 0) / 1000;
-    const defenseActiveSec = s.defensePlayers.reduce((a, p) => a + (Number(p.totalFightMs) || 0), 0) / 1000;
-    const mitigationActiveSec = (s.damageMitigationPlayers ?? []).reduce((a, p) => a + (Number(p.activeMs) || 0), 0) / 1000;
+    const healingActiveSec = healingPlayers.reduce((a, p) => a + (p.activeMs ?? 0), 0) / 1000;
+    const supportActiveSec = supportPlayers.reduce((a, p) => a + (p.activeMs ?? 0), 0) / 1000;
+    const defenseActiveSec = defensePlayers.reduce((a, p) => a + (Number(p.totalFightMs) || 0), 0) / 1000;
+    const mitigationActiveSec = damageMitigationPlayers.reduce((a, p) => a + (Number(p.activeMs) || 0), 0) / 1000;
 
     return {
       totalCleanses,
@@ -93,11 +109,11 @@ export default function DefensiveView() {
       defenseActiveSec,
       mitigationActiveSec: mitigationActiveSec || defenseActiveSec,
     };
-  }, [s, allyScope, mitigationByAccount]);
+  }, [s, allyScope, supportPlayers, healingPlayers, defensePlayers, damageMitigationPlayers, mitigationByAccount]);
 
   const supportRows = useMemo(() => {
     if (!s || tab !== "support") return [];
-    const rows = [...s.supportPlayers].sort((a, b) => (b.supportTotals.condiCleanse ?? 0) - (a.supportTotals.condiCleanse ?? 0));
+    const rows = [...supportPlayers].sort((a, b) => (b.supportTotals.condiCleanse ?? 0) - (a.supportTotals.condiCleanse ?? 0));
     if (!sort) return rows;
     const dir = sort.dir === "asc" ? 1 : -1;
     const numeric: Partial<Record<DefensiveSortKey, (p: typeof rows[number]) => number>> = {
@@ -111,11 +127,11 @@ export default function DefensiveView() {
     if (sort.key === "class") return rows.sort((a, b) => a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account));
     const get = numeric[sort.key];
     return get ? rows.sort((a, b) => (get(a) - get(b)) * dir || a.account.localeCompare(b.account)) : rows;
-  }, [s, tab, sort]);
+  }, [s, tab, sort, supportPlayers]);
 
   const healingRows = useMemo(() => {
     if (!s || tab !== "healing") return [];
-    const rows = [...s.healingPlayers].sort(
+    const rows = [...healingPlayers].sort(
       (a, b) =>
         pickAllyScopeValue(allyScope, b.healingTotals.healing, b.healingTotals.squadHealing) -
         pickAllyScopeValue(allyScope, a.healingTotals.healing, a.healingTotals.squadHealing)
@@ -132,13 +148,13 @@ export default function DefensiveView() {
     if (sort.key === "class") return rows.sort((a, b) => a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account));
     const get = numeric[sort.key];
     return get ? rows.sort((a, b) => (get(a) - get(b)) * dir || a.account.localeCompare(b.account)) : rows;
-  }, [s, tab, allyScope, sort]);
+  }, [s, tab, allyScope, sort, healingPlayers]);
 
   const healingMvpRows = useMemo(() => {
     if (!s || tab !== "healing") return [];
     const firstPositive = (...values: Array<number | undefined>) => values.find((value) => Number.isFinite(value) && (value ?? 0) > 0) ?? 0;
 
-    return [...s.healingPlayers]
+    return [...healingPlayers]
       .map((p) => {
         const scopeHealing = pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing);
         const scopeBarrier = pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier);
@@ -156,11 +172,11 @@ export default function DefensiveView() {
       .filter((p) => p.sustain > 0)
       .sort((a, b) => b.sustain - a.sustain)
       .slice(0, 8);
-  }, [s, tab, allyScope]);
+  }, [s, tab, allyScope, healingPlayers]);
 
   const defenseRows = useMemo(() => {
     if (!s || tab !== "defense") return [];
-    const rows = [...s.defensePlayers].sort((a, b) => (b.defenseTotals.damageTaken ?? 0) - (a.defenseTotals.damageTaken ?? 0));
+    const rows = [...defensePlayers].sort((a, b) => (b.defenseTotals.damageTaken ?? 0) - (a.defenseTotals.damageTaken ?? 0));
     if (!sort) return rows;
     const dir = sort.dir === "asc" ? 1 : -1;
     const mitigationFor = (p: typeof rows[number]) => (mitigationByAccount.get(`${p.account}::${p.profession}`) ?? mitigationByAccount.get(p.account))?.mitigationTotals;
@@ -182,7 +198,7 @@ export default function DefensiveView() {
     if (sort.key === "class") return rows.sort((a, b) => a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account));
     const get = numeric[sort.key];
     return get ? rows.sort((a, b) => (get(a) - get(b)) * dir || a.account.localeCompare(b.account)) : rows;
-  }, [s, tab, sort, mitigationByAccount]);
+  }, [s, tab, sort, mitigationByAccount, defensePlayers]);
 
   if (!report || !s || !totals) return null;
 
