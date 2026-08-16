@@ -123,7 +123,13 @@ export default function OffensiveView() {
 
   const rows = useMemo<Row[]>(() => {
     if (!report) return [];
-    return report.stats.offensePlayers.map((p) => {
+    // Dedupe by account before mapping - offensePlayers can contain duplicate
+    // entries for the same account (e.g. a build swap mid-report), which is
+    // easy to miss in the default damage-sorted order but becomes obvious once
+    // sorting by another column scatters the duplicates apart. Mirrors the
+    // same account-dedupe fix applied in BuffsView.
+    const players = Array.from(new Map(report.stats.offensePlayers.map((pl) => [pl.account, pl])).values());
+    return players.map((p) => {
       const secs = p.totalFightMs / 1000;
       const weights = p.offenseRateWeights ?? {};
       const pct = (id: "criticalRate" | "flankingRate" | "glanceRate") => {
@@ -364,7 +370,7 @@ export default function OffensiveView() {
                     <td className="p-2.5 text-right text-amber-400">{perPlayerN(p.offenseTotals.boonStrips ?? 0, p.totalFightMs)}</td>
                     {/* Kills */}
                     <td className="p-2.5 text-right text-emerald-400">{perPlayerN(p.offenseTotals.killed ?? 0, p.totalFightMs)}</td>
-                  
+
                 {derived.hasSiegeData && (
                   <td className="p-2.5 text-right text-slate-500">
                     {fmtCompact(Math.max(0, (p.offenseTotals.damageAll ?? 0) - (p.offenseTotals.damage ?? 0)))}
