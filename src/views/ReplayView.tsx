@@ -733,7 +733,7 @@ render(0);
                   </circle>
                 );
               })}
-                      </g>g>
+                      </g>
             </svg>
           </div>
 
