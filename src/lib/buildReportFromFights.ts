@@ -1706,7 +1706,7 @@ function computeFightTables(fights: FightInput[]): {
                              inBarrier += Number(def?.damageBarrier) || 0;
                              enemyKills += Number(st?.killed) || 0;
                              enemyDowns += Number(st?.downed) || 0;
-                             outDamage += Number(st?.totalDamage) || 0;
+                             outDamage += (p.totalDamageDist?.[0] ?? []).reduce((sum, entry) => sum + (Number(entry?.totalDamage) || 0), 0);
                              outStrips += Number(p.support?.[0]?.boonStrips) || 0;
                              // Prefer the direct phase total when EI provides it. Fall back to the
                              // ally matrix, which is how older EI/healing-addon payloads expose the
