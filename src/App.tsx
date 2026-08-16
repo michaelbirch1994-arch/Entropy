@@ -246,7 +246,7 @@ function ReportShell() {
   const [discordOpen, setDiscordOpen] = useState(false);
   const [discordStatus, setDiscordStatus] = useState<DiscordShareStatus>("idle");
   const [discordError, setDiscordError] = useState("");
-  const { activeView, setActiveView } = useView();
+  const { activeView, setActiveView } = useView(); function handleSetActiveView(view: string) { setAtHome(false); setActiveView(view); }
 
 
 
@@ -383,7 +383,7 @@ function ReportShell() {
 
 
       {/* Only show sidebar when a report is loaded */}
-      {(report || showTool) && <Sidebar activeView={activeView} setActiveView={setActiveView} />}
+      {(report || showTool) && <Sidebar activeView={activeView} setActiveView={handleSetActiveView} />}
 
 
 
