@@ -13,6 +13,11 @@ const SORT_LABEL: Record<SortKey, string> = {
   hits: "Hits",
 };
 
+const TAB_ACCENT: Record<"outgoing" | "incoming", { border: string; bg: string; text: string; from: string; to: string }> = {
+    outgoing: { border: "border-orange-500/15", bg: "bg-orange-500/[0.05]", text: "text-orange-300", from: "from-orange-600", to: "to-orange-400" },
+    incoming: { border: "border-rose-500/15", bg: "bg-rose-500/[0.05]", text: "text-rose-300", from: "from-rose-600", to: "to-rose-400" },
+};
+
 function metricValueForSkill(skill: TopSkill, sort: SortKey) {
   return skill[sort];
 }
@@ -309,6 +314,7 @@ export default function TopSkillsView() {
     ? sorted.map((skill) => healingById.get(skill.id)).filter((source): source is TopHealingSource => !!source)
     : [];
   const maxMatchedHealing = Math.max(...visibleHealingMatches.map((source) => source.healing), 1);
+  const accent = TAB_ACCENT[tab === "incoming" ? "incoming" : "outgoing"];
 
   return (
     // `tab` stays in the key (outgoing/incoming genuinely swap to different
@@ -375,14 +381,14 @@ export default function TopSkillsView() {
                 </span>
               </div>
 
-              <div className="mb-3 rounded-xl border border-sky-500/15 bg-sky-500/[0.05] p-3">
+              <div className={`mb-3 rounded-xl border ${accent.border} ${accent.bg} p-3`}>
                 <div className="flex justify-between text-[10px] font-mono mb-1">
                   <span className="text-slate-400">Sorted by {SORT_LABEL[sort]}</span>
-                  <span className="text-sky-300 font-bold">{sort === "hits" ? fmtNum(activeValue) : fmtCompact(activeValue)}</span>
+                  <span className={`${accent.text} font-bold`}>{sort === "hits" ? fmtNum(activeValue) : fmtCompact(activeValue)}</span>
                 </div>
                 <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-sky-600 to-sky-300 rounded-full transition-all duration-500"
+                    className={`h-full bg-gradient-to-r ${accent.from} ${accent.to} rounded-full transition-all duration-500`}
                     style={{ width: `${(activeValue / maxActive) * 100}%` }}
                   />
                 </div>
@@ -392,11 +398,11 @@ export default function TopSkillsView() {
                 <div>
                   <div className="flex justify-between text-[10px] font-mono mb-1">
                     <span className="text-slate-500">Damage</span>
-                    <span className="text-orange-400 font-bold">{fmtCompact(sk.damage)}</span>
+                    <span className={`${accent.text} font-bold`}>{fmtCompact(sk.damage)}</span>
                   </div>
                   <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-full transition-all duration-500"
+                      className={`h-full bg-gradient-to-r ${accent.from} ${accent.to} rounded-full transition-all duration-500`}
                       style={{ width: `${(sk.damage / maxDmg) * 100}%` }}
                     />
                   </div>
