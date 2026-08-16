@@ -184,7 +184,7 @@ const tally = new Map<number, { count: number; players: Set<string> }>();
             className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2"
           >
             {data.fights.map((f, i) => (
-              <option key={f.fightId} value={i}>{f.fightName}</option>
+              <option key={f.fightId} value={i}>#{i + 1} · {f.fightName}</option>
             ))}
           </select>
         )}
