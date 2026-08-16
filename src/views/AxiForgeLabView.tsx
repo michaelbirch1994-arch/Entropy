@@ -261,7 +261,7 @@ function SquadBoonCoverage({
   computing: boolean;
 }) {
   const providers = useMemo(() => {
-    const map = new Map<string, Array<{ buildName: string; profession: string }>>();
+    const map = new Map<string, { icon?: string; sources: Array<{ buildName: string; profession: string }> }>();
     const referenced = composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id));
     for (const buildId of referenced) {
       const build = builds.find((item) => item.id === buildId);
@@ -270,9 +270,9 @@ function SquadBoonCoverage({
       if (!coverage) continue;
       for (const entry of coverage) {
         if (!entry.hasAllySource) continue;
-        const list = map.get(entry.name) ?? [];
-        list.push({ buildName: build.name, profession: build.state.professionId });
-        map.set(entry.name, list);
+        const existing = map.get(entry.name) ?? { icon: entry.icon, sources: [] }; if (!existing.icon && entry.icon) existing.icon = entry.icon;
+        existing.sources.push({ buildName: build.name, profession: build.state.professionId });
+        map.set(entry.name, existing);
       }
     }
     return map;
@@ -286,7 +286,7 @@ function SquadBoonCoverage({
       </div>
       <div className="theme-builder-boon-grid">
         {BOON_DISPLAY_ORDER.map((boon) => {
-          const list = providers.get(boon) ?? [];
+          const entry = providers.get(boon); const list = entry?.sources ?? [];
           const covered = list.length > 0;
           return (
             <div
@@ -294,8 +294,8 @@ function SquadBoonCoverage({
               className={covered ? "is-covered" : "is-missing"}
               title={covered ? list.map((source) => `${source.buildName} (${source.profession})`).join(", ") : "No assigned build grants this to allies"}
             >
-              <strong>{boon}</strong>
-              <span>{covered ? `${list.length} source${list.length === 1 ? "" : "s"}` : "No coverage"}</span>
+              <div className="theme-builder-boon-icon">{entry?.icon ? <img src={entry.icon} alt="" /> : <Sparkles className="h-5 w-5" />}{covered && <em>{list.length}</em>}</div>
+              <span>{boon}</span>
             </div>
           );
         })}
