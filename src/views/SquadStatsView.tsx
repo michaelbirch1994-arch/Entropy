@@ -656,7 +656,7 @@ export default function SquadStatsView() {
             <tbody className="divide-y divide-slate-800/30 font-mono">
               {squadOverviewRows.map((p) => {
                 return (
-                  <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
+                  <tr key={`${p.account}:${p.profession}`} className="hover:bg-blue-950/20 transition-colors">
                     <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
                     <td className="p-2.5 text-slate-400">{p.profession}</td>
                     <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.damage)}</td>
