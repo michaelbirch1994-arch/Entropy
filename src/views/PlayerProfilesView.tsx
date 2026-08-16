@@ -1,10 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Panel from "../components/ui/Panel";
-import { Users, Swords, Trophy, Sparkles, Flame } from "lucide-react";
-import { getAllProfiles, topClass, computeBadges, currentWinStreak, type PlayerProfile } from "../lib/playerProfileStore";
+import { Users, Trophy, Sparkles, Flame, X } from "lucide-react";
+import {
+  getAllProfiles,
+  topClass,
+  computeBadges,
+  currentWinStreak,
+  longestWinStreak,
+  currentMvpStreak,
+  type PlayerProfile,
+} from "../lib/playerProfileStore";
 import { fmtCompact, fmtFixedGrouped, fmtNum, profChip } from "../utils/format";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { CHART_COLORS, TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE } from "../utils/chartTheme";
 
 type TableSortKey = "account" | "mainClass" | "totalFightsJoined" | "totalDamage" | "bestDps" | "totalHealing" | "totalDownContrib" | "mvpTotal";
 type SortState = { key: TableSortKey; dir: "asc" | "desc" } | null;
@@ -12,6 +22,8 @@ type SortState = { key: TableSortKey; dir: "asc" | "desc" } | null;
 export default function PlayerProfilesView() {
   const [profiles, setProfiles] = useState<PlayerProfile[] | null>(null);
   const [sort, setSort] = useState<SortState>(null);
+  const [classFilter, setClassFilter] = useState<string>("all");
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,9 +35,26 @@ export default function PlayerProfilesView() {
     };
   }, []);
 
-  const sorted = useMemo(() => {
+  const classOptions = useMemo(() => {
     if (!profiles) return [];
-    const base = [...profiles].sort((a, b) => a.account.localeCompare(b.account));
+    const counts = new Map<string, number>();
+    for (const p of profiles) {
+      const c = topClass(p);
+      if (c) counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([name]) => name);
+  }, [profiles]);
+
+  const filtered = useMemo(() => {
+    if (!profiles) return [];
+    if (classFilter === "all") return profiles;
+    return profiles.filter((p) => topClass(p) === classFilter);
+  }, [profiles, classFilter]);
+
+  const sorted = useMemo(() => {
+    const base = [...filtered].sort((a, b) => a.account.localeCompare(b.account));
     if (!sort) return base;
     const dir = sort.dir === "asc" ? 1 : -1;
     return base.sort((a, b) => {
@@ -38,7 +67,7 @@ export default function PlayerProfilesView() {
       }
       return (a[sort.key] - b[sort.key]) * dir || a.account.localeCompare(b.account);
     });
-  }, [profiles, sort]);
+  }, [filtered, sort]);
 
   const toggleSort = (key: TableSortKey) => {
     setSort((prev) => {
@@ -64,6 +93,20 @@ export default function PlayerProfilesView() {
     </th>
   );
 
+  // Top-12 chart of the currently filtered/sorted player pool by total
+  // damage, so the visual leaderboard always matches whatever the table is
+  // showing (respects the class filter) rather than a fixed global slice.
+  const chartData = useMemo(
+    () =>
+      [...filtered]
+        .sort((a, b) => b.totalDamage - a.totalDamage)
+        .slice(0, 12)
+        .map((p) => ({ account: p.account, totalDamage: p.totalDamage, mainClass: topClass(p) ?? "" })),
+    [filtered],
+  );
+
+  const selectedProfile = profiles?.find((p) => p.account === selectedAccount) ?? null;
+
   if (profiles === null) {
     return <div className="flex items-center justify-center py-24 text-theme-muted text-sm">Loading career profiles...</div>;
   }
@@ -83,7 +126,7 @@ export default function PlayerProfilesView() {
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-2 text-[11px] mb-3">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] mb-3">
               <span className="text-theme-muted font-bold uppercase tracking-wider">Sort by:</span>
               {([
                 { k: "totalDamage", l: "Damage" },
@@ -103,6 +146,32 @@ export default function PlayerProfilesView() {
                 </button>
               ))}
             </div>
+
+            {classOptions.length > 1 && (
+              <div className="flex flex-wrap items-center gap-2 text-[11px] mb-4" role="group" aria-label="Filter by main class">
+                <span className="text-theme-muted font-bold uppercase tracking-wider">Class:</span>
+                <button
+                  onClick={() => setClassFilter("all")}
+                  className={`px-2.5 py-1.5 rounded-lg font-bold transition-all ${
+                    classFilter === "all" ? "bg-theme-accent/15 text-theme-accent" : "text-theme-muted hover:text-theme-text"
+                  }`}
+                >
+                  All
+                </button>
+                {classOptions.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setClassFilter(c)}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-bold transition-all ${
+                      classFilter === c ? "bg-theme-accent/15 text-theme-accent" : "text-theme-muted hover:text-theme-text"
+                    }`}
+                  >
+                    <ProfessionIcon profession={c} className="w-3.5 h-3.5" />
+                    {c}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="theme-table-shell overflow-x-auto custom-scrollbar">
               <table className="theme-data-table w-full text-left text-xs">
@@ -129,7 +198,8 @@ export default function PlayerProfilesView() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.25, delay: Math.min(i, 20) * 0.015 }}
-                        className="theme-table-row transition-colors"
+                        onClick={() => setSelectedAccount((cur) => (cur === p.account ? null : p.account))}
+                        className={`theme-table-row transition-colors cursor-pointer ${selectedAccount === p.account ? "bg-theme-accent/[0.08]" : ""}`}
                       >
                         <td className="p-2.5 text-theme-text font-semibold whitespace-nowrap">{p.account}</td>
                         <td className="p-2.5">
@@ -196,10 +266,121 @@ export default function PlayerProfilesView() {
         )}
       </Panel>
 
+      {profiles.length > 0 && chartData.length > 0 && (
+        <Panel
+          title="Damage Leaderboard"
+          subtitle="Top career damage totals for the currently filtered player pool. Click a bar to open that player's profile."
+          icon={<Trophy className="w-4 h-4" />}
+          accent="text-orange-400"
+        >
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="account" tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" interval={0} angle={-30} textAnchor="end" height={50} />
+                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" width={44} tickFormatter={(v) => fmtCompact(Number(v))} />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  itemStyle={TOOLTIP_ITEM_STYLE}
+                  labelStyle={TOOLTIP_LABEL_STYLE}
+                  formatter={(v) => [fmtCompact(Number(v)), "Total damage"]}
+                />
+                <Bar
+                  dataKey="totalDamage"
+                  radius={[3, 3, 0, 0]}
+                  onClick={(d: any) => setSelectedAccount(d?.payload?.account ?? d?.account ?? null)}
+                  cursor="pointer"
+                >
+                  {chartData.map((d) => (
+                    <Cell key={d.account} fill={d.account === selectedAccount ? CHART_COLORS.orange : CHART_COLORS.amber} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Panel>
+      )}
+
+      {selectedProfile && (
+        <Panel
+          title={`${selectedProfile.account} · Career Dossier`}
+          icon={<Users className="w-4 h-4" />}
+          accent="text-theme-accent"
+          action={
+            <button
+              type="button"
+              onClick={() => setSelectedAccount(null)}
+              className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-theme-muted hover:text-theme-text"
+            >
+              <X className="w-3 h-3" /> Close
+            </button>
+          }
+        >
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <ProfileMetric label="Reports seen" value={fmtNum(selectedProfile.reportsSeen)} />
+            <ProfileMetric label="Fights joined" value={fmtNum(selectedProfile.totalFightsJoined)} />
+            <ProfileMetric label="Total damage" value={fmtCompact(selectedProfile.totalDamage)} tone="text-orange-400" />
+            <ProfileMetric label="Best DPS" value={fmtFixedGrouped(selectedProfile.bestDps, 0)} />
+            <ProfileMetric label="Total healing" value={fmtCompact(selectedProfile.totalHealing)} tone="text-emerald-400" />
+            <ProfileMetric label="Total barrier" value={fmtCompact(selectedProfile.totalBarrier)} tone="text-emerald-300" />
+            <ProfileMetric label="Down contribution" value={fmtCompact(selectedProfile.totalDownContrib)} tone="text-sky-400" />
+            <ProfileMetric label="Boon strips" value={fmtCompact(selectedProfile.totalStrips)} tone="text-cyan-300" />
+            <ProfileMetric label="Condi cleanses" value={fmtCompact(selectedProfile.totalCleanses)} tone="text-cyan-300" />
+            <ProfileMetric label="MVP awards" value={String(selectedProfile.offensiveMvpCount + selectedProfile.defensiveMvpCount)} tone="text-amber-400" />
+            <ProfileMetric label="Current win streak" value={String(currentWinStreak(selectedProfile))} tone="text-orange-300" />
+            <ProfileMetric label="Longest win streak" value={String(longestWinStreak(selectedProfile))} tone="text-orange-300" />
+            <ProfileMetric label="Current MVP streak" value={String(currentMvpStreak(selectedProfile))} tone="text-amber-300" />
+          </div>
+
+          <div className="mt-5">
+            <div className="text-[10px] font-black uppercase tracking-wider text-theme-muted mb-2">Classes played</div>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(selectedProfile.classCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([cls, count]) => (
+                  <span
+                    key={cls}
+                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold border ${profChip(cls)}`}
+                  >
+                    <ProfessionIcon profession={cls} className="w-3.5 h-3.5" />
+                    {cls} <span className="opacity-70">×{count}</span>
+                  </span>
+                ))}
+            </div>
+          </div>
+
+          {computeBadges(selectedProfile).length > 0 && (
+            <div className="mt-5">
+              <div className="text-[10px] font-black uppercase tracking-wider text-theme-muted mb-2">Badges</div>
+              <div className="flex flex-wrap gap-2">
+                {computeBadges(selectedProfile).map((b) => (
+                  <span
+                    key={b.id}
+                    title={b.detail}
+                    className="px-2 py-1 rounded text-[10px] font-bold border border-sky-500/30 text-sky-400 bg-sky-500/10"
+                  >
+                    {b.label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </Panel>
+      )}
+
       <div className="flex items-center gap-2 text-[10px] text-theme-muted italic">
         <Sparkles className="w-3 h-3" />
         Career stats are stored locally in this browser and grow every time a new report is loaded here.
       </div>
+    </div>
+  );
+}
+
+function ProfileMetric({ label, value, tone = "text-theme-text" }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className="border-l-2 border-theme-accent/30 bg-black/25 px-3 py-2">
+      <div className="text-[9px] font-black uppercase tracking-wider text-theme-muted">{label}</div>
+      <div className={`mt-1 font-mono text-lg font-black ${tone}`}>{value}</div>
     </div>
   );
 }
