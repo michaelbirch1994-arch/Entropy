@@ -1,14 +1,12 @@
 import type { Gw2ApiFact, Gw2Skill, Gw2Trait } from "../../types/buildEditor";
 
 /**
- * Squad boon-coverage engine, ported from AxiForge's own analyzeBoons
- * (@axiapps/gw2-data/src/engine/boons.js). Given a build's actual selected
- * skills and active traits, this scans their GW2 API `facts` for Buff-type
- * entries naming one of the 12 real boons, then uses a short text heuristic
- * over each entity's `description` to guess whether the boon is granted to
- * the caster only or also to nearby allies - the GW2 API doesn't expose that
- * distinction as structured data, so neither does AxiForge; this mirrors its
- * approach exactly rather than inventing a different one.
+ * Squad boon-coverage engine. Scans a build's selected skills and active
+ * traits for GW2 API `facts` entries that grant one of the 12 real boons,
+ * then uses a short text heuristic over each entity's `description` to
+ * infer whether the boon reaches nearby allies or just the caster - the
+ * GW2 API doesn't expose that distinction as structured data, so this
+ * infers it from the wording instead.
  */
 
 const BUFF_FACT_TYPES = new Set(["Buff", "ApplyBuffCondition", "PrefixedBuff"]);
