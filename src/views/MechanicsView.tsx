@@ -75,7 +75,7 @@ export default function MechanicsView() {
           >
             {data.fights.map((f, i) => (
               <option key={f.fightId} value={i}>
-                {f.fightName} ({fmtClock(f.durationMs)})
+                #{i + 1} · {f.fightName} ({fmtClock(f.durationMs)})
               </option>
             ))}
           </select>
