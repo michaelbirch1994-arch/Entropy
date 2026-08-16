@@ -92,7 +92,7 @@ export default function RotationsView() {
             className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2"
           >
             {data.fights.map((f, i) => (
-              <option key={f.fightId} value={i}>{f.fightName} ({fmtClock(f.durationMs)})</option>
+              <option key={f.fightId} value={i}>#{i + 1} · {f.fightName} ({fmtClock(f.durationMs)})</option>
             ))}
           </select>
         )}
