@@ -48,6 +48,8 @@ import {
   validateBuilder,
 } from "../lib/axiforge/builderModel";
 import { loadBuilderWorkspace, saveBuilderWorkspace } from "../lib/axiforge/builderStorage";
+import { BOON_DISPLAY_ORDER, type BoonCoverageEntry } from "../lib/axiforge/boonEngine";
+import { computeBuildBoonCoverage } from "../lib/axiforge/squadBoons";
 import {
   fetchGw2Professions,
   fetchGw2Skills,
@@ -243,15 +245,78 @@ function BuildLibrary({
   );
 }
 
+function boonCacheKey(build: SavedBuilderBuild): string {
+  return `${build.id}:${build.updatedAt}`;
+}
+
+function SquadBoonCoverage({
+  composition,
+  builds,
+  boonCache,
+  computing,
+}: {
+  composition: BuilderComposition;
+  builds: SavedBuilderBuild[];
+  boonCache: Record<string, BoonCoverageEntry[]>;
+  computing: boolean;
+}) {
+  const providers = useMemo(() => {
+    const map = new Map<string, Array<{ buildName: string; profession: string }>>();
+    const referenced = composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id));
+    for (const buildId of referenced) {
+      const build = builds.find((item) => item.id === buildId);
+      if (!build) continue;
+      const coverage = boonCache[boonCacheKey(build)];
+      if (!coverage) continue;
+      for (const entry of coverage) {
+        if (!entry.hasAllySource) continue;
+        const list = map.get(entry.name) ?? [];
+        list.push({ buildName: build.name, profession: build.state.professionId });
+        map.set(entry.name, list);
+      }
+    }
+    return map;
+  }, [composition, builds, boonCache]);
+
+  return (
+    <section className="theme-builder-boon-coverage">
+      <div className="theme-builder-section-head">
+        <div><div className="theme-builder-kicker">Live from assigned squad slots</div><h3>Squad boon coverage</h3></div>
+        {computing && <Loader2 className="h-4 w-4 animate-spin" />}
+      </div>
+      <div className="theme-builder-boon-grid">
+        {BOON_DISPLAY_ORDER.map((boon) => {
+          const list = providers.get(boon) ?? [];
+          const covered = list.length > 0;
+          return (
+            <div
+              key={boon}
+              className={covered ? "is-covered" : "is-missing"}
+              title={covered ? list.map((source) => `${source.buildName} (${source.profession})`).join(", ") : "No assigned build grants this to allies"}
+            >
+              <strong>{boon}</strong>
+              <span>{covered ? `${list.length} source${list.length === 1 ? "" : "s"}` : "No coverage"}</span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function SquadWorkspace({
   composition,
   builds,
+  boonCache,
+  boonComputing,
   onCreate,
   onChange,
   onCopyCode,
 }: {
   composition: BuilderComposition | null;
   builds: SavedBuilderBuild[];
+  boonCache: Record<string, BoonCoverageEntry[]>;
+  boonComputing: boolean;
   onCreate: () => void;
   onChange: (composition: BuilderComposition) => void;
   onCopyCode: () => void;
@@ -269,43 +334,46 @@ function SquadWorkspace({
   const update = (partial: Partial<BuilderComposition>) => onChange({ ...composition, ...partial, updatedAt: new Date().toISOString() });
 
   return (
-    <section className="theme-builder-workspace">
-      <div className="theme-builder-section-head">
-        <div className="grid flex-1 gap-3 md:grid-cols-[minmax(15rem,1fr)_9rem]">
-          <label><FieldLabel>Squad name</FieldLabel><TextField value={composition.name} onChange={(event) => update({ name: event.target.value })} /></label>
-          <label><FieldLabel>Mode</FieldLabel><SelectField value={composition.gameMode} onChange={(event) => update({ gameMode: event.target.value as BuilderComposition["gameMode"] })}>{GAME_MODES.map((mode) => <option key={mode.id} value={mode.id}>{mode.label}</option>)}</SelectField></label>
-        </div>
-        <div className="theme-builder-squad-readout"><strong>{assigned}</strong><span>assigned</span></div>
-        <button type="button" className="theme-command-button" onClick={onCopyCode} disabled={!assigned}><Clipboard className="h-4 w-4" /> Copy squad code</button>
-      </div>
-      <div className="theme-builder-party-stack">
-        {composition.parties.map((party, partyIndex) => (
-          <div key={party.id} className="theme-builder-party-line">
-            <div className="theme-builder-party-name">
-              <span>{String(partyIndex + 1).padStart(2, "0")}</span>
-              <input value={party.name} onChange={(event) => update({ parties: composition.parties.map((item) => item.id === party.id ? { ...item, name: event.target.value } : item) })} />
-              {composition.parties.length > 1 && <button type="button" title="Remove subgroup" onClick={() => update({ parties: composition.parties.filter((item) => item.id !== party.id) })}><X /></button>}
-            </div>
-            <div className="theme-builder-party-slots">
-              {party.slots.map((buildId, slotIndex) => {
-                const selected = builds.find((build) => build.id === buildId);
-                return (
-                  <label key={slotIndex} className={selected ? "is-filled" : ""}>
-                    <span>{slotIndex + 1}</span>
-                    <select value={buildId ?? ""} onChange={(event) => update({ parties: composition.parties.map((item) => item.id === party.id ? { ...item, slots: item.slots.map((slot, index) => index === slotIndex ? event.target.value || null : slot) } : item) })}>
-                      <option value="">Open slot</option>
-                      {builds.map((build) => <option key={build.id} value={build.id}>{build.name} · {build.state.professionId}</option>)}
-                    </select>
-                    {selected && <small>{selected.state.role || selected.state.professionId}</small>}
-                  </label>
-                );
-              })}
-            </div>
+    <>
+      <SquadBoonCoverage composition={composition} builds={builds} boonCache={boonCache} computing={boonComputing} />
+      <section className="theme-builder-workspace">
+        <div className="theme-builder-section-head">
+          <div className="grid flex-1 gap-3 md:grid-cols-[minmax(15rem,1fr)_9rem]">
+            <label><FieldLabel>Squad name</FieldLabel><TextField value={composition.name} onChange={(event) => update({ name: event.target.value })} /></label>
+            <label><FieldLabel>Mode</FieldLabel><SelectField value={composition.gameMode} onChange={(event) => update({ gameMode: event.target.value as BuilderComposition["gameMode"] })}>{GAME_MODES.map((mode) => <option key={mode.id} value={mode.id}>{mode.label}</option>)}</SelectField></label>
           </div>
-        ))}
-      </div>
-      <button type="button" className="theme-builder-add-line" onClick={() => update({ parties: [...composition.parties, createParty(composition.parties.length)] })}><Plus className="h-4 w-4" /> Add subgroup</button>
-    </section>
+          <div className="theme-builder-squad-readout"><strong>{assigned}</strong><span>assigned</span></div>
+          <button type="button" className="theme-command-button" onClick={onCopyCode} disabled={!assigned}><Clipboard className="h-4 w-4" /> Copy squad code</button>
+        </div>
+        <div className="theme-builder-party-stack">
+          {composition.parties.map((party, partyIndex) => (
+            <div key={party.id} className="theme-builder-party-line">
+              <div className="theme-builder-party-name">
+                <span>{String(partyIndex + 1).padStart(2, "0")}</span>
+                <input value={party.name} onChange={(event) => update({ parties: composition.parties.map((item) => item.id === party.id ? { ...item, name: event.target.value } : item) })} />
+                {composition.parties.length > 1 && <button type="button" title="Remove subgroup" onClick={() => update({ parties: composition.parties.filter((item) => item.id !== party.id) })}><X /></button>}
+              </div>
+              <div className="theme-builder-party-slots">
+                {party.slots.map((buildId, slotIndex) => {
+                  const selected = builds.find((build) => build.id === buildId);
+                  return (
+                    <label key={slotIndex} className={selected ? "is-filled" : ""}>
+                      <span>{slotIndex + 1}</span>
+                      <select value={buildId ?? ""} onChange={(event) => update({ parties: composition.parties.map((item) => item.id === party.id ? { ...item, slots: item.slots.map((slot, index) => index === slotIndex ? event.target.value || null : slot) } : item) })}>
+                        <option value="">Open slot</option>
+                        {builds.map((build) => <option key={build.id} value={build.id}>{build.name} · {build.state.professionId}</option>)}
+                      </select>
+                      {selected && <small>{selected.state.role || selected.state.professionId}</small>}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button type="button" className="theme-builder-add-line" onClick={() => update({ parties: [...composition.parties, createParty(composition.parties.length)] })}><Plus className="h-4 w-4" /> Add subgroup</button>
+      </section>
+    </>
   );
 }
 
@@ -324,6 +392,8 @@ export default function AxiForgeLabView() {
   const [exportCode, setExportCode] = useState("");
   const [importOpen, setImportOpen] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [boonCache, setBoonCache] = useState<Record<string, BoonCoverageEntry[]>>({});
+  const [boonComputing, setBoonComputing] = useState(false);
 
   const builder = workspace.draft;
   const updateBuilder = (updater: EntropyBuilderState | ((current: EntropyBuilderState) => EntropyBuilderState)) => {
@@ -387,6 +457,42 @@ export default function AxiForgeLabView() {
       .catch((error) => !cancelled && setCatalogError(error instanceof Error ? error.message : "Unable to load traits."));
     return () => { cancelled = true; };
   }, [builder.specializationIds.join(":"), professionSpecs.length]);
+
+  // Squad boon coverage: for every build currently assigned into any squad
+  // slot, resolve and cache its live boon-support profile so the panel above
+  // the party stack can stay in sync as builds are saved into the squad.
+  useEffect(() => {
+    if (!activeComposition) return;
+    const referencedIds = new Set(
+      activeComposition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id)),
+    );
+    const targets = [...referencedIds]
+      .map((id) => workspace.builds.find((build) => build.id === id))
+      .filter((build): build is SavedBuilderBuild => Boolean(build));
+    const missing = targets.filter((build) => !(boonCacheKey(build) in boonCache));
+    if (!missing.length) return;
+    let cancelled = false;
+    setBoonComputing(true);
+    Promise.all(
+      missing.map(async (build) => {
+        try {
+          const coverage = await computeBuildBoonCoverage(build.state);
+          return [boonCacheKey(build), coverage] as const;
+        } catch {
+          return [boonCacheKey(build), []] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      setBoonCache((current) => {
+        const next = { ...current };
+        for (const [key, coverage] of entries) next[key] = coverage;
+        return next;
+      });
+      setBoonComputing(false);
+    });
+    return () => { cancelled = true; };
+  }, [activeComposition, workspace.builds, boonCache]);
 
   function chooseProfession(profession: Gw2Profession) {
     const next = createEmptyBuilder(profession.id);
@@ -621,7 +727,7 @@ export default function AxiForgeLabView() {
       )}
 
       {activeTab === "library" && <BuildLibrary builds={workspace.builds} onLoad={loadBuild} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} />}
-      {activeTab === "squad" && <SquadWorkspace composition={activeComposition} builds={workspace.builds} onCreate={createSquad} onChange={updateComposition} onCopyCode={exportSquad} />}
+      {activeTab === "squad" && <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} onCreate={createSquad} onChange={updateComposition} onCopyCode={exportSquad} />}
 
       {activeTab === "build" && (
         <div className="theme-builder-layout">
