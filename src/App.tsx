@@ -224,7 +224,7 @@ function ReportShell() {
               <NoReportState />
             </motion.div>
           ) : report ? (
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
               <motion.div
                 key={activeView}
                 initial={{ opacity: 0, y: 10 }}
