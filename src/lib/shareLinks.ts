@@ -1,6 +1,10 @@
 import type { WvWReport } from "../types/report";
 
-export const DEFAULT_SHARE_VIEWER_URL = "https://michaelbirch1994-arch.github.io/Entropy/";
+// Entropy's canonical hosted deployment. Only used when we're not in a
+// real browser tab (SSR/tests) - live share links always prefer the
+// actual page the user is on (see getConfiguredShareViewerUrl), so this
+// never overrides the real Vercel URL for someone using the hosted app.
+export const DEFAULT_SHARE_VIEWER_URL = "https://entropy-pi-five.vercel.app/";
 
 export interface ReportLoadQuery {
   reportId: string | null;
@@ -26,13 +30,13 @@ function isLoadableExternalUrl(value: string): boolean {
 }
 
 export function getConfiguredShareViewerUrl(currentHref?: string): string {
-  const configured = import.meta.env.VITE_ENTROPY_SHARE_VIEWER_URL;
-  if (typeof configured === "string" && configured.trim()) return configured.trim();
-
   if (currentHref) return currentHref;
   if (typeof window !== "undefined" && /^https?:$/i.test(window.location.protocol)) {
     return window.location.href;
   }
+
+  const configured = import.meta.env.VITE_ENTROPY_SHARE_VIEWER_URL;
+  if (typeof configured === "string" && configured.trim()) return configured.trim();
 
   return DEFAULT_SHARE_VIEWER_URL;
 }
