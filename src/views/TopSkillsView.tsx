@@ -113,6 +113,66 @@ function buildHealingById(healingSources: TopHealingSource[]) {
   return byId;
 }
 
+// Skills/traits/relics/sigils that GW2 actually classifies as life stealing
+// (draining health from a foe and healing yourself with it), per
+// https://wiki.guildwars2.com/wiki/Life_stealing. A skill just having high
+// incoming healing (a boon, a heal skill, condi cleanse-on-heal, etc.) does
+// NOT make it life steal - this allowlist is what makes the distinction.
+const LIFE_STEAL_SKILL_NAMES: Set<string> = (() => {
+  const items = [
+    "Vampiric Slash",
+    "Hungering Maelstrom",
+    "Soul Grasp",
+    "Locust Swarm",
+    "Addle",
+    "Deadly Feast",
+    "Deadly Slice",
+    "Distress",
+    "Extirpate",
+    "Sinister Stab",
+    "Death Spiral",
+    "Grim Specter",
+    "Enchanted Daggers",
+    "Signet of Vampirism",
+    "Signet of the Locust",
+    "Nightmare Weapon",
+    "Soulcleave's Summit",
+    "Xinrae's Weapon",
+    "Facet of Nature",
+    "Vampiric Bite",
+    "Blood Frenzy",
+    "Life Siphon",
+    "Battle Scarred",
+    "Predator's Cunning",
+    "Cloaked in Shadow",
+    "Leeching Venoms",
+    "Shadow Siphoning",
+    "Larcenous Torment",
+    "Overflowing Thirst",
+    "Signets of Suffering",
+    "Vampiric",
+    "Vampiric Presence",
+    "Augury of Death",
+    "Lesser Enchanted Daggers",
+    "Carnivore",
+    "Lesser Signet of the Locust",
+    "Relic of Vampirism",
+    "Relic of the Mist Stranger",
+    "Superior Sigil of Blood",
+    "Major Sigil of Blood",
+    "Minor Sigil of Blood",
+    "Superior Sigil of Leeching",
+    "Major Sigil of Leeching",
+    "Superior Sigil of Draining",
+  ];
+  return new Set(items.map((n) => n.toLowerCase()));
+})();
+
+function isLifeStealSource(name: string | undefined | null): boolean {
+  if (!name) return false;
+  return LIFE_STEAL_SKILL_NAMES.has(name.trim().toLowerCase());
+}
+
 function LifeStealSpotlight({
   healingSources,
   topSkills,
@@ -126,7 +186,7 @@ function LifeStealSpotlight({
 
   const damageById = new Map(topSkills.map((skill) => [skill.id, skill]));
   const topSources = [...healingSources]
-    .filter((source) => source.healing > 0)
+    .filter((source) => source.healing > 0 && isLifeStealSource(source.name))
     .sort((a, b) => b.healing - a.healing)
     .slice(0, 4);
   const maxHealing = Math.max(...topSources.map((source) => source.healing), 1);
