@@ -447,16 +447,19 @@ function ReportShell() {
                   Webhook
                 </button>
                 {source && (
-                  <span
-                    className={`theme-status-pill flex items-center gap-1.5 px-2.5 py-1.5 ${
+                  <button
+                    type="button"
+                    onClick={handleExportReport}
+                    title="Copy a short Entropy viewer link when dps.report permalinks exist; otherwise save a portable Entropy report artifact for web hosting."
+                    className={`theme-status-pill flex items-center gap-1.5 px-2.5 py-1.5 transition-colors hover:brightness-125 cursor-pointer ${
                       source === "upload"
                         ? "text-amber-400 border-amber-500/30 bg-amber-500/5"
                         : "text-sky-400 border-sky-500/30 bg-sky-500/5"
                     }`}
                   >
-                    {source === "upload" ? <Upload className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
-                    {source === "upload" ? "Uploaded" : "Shared link"}
-                  </span>
+                    {exportStatus !== "idle" ? <Link2 className="w-3 h-3" /> : source === "upload" ? <Upload className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
+                    {exportStatus !== "idle" ? exportLabel : source === "upload" ? "Uploaded" : "Shared link"}
+                  </button>
                 )}
                 <button
                   onClick={clearReport}
