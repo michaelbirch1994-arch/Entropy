@@ -35,6 +35,13 @@ export default function CommanderStatsView() {
   const commanderSurvival = Math.max(0, 1 - ratio(commander.commanderDeaths, commander.fights));
   const forceRatio = ratio(commander.avgEnemySize, commander.avgSquadSize);
   const allyTrade = ratio(commander.alliesDead, commander.kills);
+  // Elite Insights only tracks deaths per player (defenses.deadCount); kill
+  // credit on a kill event is squad-wide, so there is no way to isolate "the
+  // commander's own kills" from combat-log data. commander.kills/alliesDead is
+  // therefore always a squad-wide trade ratio for fights this commander led,
+  // not the commander's personal K/D - recomputed here (rather than trusting
+  // a possibly-stale precomputed field) and labeled "Squad KDR" accordingly.
+  const squadKdr = ratio(commander.kills, commander.alliesDead);
   const reviewCues = buildReviewCues(commander, downConversion, commanderSurvival, forceRatio);
 
   return (
@@ -73,7 +80,7 @@ export default function CommanderStatsView() {
             <StatCard label="Fights" value={fmtNum(commander.fights)} icon={<Swords className="h-3.5 w-3.5 text-orange-400" />} accent="text-orange-300" />
             <StatCard label="Wins" value={fmtNum(commander.wins)} icon={<Target className="h-3.5 w-3.5 text-emerald-400" />} accent="text-emerald-300" />
             <StatCard label="Losses" value={fmtNum(commander.losses)} icon={<Skull className="h-3.5 w-3.5 text-rose-400" />} accent="text-rose-300" />
-            <StatCard label="KDR" value={fmtFixed(commander.kdr, 2)} icon={<Gauge className="h-3.5 w-3.5 text-amber-400" />} accent="text-amber-300" />
+            <StatCard label="Squad KDR" value={fmtFixed(squadKdr, 2)} icon={<Gauge className="h-3.5 w-3.5 text-amber-400" />} accent="text-amber-300" sub="Squad kills / allied deaths while this commander led" />
             <StatCard label="Kills" value={fmtNum(commander.kills)} icon={<Swords className="h-3.5 w-3.5 text-emerald-400" />} accent="text-emerald-300" />
             <StatCard label="Duration" value={fmtDur(commander.totalDurationMs)} icon={<Clock className="h-3.5 w-3.5 text-slate-400" />} accent="text-slate-300" />
           </div>

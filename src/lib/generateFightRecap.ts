@@ -52,7 +52,7 @@ export function generateFightRecap(s: ReportStats): FightRecap | null {
 
   // --- Kills/downs summary ---
   paragraphs.push(
-    `The squad put down ${fmtNum(s.totalEnemyDowns)} enemies and secured ${fmtNum(s.totalEnemyKills)} kills, while taking ` +
+    `The squad put down ${fmtNum(s.totalEnemyDowns)} enemies and secured ${fmtNum(s.totalSquadKills)} kills, while taking ` +
     `${fmtNum(s.totalSquadDowns)} downs and losing ${fmtNum(s.totalSquadDeaths)} of its own.`
   );
 
