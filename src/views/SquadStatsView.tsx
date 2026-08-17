@@ -89,8 +89,11 @@ function buildPressureRows(players: OffensePlayer[], scope: ReturnType<typeof us
     const pressureRaw = downContribution + enemyDowns * 50000 + kills * 80000 + damage * 0.05;
     return { account: p.account, profession: p.profession, damage, dps, downContribution, enemyDowns, kills, pressureRaw };
   }).sort((a, b) => b.pressureRaw - a.pressureRaw);
-  const max = Math.max(...base.map((p) => p.pressureRaw), 1);
-  return base.map((p) => ({ ...p, pressureScore: normalizeScore(p.pressureRaw, max), pressurePct: safeDiv(p.pressureRaw, max) }));
+  // Kill Pressure is this player's share of the SQUAD total pressure, not
+  // normalized against the top player - otherwise the leader always shows
+  // 100 (their own value divided by itself as the max).
+  const total = base.reduce((sum, p) => sum + p.pressureRaw, 0) || 1;
+  return base.map((p) => ({ ...p, pressureScore: normalizeScore(p.pressureRaw, total), pressurePct: safeDiv(p.pressureRaw, total) }));
 }
 
 function SkillSourceRows({
@@ -365,7 +368,7 @@ export default function SquadStatsView() {
       <div className="theme-stat-grid grid grid-cols-1 xl:grid-cols-3 gap-4">
         <StatCard
           label="Kill Pressure"
-          value={pressureLeader ? `${pressureLeader.pressureScore}/100` : "n/a"}
+          value={pressureLeader ? `${pressureLeader.pressureScore}%` : "n/a"}
           icon={<Crosshair className="w-3.5 h-3.5 text-rose-400" />}
           accent="text-rose-300"
           sub={pressureLeader ? `${pressureLeader.account} · ${fmtCompact(pressureLeader.downContribution)} down contribution` : "No pressure data available"}
