@@ -332,7 +332,7 @@ export default function FightBreakdownView() {
                 contentStyle={TOOLTIP_STYLE}
                 itemStyle={TOOLTIP_ITEM_STYLE}
                 labelStyle={TOOLTIP_LABEL_STYLE}
-                formatter={(v, name) => [name === "kdr" ? Number(v).toFixed(2) : fmtCompact(Number(v)), name === "kdr" ? "KDR" : name === "outDamage" ? "Outgoing" : "Incoming"]}
+                formatter={(v, name) => [name === "KDR" ? Number(v).toFixed(2) : fmtCompact(Number(v)), name]}
                 labelFormatter={(v, payload) => {
                   const row = payload?.[0]?.payload as { label?: string; isWin?: boolean } | undefined;
                   return `Fight #${v}${row?.label ? ` · ${row.label}` : ""}${row?.isWin != null ? ` · ${row.isWin ? "Win" : "Loss"}` : ""}`;
@@ -341,7 +341,7 @@ export default function FightBreakdownView() {
               <Legend wrapperStyle={{ fontSize: 10, color: "#64748b" }} />
               <Bar yAxisId="dmg" dataKey="outDamage" name="Outgoing" fill={CHART_COLORS.amber} radius={[3, 3, 0, 0]} />
               <Bar yAxisId="dmg" dataKey="inDamage" name="Incoming" fill={CHART_COLORS.rose} radius={[3, 3, 0, 0]} />
-              <Line yAxisId="kdr" type="monotone" dataKey="kdr" name="kdr" stroke={CHART_COLORS.cyan} strokeWidth={2} dot={{ r: 2 }} />
+              <Line yAxisId="kdr" type="monotone" dataKey="kdr" name="KDR" stroke={CHART_COLORS.cyan} strokeWidth={2} dot={{ r: 2 }} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
