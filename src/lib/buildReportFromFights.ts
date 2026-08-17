@@ -934,6 +934,8 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
     const skillMeta = new Map<number, { name: string; icon?: string }>();
     const outgoing = new Map<number, { damage: number; hits: number; downContribution: number }>();
     const incoming = new Map<number, { damage: number; hits: number; downContribution: number }>();
+    const outgoingBest = new Map<number, { value: number; account: string; profession: string }>();
+    const incomingBest = new Map<number, { value: number; account: string; profession: string }>();
 
   function accumulate(
         target: Map<number, { damage: number; hits: number; downContribution: number }>,
@@ -949,7 +951,7 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
         target.set(id, cur);
   }
 
-  type DistEntry = { id?: number; totalDamage?: number; connectedHits?: number; hits?: number; downContribution?: number };
+    type DistEntry = { id?: number; totalDamage?: number; connectedHits?: number; hits?: number; downContribution?: number; max?: number };
 
   for (const f of fights) {
         const raw = f.raw as Record<string, unknown>;
@@ -987,6 +989,17 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                           const hits = Number(entry?.connectedHits ?? entry?.hits) || 0;
                           const downContrib = Number(entry?.downContribution) || 0;
                           if (dmg === 0 && hits === 0 && downContrib === 0) continue;
+                const hitMax = Number(entry?.max) || 0;
+                if (hitMax > 0) {
+                    const prevBest = outgoingBest.get(id);
+                    if (!prevBest || hitMax > prevBest.value) {
+                        outgoingBest.set(id, {
+                            value: hitMax,
+                            account: String(p.account ?? p.name ?? 'Unknown'),
+                            profession: String(p.profession ?? 'Unknown'),
+                        });
+                    }
+                }
                           accumulate(outgoing, id, dmg, hits, downContrib);
                 }
 
@@ -1004,6 +1017,17 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                   // Down Contrib bar regardless of the underlying data.
                   const downContrib = Number(entry?.downContribution) || 0;
                           if (dmg === 0 && hits === 0 && downContrib === 0) continue;
+                const hitMaxIn = Number(entry?.max) || 0;
+                if (hitMaxIn > 0) {
+                    const prevBestIn = incomingBest.get(id);
+                    if (!prevBestIn || hitMaxIn > prevBestIn.value) {
+                        incomingBest.set(id, {
+                            value: hitMaxIn,
+                            account: String(p.account ?? p.name ?? 'Unknown'),
+                            profession: String(p.profession ?? 'Unknown'),
+                        });
+                    }
+                }
                           accumulate(incoming, id, dmg, hits, downContrib);
                 }
         }
@@ -1017,7 +1041,7 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
         accumulate(outgoing, NATURAL_FORTITUDE_SYNTHETIC_SKILL_ID, naturalFortitude.damage, naturalFortitude.hits, 0);
   }
 
-  function toRows(map: Map<number, { damage: number; hits: number; downContribution: number }>): TopSkill[] {
+    function toRows(map: Map<number, { damage: number; hits: number; downContribution: number }>, bestMap: Map<number, { value: number; account: string; profession: string }>): TopSkill[] {
         return Array.from(map.entries())
           .map(([id, v]) => ({
                     name: skillMeta.get(id)?.name ?? `Skill ${id}`,
@@ -1026,12 +1050,13 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                     damage: v.damage,
                     hits: v.hits,
                     downContribution: v.downContribution,
+                biggestHit: bestMap.get(id) ?? null,
           }))
           .filter((s) => s.damage > 0 || s.hits > 0 || s.downContribution > 0);
   }
 
-  const outgoingRows = toRows(outgoing);
-  const incomingRows = toRows(incoming);
+    const outgoingRows = toRows(outgoing, outgoingBest);
+    const incomingRows = toRows(incoming, incomingBest);
   const byDamage = (rows: TopSkill[]) => [...rows].sort((a, b) => b.damage - a.damage || b.downContribution - a.downContribution).slice(0, 30);
   const byDownContribution = (rows: TopSkill[]) => [...rows].sort((a, b) => b.downContribution - a.downContribution || b.damage - a.damage).slice(0, 30);
 
@@ -1085,9 +1110,10 @@ function computeReplayFights(fights: FightInput[]) {
 // healing addon active - the same precondition HealingPlayer.hasHealAddon
 // already flags elsewhere in this file.
 function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
-    type HealDistEntry = { totalHealing?: number; hits?: number; id?: number; indirectHealing?: boolean };
+    type HealDistEntry = { totalHealing?: number; hits?: number; id?: number; indirectHealing?: boolean; max?: number };
 
   const totals = new Map<string, { id: number; healing: number; hits: number; isTrait: boolean }>();
+    const bestHeal = new Map<string, { value: number; account: string; profession: string }>();
     // Merged skill+buff name/icon lookup, keyed by numeric id regardless of
   // which map it came from - same precedence (skillMap first, buffMap only
   // fills gaps) as computeTopSkills' skillMeta above.
@@ -1132,6 +1158,17 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
                     const cur = totals.get(key) || { id, healing: 0, hits: 0, isTrait };
                     cur.healing += healing;
                     cur.hits += hits;
+                const healMax = Number(entry?.max) || 0;
+                if (healMax > 0) {
+                    const prevBestHeal = bestHeal.get(key);
+                    if (!prevBestHeal || healMax > prevBestHeal.value) {
+                        bestHeal.set(key, {
+                            value: healMax,
+                            account: String(p.account ?? p.name ?? 'Unknown'),
+                            profession: String(p.profession ?? 'Unknown'),
+                        });
+                    }
+                }
                     totals.set(key, cur);
           }
       }
@@ -1147,6 +1184,7 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
                         healing: v.healing,
                         hits: v.hits,
                         isTrait: v.isTrait,
+                biggestHit: bestHeal.get(`${v.isTrait ? 'b' : 's'}${v.id}`) ?? null,
               };
       })
       .sort((a, b) => b.healing - a.healing)

@@ -264,6 +264,7 @@ export default function TopSkillsView() {
   const { report } = useReport();
   const [tab, setTab] = useState<"outgoing" | "incoming" | "healing">("outgoing");
   const [sort, setSort] = useState<SortKey>("damage");
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
   if (!report) return null;
   const s = report.stats;
 
@@ -319,7 +320,8 @@ export default function TopSkillsView() {
               return (
                 <div
                   key={`healing:${sort}:${hs.isTrait ? "trait" : "skill"}:${hs.id}:${hs.name}:${hs.healing}:${hs.hits}`}
-                  className="bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg hover:border-slate-700 transition-all"
+              onClick={() => setExpandedKey(expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}` ? null : `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}`)}
+              className="bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg hover:border-slate-700 transition-all cursor-pointer"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -354,6 +356,18 @@ export default function TopSkillsView() {
                       />
                     </div>
                   </div>
+                {expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}` && (
+                  <div className="mt-3 pt-3 border-t border-slate-800/60 text-[10px] font-mono">
+                    {hs.biggestHit ? (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Biggest single heal</span>
+                        <span className="text-emerald-400 font-bold">{fmtCompact(hs.biggestHit.value)} - {hs.biggestHit.account} ({hs.biggestHit.profession})</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-600">No single-hit data available</span>
+                    )}
+                  </div>
+                )}
                 </div>
               );
             })}
@@ -419,7 +433,8 @@ export default function TopSkillsView() {
           return (
             <div
               key={`${tab}:${sort}:${sk.id}:${sk.name}:${sk.damage}:${sk.downContribution}:${sk.hits}`}
-              className="bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg hover:border-slate-700 transition-all"
+              onClick={() => setExpandedKey(expandedKey === `${tab}:${sk.id}` ? null : `${tab}:${sk.id}`)}
+              className="bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg hover:border-slate-700 transition-all cursor-pointer"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -494,6 +509,18 @@ export default function TopSkillsView() {
                   </div>
                 )}
               </div>
+                {expandedKey === `${tab}:${sk.id}` && (
+                  <div className="mt-3 pt-3 border-t border-slate-800/60 text-[10px] font-mono">
+                    {sk.biggestHit ? (
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">{tab === "incoming" ? "Biggest single hit taken" : "Biggest single hit"}</span>
+                        <span className="text-amber-400 font-bold">{fmtCompact(sk.biggestHit.value)} - {sk.biggestHit.account} ({sk.biggestHit.profession})</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-600">No single-hit data available</span>
+                    )}
+                  </div>
+                )}
             </div>
           );
         })}

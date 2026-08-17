@@ -368,6 +368,7 @@ export interface TopSkill {
     damage: number;
     hits: number;
     downContribution: number;
+    biggestHit?: { value: number; account: string; profession: string } | null;
 }
 
 export interface CommanderRow {
@@ -647,6 +648,7 @@ export interface TopHealingSource {
     hits: number;
     /** True when this source is a trait/buff-triggered conversion heal (EI's IndirectHealing) rather than a directly-cast skill. */
   isTrait: boolean;
+    biggestHit?: { value: number; account: string; profession: string } | null;
 }
 
 export interface TopBarrierSource {
