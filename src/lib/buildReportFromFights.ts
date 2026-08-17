@@ -231,6 +231,7 @@ import type {
     DamageMitigationMinion,
 } from '../types/report';
 
+import { getFightOutcome } from "./bridge-metrics/computePlayerAggregation";
 // Stamped onto every report. Metrics are computed at build time, not at
 // display time, so a report built by an older version keeps whatever numbers
 // that version produced - updating the app does not retroactively fix it.
@@ -1352,7 +1353,7 @@ function computeFightHighlights(fights: FightInput[]): FightHighlight[] {
                                   }
 
                                   const durationMs = Number(raw.durationMS) || 0;
-        const success = !!raw.success;
+        const success = getFightOutcome(raw);
         const squadCount = squad.length;
         const enemyCount = Math.max(players.length - squadCount, 0);
         const fightName = f.summary.fightName || `Fight ${i + 1}`;
@@ -1581,7 +1582,7 @@ function computeCommanderStats(fights: FightInput[]): CommanderRow[] {
         const squad = players.filter((p) => !p.notInSquad);
         const enemyCount = Math.max(players.length - squad.length, 0);
         const durationMs = Number(raw.durationMS) || 0;
-        const isWin = !!raw.success;
+        const isWin = getFightOutcome(raw);
 
       let alliesDown = 0, alliesDead = 0;
         for (const p of squad) {
@@ -1726,7 +1727,7 @@ function computeFightTables(fights: FightInput[]): {
         const secs = Math.round((durationMs % 60000) / 1000);
         const mapName = String(raw.fightName || raw.name || "Unknown Map");
         const timestamp = Date.parse((raw.timeStartStd as string) ?? "") || 0;
-        const isWin = !!raw.success;
+        const isWin = getFightOutcome(raw);
         const skillMap = (raw.skillMap ?? {}) as Record<string, { name?: string; icon?: string }>;
         const buffMap = (raw.buffMap ?? {}) as Record<string, { name?: string; icon?: string }>;
         const resolveMeta = (id: number) => {
