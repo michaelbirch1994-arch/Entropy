@@ -49,10 +49,16 @@ export default function ReplayView() {
   const [followFocus, setFollowFocus] = useState(true);
   const [showMechanics, setShowMechanics] = useState(true);
   const [showCasts, setShowCasts] = useState(false);
-  // Facing spokes default on - EI ships true per-sample orientation data
-  // (not a movement-heading guess), so unlike the cast pulses above this is
-  // cheap, always-useful signal.
-  const [showFacing, setShowFacing] = useState(true);
+  // Facing spokes default OFF: the EI orientation-angle convention (which
+  // way 0deg points, cw vs ccw) has never been verified against a real
+  // replay export (see the comment on asFacingPoints in parseReplayData.ts).
+  // If the angle sign/offset is wrong, this line points backward relative
+  // to travel, which reads as a streak trailing behind a moving dot -
+  // exactly the "trailing line" artifact users kept reporting even after
+  // the SVG paint-compositing fix in v0.2.43 (which was never the real
+  // cause). Opt-in until FACING_ANGLE_SIGN/FACING_ANGLE_OFFSET_DEG are
+  // confirmed correct against a live log.
+  const [showFacing, setShowFacing] = useState(false);
   const rafRef = useRef<number | null>(null);
   const lastTsRef = useRef<number | null>(null);
 
