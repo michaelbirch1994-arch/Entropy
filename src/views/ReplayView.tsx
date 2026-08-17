@@ -40,11 +40,12 @@ export default function ReplayView() {
   const [speed, setSpeed] = useState(2);
   // Optional overlay layers. Casts default off: a WvW pull produces
   // thousands of them and they bury the squad dots otherwise.
-  // Off by default. The viewBox is fitted to the squad's actual movement,
-  // which is a small patch of a very large map image, so drawing the map at
-  // its full pixel size fills the whole frame with dark terrain and reads as
-  // a black screen. Opt-in until the framing is reconciled with the map rect.
-  const [showMap, setShowMap] = useState(false);
+  // Real combat-replay map imagery (WvW keep/tower terrain screenshots from
+  // EI), counter-flipped per-image so it matches the y-down SVG flip below.
+  // Verified on-screen across zoom levels and scrub positions - framing
+  // tracks the fitted squad-movement bounds correctly. Default on so users
+  // get real map context without an extra click.
+  const [showMap, setShowMap] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [followFocus, setFollowFocus] = useState(true);
   const [showMechanics, setShowMechanics] = useState(true);
