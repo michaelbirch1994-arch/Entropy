@@ -81,6 +81,7 @@ const MENU: NavSection[] = [
       { id: "rotations", label: "Rotations", keywords: ["apm", "casts"] },
       { id: "buffs", label: "Buffs", keywords: ["uptime", "boons", "conditions", "stability"] },
       { id: "buff-generation", label: "Buff Generation", keywords: ["boon generation", "cleanse", "stability", "quickness"] },
+      { id: "party-boons", label: "Party Boons", keywords: ["subgroup", "party", "group boons"] },
     ],
   },
   {
@@ -358,6 +359,7 @@ export const VIEW_ICONS: Record<string, ReactNode> = {
   highlights: <Star className="w-4 h-4" />,
   "death-recap": <Skull className="w-4 h-4" />,
   "buff-generation": <Sparkles className="w-4 h-4" />,
+  "party-boons": <Users className="w-4 h-4" />,
   classes: <Layers className="w-4 h-4" />,
   "map-distribution": <MapIcon className="w-4 h-4" />,
   "commander-stats": <Target className="w-4 h-4" />,

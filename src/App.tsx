@@ -29,6 +29,7 @@ import ReplayView from "./views/ReplayView";
 import MechanicsView from "./views/MechanicsView";
 import DeathRecapView from "./views/DeathRecapView";
 import BuffGenerationView from "./views/BuffGenerationView";
+import PartyBoonsView from "./views/PartyBoonsView";
 import HighlightsView from "./views/HighlightsView";
 import ArchiveView from "./views/ArchiveView";
 import CompareView from "./views/CompareView";
@@ -79,6 +80,7 @@ const VIEW_TITLES: Record<string, string> = {
   mechanics: "Mechanics Timeline",
   "death-recap": "Death Recap",
   "buff-generation": "Buff Generation",
+  "party-boons": "Party Boons",
   highlights: "Highlights",
   archive: "Report Archive",
   compare: "Compare Reports",
@@ -113,6 +115,7 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "mechanics": return <MechanicsView />;
     case "death-recap": return <DeathRecapView />;
     case "buff-generation": return <BuffGenerationView />;
+    case "party-boons": return <PartyBoonsView />;
     case "highlights": return <HighlightsView />;
     case "archive": return <ArchiveView />;
     case "compare": return <CompareView />;
