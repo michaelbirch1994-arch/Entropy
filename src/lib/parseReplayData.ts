@@ -338,6 +338,19 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
   return { durationMs, bounds: { minX, maxX, minY, maxY }, players, enemies, map, mechanics, skillMeta };
 }
 
+// Reasonable data gaps happen: samples land at a fixed cadence (150ms by
+// default) but disappear for stretches during disconnects, waypoints/portals
+// taken while still alive (not covered by deadIntervals), zone transitions, or
+// plain holes in what EI captured. Bridging one of these gaps with a straight-
+// line lerp draws a fast, unbroken streak clear across the map between the two
+// real positions on either side of the gap - this is the "drawing line" /
+// trailing-line artifact players kept reporting even after the facing-angle
+// and SVG paint-compositing fixes, because neither of those touched the data
+// layer where this actually happens. If the two bracketing samples are farther
+// apart than MAX_INTERP_GAP_MS, treat the position/facing as unknown for that
+// stretch instead of interpolating across it.
+const MAX_INTERP_GAP_MS = 1500;
+
 export function interpolatePosition(points: ReplayPoint[], t: number): ReplayPoint | null {
   if (points.length === 0) return null;
   if (t <= points[0].t) return points[0];
@@ -352,6 +365,7 @@ export function interpolatePosition(points: ReplayPoint[], t: number): ReplayPoi
   const a = points[lo];
   const b = points[hi];
   const span = b.t - a.t || 1;
+  if (span > MAX_INTERP_GAP_MS) return null;
   const f = (t - a.t) / span;
   return { t, x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
 }
@@ -374,6 +388,7 @@ export function interpolateFacing(facings: ReplayFacingPoint[], t: number): numb
   const a = facings[lo];
   const b = facings[hi];
   const span = b.t - a.t || 1;
+  if (span > MAX_INTERP_GAP_MS) return null;
   const f = (t - a.t) / span;
   const delta = ((b.angle - a.angle + 540) % 360) - 180;
   return a.angle + delta * f;
