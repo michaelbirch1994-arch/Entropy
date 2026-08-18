@@ -368,6 +368,12 @@ function ReportShell() {
   const viewIcon = VIEW_ICONS[activeView] ?? <Activity className="w-4 h-4" />;
 
 
+  async function handleReplaceLogs() {
+    await clearReport();
+    setAtHome(true);
+  }
+
+
 
 
   // When no report loaded yet (and not in the middle of initial load), show Import Center
@@ -415,11 +421,19 @@ function ReportShell() {
                 {(activeView === "defensive" || activeView === "squad-stats") && <AllyScopeToggle />}
                 <button
                   onClick={() => setAtHome(true)}
-                  title="Import more logs without discarding this report"
+                  title="Open the combat record intake. The current report stays active until you view or combine new fights."
                   className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
                 >
                   <Upload className="w-3 h-3" />
-                  Import
+                  Add logs
+                </button>
+                <button
+                  onClick={() => void handleReplaceLogs()}
+                  title="Clear the current report and start a fresh log intake."
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5 hover:text-amber-300"
+                >
+                  <Upload className="w-3 h-3" />
+                  Replace logs
                 </button>
                 <button
                   onClick={handleExportReport}
@@ -466,6 +480,7 @@ function ReportShell() {
                 )}
                 <button
                   onClick={clearReport}
+                  title="Clear the current report from this session."
                   className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5 hover:text-rose-400"
                 >
                   <X className="w-3 h-3" />
@@ -609,7 +624,7 @@ function ReportShell() {
                       onClick={() => setAtHome(false)}
                       className="theme-command-button text-[10px] font-bold uppercase tracking-wider px-3 py-2 transition-colors"
                     >
-                      Back to report
+                      Back to current report
                     </button>
                   </div>
                 )}
