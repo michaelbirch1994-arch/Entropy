@@ -80,6 +80,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 
 - [x] Add minimum, average, maximum, and sample size where meaningful.
 - [ ] Expose the player, fight, and event context behind extremes.
+  - [x] Top Skills and Healing Sources now attach player and fight context to biggest-hit and peak per-fight values for newly built reports.
 - [ ] Prefer ranked extremes when a single outlier would be misleading.
 - [ ] Include combat-time and participation context in skill comparisons.
 

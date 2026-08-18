@@ -961,10 +961,12 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
     const incoming = new Map<number, { damage: number; hits: number; downContribution: number }>();
     const outgoingFightValues = new Map<number, number[]>();
     const incomingFightValues = new Map<number, number[]>();
+    const outgoingFightPeaks = new Map<number, { value: number; fightIndex: number; fightName: string; fightLabel: string }>();
+    const incomingFightPeaks = new Map<number, { value: number; fightIndex: number; fightName: string; fightLabel: string }>();
     const outgoingPlayers = new Map<number, Set<string>>();
     const incomingPlayers = new Map<number, Set<string>>();
-    const outgoingBest = new Map<number, { value: number; account: string; profession: string }>();
-    const incomingBest = new Map<number, { value: number; account: string; profession: string }>();
+    const outgoingBest = new Map<number, { value: number; account: string; profession: string; fightIndex: number; fightName: string; fightLabel: string }>();
+    const incomingBest = new Map<number, { value: number; account: string; profession: string; fightIndex: number; fightName: string; fightLabel: string }>();
 
   function accumulate(
         target: Map<number, { damage: number; hits: number; downContribution: number }>,
@@ -986,18 +988,37 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
         target.set(id, players);
   }
 
-  function recordFightValues(target: Map<number, number[]>, values: Map<number, number>) {
+  function fightContext(f: FightInput, fightIndex: number) {
+        const fightName = f.summary.fightName || `Fight ${fightIndex + 1}`;
+        return {
+          fightIndex,
+          fightName,
+          fightLabel: `F${fightIndex + 1} · ${fightName}`,
+        };
+  }
+
+  function recordFightValues(
+        target: Map<number, number[]>,
+        peaks: Map<number, { value: number; fightIndex: number; fightName: string; fightLabel: string }>,
+        values: Map<number, number>,
+        context: { fightIndex: number; fightName: string; fightLabel: string },
+      ) {
         for (const [id, value] of values) {
           const samples = target.get(id) ?? [];
           samples.push(value);
           target.set(id, samples);
+          const currentPeak = peaks.get(id);
+          if (!currentPeak || value > currentPeak.value) {
+                peaks.set(id, { ...context, value });
+          }
         }
   }
 
     type DistEntry = { id?: number; totalDamage?: number; connectedHits?: number; hits?: number; downContribution?: number; max?: number };
 
-  for (const f of fights) {
+  for (const [fightIndex, f] of fights.entries()) {
         const raw = f.raw as Record<string, unknown>;
+        const context = fightContext(f, fightIndex);
         const fightOutgoing = new Map<number, number>();
         const fightIncoming = new Map<number, number>();
         const skillMap = (raw.skillMap ?? {}) as Record<string, { name?: string; icon?: string }>;
@@ -1045,6 +1066,7 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                             value: hitMax,
                             account,
                             profession: String(p.profession ?? 'Unknown'),
+                            ...context,
                         });
                     }
                 }
@@ -1075,14 +1097,15 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                             value: hitMaxIn,
                             account,
                             profession: String(p.profession ?? 'Unknown'),
+                            ...context,
                         });
                     }
                 }
                           accumulate(incoming, id, dmg, hits, downContrib);
                 }
         }
-        recordFightValues(outgoingFightValues, fightOutgoing);
-        recordFightValues(incomingFightValues, fightIncoming);
+        recordFightValues(outgoingFightValues, outgoingFightPeaks, fightOutgoing, context);
+        recordFightValues(incomingFightValues, incomingFightPeaks, fightIncoming, context);
   }
 
   if (naturalFortitude.damage > 0 || naturalFortitude.hits > 0) {
@@ -1097,8 +1120,9 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
 
     function toRows(
       map: Map<number, { damage: number; hits: number; downContribution: number }>,
-      bestMap: Map<number, { value: number; account: string; profession: string }>,
+      bestMap: Map<number, { value: number; account: string; profession: string; fightIndex: number; fightName: string; fightLabel: string }>,
       fightValues: Map<number, number[]>,
+      fightPeaks: Map<number, { value: number; fightIndex: number; fightName: string; fightLabel: string }>,
       players: Map<number, Set<string>>,
     ): TopSkill[] {
         return Array.from(map.entries())
@@ -1118,13 +1142,14 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                     perFightMin: samples.length > 0 ? Math.min(...samples) : 0,
                     perFightAverage: samples.length > 0 ? sampleTotal / samples.length : 0,
                     perFightMax: samples.length > 0 ? Math.max(...samples) : 0,
+                    perFightMaxContext: fightPeaks.get(id) ?? null,
                 };
           })
           .filter((s) => s.damage > 0 || s.hits > 0 || s.downContribution > 0);
   }
 
-    const outgoingRows = toRows(outgoing, outgoingBest, outgoingFightValues, outgoingPlayers);
-    const incomingRows = toRows(incoming, incomingBest, incomingFightValues, incomingPlayers);
+    const outgoingRows = toRows(outgoing, outgoingBest, outgoingFightValues, outgoingFightPeaks, outgoingPlayers);
+    const incomingRows = toRows(incoming, incomingBest, incomingFightValues, incomingFightPeaks, incomingPlayers);
   const byDamage = (rows: TopSkill[]) => [...rows].sort((a, b) => b.damage - a.damage || b.downContribution - a.downContribution).slice(0, 30);
   const byDownContribution = (rows: TopSkill[]) => [...rows].sort((a, b) => b.downContribution - a.downContribution || b.damage - a.damage).slice(0, 30);
 
@@ -1182,15 +1207,22 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
 
   const totals = new Map<string, { id: number; healing: number; hits: number; isTrait: boolean }>();
     const fightValues = new Map<string, number[]>();
+    const fightPeaks = new Map<string, { value: number; fightIndex: number; fightName: string; fightLabel: string }>();
     const sourcePlayers = new Map<string, Set<string>>();
-    const bestHeal = new Map<string, { value: number; account: string; profession: string }>();
+    const bestHeal = new Map<string, { value: number; account: string; profession: string; fightIndex: number; fightName: string; fightLabel: string }>();
     // Merged skill+buff name/icon lookup, keyed by numeric id regardless of
   // which map it came from - same precedence (skillMap first, buffMap only
   // fills gaps) as computeTopSkills' skillMeta above.
   const nameMeta = new Map<number, { name: string; icon?: string }>();
 
-  for (const f of fights) {
+  for (const [fightIndex, f] of fights.entries()) {
         const raw = f.raw as Record<string, unknown>;
+        const fightName = f.summary.fightName || `Fight ${fightIndex + 1}`;
+        const context = {
+                fightIndex,
+                fightName,
+                fightLabel: `F${fightIndex + 1} · ${fightName}`,
+        };
         const fightHealing = new Map<string, number>();
         const skillMap = (raw.skillMap ?? {}) as Record<string, { name?: string; icon?: string }>;
         const buffMap = (raw.buffMap ?? {}) as Record<string, { name?: string; icon?: string }>;
@@ -1242,6 +1274,7 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
                             value: healMax,
                             account,
                             profession: String(p.profession ?? 'Unknown'),
+                            ...context,
                         });
                     }
                 }
@@ -1252,6 +1285,10 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
               const samples = fightValues.get(key) ?? [];
               samples.push(value);
               fightValues.set(key, samples);
+              const currentPeak = fightPeaks.get(key);
+              if (!currentPeak || value > currentPeak.value) {
+                      fightPeaks.set(key, { ...context, value });
+              }
       }
   }
 
@@ -1274,6 +1311,7 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
                 perFightMin: samples.length > 0 ? Math.min(...samples) : 0,
                 perFightAverage: samples.length > 0 ? sampleTotal / samples.length : 0,
                 perFightMax: samples.length > 0 ? Math.max(...samples) : 0,
+                perFightMaxContext: fightPeaks.get(key) ?? null,
               };
       })
       .sort((a, b) => b.healing - a.healing)

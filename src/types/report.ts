@@ -368,7 +368,7 @@ export interface TopSkill {
     damage: number;
     hits: number;
     downContribution: number;
-    biggestHit?: { value: number; account: string; profession: string } | null;
+    biggestHit?: { value: number; account: string; profession: string; fightIndex?: number; fightName?: string; fightLabel?: string } | null;
     /** Number of fights in which this skill recorded damage, hits, or down contribution. */
   fightCount?: number;
     /** Distinct squad players who contributed this outgoing skill, or were affected by this incoming skill. */
@@ -379,6 +379,8 @@ export interface TopSkill {
   perFightAverage?: number;
     /** Per-fight squad maximum among fights where the skill appeared. */
   perFightMax?: number;
+    /** Fight where the per-fight maximum occurred, when this report was built from raw logs. */
+  perFightMaxContext?: { value: number; fightIndex: number; fightName: string; fightLabel: string } | null;
 }
 
 export interface CommanderRow {
@@ -668,7 +670,7 @@ export interface TopHealingSource {
     hits: number;
     /** True when this source is a trait/buff-triggered conversion heal (EI's IndirectHealing) rather than a directly-cast skill. */
     isTrait: boolean;
-    biggestHit?: { value: number; account: string; profession: string } | null;
+    biggestHit?: { value: number; account: string; profession: string; fightIndex?: number; fightName?: string; fightLabel?: string } | null;
     /** Number of fights in which this healing source was observed. */
   fightCount?: number;
     /** Distinct squad players who produced this healing source. */
@@ -679,6 +681,8 @@ export interface TopHealingSource {
   perFightAverage?: number;
     /** Per-fight squad maximum among fights where the source appeared. */
   perFightMax?: number;
+    /** Fight where the per-fight maximum occurred, when this report was built from raw logs. */
+  perFightMaxContext?: { value: number; fightIndex: number; fightName: string; fightLabel: string } | null;
 }
 
 export interface TopBarrierSource {

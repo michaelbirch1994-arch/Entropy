@@ -58,6 +58,8 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
            it('records fight coverage, contributors, and per-fight range for Top Skills', () => {
                  const firstRaw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
                  const secondRaw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 firstRaw.fightName = 'Opening Clash';
+                 secondRaw.fightName = 'Final Push';
                  const firstPlayer = (firstRaw.players ?? []).find((p: any) => !p.notInSquad) as any;
                  const secondPlayer = (secondRaw.players ?? []).find((p: any) => p.account === firstPlayer?.account) as any;
                  expect(firstPlayer).toBeTruthy();
@@ -94,6 +96,10 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(sample?.perFightMin).toBe(10_000_000);
                  expect(sample?.perFightAverage).toBe(20_000_000);
                  expect(sample?.perFightMax).toBe(30_000_000);
+                 expect(sample?.perFightMaxContext?.fightIndex).toBe(1);
+                 expect(sample?.perFightMaxContext?.fightName).toBe('Final Push');
+                 expect(sample?.biggestHit?.fightIndex).toBe(1);
+                 expect(sample?.biggestHit?.fightName).toBe('Final Push');
            });
 
 
