@@ -50,9 +50,9 @@ export interface ReplayPlayerTrack {
 }
 
 // Hostile targets get a much thinner track than players - EI doesn't expose
-// profession/commander-tag info for the enemy side, and "account" is a
-// synthetic id (targets have no account name), just enough to key React
-// lists and draw them on the map distinctly from the squad.
+// profession/commander-tag info for the enemy side. `id` is a synthetic,
+// per-actor identity based on EI's instanceID (not the species id), so React
+// never reconciles several enemy players through the same SVG element.
 export interface ReplayEnemyTrack {
   id: string;
   name: string;
@@ -161,6 +161,19 @@ function asIntervals(v: unknown): [number, number][] {
 function isRealEnemyTarget(t: Record<string, unknown>): boolean {
   if (t.isFake === true) return false;
   return true;
+}
+
+function enemyTrackId(t: Record<string, unknown>, index: number): string {
+  const instanceId = t.instanceID ?? t.instanceId;
+  if ((typeof instanceId === "number" && Number.isFinite(instanceId)) || (typeof instanceId === "string" && instanceId.trim())) {
+    return `target-${String(instanceId)}`;
+  }
+
+  // Some older exports omit instanceID. The species id is not unique, so the
+  // source-array index remains part of the fallback identity.
+  const speciesId = t.id;
+  const species = typeof speciesId === "number" || typeof speciesId === "string" ? String(speciesId) : "unknown";
+  return `target-${species}-${index}`;
 }
 
 export function parseReplayData(log: RawFightLog): ReplayData | null {
@@ -272,7 +285,7 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
     }
     
     enemies.push({
-      id: typeof t.id === "number" || typeof t.id === "string" ? String(t.id) : `target-${idx}`,
+      id: enemyTrackId(t, idx),
       name: typeof t.name === "string" ? t.name : "Enemy",
       points,
       facings,
@@ -350,6 +363,12 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
 // apart than MAX_INTERP_GAP_MS, treat the position/facing as unknown for that
 // stretch instead of interpolating across it.
 const MAX_INTERP_GAP_MS = 1500;
+// EI positions may remain temporally contiguous across a waypoint, portal,
+// map transfer, or bad sample. Moving more than 1,000 coordinate units per
+// second is far beyond normal player motion but remains generous enough for
+// leaps and movement skills. Treat larger segments as discontinuities so a
+// dot disappears and reappears instead of being animated across the map.
+const MAX_INTERP_SPEED_UNITS_PER_MS = 1;
 
 export function interpolatePosition(points: ReplayPoint[], t: number): ReplayPoint | null {
   if (points.length === 0) return null;
@@ -364,8 +383,11 @@ export function interpolatePosition(points: ReplayPoint[], t: number): ReplayPoi
   }
   const a = points[lo];
   const b = points[hi];
+  if (t === a.t) return a;
+  if (t === b.t) return b;
   const span = b.t - a.t || 1;
   if (span > MAX_INTERP_GAP_MS) return null;
+  if (Math.hypot(b.x - a.x, b.y - a.y) > span * MAX_INTERP_SPEED_UNITS_PER_MS) return null;
   const f = (t - a.t) / span;
   return { t, x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
 }

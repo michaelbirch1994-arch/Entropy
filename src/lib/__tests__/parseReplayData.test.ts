@@ -4,20 +4,17 @@ import {
   interpolateFacing,
   interpolatePosition,
   isInInterval,
+  parseReplayData,
   type ReplayFacingPoint,
   type ReplayPoint,
 } from '../parseReplayData';
+import type { RawFightLog } from '../../types/rawFight';
 
 // Regression coverage for the replay-scrubbing primitives behind Fight
-// Replay's dot/line rendering. This file exists because the actual bug
-// class that repeatedly shipped as "trailing line" / "streak" reports
-// (v0.2.36, v0.2.40, v0.2.42, v0.2.43, v0.2.44) was never in these
-// functions - it was SVG paint compositing and an unverified facing-angle
-// convention - but that took several releases to pin down precisely
-// because there was no test coverage isolating "is the interpolation math
-// itself correct" from "does it render correctly on screen". These tests
-// lock down the math so any future regression here is caught in CI before
-// it reaches a release.
+// Replay's dot/line rendering. Trail reports have had several independent
+// causes: SVG paint/facing behavior, non-unique target identities, and
+// interpolation across implausible spatial jumps. These tests isolate the
+// data/math layer so future regressions are caught before release.
 
 describe('interpolatePosition', () => {
   const points: ReplayPoint[] = [
@@ -60,6 +57,47 @@ describe('interpolatePosition', () => {
       expect(p.x).toBeGreaterThanOrEqual(prevX);
       prevX = p.x;
     }
+  });
+
+  it('does not interpolate an impossible spatial jump between adjacent samples', () => {
+    const jumped: ReplayPoint[] = [
+      { t: 0, x: 0, y: 0 },
+      { t: 150, x: 5000, y: 5000 },
+    ];
+
+    expect(interpolatePosition(jumped, 75)).toBeNull();
+    expect(interpolatePosition(jumped, 0)).toEqual(jumped[0]);
+    expect(interpolatePosition(jumped, 150)).toEqual(jumped[1]);
+  });
+});
+
+describe('parseReplayData enemy identity', () => {
+  it('uses the EI instance id when several enemies share one species id', () => {
+    const actorReplay = {
+      start: 0,
+      positions: [[0, 0], [1, 1]],
+      orientations: [],
+      down: [],
+      dead: [],
+    };
+    const log = {
+      durationMS: 1000,
+      combatReplayMetaData: { pollingRate: 150 },
+      players: [{
+        account: 'Squad.1234',
+        name: 'Squad Player',
+        profession: 'Guardian',
+        combatReplayData: actorReplay,
+        totalDamageDist: [[]],
+        rotation: [],
+      }],
+      targets: [
+        { id: 42, instanceID: 1001, name: 'Enemy One', combatReplayData: actorReplay },
+        { id: 42, instanceID: 1002, name: 'Enemy Two', combatReplayData: actorReplay },
+      ],
+    } as unknown as RawFightLog;
+
+    expect(parseReplayData(log)?.enemies.map((enemy) => enemy.id)).toEqual(['target-1001', 'target-1002']);
   });
 });
 

@@ -13,6 +13,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 
 ## P1 — Performance and compatibility
 
+- [x] Remove the page-level slide/exit animation that mounted two heavy report views during sidebar tab changes and caused a visible layout jerk.
 - [ ] Profile a genuinely large combined raid in Firefox and compare it with Chrome and Edge.
 - [ ] Memoize expensive report derivations that currently occur during render.
 - [ ] Audit chart animation, blur, shadow, gradient, and large-table costs.
@@ -51,6 +52,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 
 ## P2 — Visual polish
 
+- [x] Give Fight Replay enemies stable instance identities, reject implausible position jumps, keep markers screen-sized, and re-center zoom on the commander/squad.
 - [ ] Improve accent foreground contrast and define explicit theme foreground tokens.
 - [ ] Remove fractional/tiny typography and text-container transforms that blur at 1080p.
 - [x] Remove profession-icon clipping, retain normal antialiasing, and optically center glyphs.
