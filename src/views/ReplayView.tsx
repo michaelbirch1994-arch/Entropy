@@ -119,9 +119,9 @@ export default function ReplayView() {
   }, [fight, zoom]);
 
   // Marker radii are expressed in SVG/world units, but the user experiences
-  // them as screen pixels. Scale marker units from the current viewBox width
-  // so tight replay bounds do not explode dots into huge opaque blobs.
-  const markerUnit = frame ? Math.max(frame.w / 900, 0.08) : 1;
+  // them as screen pixels. Use the limiting axis of the actual 900x420
+  // viewport so very tight or unusually shaped bounds never inflate dots.
+  const markerUnit = frame ? Math.max(frame.w / 900, frame.h / 420, 0.001) : 1;
 
   const focusPoint = useMemo(() => {
     if (!fight) return null;
@@ -533,7 +533,8 @@ render(0);
                 value={zoom}
                 onChange={(e) => {
                   setZoom(Number(e.target.value));
-                  if (followFocus) setPan({ x: 0, y: 0 });
+                  setFollowFocus(true);
+                  setPan({ x: 0, y: 0 });
                 }}
                 className="w-28 accent-sky-400"
               />
@@ -620,7 +621,7 @@ render(0);
                       key={`mech-${m.t}-${m.name}-${i}`}
                       cx={pt.x}
                       cy={pt.y}
-                      r={(12 + age * 20) * markerUnit}
+                      r={(9 + age * 14) * markerUnit}
                       fill="none"
                       stroke="#f43f5e"
                       strokeWidth={2 * markerUnit}
@@ -643,7 +644,7 @@ render(0);
                       key={`cast-${p.account}`}
                       cx={pt.x}
                       cy={pt.y}
-                      r={(7 + age * 12) * markerUnit}
+                      r={(5 + age * 8) * markerUnit}
                       fill="none"
                       stroke="#fbbf24"
                       strokeWidth={1.5 * markerUnit}
@@ -658,8 +659,8 @@ render(0);
                   const pt = interpolatePosition(e.points, t);
                   const angle = interpolateFacing(e.facings ?? [], t);
                   if (!pt || angle == null) return null;
-                  const r = (isInInterval(e.downIntervals, t) ? 9 : 6.5) * markerUnit;
-                  const end = facingLineEnd(pt.x, pt.y, r + 7 * markerUnit, angle);
+                  const r = (isInInterval(e.downIntervals, t) ? 6.5 : 4.5) * markerUnit;
+                  const end = facingLineEnd(pt.x, pt.y, r + 5 * markerUnit, angle);
                   return (
                     <line
                       key={`facing-${e.id}`}
@@ -686,7 +687,7 @@ render(0);
                     key={e.id}
                     cx={pt.x}
                     cy={pt.y}
-                    r={(down ? 9 : 6.5) * markerUnit}
+                    r={(down ? 6.5 : 4.5) * markerUnit}
                     fill="#f43f5e"
                     fillOpacity={down ? 0.25 : 0.75}
                     stroke={down ? "#f43f5e" : "none"}
@@ -702,8 +703,8 @@ render(0);
                   const pt = interpolatePosition(p.points, t);
                   const angle = interpolateFacing(p.facings ?? [], t);
                   if (!pt || angle == null) return null;
-                  const r = (isInInterval(p.downIntervals, t) ? 10 : p.isCommander ? 11 : 7) * markerUnit;
-                  const end = facingLineEnd(pt.x, pt.y, r + 7 * markerUnit, angle);
+                  const r = (isInInterval(p.downIntervals, t) ? 7.5 : p.isCommander ? 8.5 : 5) * markerUnit;
+                  const end = facingLineEnd(pt.x, pt.y, r + 5 * markerUnit, angle);
                   return (
                     <line
                       key={`facing-${p.account}`}
@@ -730,7 +731,7 @@ render(0);
                     key={p.account}
                     cx={pt.x}
                     cy={pt.y}
-                    r={(down ? 10 : p.isCommander ? 11 : 7) * markerUnit}
+                    r={(down ? 7.5 : p.isCommander ? 8.5 : 5) * markerUnit}
                     fill={p.inSquad ? "#f59e0b" : "#64748b"}
                     fillOpacity={down ? 0.3 : 0.9}
                     stroke={down ? "#f43f5e" : p.isCommander ? "#fbbf24" : "none"}
