@@ -39,6 +39,21 @@ const METRICS: { key: MetricKey; label: string; icon: typeof Trophy; unit?: stri
   { key: "kills", label: "Kills", icon: Swords },
 ];
 
+const METRIC_GLOW: Record<MetricKey, string> = {
+  dps: "neon-offense",
+  damage: "neon-offense",
+  downContrib: "neon-offense",
+  healing: "neon-healing",
+  barrier: "neon-barrier",
+  cleanses: "neon-barrier",
+  strips: "neon-control",
+  stability: "neon-control",
+  cc: "neon-control",
+  interrupts: "neon-control",
+  dodges: "neon-survival",
+  kills: "neon-offense",
+};
+
 function formatMetricValue(entry: LeaderboardEntry, unit?: string) {
   if (unit === "") return Math.round(entry.value).toLocaleString();
   return entry.value >= 100000 ? fmtCompact(entry.value) : fmtNum(entry.value);
@@ -204,6 +219,7 @@ function PlayerMetricCard({
   index,
   max,
   metricLabel,
+  glowClass,
   unit,
   breakdown,
   sample,
@@ -214,6 +230,7 @@ function PlayerMetricCard({
   index: number;
   max: number;
   metricLabel: string;
+  glowClass: string;
   unit?: string;
   breakdown: PlayerSourceBreakdown;
   sample: PlayerSampleContext;
@@ -228,7 +245,7 @@ function PlayerMetricCard({
     <button
       type="button"
       onClick={onToggle}
-      className="theme-player-card rounded-2xl p-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent/40"
+      className={`theme-player-card ${glowClass} rounded-2xl p-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent/40`}
     >
       <div className="theme-player-card-head flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
@@ -323,6 +340,7 @@ export default function TopPlayersView() {
           const isActive = metric === m.key;
           return (
             <button
+              type="button"
               key={m.key}
               onClick={() => setMetric(m.key)}
               className={`theme-filter-button flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 border ${
@@ -345,7 +363,7 @@ export default function TopPlayersView() {
           return (
             <div
               key={`${metric}:podium:${e.account}:${e.profession}:${e.rank}:${e.value}`}
-              className={`theme-podium-card is-rank-${place} rounded-2xl p-4 flex items-center gap-4`}
+              className={`theme-podium-card ${METRIC_GLOW[metric]} is-rank-${place} rounded-2xl p-4 flex items-center gap-4`}
             >
               <div className="theme-podium-rank text-3xl font-black font-mono">#{place}</div>
               <div className="flex-1 min-w-0">
@@ -381,6 +399,7 @@ export default function TopPlayersView() {
                 index={index}
                 max={maxValue}
                 metricLabel={active.label}
+                glowClass={METRIC_GLOW[metric]}
                 unit={active.unit}
                 sample={{
                   fights: sampleByAccount.get(entry.account)?.logsJoined ?? entry.count,

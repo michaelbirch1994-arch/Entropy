@@ -88,7 +88,7 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label, onOpen }: {
       initial={{ opacity: 0, y: 16, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.45, ease: "easeOut", delay: accent === "amber" ? 0 : 0.1 }}
-      className={`theme-player-card theme-mvp-card w-full cursor-pointer bg-[#0a101f]/55 backdrop-blur-md border rounded-2xl p-5 text-left transition-colors duration-300 flex flex-col focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:ring-offset-2 focus:ring-offset-[#050914] ${a.border} ${a.glow}`}
+      className={`theme-player-card theme-mvp-card ${accent === "amber" ? "neon-offense" : "neon-barrier"} w-full cursor-pointer bg-[#0a101f]/55 backdrop-blur-md border rounded-2xl p-5 text-left transition-colors duration-300 flex flex-col focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:ring-offset-2 focus:ring-offset-[#050914] ${a.border} ${a.glow}`}
     >
       <div className={`flex items-center gap-2 ${a.heading} text-[11px] font-black uppercase tracking-widest mb-4`}>
         {accent === "amber" ? <Swords className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
@@ -160,14 +160,14 @@ export default function OverviewView() {
   };
 
   const perSecCards = [
-    { label: "Down Contrib /s", value: fmtFixedGrouped(perSec(s.maxDownContrib)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, accent: "text-slate-100" },
-    { label: "Healing /s", value: fmtFixedGrouped(perSec(s.maxHealing)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, accent: "text-slate-100" },
-    { label: "Barrier /s", value: fmtFixedGrouped(perSec(s.maxBarrier)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, accent: "text-slate-100" },
-    { label: "Cleanses /s", value: fmtFixedGrouped(perSec(s.maxCleanses)), icon: <Droplet className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, accent: "text-slate-100" },
-    { label: "Strips /s", value: fmtFixedGrouped(perSec(s.maxStrips)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, accent: "text-slate-100" },
-    { label: "Stability Gen /s", value: fmtFixedGrouped(perSec(s.maxStab)), icon: <Shield className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxStab.player, count: s.maxStab.count, accent: "text-slate-100" },
-    { label: "CC /s", value: fmtFixedGrouped(perSec(s.maxCC)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, accent: "text-slate-100" },
-    { label: "Interrupts /s", value: fmtFixedGrouped(perSec(s.maxInterrupts)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, accent: "text-slate-100" },
+    { label: "Down Contrib /s", value: fmtFixedGrouped(perSec(s.maxDownContrib)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, glow: "neon-offense" },
+    { label: "Healing /s", value: fmtFixedGrouped(perSec(s.maxHealing)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, glow: "neon-healing" },
+    { label: "Barrier /s", value: fmtFixedGrouped(perSec(s.maxBarrier)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, glow: "neon-barrier" },
+    { label: "Cleanses /s", value: fmtFixedGrouped(perSec(s.maxCleanses)), icon: <Droplet className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, glow: "neon-barrier" },
+    { label: "Strips /s", value: fmtFixedGrouped(perSec(s.maxStrips)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, glow: "neon-control" },
+    { label: "Stability Gen /s", value: fmtFixedGrouped(perSec(s.maxStab)), icon: <Shield className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxStab.player, count: s.maxStab.count, glow: "neon-control" },
+    { label: "CC /s", value: fmtFixedGrouped(perSec(s.maxCC)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, glow: "neon-control" },
+    { label: "Interrupts /s", value: fmtFixedGrouped(perSec(s.maxInterrupts)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, glow: "neon-control" },
   ];
 
   const recap = generateFightRecap(s);
@@ -219,7 +219,7 @@ export default function OverviewView() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: 0.15 + i * 0.04 }}
             whileHover={{ y: -2 }}
-            className="theme-stat-card theme-metric-card cursor-pointer bg-[#0a101f]/90 border border-slate-800/80 p-4 rounded-2xl text-left shadow-lg hover:border-slate-700 transition-colors flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:ring-offset-2 focus:ring-offset-[#050914]"
+            className={`theme-stat-card theme-metric-card ${c.glow} cursor-pointer bg-[#0a101f]/90 border border-slate-800/80 p-4 rounded-2xl text-left shadow-lg hover:border-slate-700 transition-colors flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:ring-offset-2 focus:ring-offset-[#050914]`}
           >
             <div>
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">

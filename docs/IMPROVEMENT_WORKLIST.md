@@ -55,6 +55,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 ## P2 — Visual polish
 
 - [x] Give Fight Replay enemies stable instance identities, reject implausible position jumps, keep markers screen-sized, and re-center zoom on the commander/squad.
+- [x] Replace the Scorched Earth presentation layer with a graphite mechanical command theme, cyan/teal system accents, amber instrumentation, and metric-aware neon underglows on player cards.
 - [ ] Improve accent foreground contrast and define explicit theme foreground tokens.
 - [ ] Remove fractional/tiny typography and text-container transforms that blur at 1080p.
 - [x] Remove profession-icon clipping, retain normal antialiasing, and optically center glyphs.
