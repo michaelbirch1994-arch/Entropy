@@ -61,6 +61,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 - [x] Standardize pointer cursors and visible focus states for interactive elements. Native controls, links, summaries, and role-based buttons now share a high-contrast neon focus ring and honest pointer/disabled cursors.
 - [ ] Add Reload Current, Replace Logs, Add Logs, and Clear Logs actions while preserving drag-and-drop ingestion.
   - [x] Header now separates Add Logs from Replace Logs and keeps Clear Logs explicit while preserving the raw-log drag/drop intake.
+  - [x] Header now includes Reload Current, which rebuilds reports from stored dps.report fight links when available and explains when a one-off upload cannot be reloaded automatically.
 - [ ] Keep the web ingestion path as direct as the desktop path.
   - [x] Web users now get explicit guidance that drag/drop and dps.report links still work when folder watching is unavailable.
 

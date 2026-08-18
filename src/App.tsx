@@ -38,7 +38,7 @@ import AxiForgeLabView from "./views/AxiForgeLabView";
 import { downloadReportArtifact } from "./lib/shareReportArtifact";
 import { buildEntropyShareLink } from "./lib/shareLinks";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
-import { Activity, CircleAlert as AlertCircle, FlaskConical, Link2, MessageCircle, Send, Upload, X } from "lucide-react";
+import { Activity, CircleAlert as AlertCircle, FlaskConical, Link2, MessageCircle, RefreshCw, Send, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
 import RawLogImporter from "./components/ui/RawLogImporter";
@@ -238,7 +238,7 @@ type ExportStatus = "idle" | "copied" | "downloaded" | "failed";
 
 
 function ReportShell() {
-  const { report, loading, error, source, clearReport } = useReport();
+  const { report, loading, error, source, reloadReport, clearReport } = useReport();
   // Lets you get back to the import screen to add more logs without
   // throwing away the report you already have - Clear is destructive and
   // was previously the only route back.
@@ -374,6 +374,12 @@ function ReportShell() {
   }
 
 
+  async function handleReloadCurrent() {
+    await reloadReport();
+    setAtHome(false);
+  }
+
+
 
 
   // When no report loaded yet (and not in the middle of initial load), show Import Center
@@ -419,6 +425,15 @@ function ReportShell() {
                 {(activeView === "offensive" || activeView === "squad-stats") && <DamageScopeToggle />}
                 {(activeView === "defensive" || activeView === "offensive") && <StatsDisplayToggle />}
                 {(activeView === "defensive" || activeView === "squad-stats") && <AllyScopeToggle />}
+                <button
+                  onClick={() => void handleReloadCurrent()}
+                  disabled={loading}
+                  title="Re-fetch the current report's dps.report fights and rebuild metrics with this Entropy version when source links are available."
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5 disabled:opacity-60"
+                >
+                  <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+                  {loading ? "Reloading" : "Reload"}
+                </button>
                 <button
                   onClick={() => setAtHome(true)}
                   title="Open the combat record intake. The current report stays active until you view or combine new fights."
@@ -584,6 +599,17 @@ function ReportShell() {
                   {discordStatus === "sending" ? "Sending..." : "Save + send"}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+
+        {report && error && !atHome && (
+          <div className="theme-alert-plate mx-6 mt-4 rounded-xl border border-rose-500/30 bg-rose-500/[0.07] px-4 py-3 flex items-start gap-3">
+            <AlertCircle className="w-4 h-4 text-rose-300 mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-rose-200/90 leading-relaxed">
+              <span className="font-bold">Report reload needs a source.</span>{" "}
+              {error}
             </div>
           </div>
         )}
