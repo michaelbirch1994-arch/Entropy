@@ -14,7 +14,7 @@ export default function PlayerSampleCell({ sample }: { sample: PlayerSampleConte
     );
   }
 
-  const reliability = getSampleReliability(sample.fights, sample.totalFights);
+  const reliability = getSampleReliability(sample.fights, sample.totalFights, sample.activeMs);
 
   return (
     <div className="min-w-[148px] text-right font-mono" title={reliability.detail}>

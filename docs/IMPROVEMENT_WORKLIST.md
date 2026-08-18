@@ -32,9 +32,9 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 - [ ] Base rate metrics on the appropriate active/combat duration.
   - [x] Core offense/defense/support/healing tables use player-specific tracked duration rather than one squad-wide clock.
   - [ ] Audit remaining rate labels and cross-view denominator consistency before marking this complete.
-- [ ] Flag low-duration and low-fight samples instead of presenting them as equally reliable.
+- [x] Flag low-duration and low-fight samples instead of presenting them as equally reliable.
   - [x] Core performance tables now flag low/developing/strong fight samples and preserve an explicit unavailable state for legacy reports.
-  - [ ] Add minimum-duration warnings where a player has enough fights but very little tracked time.
+  - [x] Downgrade otherwise broad fight samples when total or per-fight active combat time is too short for a stable rate comparison.
 - [ ] Hide unsupported Siege/NPC Damage and other permanently empty columns.
 
 ## P1 — Signal vs. noise across raids
