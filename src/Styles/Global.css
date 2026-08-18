@@ -16,6 +16,9 @@
   --color-theme-accent: var(--theme-accent);
   --color-theme-accent-dim: var(--theme-accentDim);
   --color-theme-accent-strong: var(--theme-accentStrong);
+  --color-theme-on-accent: var(--theme-onAccent);
+  --color-theme-on-warning: var(--theme-onWarning);
+  --color-theme-on-danger: var(--theme-onDanger);
   --color-theme-secondary: var(--theme-secondary);
   --color-theme-danger: var(--theme-danger);
   --color-theme-warning: var(--theme-warning);
@@ -41,6 +44,9 @@
   --theme-accent: #18D9BD;
   --theme-accentDim: #08655F;
   --theme-accentStrong: #58FFE3;
+  --theme-onAccent: #001714;
+  --theme-onWarning: #1B0D00;
+  --theme-onDanger: #210009;
   --theme-secondary: #FFAB45;
   --theme-danger: #FF5D7D;
   --theme-warning: #FFB84D;
@@ -2719,4 +2725,208 @@ kbd {
   .theme-podium-card,
   .theme-party-card,
   .theme-roster-player { transition: none; }
+}
+
+/* Spectrum command polish ----------------------------------------------------
+   Each workspace gets a distinct signal color while metric surfaces keep their
+   semantic identity. Graphite remains the shared chassis, so color communicates
+   context instead of becoming decoration. */
+
+.theme-main[data-workspace-tone="overview"] {
+  --theme-accent: #40ddff;
+  --theme-accentStrong: #9bf3ff;
+  --theme-accentDim: #126b82;
+  --theme-glow: rgba(64, 221, 255, 0.38);
+}
+
+.theme-main[data-workspace-tone="squad"] {
+  --theme-accent: #51edab;
+  --theme-accentStrong: #a6ffd4;
+  --theme-accentDim: #176e50;
+  --theme-glow: rgba(81, 237, 171, 0.36);
+}
+
+.theme-main[data-workspace-tone="performance"] {
+  --theme-accent: #ffad45;
+  --theme-accentStrong: #ffd18a;
+  --theme-accentDim: #89531c;
+  --theme-glow: rgba(255, 173, 69, 0.38);
+}
+
+.theme-main[data-workspace-tone="combat"] {
+  --theme-accent: #ff6688;
+  --theme-accentStrong: #ffb0c2;
+  --theme-accentDim: #8a2941;
+  --theme-glow: rgba(255, 102, 136, 0.36);
+}
+
+.theme-main[data-workspace-tone="extras"] {
+  --theme-accent: #aa89ff;
+  --theme-accentStrong: #d4c4ff;
+  --theme-accentDim: #58418f;
+  --theme-glow: rgba(170, 137, 255, 0.38);
+}
+
+.theme-main[data-workspace-tone] {
+  background:
+    radial-gradient(circle at 76% 4%, color-mix(in srgb, var(--theme-accent) 9%, transparent), transparent 28rem),
+    linear-gradient(90deg, rgba(2, 8, 12, 0.74), rgba(2, 8, 12, 0.18) 52%, rgba(2, 8, 12, 0.48)),
+    linear-gradient(180deg, rgba(4, 15, 20, 0.2), rgba(2, 7, 11, 0.66));
+}
+
+.theme-main[data-workspace-tone] .theme-topbar {
+  border-bottom-color: color-mix(in srgb, var(--theme-accent) 48%, transparent);
+  background:
+    linear-gradient(102deg, color-mix(in srgb, var(--theme-accent) 13%, transparent), transparent 24rem),
+    rgba(3, 10, 14, 0.93);
+}
+
+.theme-main[data-workspace-tone] .theme-topbar::after {
+  background: linear-gradient(90deg, var(--theme-accentStrong) 0 5%, var(--theme-accent) 24%, color-mix(in srgb, var(--theme-secondary) 72%, var(--theme-accent)) 70%, transparent);
+  box-shadow: 0 0 18px var(--theme-glow);
+}
+
+.theme-main[data-workspace-tone] .theme-topbar::before {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--theme-secondary) 72%, var(--theme-accent)), transparent);
+  box-shadow: 0 0 13px color-mix(in srgb, var(--theme-secondary) 28%, transparent);
+}
+
+.theme-nav-item[data-tone="overview"],
+.theme-nav-section[data-tone="overview"] { --nav-signal: #40ddff; --nav-signal-strong: #9bf3ff; }
+.theme-nav-item[data-tone="squad"],
+.theme-nav-section[data-tone="squad"] { --nav-signal: #51edab; --nav-signal-strong: #a6ffd4; }
+.theme-nav-item[data-tone="performance"],
+.theme-nav-section[data-tone="performance"] { --nav-signal: #ffad45; --nav-signal-strong: #ffd18a; }
+.theme-nav-item[data-tone="combat"],
+.theme-nav-section[data-tone="combat"] { --nav-signal: #ff6688; --nav-signal-strong: #ffb0c2; }
+.theme-nav-item[data-tone="extras"],
+.theme-nav-section[data-tone="extras"] { --nav-signal: #aa89ff; --nav-signal-strong: #d4c4ff; }
+
+.theme-nav-item[aria-current="page"][data-tone] {
+  color: var(--nav-signal-strong) !important;
+  border-left-color: var(--nav-signal-strong);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--nav-signal) 24%, transparent), color-mix(in srgb, var(--nav-signal) 7%, transparent) 64%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--nav-signal-strong), inset 0 -1px 0 color-mix(in srgb, var(--nav-signal) 30%, transparent), 0 0 22px -15px var(--nav-signal) !important;
+}
+
+.theme-nav-section[data-tone][aria-expanded="true"] {
+  color: var(--nav-signal-strong) !important;
+  border-color: color-mix(in srgb, var(--nav-signal) 54%, transparent) !important;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--nav-signal) 20%, transparent), transparent 72%), rgba(8, 27, 32, 0.82) !important;
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--nav-signal) 70%, transparent);
+}
+
+.theme-panel[data-tone="system"],
+.theme-stat-card[data-tone="system"] { --plate-accent: var(--theme-accent); }
+.theme-panel[data-tone="info"],
+.theme-stat-card[data-tone="info"] { --plate-accent: #4dc8ff; }
+.theme-panel[data-tone="success"],
+.theme-stat-card[data-tone="success"] { --plate-accent: #51edab; }
+.theme-panel[data-tone="warning"],
+.theme-stat-card[data-tone="warning"] { --plate-accent: #ffad45; }
+.theme-panel[data-tone="danger"],
+.theme-stat-card[data-tone="danger"] { --plate-accent: #ff6688; }
+.theme-panel[data-tone="violet"],
+.theme-stat-card[data-tone="violet"] { --plate-accent: #aa89ff; }
+
+.theme-panel,
+.theme-stat-card {
+  border-color: color-mix(in srgb, var(--plate-accent) 30%, #163d46);
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--plate-accent) 8%, transparent), transparent 18rem),
+    linear-gradient(132deg, color-mix(in srgb, var(--plate-accent) 8%, transparent), transparent 17rem),
+    linear-gradient(180deg, rgba(9, 25, 31, 0.96), rgba(3, 12, 17, 0.92));
+  box-shadow: inset 0 1px 0 rgba(207, 255, 249, 0.05), inset 3px 0 0 color-mix(in srgb, var(--plate-accent) 48%, transparent), 0 24px 58px -42px #000;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.theme-panel::after,
+.theme-stat-card::after {
+  background:
+    linear-gradient(140deg, transparent 0 48%, color-mix(in srgb, var(--plate-accent) 13%, transparent) 49% 50%, transparent 51%),
+    linear-gradient(165deg, transparent 0 69%, color-mix(in srgb, var(--plate-accent) 16%, transparent) 70% 71%, transparent 72%);
+}
+
+.theme-panel:hover,
+.theme-stat-card:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--plate-accent) 58%, #1b4b54);
+  box-shadow: inset 0 1px 0 rgba(226, 255, 252, 0.06), inset 3px 0 0 color-mix(in srgb, var(--plate-accent) 76%, transparent), 0 24px 58px -42px #000, 0 0 26px -20px var(--plate-accent);
+}
+
+.theme-panel-header {
+  border-bottom-color: color-mix(in srgb, var(--plate-accent) 26%, #173c45) !important;
+  background: linear-gradient(102deg, color-mix(in srgb, var(--plate-accent) 12%, transparent), transparent 14rem), linear-gradient(180deg, rgba(5, 18, 23, 0.8), rgba(3, 12, 16, 0.64));
+}
+
+.theme-panel-header::after {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--plate-accent) 72%, var(--theme-secondary)));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--plate-accent) 25%, transparent);
+}
+
+.theme-stat-card:nth-child(4n + 2):not([data-tone]),
+.theme-panel:nth-of-type(4n + 2):not([data-tone]) { --plate-accent: #ffad45; }
+.theme-stat-card:nth-child(4n + 3):not([data-tone]),
+.theme-panel:nth-of-type(4n + 3):not([data-tone]) { --plate-accent: #51edab; }
+.theme-stat-card:nth-child(4n):not([data-tone]),
+.theme-panel:nth-of-type(4n):not([data-tone]) { --plate-accent: #aa89ff; }
+
+.theme-app-shell .animate-view table thead,
+.theme-table-head {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 14%, transparent), transparent 48%), rgba(4, 16, 21, 0.97);
+  color: color-mix(in srgb, var(--theme-accentStrong) 36%, var(--theme-textMuted));
+}
+
+.theme-table-row:hover,
+.theme-app-shell .animate-view table tbody tr:hover {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 12%, transparent), color-mix(in srgb, var(--theme-accent) 3%, transparent) 72%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--theme-accentStrong);
+}
+
+.theme-chart-stage {
+  border-color: color-mix(in srgb, var(--theme-accent) 36%, #17424b);
+  background:
+    radial-gradient(circle at 72% 28%, color-mix(in srgb, var(--theme-accent) 8%, transparent), transparent 30%),
+    linear-gradient(color-mix(in srgb, var(--theme-accent) 18%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 15%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(7, 24, 29, 0.96), rgba(2, 10, 14, 0.98));
+  background-size: auto, 32px 32px, 32px 32px, auto;
+  box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.58), inset 3px 0 0 color-mix(in srgb, var(--theme-accent) 44%, transparent);
+}
+
+button:not(:disabled),
+a[href],
+summary,
+select,
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+:where(button, a[href], input, select, textarea, summary, [role="button"]):focus-visible {
+  outline: 2px solid var(--theme-accentStrong);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--theme-accent) 16%, transparent), 0 0 22px -12px var(--theme-accent);
+}
+
+.theme-panel-title,
+.theme-stat-label {
+  letter-spacing: 0.075em;
+}
+
+@keyframes entropyViewFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-view {
+  animation: entropyViewFade 170ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-view { animation: none; }
 }

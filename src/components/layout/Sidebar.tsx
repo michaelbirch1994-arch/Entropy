@@ -43,12 +43,16 @@ interface NavSection {
   title: string;
   icon: ReactNode;
   items: NavItem[];
+  tone: ViewTone;
   flat?: boolean;
 }
+
+export type ViewTone = "overview" | "squad" | "performance" | "combat" | "extras";
 
 const MENU: NavSection[] = [
   {
     title: "OVERVIEW",
+    tone: "overview",
     icon: <Activity className="w-4 h-4" />,
     items: [
       { id: "overview", label: "Overview", keywords: ["summary", "night", "landing"] },
@@ -61,6 +65,7 @@ const MENU: NavSection[] = [
   },
   {
     title: "SQUAD & ROSTER",
+    tone: "squad",
     icon: <Users className="w-4 h-4" />,
     items: [
       { id: "squad-stats", label: "Squad Stats", keywords: ["kill pressure", "healing effectiveness", "tag distance"] },
@@ -71,6 +76,7 @@ const MENU: NavSection[] = [
   },
   {
     title: "PERFORMANCE",
+    tone: "performance",
     icon: <Swords className="w-4 h-4" />,
     items: [
       { id: "top-players", label: "Top Players", keywords: ["mvp", "damage", "healing", "barrier"] },
@@ -86,6 +92,7 @@ const MENU: NavSection[] = [
   },
   {
     title: "COMBAT LOG",
+    tone: "combat",
     icon: <Film className="w-4 h-4" />,
     items: [
       { id: "highlights", label: "Highlights" },
@@ -97,6 +104,7 @@ const MENU: NavSection[] = [
   },
   {
     title: "EXTRAS",
+    tone: "extras",
     icon: <Star className="w-4 h-4" />,
     items: [
       { id: "intelligence", label: "Intelligence", keywords: ["ml", "predictive", "findings"] },
@@ -106,6 +114,10 @@ const MENU: NavSection[] = [
     ],
   },
 ];
+
+export const VIEW_TONES: Record<string, ViewTone> = Object.fromEntries(
+  MENU.flatMap((section) => section.items.map((item) => [item.id, section.tone])),
+) as Record<string, ViewTone>;
 
 function findSectionForView(viewId: string): string | null {
   for (const section of MENU) {
@@ -190,11 +202,13 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   const renderItemButton = (item: NavItem, options?: { compactList?: boolean; section?: string }) => {
     const isActive = activeView === item.id;
     const icon = VIEW_ICONS[item.id] ?? <Activity className="w-4 h-4" />;
+    const tone = VIEW_TONES[item.id] ?? "overview";
     return (
       <button
         key={item.id}
         onClick={() => selectView(item.id)}
         aria-current={isActive ? "page" : undefined}
+        data-tone={tone}
         title={compact ? item.label : undefined}
         className={`theme-nav-item group w-full text-left rounded-lg text-xs font-medium transition-all duration-200 relative ${
           compact
@@ -281,7 +295,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
           const hasCurrent = section.items.some((i) => i.id === activeView);
           const isFlat = section.flat || section.items.length <= 2;
           return (
-            <div key={section.title} className={compact ? "mt-1" : ""}>
+            <div key={section.title} className={compact ? "mt-1" : ""} data-tone={section.tone}>
               {isFlat ? (
                 <div className={compact ? "space-y-1" : "space-y-0.5"}>
                   {!compact && (
@@ -297,6 +311,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
               <button
                 onClick={() => toggle(section.title)}
                 aria-expanded={isOpen}
+                data-tone={section.tone}
                 className={`theme-nav-section w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
                   isOpen || hasCurrent
                     ? "bg-theme-accent/5 text-theme-accent border border-theme-accent/15"

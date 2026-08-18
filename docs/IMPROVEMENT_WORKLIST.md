@@ -55,16 +55,16 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 ## P2 — Interaction and workflow
 
 - [x] Make Overview cards real, keyboard-accessible navigation targets or remove button-like hover treatment. MVP and per-second metric cards now navigate to Top Players with native button semantics, visible focus treatment, and accessible labels.
-- [ ] Standardize pointer cursors and visible focus states for interactive elements.
+- [x] Standardize pointer cursors and visible focus states for interactive elements. Native controls, links, summaries, and role-based buttons now share a high-contrast neon focus ring and honest pointer/disabled cursors.
 - [ ] Add Reload Current, Replace Logs, Add Logs, and Clear Logs actions while preserving drag-and-drop ingestion.
 - [ ] Keep the web ingestion path as direct as the desktop path.
 
 ## P2 — Visual polish
 
 - [x] Give Fight Replay enemies stable instance identities, reject implausible position jumps, keep markers screen-sized, and re-center zoom on the commander/squad.
-- [x] Replace the Scorched Earth presentation layer with a graphite mechanical command theme, cyan/teal system accents, amber instrumentation, and metric-aware neon underglows on player cards.
-- [ ] Improve accent foreground contrast and define explicit theme foreground tokens.
-- [ ] Remove fractional/tiny typography and text-container transforms that blur at 1080p.
+- [x] Replace the Scorched Earth presentation layer with a graphite mechanical command theme, workspace-aware cyan/emerald/amber/rose/violet signals, brighter chart series, and metric-aware neon underglows on player cards.
+- [x] Improve accent foreground contrast and define explicit theme foreground tokens. The shared theme now exposes dark on-accent/on-warning/on-danger colors and high-contrast focus treatment.
+- [ ] Remove fractional/tiny typography and text-container transforms that blur at 1080p. Shared panel titles, subtitles, actions, stat labels, and supporting values are now at least 11px; view-specific microcopy still needs a final native-resolution audit.
 - [x] Remove profession-icon clipping, retain normal antialiasing, and optically center glyphs.
 - [ ] Verify every profession icon at each production size on desktop and web builds.
 - [ ] Keep metric content aligned while decorative asymmetry remains clearly intentional.

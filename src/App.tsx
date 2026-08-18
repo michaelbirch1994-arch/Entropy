@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import Sidebar, { VIEW_ICONS } from "./components/layout/Sidebar";
+import Sidebar, { VIEW_ICONS, VIEW_TONES } from "./components/layout/Sidebar";
 import { ReportProvider, useReport } from "./store/ReportContext";
 import { ViewProvider, useView } from "./store/ViewContext";
 import { CompareProvider } from "./store/CompareContext";
@@ -391,7 +391,10 @@ function ReportShell() {
 
 
 
-      <main className="theme-main flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar">
+      <main
+        className="theme-main flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar"
+        data-workspace-tone={VIEW_TONES[activeView] ?? "overview"}
+      >
         {/* Header - only when report is active */}
         {report && (
           <header className="theme-topbar sticky top-0 z-30 px-6 py-4">
