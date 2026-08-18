@@ -25,12 +25,13 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 - [x] Add active combat time, fights participated, total fights, and participation percentage to Squad Roster Overview.
 - [x] Add fights joined, session coverage, active combat time, and sample-reliability labels to Top Players.
 - [x] Add fight coverage, contributor counts, per-fight ranges, and low-sample warnings to Top Skills and Healing Sources.
-- [ ] Extend the same participation context to the remaining player tables where sample size changes interpretation.
+- [x] Extend the same participation context to the remaining player tables where sample size changes interpretation.
   - [x] Add shared fight coverage, active time, and reliability labels to Offensive, Support, Healing, Defensive Stats, Buffs, and Buff Generation tables.
   - [x] Make per-second sorting in Support, Healing, and Defensive Stats use the same player-specific duration as the displayed rate.
-  - [ ] Add profession/build-specific attendance before showing sample labels on Damage Modifiers and per-fight Rotations; account-wide attendance would be misleading when a player swaps builds.
+  - [x] Add profession/build-specific attendance before showing sample labels on Damage Modifiers and per-fight Rotations; account-wide attendance would be misleading when a player swaps builds. New reports persist fight coverage and EI active time by account+profession, while archived reports display coverage as unavailable instead of inventing it.
 - [ ] Base rate metrics on the appropriate active/combat duration.
   - [x] Core offense/defense/support/healing tables use player-specific tracked duration rather than one squad-wide clock.
+  - [x] Rotation casts per minute use the selected account+profession's EI active time and expose session coverage for that exact build.
   - [ ] Audit remaining rate labels and cross-view denominator consistency before marking this complete.
 - [x] Flag low-duration and low-fight samples instead of presenting them as equally reliable.
   - [x] Core performance tables now flag low/developing/strong fight samples and preserve an explicit unavailable state for legacy reports.

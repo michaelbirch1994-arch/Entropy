@@ -6,6 +6,8 @@ import { Percent, CircleCheck, Sparkles } from "lucide-react";
 import type { DamageModifierColumn } from "../types/report";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { CHART_COLORS, TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE } from "../utils/chartTheme";
+import PlayerSampleCell from "../components/ui/PlayerSampleCell";
+import type { PlayerSampleContextData } from "../lib/playerSampleContext";
 
 function kindOf(c: DamageModifierColumn): "gain" | "underEffect" | "counter" {
   if (c.isCounter) return "counter";
@@ -46,7 +48,7 @@ const KIND_FILTERS = [
 
 type KindFilter = (typeof KIND_FILTERS)[number]["key"];
 
-type SortKey = "player" | "class" | number;
+type SortKey = "player" | "class" | "sample" | number;
 type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
 
 // Custom XAxis tick that draws the modifier's own icon instead of a wrapped
@@ -97,6 +99,12 @@ export default function DamageModifiersView() {
   }
 
   const { columns, rows } = data;
+  const sampleFor = (row: (typeof rows)[number]): PlayerSampleContextData => ({
+    fights: Math.max(0, Number(row.fightsJoined) || 0),
+    totalFights: Math.max(Number(row.fightsJoined) || 0, Number(data.totalFights) || 0),
+    activeMs: Math.max(0, Number(row.activeMs) || 0),
+    known: Number.isFinite(row.fightsJoined) && Number.isFinite(data.totalFights),
+  });
 
   // Squad-wide total per modifier, driving both the summary chart and the
   // column sort order used for the chart's bars. Table column order itself
@@ -143,6 +151,11 @@ export default function DamageModifiersView() {
     return base.sort((a, b) => {
       if (sort.key === "player") return a.account.localeCompare(b.account) * dir || a.profession.localeCompare(b.profession);
       if (sort.key === "class") return a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account);
+      if (sort.key === "sample") {
+        const av = data.totalFights ? (a.fightsJoined ?? 0) / data.totalFights : 0;
+        const bv = data.totalFights ? (b.fightsJoined ?? 0) / data.totalFights : 0;
+        return (av - bv) * dir || ((a.activeMs ?? 0) - (b.activeMs ?? 0)) * dir || a.account.localeCompare(b.account);
+      }
       if (typeof sort.key !== "number") return 0;
       const av = a.values[sort.key]?.damage ?? 0;
       const bv = b.values[sort.key]?.damage ?? 0;
@@ -318,6 +331,11 @@ export default function DamageModifiersView() {
                     Class <span className="text-[8px] opacity-70">{sortLabel("class")}</span>
                   </button>
                 </th>
+                <th className="text-right font-bold px-2 py-3 min-w-[164px]">
+                  <button type="button" onClick={() => toggleSort("sample")} className={sortButtonClass("sample", "ml-auto")}>
+                    Build sample <span className="text-[8px] opacity-70">{sortLabel("sample")}</span>
+                  </button>
+                </th>
                 {filteredColumns.map((c) => {
                   const kind = kindOf(c);
                   const tooltip = [c.name, c.description, `${KIND_LABEL[kind]}`, `${c.playersWithIt} player${c.playersWithIt === 1 ? "" : "s"} triggered this`]
@@ -364,6 +382,9 @@ export default function DamageModifiersView() {
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(row.profession)}`}>
                       {row.profession}
                     </span>
+                  </td>
+                  <td className="px-2 py-2.5 text-right">
+                    <PlayerSampleCell sample={sampleFor(row)} />
                   </td>
                   {filteredColumns.map((c) => {
                     const v = row.values[c.id];

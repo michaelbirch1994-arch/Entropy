@@ -183,6 +183,22 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  firstPlayer.extHealingStats = { ...(firstPlayer.extHealingStats ?? {}), outgoingHealingAllies: [[{ healing: 1000 }]] };
                  secondPlayer.extHealingStats = { ...(secondPlayer.extHealingStats ?? {}), outgoingHealingAllies: [[{ healing: 2000 }]] };
 
+                 const modifierId = 990001;
+                 const rotationSkillId = 990002;
+                 for (const [raw, player, activeMs] of [[firstRaw, firstPlayer, 30_000], [secondRaw, secondPlayer, 45_000]] as const) {
+                         (raw as any).damageModMap = {
+                                 ...((raw as any).damageModMap ?? {}),
+                                 [`d${modifierId}`]: { name: 'Build Attendance Modifier' },
+                         };
+                         (raw as any).skillMap = {
+                                 ...((raw as any).skillMap ?? {}),
+                                 [`s${rotationSkillId}`]: { name: 'Build Attendance Cast' },
+                         };
+                         player.activeTimes = [activeMs];
+                         player.damageModifiers = [{ id: modifierId, damageModifiers: [{ damageGain: 100, totalHitCount: 2 }] }];
+                         player.rotation = [{ id: rotationSkillId, skills: [{ castTime: 1_000, duration: 500 }] }];
+                 }
+
                  const firstInput = { summary: summarizeRawFight(firstRaw), raw: firstRaw };
                  const secondInput = { summary: summarizeRawFight(secondRaw), raw: secondRaw };
                  const firstReport = buildReportFromFights([firstInput]);
@@ -209,6 +225,18 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(supportRows[0].supportTotals.boonStrips).toBe(12);
                  expect(healingRows[0].healingTotals.healing).toBe(3000);
                  expect(generalRows[0].logsJoined).toBe(2);
+
+                 const modifierRows = combined.stats.damageModifiers?.rows.filter((row) => row.account === account) ?? [];
+                 expect(combined.stats.damageModifiers?.totalFights).toBe(2);
+                 expect(modifierRows).toHaveLength(2);
+                 expect(modifierRows.find((row) => row.profession === firstProfession)).toMatchObject({ fightsJoined: 1, activeMs: 30_000 });
+                 expect(modifierRows.find((row) => row.profession === secondProfession)).toMatchObject({ fightsJoined: 1, activeMs: 45_000 });
+
+                 expect(combined.stats.rotations?.totalFights).toBe(2);
+                 const rotationPlayers = combined.stats.rotations?.fights.flatMap((rotationFight) => rotationFight.players.filter((row) => row.account === account)) ?? [];
+                 expect(rotationPlayers).toHaveLength(2);
+                 expect(rotationPlayers.find((row) => row.profession === firstProfession)?.activeMs).toBe(30_000);
+                 expect(rotationPlayers.find((row) => row.profession === secondProfession)?.activeMs).toBe(45_000);
            });
 
            it('keeps partial attendance distinct from full-session attendance', () => {

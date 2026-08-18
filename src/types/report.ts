@@ -484,6 +484,10 @@ export interface DamageModifierRow {
     profession: string;
     professionList: string[];
     group: number;
+    /** Fights where this account played this profession, not account-wide attendance. */
+  fightsJoined?: number;
+    /** EI active time accumulated only while this account played this profession. */
+  activeMs?: number;
     /** modifier id -> { damage gained (or damage-under-effect for non-multiplicative mods), hits under the effect } */
   values: Record<number, { damage: number; hits: number }>;
 }
@@ -491,6 +495,8 @@ export interface DamageModifierRow {
 export interface DamageModifierData {
     columns: DamageModifierColumn[];
     rows: DamageModifierRow[];
+    /** Total fights in the combined report; optional for archived reports. */
+  totalFights?: number;
 }
 
 // --- Rotations (per-fight skill cast timeline, like dps.report's Rotations tab) ---
@@ -505,6 +511,8 @@ export interface RotationPlayer {
     account: string;
     profession: string;
     professionList: string[];
+    /** EI active time for this player in this fight. */
+  activeMs?: number;
     casts: RotationCast[];
 }
 
@@ -526,6 +534,8 @@ export interface RotationFight {
 export interface RotationsData {
     skillMeta: Record<number, { name: string; icon?: string }>;
     fights: RotationFight[];
+    /** Total fights in the combined report, including fights without rotation data. */
+  totalFights?: number;
 }
 
 // --- DPS Graph (per-fight cumulative damage over time, like dps.report's Graph tab) ---

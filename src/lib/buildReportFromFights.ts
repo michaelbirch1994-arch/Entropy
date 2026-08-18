@@ -715,9 +715,9 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
   // relics "active" at once) just because the same account played other
   // classes in other fights. One row per account+class keeps every row's
   // modifiers honest to the class actually shown.
-  const rowsByKey = new Map<string, { account: string; profession: string; professionList: string[]; group: number; values: Map<number, { damage: number; hits: number }> }>();
+  const rowsByKey = new Map<string, { account: string; profession: string; professionList: string[]; group: number; fightsJoined: number; activeMs: number; seenFights: Set<number>; values: Map<number, { damage: number; hits: number }> }>();
 
-  for (const f of fights) {
+  for (const [fightIndex, f] of fights.entries()) {
         const raw = f.raw as Record<string, unknown>;
         const modMap = (raw.damageModMap ?? {}) as Record<string, { name?: string; icon?: string; description?: string; incoming?: boolean; nonMultiplier?: boolean; isCounter?: boolean }>;
         const idToDesc = new Map<number, { name?: string; icon?: string; description?: string; incoming?: boolean; nonMultiplier?: boolean; isCounter?: boolean }>();
@@ -737,8 +737,17 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
 
           let row = rowsByKey.get(rowKey);
                 if (!row) {
-                          row = { account, profession, professionList: [], group: Number(p.group) || 0, values: new Map() };
+                          row = { account, profession, professionList: [], group: Number(p.group) || 0, fightsJoined: 0, activeMs: 0, seenFights: new Set(), values: new Map() };
                           rowsByKey.set(rowKey, row);
+                }
+                if (!row.seenFights.has(fightIndex)) {
+                          row.seenFights.add(fightIndex);
+                          row.fightsJoined += 1;
+                          const activeTimes = p.activeTimes as unknown;
+                          const activeMs = Array.isArray(activeTimes) && typeof activeTimes[0] === 'number'
+                            ? activeTimes[0]
+                            : Number(raw.durationMS) || 0;
+                          row.activeMs += Math.max(0, activeMs);
                 }
 
           const mods = (p.damageModifiers ?? []) as ModEntry[];
@@ -794,12 +803,12 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
               row.values.forEach((v, id) => {
                         if (columnIds.has(id)) values[id] = v;
               });
-              return { account: row.account, profession: row.profession, professionList: row.professionList, group: row.group, values };
+              return { account: row.account, profession: row.profession, professionList: row.professionList, group: row.group, fightsJoined: row.fightsJoined, activeMs: row.activeMs, values };
       })
       .filter((row) => Object.keys(row.values).length > 0)
       .sort((a, b) => a.group - b.group || a.account.localeCompare(b.account) || a.profession.localeCompare(b.profession));
 
-  return { columns, rows };
+  return { columns, rows, totalFights: fights.length };
 }
 
 // Per-fight skill-cast timeline (dps.report's "Rotations" tab). Reads
@@ -863,6 +872,13 @@ function computeRotations(fights: FightInput[]): RotationsData {
                           account,
                           profession: String(p.profession || 'Unknown'),
                           professionList: [],
+                          activeMs: (() => {
+                                    const activeTimes = p.activeTimes as unknown;
+                                    const value = Array.isArray(activeTimes) && typeof activeTimes[0] === 'number'
+                                      ? activeTimes[0]
+                                      : durationMs;
+                                    return Math.max(0, value);
+                          })(),
                           casts,
                 });
         }
@@ -878,7 +894,7 @@ function computeRotations(fights: FightInput[]): RotationsData {
                      }
   });
 
-  return { skillMeta, fights: fightRows };
+  return { skillMeta, fights: fightRows, totalFights: fights.length };
 }
 
 // Per-fight cumulative-damage-over-time series (dps.report's "Graph" tab).

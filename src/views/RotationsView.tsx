@@ -4,6 +4,9 @@ import { profChip } from "../utils/format";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
 import { Activity, Clock, Repeat2, Search } from "lucide-react";
+import PlayerSampleCell from "../components/ui/PlayerSampleCell";
+import { getSampleReliability, sampleReliabilityClasses } from "../lib/sampleReliability";
+import type { PlayerSampleContextData } from "../lib/playerSampleContext";
 
 function fmtClock(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -30,6 +33,28 @@ export default function RotationsView() {
 
   const fight = data?.fights[fightIdx];
 
+  const buildSamples = useMemo(() => {
+    const samples = new Map<string, PlayerSampleContextData>();
+    if (!data) return samples;
+    const totalFights = Math.max(data.fights.length, data.totalFights ?? 0);
+    const hasPersistedCoverage = Number.isFinite(data.totalFights);
+    for (const rotationFight of data.fights) {
+      const seen = new Set<string>();
+      for (const player of rotationFight.players) {
+        const key = `${player.account}||${player.profession}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const hasActiveTime = Number.isFinite(player.activeMs);
+        const current = samples.get(key) ?? { fights: 0, totalFights, activeMs: 0, known: hasPersistedCoverage && hasActiveTime };
+        current.fights += 1;
+        current.activeMs += hasActiveTime ? Math.max(0, Number(player.activeMs)) : 0;
+        current.known = current.known && hasPersistedCoverage && hasActiveTime;
+        samples.set(key, current);
+      }
+    }
+    return samples;
+  }, [data]);
+
   // Squad-wide rows, filtered by the search box. Sorted by profession then
   // account so classes cluster together the way dps.report's rotation view
   // groups them - much easier to scan than raw squad order.
@@ -51,7 +76,12 @@ export default function RotationsView() {
   }, [fight, playerAccount]);
 
   const activePlayer = fight?.players.find((p) => p.account === activeAccount);
-  const activeMinutes = fight ? Math.max(fight.durationMs / 60000, 1 / 60) : 1;
+  const hasActiveTime = Number.isFinite(activePlayer?.activeMs) && Number(activePlayer?.activeMs) > 0;
+  const activeDurationMs = fight && activePlayer ? (hasActiveTime ? Number(activePlayer.activeMs) : fight.durationMs) : 0;
+  const activeMinutes = activeDurationMs > 0 ? Math.max(activeDurationMs / 60000, 1 / 60) : 1;
+  const activeSample = activePlayer
+    ? buildSamples.get(`${activePlayer.account}||${activePlayer.profession}`)
+    : undefined;
   const castCount = activePlayer?.casts.length ?? 0;
   const castRate = castCount / activeMinutes;
   const uniqueSkills = new Set(activePlayer?.casts.map((cast) => cast.skillId) ?? []).size;
@@ -123,6 +153,8 @@ export default function RotationsView() {
           <div className="max-h-[520px] overflow-y-auto custom-scrollbar">
             {rows.map((p) => {
               const isActive = p.account === activeAccount;
+              const sample = buildSamples.get(`${p.account}||${p.profession}`);
+              const reliability = sample?.known ? getSampleReliability(sample.fights, sample.totalFights, sample.activeMs) : null;
               return (
                 <button
                   key={p.account}
@@ -138,6 +170,15 @@ export default function RotationsView() {
                     <span className={`px-1 py-0 rounded text-[9px] font-bold border w-fit ${profChip(p.profession)}`}>
                       {p.profession}
                     </span>
+                    {sample && reliability ? (
+                      <span className="mt-0.5 truncate text-[9px] text-theme-muted" title={reliability.detail}>
+                        {sample.fights}/{sample.totalFights} fights · <span className={`rounded-full border px-1 py-px ${sampleReliabilityClasses(reliability.level)}`}>{reliability.label}</span>
+                      </span>
+                    ) : sample ? (
+                      <span className="mt-0.5 text-[9px] text-theme-muted" title="Re-import this report to calculate build-specific active time.">
+                        Coverage unavailable
+                      </span>
+                    ) : null}
                   </div>
                   <div className="relative flex-1 bg-black/30 rounded-md my-1 h-6 overflow-hidden">
                     {p.casts.map((c, i) => {
@@ -167,7 +208,7 @@ export default function RotationsView() {
 
       {fight && activePlayer && (
         <div className="theme-stat-grid grid gap-3 md:grid-cols-3">
-          <StatCard label="Parsed casts / minute" value={castRate.toFixed(1)} icon={<Activity className="h-3.5 w-3.5 text-orange-400" />} accent="text-orange-300" sub="All casts present in the EI rotation timeline" />
+          <StatCard label={hasActiveTime ? "Parsed casts / active minute" : "Parsed casts / fight minute"} value={castRate.toFixed(1)} icon={<Activity className="h-3.5 w-3.5 text-orange-400" />} accent="text-orange-300" sub={hasActiveTime ? "Uses this build's EI active time, not the full fight clock" : "Archived report fallback; re-import logs for exact active time"} />
           <StatCard label="Unique skills" value={uniqueSkills} icon={<Repeat2 className="h-3.5 w-3.5 text-cyan-400" />} accent="text-cyan-300" sub={`${castCount} parsed casts in selected fight`} />
           <StatCard label="Most-used skill" value={mostUsedSkill?.count ?? 0} icon={<Clock className="h-3.5 w-3.5 text-amber-400" />} accent="text-amber-300" sub={mostUsedSkill?.name ?? "No parsed casts"} />
         </div>
@@ -176,12 +217,15 @@ export default function RotationsView() {
       {fight && activePlayer && (
         <Panel
           title="Skill Rotation"
-          subtitle={`${activePlayer.account} - ${activePlayer.casts.length} casts over ${fmtClock(fight.durationMs)}`}
+          subtitle={`${activePlayer.account} - ${activePlayer.casts.length} casts over ${fmtClock(activeDurationMs)} ${hasActiveTime ? "active time" : "fight time"}`}
           icon={<Clock className="w-3.5 h-3.5" />}
           action={
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(activePlayer.profession)}`}>
-              {activePlayer.profession}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(activePlayer.profession)}`}>
+                {activePlayer.profession}
+              </span>
+              {activeSample && <PlayerSampleCell sample={activeSample} />}
+            </div>
           }
         >
           <div className="relative bg-black/30 rounded-xl border border-slate-800 h-16 overflow-hidden">
