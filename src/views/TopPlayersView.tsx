@@ -239,7 +239,7 @@ function PlayerMetricCard({
 }) {
   const style = profStyle(entry.profession);
   const share = max > 0 ? Math.max(4, (entry.value / max) * 100) : 4;
-  const reliability = getSampleReliability(sample.fights, sample.totalFights);
+  const reliability = getSampleReliability(sample.fights, sample.totalFights, sample.combatTimeMs);
 
   return (
     <button
