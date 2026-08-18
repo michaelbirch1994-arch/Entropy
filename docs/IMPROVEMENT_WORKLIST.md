@@ -82,6 +82,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 - [ ] Expose the player, fight, and event context behind extremes.
   - [x] Top Skills and Healing Sources now attach player and fight context to biggest-hit and peak per-fight values for newly built reports.
 - [ ] Prefer ranked extremes when a single outlier would be misleading.
+  - [x] Top Skills and Healing Sources now flag spike-heavy sources where the peak fight is far above the average.
 - [ ] Include combat-time and participation context in skill comparisons.
 
 ## Definition of done for this feedback round

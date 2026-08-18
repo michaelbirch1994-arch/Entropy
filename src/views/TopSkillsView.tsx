@@ -170,6 +170,10 @@ function SkillSampleContext({
 function PerFightRange({ sample, label }: { sample: SkillSample; label: string }) {
   if (sample.fightCount === undefined || sample.fightCount <= 0) return null;
   const maxContext = fightContextLabel(sample.perFightMaxContext);
+  const average = sample.perFightAverage ?? 0;
+  const peak = sample.perFightMax ?? 0;
+  const spikeRatio = average > 0 ? peak / average : 0;
+  const isSpikeHeavy = (sample.fightCount ?? 0) >= 3 && spikeRatio >= 2.5;
   return (
     <div className="mt-2 rounded-lg border border-slate-800/60 bg-slate-950/30 p-2">
       <div className="grid grid-cols-3 gap-2 text-center">
@@ -189,6 +193,14 @@ function PerFightRange({ sample, label }: { sample: SkillSample; label: string }
       {maxContext && (
         <div className="mt-2 border-t border-slate-800/60 pt-2 text-[10px] text-slate-500">
           Peak fight: <span className="font-bold text-amber-300">{maxContext}</span>
+        </div>
+      )}
+      {isSpikeHeavy && (
+        <div
+          className="mt-2 rounded-md border border-amber-400/20 bg-amber-500/[0.06] px-2 py-1.5 text-[10px] text-amber-200/90"
+          title="The best fight is much higher than this source's average fight, so judge the total with the sample and average beside it."
+        >
+          Spike-heavy source: peak is {spikeRatio.toFixed(1)}× its average fight.
         </div>
       )}
     </div>
