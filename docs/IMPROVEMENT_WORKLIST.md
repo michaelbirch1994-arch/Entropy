@@ -37,6 +37,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
   - [x] Core performance tables now flag low/developing/strong fight samples and preserve an explicit unavailable state for legacy reports.
   - [x] Downgrade otherwise broad fight samples when total or per-fight active combat time is too short for a stable rate comparison.
 - [ ] Hide unsupported Siege/NPC Damage and other permanently empty columns.
+  - [x] Offensive only shows the Siege/NPC/Gate proxy when EI all-damage exceeds player damage for at least one player.
 
 ## P1 — Signal vs. noise across raids
 
