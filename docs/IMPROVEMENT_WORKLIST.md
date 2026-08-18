@@ -26,8 +26,15 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 - [x] Add fights joined, session coverage, active combat time, and sample-reliability labels to Top Players.
 - [x] Add fight coverage, contributor counts, per-fight ranges, and low-sample warnings to Top Skills and Healing Sources.
 - [ ] Extend the same participation context to the remaining player tables where sample size changes interpretation.
+  - [x] Add shared fight coverage, active time, and reliability labels to Offensive, Support, Healing, Defensive Stats, Buffs, and Buff Generation tables.
+  - [x] Make per-second sorting in Support, Healing, and Defensive Stats use the same player-specific duration as the displayed rate.
+  - [ ] Add profession/build-specific attendance before showing sample labels on Damage Modifiers and per-fight Rotations; account-wide attendance would be misleading when a player swaps builds.
 - [ ] Base rate metrics on the appropriate active/combat duration.
-- [ ] Flag low-duration and low-fight samples instead of presenting them as equally reliable.
+  - [x] Core offense/defense/support/healing tables use player-specific tracked duration rather than one squad-wide clock.
+  - [ ] Audit remaining rate labels and cross-view denominator consistency before marking this complete.
+- [x] Flag low-duration and low-fight samples instead of presenting them as equally reliable.
+  - [x] Core performance tables now flag low/developing/strong fight samples and preserve an explicit unavailable state for legacy reports.
+  - [x] Downgrade otherwise broad fight samples when total or per-fight active combat time is too short for a stable rate comparison.
 - [ ] Hide unsupported Siege/NPC Damage and other permanently empty columns.
 
 ## P1 — Signal vs. noise across raids
