@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import Sidebar, { VIEW_ICONS } from "./components/layout/Sidebar";
 import { ReportProvider, useReport } from "./store/ReportContext";
 import { ViewProvider, useView } from "./store/ViewContext";
@@ -614,17 +614,9 @@ function ReportShell() {
               </div>
             </motion.div>
           ) : report ? (
-            <AnimatePresence>
-              <motion.div
-                key={activeView}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.22, ease: "easeOut" }}
-              >
-                <ReportRouter activeView={activeView} />
-              </motion.div>
-            </AnimatePresence>
+            <div className="min-h-full w-full">
+              <ReportRouter activeView={activeView} />
+            </div>
           ) : null}
         </div>
       </main>
