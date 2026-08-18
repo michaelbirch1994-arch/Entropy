@@ -7,10 +7,12 @@ import { Shield, Heart, Droplet, Zap, Wind, Target } from "lucide-react";
 import { useStatsDisplay, pickStatsDisplayValue } from "../store/StatsDisplayContext";
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
+import PlayerSampleCell from "../components/ui/PlayerSampleCell";
+import { resolvePlayerSampleContext } from "../lib/playerSampleContext";
 
 type Tab = "defense" | "support" | "healing";
 type DefensiveSortKey =
-  | "player" | "class" | "cleanses" | "strips" | "stunBreaks" | "resurrects" | "logs"
+  | "player" | "class" | "sample" | "cleanses" | "strips" | "stunBreaks" | "resurrects" | "logs"
   | "healing" | "squadHealing" | "barrier" | "downedHealing"
   | "damageTaken" | "powerDamage" | "condiDamage" | "hits" | "barrierAbsorbed" | "mitigatedDamage" | "blocks" | "dodges" | "invulned" | "interrupted" | "downs" | "deaths";
 
@@ -22,6 +24,12 @@ function dedupeByAccount<T extends { account: string }>(rows: T[]): T[] {
   return Array.from(new Map(rows.map((r) => [r.account, r])).values());
 }
 
+function metricSortValue(value: number, activeMs: number | undefined, perSecond: boolean): number {
+  if (!perSecond) return value;
+  const seconds = (activeMs ?? 0) / 1000;
+  return seconds > 0 ? value / seconds : 0;
+}
+
 export default function DefensiveView() {
   const { report } = useReport();
   const [tab, setTab] = useState<Tab>("support");
@@ -29,6 +37,7 @@ export default function DefensiveView() {
   const { mode } = useStatsDisplay();
   const { scope: allyScope } = useAllyScope();
   const s = report?.stats;
+  const isPerSecond = mode === "perSecond";
 
   // Deduped once here so every summary card, MVP list, and sortable table
   // built from these derives from a single row per player instead of
@@ -113,25 +122,37 @@ export default function DefensiveView() {
 
   const supportRows = useMemo(() => {
     if (!s || tab !== "support") return [];
-    const rows = [...supportPlayers].sort((a, b) => (b.supportTotals.condiCleanse ?? 0) - (a.supportTotals.condiCleanse ?? 0));
+    const rows = supportPlayers
+      .map((player) => ({
+        ...player,
+        sample: resolvePlayerSampleContext(s.generalPlayers, s.total, player.account, {
+          fights: player.logsJoined,
+          activeMs: player.activeMs,
+        }),
+      }))
+      .sort((a, b) => (b.supportTotals.condiCleanse ?? 0) - (a.supportTotals.condiCleanse ?? 0));
     if (!sort) return rows;
     const dir = sort.dir === "asc" ? 1 : -1;
     const numeric: Partial<Record<DefensiveSortKey, (p: typeof rows[number]) => number>> = {
-      cleanses: (p) => p.supportTotals.condiCleanse ?? 0,
-      strips: (p) => p.supportTotals.boonStrips ?? 0,
-      stunBreaks: (p) => p.supportTotals.stunBreak ?? 0,
-      resurrects: (p) => p.supportTotals.resurrects ?? 0,
+      sample: (p) => p.sample.fights,
+      cleanses: (p) => metricSortValue(p.supportTotals.condiCleanse ?? 0, p.activeMs, isPerSecond),
+      strips: (p) => metricSortValue(p.supportTotals.boonStrips ?? 0, p.activeMs, isPerSecond),
+      stunBreaks: (p) => metricSortValue(p.supportTotals.stunBreak ?? 0, p.activeMs, isPerSecond),
+      resurrects: (p) => metricSortValue(p.supportTotals.resurrects ?? 0, p.activeMs, isPerSecond),
       logs: (p) => p.logsJoined ?? 0,
     };
     if (sort.key === "player") return rows.sort((a, b) => a.account.localeCompare(b.account) * dir);
     if (sort.key === "class") return rows.sort((a, b) => a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account));
     const get = numeric[sort.key];
     return get ? rows.sort((a, b) => (get(a) - get(b)) * dir || a.account.localeCompare(b.account)) : rows;
-  }, [s, tab, sort, supportPlayers]);
+  }, [s, tab, sort, supportPlayers, isPerSecond]);
 
   const healingRows = useMemo(() => {
     if (!s || tab !== "healing") return [];
-    const rows = [...healingPlayers].sort(
+    const rows = healingPlayers.map((player) => ({
+      ...player,
+      sample: resolvePlayerSampleContext(s.generalPlayers, s.total, player.account, { activeMs: player.activeMs }),
+    })).sort(
       (a, b) =>
         pickAllyScopeValue(allyScope, b.healingTotals.healing, b.healingTotals.squadHealing) -
         pickAllyScopeValue(allyScope, a.healingTotals.healing, a.healingTotals.squadHealing)
@@ -139,16 +160,17 @@ export default function DefensiveView() {
     if (!sort) return rows;
     const dir = sort.dir === "asc" ? 1 : -1;
     const numeric: Partial<Record<DefensiveSortKey, (p: typeof rows[number]) => number>> = {
-      healing: (p) => pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing),
-      squadHealing: (p) => p.healingTotals.squadHealing ?? 0,
-      barrier: (p) => pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier),
-      downedHealing: (p) => p.healingTotals.downedHealing ?? 0,
+      sample: (p) => p.sample.fights,
+      healing: (p) => metricSortValue(pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing), p.activeMs, isPerSecond),
+      squadHealing: (p) => metricSortValue(p.healingTotals.squadHealing ?? 0, p.activeMs, isPerSecond),
+      barrier: (p) => metricSortValue(pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier), p.activeMs, isPerSecond),
+      downedHealing: (p) => metricSortValue(p.healingTotals.downedHealing ?? 0, p.activeMs, isPerSecond),
     };
     if (sort.key === "player") return rows.sort((a, b) => a.account.localeCompare(b.account) * dir);
     if (sort.key === "class") return rows.sort((a, b) => a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account));
     const get = numeric[sort.key];
     return get ? rows.sort((a, b) => (get(a) - get(b)) * dir || a.account.localeCompare(b.account)) : rows;
-  }, [s, tab, allyScope, sort, healingPlayers]);
+  }, [s, tab, allyScope, sort, healingPlayers, isPerSecond]);
 
   const healingMvpRows = useMemo(() => {
     if (!s || tab !== "healing") return [];
@@ -167,7 +189,8 @@ export default function DefensiveView() {
         );
         const lifeSiphon = firstPositive(p.healingTotals.squadConversionHealing, p.healingTotals.conversionHealing);
         const sustain = healing + barrier + downedHealing + lifeSiphon;
-        return { ...p, healing, barrier, downedHealing, lifeSiphon, sustain };
+        const sample = resolvePlayerSampleContext(s.generalPlayers, s.total, p.account, { activeMs: p.activeMs });
+        return { ...p, healing, barrier, downedHealing, lifeSiphon, sustain, sample };
       })
       .filter((p) => p.sustain > 0)
       .sort((a, b) => b.sustain - a.sustain)
@@ -176,38 +199,46 @@ export default function DefensiveView() {
 
   const defenseRows = useMemo(() => {
     if (!s || tab !== "defense") return [];
-    const rows = [...defensePlayers].sort((a, b) => (b.defenseTotals.damageTaken ?? 0) - (a.defenseTotals.damageTaken ?? 0));
+    const rows = defensePlayers.map((player) => ({
+      ...player,
+      sample: resolvePlayerSampleContext(s.generalPlayers, s.total, player.account, { activeMs: player.totalFightMs }),
+    })).sort((a, b) => (b.defenseTotals.damageTaken ?? 0) - (a.defenseTotals.damageTaken ?? 0));
     if (!sort) return rows;
     const dir = sort.dir === "asc" ? 1 : -1;
     const mitigationFor = (p: typeof rows[number]) => (mitigationByAccount.get(`${p.account}::${p.profession}`) ?? mitigationByAccount.get(p.account))?.mitigationTotals;
     const numeric: Partial<Record<DefensiveSortKey, (p: typeof rows[number]) => number>> = {
-      damageTaken: (p) => p.defenseTotals.damageTaken ?? 0,
-      powerDamage: (p) => p.defenseTotals.powerDamageTaken ?? 0,
-      condiDamage: (p) => p.defenseTotals.conditionDamageTaken ?? 0,
-      hits: (p) => p.defenseTotals.damageTakenCount ?? 0,
-      barrierAbsorbed: (p) => p.defenseTotals.damageBarrier ?? 0,
-      mitigatedDamage: (p) => mitigationFor(p)?.totalMitigation ?? 0,
-      blocks: (p) => mitigationFor(p)?.blocked ?? p.defenseTotals.blockedCount ?? 0,
-      dodges: (p) => p.defenseTotals.dodgeCount ?? 0,
-      invulned: (p) => p.defenseTotals.invulnedCount ?? 0,
-      interrupted: (p) => p.defenseTotals.interruptedCount ?? 0,
-      downs: (p) => p.defenseTotals.downCount ?? 0,
-      deaths: (p) => p.defenseTotals.deadCount ?? 0,
+      sample: (p) => p.sample.fights,
+      damageTaken: (p) => metricSortValue(p.defenseTotals.damageTaken ?? 0, p.totalFightMs, isPerSecond),
+      powerDamage: (p) => metricSortValue(p.defenseTotals.powerDamageTaken ?? 0, p.totalFightMs, isPerSecond),
+      condiDamage: (p) => metricSortValue(p.defenseTotals.conditionDamageTaken ?? 0, p.totalFightMs, isPerSecond),
+      hits: (p) => metricSortValue(p.defenseTotals.damageTakenCount ?? 0, p.totalFightMs, isPerSecond),
+      barrierAbsorbed: (p) => metricSortValue(p.defenseTotals.damageBarrier ?? 0, p.totalFightMs, isPerSecond),
+      mitigatedDamage: (p) => metricSortValue(mitigationFor(p)?.totalMitigation ?? 0, p.totalFightMs, isPerSecond),
+      blocks: (p) => metricSortValue(mitigationFor(p)?.blocked ?? p.defenseTotals.blockedCount ?? 0, p.totalFightMs, isPerSecond),
+      dodges: (p) => metricSortValue(p.defenseTotals.dodgeCount ?? 0, p.totalFightMs, isPerSecond),
+      invulned: (p) => metricSortValue(p.defenseTotals.invulnedCount ?? 0, p.totalFightMs, isPerSecond),
+      interrupted: (p) => metricSortValue(p.defenseTotals.interruptedCount ?? 0, p.totalFightMs, isPerSecond),
+      downs: (p) => metricSortValue(p.defenseTotals.downCount ?? 0, p.totalFightMs, isPerSecond),
+      deaths: (p) => metricSortValue(p.defenseTotals.deadCount ?? 0, p.totalFightMs, isPerSecond),
     };
     if (sort.key === "player") return rows.sort((a, b) => a.account.localeCompare(b.account) * dir);
     if (sort.key === "class") return rows.sort((a, b) => a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account));
     const get = numeric[sort.key];
     return get ? rows.sort((a, b) => (get(a) - get(b)) * dir || a.account.localeCompare(b.account)) : rows;
-  }, [s, tab, sort, mitigationByAccount, defensePlayers]);
+  }, [s, tab, sort, mitigationByAccount, defensePlayers, isPerSecond]);
 
   if (!report || !s || !totals) return null;
 
-  const isPerSecond = mode === "perSecond";
   // Per-player cells divide by that player's own active combat time, not the
   // squad-wide total the summary cards use - otherwise a "/s" column would be
   // rating everyone against the whole squad's clock.
   const perPlayer = (v: number, activeMs: number | undefined) => {
     if (!isPerSecond) return fmtCompact(v);
+    const secs = (activeMs ?? 0) / 1000;
+    return secs > 0 ? fmtFixed(v / secs, 2) : "-";
+  };
+  const perPlayerN = (v: number, activeMs: number | undefined) => {
+    if (!isPerSecond) return fmtNum(v);
     const secs = (activeMs ?? 0) / 1000;
     return secs > 0 ? fmtFixed(v / secs, 2) : "-";
   };
@@ -286,6 +317,7 @@ export default function DefensiveView() {
                   <th className="p-2.5">#</th>
                   <SortHeader label="Player" k="player" />
                   <SortHeader label="Class" k="class" />
+                  <SortHeader label="Sample" k="sample" align="right" title="Fights joined, session coverage, active combat time, and sample reliability" />
                   <SortHeader label="Cleanses" k="cleanses" align="right" />
                   <SortHeader label="Strips" k="strips" align="right" />
                   <SortHeader label="Stun Breaks" k="stunBreaks" align="right" />
@@ -299,10 +331,11 @@ export default function DefensiveView() {
                     <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
                     <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
                     <td className="p-2.5"><ClassCell profession={p.profession} /></td>
-                    <td className="p-2.5 text-right text-cyan-400 font-bold">{fmtNum(p.supportTotals.condiCleanse)}</td>
-                    <td className="p-2.5 text-right text-amber-400">{p.supportTotals.boonStrips}</td>
-                    <td className="p-2.5 text-right text-slate-300">{p.supportTotals.stunBreak}</td>
-                    <td className="p-2.5 text-right text-emerald-400">{p.supportTotals.resurrects}</td>
+                    <td className="p-2.5 text-right"><PlayerSampleCell sample={p.sample} /></td>
+                    <td className="p-2.5 text-right text-cyan-400 font-bold">{perPlayerN(p.supportTotals.condiCleanse ?? 0, p.activeMs)}</td>
+                    <td className="p-2.5 text-right text-amber-400">{perPlayerN(p.supportTotals.boonStrips ?? 0, p.activeMs)}</td>
+                    <td className="p-2.5 text-right text-slate-300">{perPlayerN(p.supportTotals.stunBreak ?? 0, p.activeMs)}</td>
+                    <td className="p-2.5 text-right text-emerald-400">{perPlayerN(p.supportTotals.resurrects ?? 0, p.activeMs)}</td>
                     <td className="p-2.5 text-right text-slate-500">{p.logsJoined}</td>
                   </tr>
                 ))}
@@ -350,6 +383,9 @@ export default function DefensiveView() {
                       <div className="font-mono text-[12px] text-purple-400">{fmtCompact(p.lifeSiphon)}</div>
                     </div>
                   </div>
+                  <div className="mt-3 border-t border-theme-border/50 pt-2">
+                    <PlayerSampleCell sample={p.sample} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -370,6 +406,7 @@ export default function DefensiveView() {
                   <th className="p-2.5">#</th>
                   <SortHeader label="Player" k="player" />
                   <SortHeader label="Class" k="class" />
+                  <SortHeader label="Sample" k="sample" align="right" title="Fights joined, session coverage, active combat time, and sample reliability" />
                   <SortHeader label="Healing" k="healing" align="right" />
                   <SortHeader label="Squad Heal" k="squadHealing" align="right" />
                   <SortHeader label="Barrier" k="barrier" align="right" />
@@ -382,6 +419,7 @@ export default function DefensiveView() {
                     <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
                     <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
                     <td className="p-2.5"><ClassCell profession={p.profession} /></td>
+                    <td className="p-2.5 text-right"><PlayerSampleCell sample={p.sample} /></td>
                     <td className="p-2.5 text-right text-emerald-400 font-bold">{perPlayer(pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing), p.activeMs)}</td>
                     <td className="p-2.5 text-right text-emerald-400/70">{perPlayer(p.healingTotals.squadHealing ?? 0, p.activeMs)}</td>
                     <td className="p-2.5 text-right text-teal-400">{perPlayer(pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier), p.activeMs)}</td>
@@ -403,6 +441,7 @@ export default function DefensiveView() {
                   <th className="p-2.5">#</th>
                   <SortHeader label="Player" k="player" />
                   <SortHeader label="Class" k="class" />
+                  <SortHeader label="Sample" k="sample" align="right" title="Fights joined, session coverage, active combat time, and sample reliability" />
                   <SortHeader label="Damage Taken" k="damageTaken" align="right" />
                   <SortHeader label="Power Dmg" k="powerDamage" align="right" />
                   <SortHeader label="Condi Dmg" k="condiDamage" align="right" />
@@ -425,18 +464,19 @@ export default function DefensiveView() {
                       <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
                       <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
                       <td className="p-2.5"><ClassCell profession={p.profession} /></td>
-                      <td className="p-2.5 text-right text-rose-400 font-bold">{fmtCompact(p.defenseTotals.damageTaken)}</td>
-                      <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.defenseTotals.powerDamageTaken)}</td>
-                      <td className="p-2.5 text-right text-fuchsia-400">{fmtCompact(p.defenseTotals.conditionDamageTaken)}</td>
-                      <td className="p-2.5 text-right text-slate-400">{fmtNum(p.defenseTotals.damageTakenCount)}</td>
-                      <td className="p-2.5 text-right text-teal-400">{fmtCompact(p.defenseTotals.damageBarrier ?? 0)}</td>
-                      <td className="p-2.5 text-right text-blue-400">{fmtCompact(mitigation?.totalMitigation ?? 0)}</td>
-                      <td className="p-2.5 text-right text-indigo-400">{fmtNum(mitigation?.blocked ?? p.defenseTotals.blockedCount ?? 0)}</td>
-                      <td className="p-2.5 text-right text-cyan-400">{fmtNum(p.defenseTotals.dodgeCount ?? 0)}</td>
-                      <td className="p-2.5 text-right text-sky-400">{fmtNum(p.defenseTotals.invulnedCount ?? 0)}</td>
-                      <td className="p-2.5 text-right text-purple-400">{fmtNum(p.defenseTotals.interruptedCount ?? 0)}</td>
-                      <td className="p-2.5 text-right text-amber-400">{fmtNum(p.defenseTotals.downCount ?? 0)}</td>
-                      <td className="p-2.5 text-right text-slate-300">{fmtNum(p.defenseTotals.deadCount ?? 0)}</td>
+                      <td className="p-2.5 text-right"><PlayerSampleCell sample={p.sample} /></td>
+                      <td className="p-2.5 text-right text-rose-400 font-bold">{perPlayer(p.defenseTotals.damageTaken ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-orange-400">{perPlayer(p.defenseTotals.powerDamageTaken ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-fuchsia-400">{perPlayer(p.defenseTotals.conditionDamageTaken ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-slate-400">{perPlayerN(p.defenseTotals.damageTakenCount ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-teal-400">{perPlayer(p.defenseTotals.damageBarrier ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-blue-400">{perPlayer(mitigation?.totalMitigation ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-indigo-400">{perPlayerN(mitigation?.blocked ?? p.defenseTotals.blockedCount ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-cyan-400">{perPlayerN(p.defenseTotals.dodgeCount ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-sky-400">{perPlayerN(p.defenseTotals.invulnedCount ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-purple-400">{perPlayerN(p.defenseTotals.interruptedCount ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-amber-400">{perPlayerN(p.defenseTotals.downCount ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-slate-300">{perPlayerN(p.defenseTotals.deadCount ?? 0, p.totalFightMs)}</td>
                     </tr>
                   );
                 })}
