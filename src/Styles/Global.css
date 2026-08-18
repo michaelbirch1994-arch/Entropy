@@ -27,28 +27,28 @@
 
 :root {
   color-scheme: dark;
-  --theme-bg: #030201;
-  --theme-canvas: #080503;
-  --theme-sidebar: #070403;
-  --theme-surface: #110B08;
-  --theme-surfaceElevated: #21120C;
-  --theme-surfaceInset: #080503;
-  --theme-border: #5B2B1D;
-  --theme-borderStrong: #B83D1F;
-  --theme-text: #F4ECE4;
-  --theme-textMuted: #AA978A;
-  --theme-textFaint: #746158;
-  --theme-accent: #EF431D;
-  --theme-accentDim: #741F10;
-  --theme-accentStrong: #FF6A2A;
-  --theme-secondary: #B72F1B;
-  --theme-danger: #FF4B32;
-  --theme-warning: #F2A33A;
-  --theme-success: #73B88B;
-  --theme-info: #69AFC1;
-  --theme-grid: #321A12;
-  --theme-glow: rgba(255, 74, 28, 0.42);
-  --theme-ash: #D0BFB1;
+  --theme-bg: #02070B;
+  --theme-canvas: #050D12;
+  --theme-sidebar: #040B10;
+  --theme-surface: #08151B;
+  --theme-surfaceElevated: #10252B;
+  --theme-surfaceInset: #030B10;
+  --theme-border: #16414A;
+  --theme-borderStrong: #20B6AA;
+  --theme-text: #E8FCFF;
+  --theme-textMuted: #91B1B8;
+  --theme-textFaint: #58767D;
+  --theme-accent: #18D9BD;
+  --theme-accentDim: #08655F;
+  --theme-accentStrong: #58FFE3;
+  --theme-secondary: #FFAB45;
+  --theme-danger: #FF5D7D;
+  --theme-warning: #FFB84D;
+  --theme-success: #51EDAB;
+  --theme-info: #4DC8FF;
+  --theme-grid: #12343C;
+  --theme-glow: rgba(24, 217, 189, 0.42);
+  --theme-ash: #CDE4E8;
   --theme-display-font: "Bahnschrift SemiCondensed", "Arial Narrow", "Space Grotesk", sans-serif;
   --theme-body-font: "IBM Plex Sans", "Inter", system-ui, -apple-system, sans-serif;
   --theme-mono-font: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
@@ -2300,4 +2300,423 @@ kbd {
   .theme-builder-party-slots { grid-template-columns: 1fr; }
 }
 
+/* Neon command system ---------------------------------------------------------
+   A graphite-and-glass instrument panel inspired by modern mechanical HUDs.
+   Teal is the navigation/systems color; amber remains the high-value readout
+   color. Player cards use a semantic underglow tied to the selected metric. */
 
+.entropy-bg {
+  background:
+    radial-gradient(circle at 76% 18%, rgba(31, 231, 204, 0.13), transparent 26%),
+    radial-gradient(circle at 64% 72%, rgba(255, 171, 69, 0.09), transparent 30%),
+    linear-gradient(115deg, #02070b 0%, #061117 48%, #02070b 100%);
+  filter: none;
+}
+
+.entropy-bg::before {
+  background:
+    linear-gradient(rgba(41, 164, 156, 0.065) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(41, 164, 156, 0.055) 1px, transparent 1px);
+  background-size: 42px 42px;
+  opacity: 0.54;
+  animation: none;
+  mask-image: radial-gradient(circle at 62% 42%, black, transparent 76%);
+}
+
+.entropy-bg::after {
+  background:
+    repeating-linear-gradient(180deg, transparent 0 5px, rgba(105, 255, 232, 0.012) 5px 6px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.72), transparent 30%, transparent 76%, rgba(0, 0, 0, 0.4)),
+    radial-gradient(ellipse 46% 34% at 74% 22%, rgba(24, 217, 189, 0.08), transparent 72%);
+  opacity: 1;
+}
+
+.theme-app-shell::before {
+  background:
+    linear-gradient(90deg, transparent 0 74%, rgba(30, 220, 195, 0.055) 74.05%, transparent 74.13%),
+    linear-gradient(180deg, transparent 0 68%, rgba(255, 177, 79, 0.045) 68.05%, transparent 68.13%);
+  background-size: 38rem 100%, 100% 26rem;
+}
+
+.theme-app-shell [class~="rounded-lg"] { border-radius: 6px !important; }
+.theme-app-shell [class~="rounded-xl"] { border-radius: 8px !important; }
+.theme-app-shell [class~="rounded-2xl"],
+.theme-app-shell [class~="rounded-3xl"],
+.theme-app-shell [class~="rounded-[2rem]"] { border-radius: 10px !important; }
+
+.theme-main {
+  background:
+    linear-gradient(90deg, rgba(2, 8, 12, 0.72), rgba(2, 8, 12, 0.2) 52%, rgba(2, 8, 12, 0.48)),
+    linear-gradient(180deg, rgba(4, 15, 20, 0.22), rgba(2, 7, 11, 0.64));
+}
+
+.theme-topbar {
+  border-bottom-color: rgba(42, 206, 190, 0.46);
+  background:
+    linear-gradient(102deg, rgba(24, 217, 189, 0.12), transparent 22rem),
+    rgba(3, 10, 14, 0.9);
+  box-shadow: inset 0 -1px 0 rgba(111, 255, 231, 0.06), 0 22px 54px -38px #000;
+  backdrop-filter: blur(22px) saturate(1.05);
+}
+
+.theme-topbar::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 184, 77, 0.62), transparent);
+  box-shadow: 0 0 13px rgba(255, 177, 66, 0.34);
+}
+
+.theme-topbar::after {
+  height: 2px;
+  background: linear-gradient(90deg, #84fff0 0 4%, var(--theme-accentStrong) 20%, var(--theme-accent) 62%, transparent);
+  box-shadow: 0 0 18px rgba(24, 217, 189, 0.62);
+}
+
+.theme-sidebar {
+  border-right-color: rgba(34, 182, 171, 0.52);
+  background:
+    linear-gradient(180deg, rgba(24, 217, 189, 0.085), transparent 13rem),
+    linear-gradient(103deg, rgba(7, 20, 26, 0.98), rgba(2, 9, 13, 0.98) 72%);
+  box-shadow: inset -1px 0 0 rgba(107, 255, 234, 0.04), 18px 0 60px -42px #000;
+  backdrop-filter: blur(24px) saturate(1.02);
+}
+
+.theme-sidebar::before {
+  background: linear-gradient(180deg, transparent, #57ffe5 28%, #138d85 72%, transparent);
+  box-shadow: 0 0 12px rgba(24, 217, 189, 0.58);
+}
+
+.theme-sidebar::after {
+  background: linear-gradient(180deg, #58ffe3, #18d9bd 9rem, rgba(8, 101, 95, 0.48) 24rem, transparent 72%);
+  box-shadow: 0 0 16px rgba(24, 217, 189, 0.32);
+}
+
+.theme-sidebar-header {
+  border-bottom-color: rgba(22, 83, 91, 0.76);
+  background: linear-gradient(135deg, rgba(24, 217, 189, 0.07), transparent 42%), rgba(3, 12, 16, 0.92);
+}
+
+.theme-logo-tile {
+  color: var(--theme-accentStrong);
+  border-color: rgba(88, 255, 227, 0.62);
+  background: linear-gradient(145deg, rgba(24, 217, 189, 0.22), rgba(5, 30, 34, 0.34) 52%, rgba(2, 9, 13, 0.98));
+  box-shadow: inset 3px 0 0 rgba(88, 255, 227, 0.78), inset 0 -8px 20px rgba(24, 217, 189, 0.07), 0 0 24px -8px rgba(24, 217, 189, 0.66);
+}
+
+.theme-search-shell {
+  border-color: rgba(25, 86, 94, 0.8);
+  background: linear-gradient(90deg, rgba(24, 217, 189, 0.065), transparent 42%), rgba(3, 12, 16, 0.9) !important;
+  box-shadow: inset 3px 0 0 rgba(8, 101, 95, 0.84);
+}
+
+.theme-nav-item[aria-current="page"] {
+  border-left-color: var(--theme-accentStrong);
+  background: linear-gradient(90deg, rgba(24, 217, 189, 0.24), rgba(6, 73, 70, 0.12) 64%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--theme-accentStrong), inset 0 -1px 0 rgba(88, 255, 227, 0.28), 0 0 22px -15px rgba(24, 217, 189, 0.82) !important;
+  clip-path: none;
+}
+
+.theme-nav-section[aria-expanded="true"] {
+  border-color: rgba(31, 154, 145, 0.62) !important;
+  background: linear-gradient(105deg, rgba(9, 86, 83, 0.3), transparent 72%), rgba(8, 27, 32, 0.82) !important;
+}
+
+.theme-panel,
+.theme-stat-card {
+  --plate-accent: var(--theme-accent);
+  border-color: rgba(24, 83, 92, 0.84);
+  border-radius: 10px !important;
+  background:
+    linear-gradient(132deg, rgba(24, 217, 189, 0.075), transparent 17rem),
+    linear-gradient(180deg, rgba(9, 25, 31, 0.94), rgba(3, 12, 17, 0.9));
+  box-shadow: inset 0 1px 0 rgba(207, 255, 249, 0.045), inset 3px 0 0 rgba(11, 90, 87, 0.5), 0 24px 58px -42px #000;
+  backdrop-filter: blur(14px) saturate(1.02);
+  clip-path: none;
+}
+
+.theme-panel::after,
+.theme-stat-card::after {
+  background:
+    linear-gradient(140deg, transparent 0 48%, rgba(88, 255, 227, 0.1) 49% 50%, transparent 51%),
+    linear-gradient(165deg, transparent 0 69%, rgba(24, 217, 189, 0.14) 70% 71%, transparent 72%);
+}
+
+.theme-panel:hover,
+.theme-stat-card:hover {
+  border-color: rgba(39, 185, 174, 0.78);
+  box-shadow: inset 0 1px 0 rgba(226, 255, 252, 0.055), inset 3px 0 0 rgba(24, 217, 189, 0.64), 0 28px 66px -44px #000;
+}
+
+.theme-panel-header {
+  border-bottom-color: rgba(24, 77, 86, 0.82) !important;
+  background: linear-gradient(102deg, rgba(24, 217, 189, 0.105), transparent 13rem), linear-gradient(180deg, rgba(5, 18, 23, 0.78), rgba(3, 12, 16, 0.62));
+}
+
+.theme-panel-header::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 184, 77, 0.58));
+  box-shadow: 0 0 10px rgba(255, 177, 69, 0.22);
+}
+
+.theme-player-card,
+.theme-podium-card,
+.theme-party-card,
+.theme-source-card,
+.theme-roster-player {
+  --player-glow: var(--theme-accent);
+  border-color: rgba(24, 79, 87, 0.84);
+  border-radius: 9px !important;
+  background: linear-gradient(125deg, color-mix(in srgb, var(--player-glow) 10%, transparent), transparent 44%), rgba(5, 18, 23, 0.94);
+  box-shadow:
+    inset 3px 0 0 color-mix(in srgb, var(--player-glow) 54%, transparent),
+    inset 0 1px 0 rgba(213, 255, 249, 0.04),
+    0 15px 28px -24px color-mix(in srgb, var(--player-glow) 72%, transparent),
+    0 20px 48px -38px #000;
+  clip-path: none;
+  backdrop-filter: blur(12px) saturate(1.02);
+}
+
+.theme-player-card::before,
+.theme-podium-card::before,
+.theme-party-card::before,
+.theme-roster-player::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  left: 12%;
+  right: 12%;
+  bottom: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--player-glow) 22%, var(--player-glow) 78%, transparent);
+  box-shadow: 0 2px 13px 2px color-mix(in srgb, var(--player-glow) 46%, transparent);
+  opacity: 0.78;
+  pointer-events: none;
+}
+
+.theme-player-card::after,
+.theme-podium-card::after,
+.theme-party-card::after {
+  border-top-color: color-mix(in srgb, var(--player-glow) 58%, transparent);
+  background: linear-gradient(225deg, color-mix(in srgb, var(--player-glow) 18%, transparent), transparent 48%);
+}
+
+.theme-player-card:hover,
+.theme-podium-card:hover,
+.theme-party-card:hover,
+.theme-roster-player:hover {
+  border-color: color-mix(in srgb, var(--player-glow) 58%, var(--theme-border));
+  box-shadow:
+    inset 3px 0 0 var(--player-glow),
+    0 18px 34px -24px color-mix(in srgb, var(--player-glow) 82%, transparent),
+    0 24px 54px -38px #000;
+}
+
+.neon-offense { --player-glow: #ffad45; --plate-accent: #ffad45; }
+.neon-healing { --player-glow: #51edab; --plate-accent: #51edab; }
+.neon-barrier { --player-glow: #4dc8ff; --plate-accent: #4dc8ff; }
+.neon-control { --player-glow: #a882ff; --plate-accent: #a882ff; }
+.neon-survival { --player-glow: #6f9eff; --plate-accent: #6f9eff; }
+
+.theme-quiet-button,
+.theme-status-pill,
+.theme-filter-button {
+  border-color: rgba(25, 79, 88, 0.84);
+  border-radius: 6px !important;
+  background: linear-gradient(105deg, rgba(24, 217, 189, 0.055), transparent 65%), rgba(3, 12, 16, 0.9);
+  clip-path: none;
+}
+
+.theme-quiet-button:hover,
+.theme-filter-button:hover,
+.theme-filter-button.is-active {
+  border-color: rgba(88, 255, 227, 0.68);
+  background: linear-gradient(105deg, rgba(24, 217, 189, 0.18), transparent 76%), rgba(5, 20, 25, 0.96);
+  box-shadow: inset 2px 0 0 var(--theme-accentStrong), 0 0 20px -13px rgba(24, 217, 189, 0.76);
+}
+
+.theme-table-shell {
+  border-radius: 8px;
+  border-color: rgba(24, 73, 82, 0.84);
+  background: rgba(2, 10, 14, 0.86);
+  box-shadow: inset 3px 0 0 rgba(8, 101, 95, 0.5), inset 0 1px 0 rgba(205, 255, 248, 0.025);
+  clip-path: none;
+}
+
+.theme-app-shell .animate-view table thead,
+.theme-table-head {
+  background: linear-gradient(90deg, rgba(24, 217, 189, 0.11), transparent 42%), rgba(4, 16, 21, 0.96);
+  color: var(--theme-textMuted);
+}
+
+.theme-table-row,
+.theme-app-shell .animate-view table tbody tr { border-color: rgba(22, 69, 77, 0.44) !important; }
+
+.theme-table-row:hover,
+.theme-app-shell .animate-view table tbody tr:hover {
+  background: linear-gradient(90deg, rgba(24, 217, 189, 0.11), rgba(7, 70, 68, 0.035) 72%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--theme-accentStrong);
+}
+
+.theme-chart-stage {
+  border-radius: 8px;
+  border-color: rgba(24, 79, 87, 0.88);
+  background:
+    radial-gradient(circle at 72% 28%, rgba(24, 217, 189, 0.065), transparent 28%),
+    linear-gradient(rgba(24, 89, 94, 0.25) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(24, 89, 94, 0.2) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(7, 24, 29, 0.94), rgba(2, 10, 14, 0.96));
+  background-size: auto, 32px 32px, 32px 32px, auto;
+  box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.58), inset 3px 0 0 rgba(8, 101, 95, 0.48);
+  clip-path: none;
+}
+
+.theme-kdr-strip,
+.theme-recap-panel,
+.theme-modal,
+.theme-import-console,
+.theme-ingress-console {
+  border-radius: 10px !important;
+  clip-path: none;
+}
+
+.theme-kdr-strip {
+  border-color: rgba(24, 82, 91, 0.86) !important;
+  background: rgba(8, 49, 53, 0.42) !important;
+  box-shadow: inset 4px 0 0 rgba(24, 217, 189, 0.54), 0 22px 54px -42px #000;
+}
+
+.theme-kdr-strip::before {
+  background: linear-gradient(90deg, var(--theme-accentStrong), var(--theme-accent), transparent);
+  box-shadow: 0 0 14px rgba(24, 217, 189, 0.5);
+}
+
+.theme-kdr-stat {
+  background: linear-gradient(135deg, rgba(24, 217, 189, 0.07), transparent 64%), rgba(3, 13, 17, 0.9) !important;
+}
+
+.theme-kdr-stat:nth-child(even) {
+  background: linear-gradient(135deg, rgba(255, 171, 69, 0.065), transparent 64%), rgba(3, 13, 17, 0.9) !important;
+}
+
+.theme-recap-panel {
+  border-color: rgba(255, 184, 77, 0.48) !important;
+  background: linear-gradient(108deg, rgba(255, 171, 69, 0.12), transparent 38%), linear-gradient(90deg, rgba(5, 17, 22, 0.96), rgba(4, 15, 20, 0.86) 58%, rgba(4, 15, 20, 0.42)) !important;
+  box-shadow: inset 4px 0 0 var(--theme-warning), 0 24px 58px -42px #000;
+}
+
+/* Landing instrumentation */
+.theme-cinematic-landing::before {
+  background: radial-gradient(circle at 45% 37%, rgba(24, 217, 189, 0.12), transparent 18%), linear-gradient(90deg, rgba(2, 8, 12, 0.94), rgba(3, 13, 17, 0.54) 42%, rgba(3, 13, 17, 0.16) 68%, rgba(2, 8, 12, 0.78));
+}
+
+.theme-cinematic-landing::after {
+  background: linear-gradient(90deg, transparent 3%, rgba(24, 104, 107, 0.24) 24%, rgba(24, 217, 189, 0.78) 52%, rgba(255, 171, 69, 0.24) 82%, transparent 97%);
+  box-shadow: 0 0 36px rgba(24, 217, 189, 0.26);
+}
+
+.theme-cinematic-scanline { opacity: 0.14; background: repeating-linear-gradient(180deg, transparent 0 5px, rgba(118, 255, 234, 0.025) 5px 6px); }
+.theme-cinematic-kicker { color: var(--theme-textMuted); }
+.theme-cinematic-signal { background: var(--theme-accentStrong); box-shadow: 0 0 12px rgba(24, 217, 189, 0.88); }
+.theme-cinematic-mark { color: var(--theme-accentStrong); border-color: rgba(88, 255, 227, 0.44); background: rgba(3, 14, 18, 0.54); box-shadow: inset 0 0 25px rgba(24, 217, 189, 0.08), 0 0 35px -18px rgba(24, 217, 189, 0.9); }
+.theme-cinematic-wordmark { color: var(--theme-text); text-shadow: 0 2px 0 #06191c, 0 0 36px rgba(24, 217, 189, 0.18), 0 20px 50px rgba(0, 0, 0, 0.82); }
+.theme-cinematic-declaration { color: #d8f4f4; }
+.theme-cinematic-support { color: var(--theme-textMuted); }
+.theme-cinematic-readouts { border-top-color: rgba(24, 95, 100, 0.62); }
+.theme-cinematic-readouts > div { border-right-color: rgba(24, 75, 82, 0.46); }
+.theme-cinematic-readouts span { color: var(--theme-accentStrong); }
+.theme-cinematic-readouts strong { color: var(--theme-textMuted); }
+
+.theme-ingress-console {
+  border-color: rgba(24, 84, 93, 0.88);
+  background: linear-gradient(132deg, rgba(24, 217, 189, 0.075), transparent 25%), rgba(2, 10, 14, 0.9);
+  box-shadow: inset 4px 0 0 rgba(8, 101, 95, 0.72), 0 34px 90px -48px #000;
+}
+
+.theme-ingress-console::before { background: linear-gradient(90deg, transparent, var(--theme-accentStrong), transparent); box-shadow: 0 0 16px rgba(24, 217, 189, 0.58); }
+.theme-ingress-header { border-bottom-color: rgba(24, 72, 80, 0.58); }
+.theme-ingress-header span { color: var(--theme-textFaint); }
+.theme-ingress-header strong { color: var(--theme-text); }
+.theme-ingress-status { color: var(--theme-textMuted); }
+.theme-ingress-status i { background: var(--theme-accentStrong); box-shadow: 0 0 10px rgba(24, 217, 189, 0.88); }
+.theme-saved-report-gate { border-top-color: rgba(24, 72, 80, 0.48); }
+.theme-saved-report-gate summary { color: var(--theme-textMuted); }
+.theme-saved-report-gate summary:hover { color: var(--theme-accentStrong); }
+
+/* Builder workbench */
+.theme-builder-root { --builder-line: rgba(24, 89, 96, 0.76); --builder-plate: rgba(3, 13, 17, 0.94); }
+.theme-builder-command-deck,
+.theme-builder-workspace,
+.theme-builder-boon-coverage,
+.theme-builder-readiness,
+.theme-builder-inspector,
+.theme-builder-code-output {
+  border-color: rgba(24, 87, 95, 0.86);
+  border-left-color: var(--theme-accent);
+  border-radius: 10px;
+  background: linear-gradient(105deg, rgba(24, 217, 189, 0.11), transparent 31%), linear-gradient(178deg, rgba(7, 23, 28, 0.98), rgba(2, 10, 14, 0.97));
+  box-shadow: inset 0 1px 0 rgba(199, 255, 247, 0.05), inset 3px 0 0 rgba(8, 101, 95, 0.58), 0 28px 68px -48px #000;
+  clip-path: none;
+}
+
+.theme-builder-command-deck::after { color: rgba(88, 255, 227, 0.26); }
+.theme-builder-mark { color: var(--theme-accentStrong); border-color: rgba(88, 255, 227, 0.5); background: linear-gradient(145deg, rgba(24, 217, 189, 0.2), rgba(3, 16, 20, 0.9)); box-shadow: inset 3px 0 0 rgba(88, 255, 227, 0.62), 0 0 28px -14px var(--theme-accent); clip-path: none; border-radius: 8px; }
+.theme-builder-title-block h2,
+.theme-builder-section-head h3,
+.theme-builder-workspace h3,
+.theme-builder-inspector h3 { color: var(--theme-text); }
+.theme-builder-title-block p,
+.theme-builder-inspector p { color: var(--theme-textMuted); }
+.theme-builder-kicker,
+.theme-builder-label { color: color-mix(in srgb, var(--theme-accentStrong) 66%, var(--theme-textMuted)); }
+
+.theme-builder-tabs { border-color: rgba(24, 76, 84, 0.86); border-radius: 8px; background: rgba(2, 11, 15, 0.95); }
+.theme-builder-tabs > button { border-right-color: rgba(24, 70, 77, 0.72); color: var(--theme-textMuted); }
+.theme-builder-tabs > button strong { border-color: rgba(24, 89, 96, 0.72); color: var(--theme-textMuted); }
+.theme-builder-tabs > button.is-active { color: var(--theme-text); background: linear-gradient(90deg, rgba(24, 217, 189, 0.24), rgba(5, 65, 64, 0.1)); box-shadow: inset 3px 0 0 var(--theme-accentStrong), inset 0 -2px 0 rgba(88, 255, 227, 0.54); }
+.theme-builder-mode-switch button { color: var(--theme-textFaint); }
+.theme-builder-mode-switch button.is-active { color: var(--theme-warning); background: rgba(255, 171, 69, 0.13); }
+
+.theme-builder-import-rack,
+.theme-builder-spec-line,
+.theme-builder-skill-slot,
+.theme-builder-library-row,
+.theme-builder-party-line,
+.theme-builder-boon-grid > div {
+  border-color: rgba(24, 75, 83, 0.78);
+  background: linear-gradient(100deg, rgba(24, 217, 189, 0.055), transparent 70%), rgba(2, 11, 15, 0.82);
+}
+
+.theme-builder-input,
+.theme-builder-import-rack textarea,
+.theme-builder-notes,
+.theme-builder-search {
+  border-color: rgba(24, 78, 86, 0.82);
+  border-radius: 6px !important;
+  background: rgba(2, 10, 14, 0.9);
+  color: var(--theme-text);
+}
+
+.theme-builder-input:focus,
+.theme-builder-import-rack textarea:focus,
+.theme-builder-notes:focus { border-color: rgba(88, 255, 227, 0.82); box-shadow: inset 2px 0 0 var(--theme-accentStrong), 0 0 18px -13px var(--theme-accent); }
+.theme-builder-input option,
+.theme-builder-party-slots option { background: var(--theme-surfaceInset); color: var(--theme-text); }
+
+.theme-builder-professions button { border-color: rgba(24, 73, 81, 0.76); border-radius: 7px; background: rgba(2, 11, 15, 0.86); color: var(--theme-textMuted); clip-path: none; }
+.theme-builder-professions button.is-active { border-color: rgba(88, 255, 227, 0.76); color: var(--theme-text); background: linear-gradient(145deg, rgba(24, 217, 189, 0.22), rgba(3, 26, 30, 0.92)); box-shadow: inset 2px 0 0 var(--theme-accentStrong), 0 8px 24px -18px var(--theme-accent); }
+.theme-builder-trait-tier button { border-color: rgba(24, 73, 81, 0.76); background: var(--theme-surfaceInset); }
+.theme-builder-trait-tier button.is-active { border-color: var(--theme-accentStrong); box-shadow: 0 0 15px -7px var(--theme-accent), inset 0 0 0 1px rgba(210, 255, 249, 0.3); }
+.theme-builder-equipment-group { border-left-color: rgba(24, 217, 189, 0.52); background: rgba(2, 11, 15, 0.66); }
+.theme-builder-progress { background: #062126; }
+.theme-builder-progress i { background: linear-gradient(90deg, #08655f, #58ffe3); box-shadow: 0 0 12px var(--theme-accent); }
+.theme-builder-readiness-score strong,
+.theme-builder-squad-readout strong { color: var(--theme-warning); }
+.theme-builder-party-slots label { border-color: rgba(24, 75, 83, 0.74); }
+.theme-builder-party-slots label.is-filled { border-color: rgba(88, 255, 227, 0.66); background: linear-gradient(100deg, rgba(24, 217, 189, 0.13), transparent); }
+.theme-builder-add-line,
+.theme-builder-link { border-color: rgba(24, 82, 90, 0.76); color: var(--theme-accentStrong); }
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-player-card,
+  .theme-podium-card,
+  .theme-party-card,
+  .theme-roster-player { transition: none; }
+}

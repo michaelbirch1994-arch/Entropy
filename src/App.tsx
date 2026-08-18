@@ -38,7 +38,7 @@ import AxiForgeLabView from "./views/AxiForgeLabView";
 import { downloadReportArtifact } from "./lib/shareReportArtifact";
 import { buildEntropyShareLink } from "./lib/shareLinks";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
-import { Activity, BrainCircuit, CircleAlert as AlertCircle, FileQuestionMark as FileQuestion, FlaskConical, Link2, MessageCircle, Send, Upload, X } from "lucide-react";
+import { Activity, CircleAlert as AlertCircle, FlaskConical, Link2, MessageCircle, Send, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
 import RawLogImporter from "./components/ui/RawLogImporter";
@@ -222,7 +222,7 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
       </section>
 
       <div className="theme-cinematic-horizon" aria-hidden="true">
-        <span>Evidence survives the burn</span>
+        <span>Signal survives the noise</span>
       </div>
     </div>
   );

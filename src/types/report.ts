@@ -369,6 +369,16 @@ export interface TopSkill {
     hits: number;
     downContribution: number;
     biggestHit?: { value: number; account: string; profession: string } | null;
+    /** Number of fights in which this skill recorded damage, hits, or down contribution. */
+  fightCount?: number;
+    /** Distinct squad players who contributed this outgoing skill, or were affected by this incoming skill. */
+  playerCount?: number;
+    /** Per-fight squad total among fights where the skill appeared. */
+  perFightMin?: number;
+    /** Per-fight squad average among fights where the skill appeared. */
+  perFightAverage?: number;
+    /** Per-fight squad maximum among fights where the skill appeared. */
+  perFightMax?: number;
 }
 
 export interface CommanderRow {
@@ -647,8 +657,18 @@ export interface TopHealingSource {
     healing: number;
     hits: number;
     /** True when this source is a trait/buff-triggered conversion heal (EI's IndirectHealing) rather than a directly-cast skill. */
-  isTrait: boolean;
+    isTrait: boolean;
     biggestHit?: { value: number; account: string; profession: string } | null;
+    /** Number of fights in which this healing source was observed. */
+  fightCount?: number;
+    /** Distinct squad players who produced this healing source. */
+  playerCount?: number;
+    /** Per-fight squad total among fights where the source appeared. */
+  perFightMin?: number;
+    /** Per-fight squad average among fights where the source appeared. */
+  perFightAverage?: number;
+    /** Per-fight squad maximum among fights where the source appeared. */
+  perFightMax?: number;
 }
 
 export interface TopBarrierSource {

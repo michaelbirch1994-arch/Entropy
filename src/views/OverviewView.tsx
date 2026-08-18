@@ -7,6 +7,7 @@ import { generateFightRecap } from "../lib/generateFightRecap";
 import RecapPanel from "../components/ui/RecapPanel";
 import SynergyPanel from "../components/ui/SynergyPanel";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
+import { useView } from "../store/ViewContext";
 
 const ACCENT_STYLES = {
   amber: {
@@ -33,12 +34,13 @@ const ACCENT_STYLES = {
   },
 } as const;
 
-function MvpBlock({ mvp, silver, bronze, accent = "amber", label }: {
+function MvpBlock({ mvp, silver, bronze, accent = "amber", label, onOpen }: {
   mvp: MvpCard;
   silver: MvpCard;
   bronze: MvpCard;
   accent: "amber" | "teal";
   label: string;
+  onOpen: () => void;
 }) {
   const a = ACCENT_STYLES[accent];
   const score = mvp.score ?? 0;
@@ -79,11 +81,14 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label }: {
   };
 
   return (
-    <motion.div
+    <motion.button
+      type="button"
+      onClick={onOpen}
+      aria-label={`View Top Players for ${label}`}
       initial={{ opacity: 0, y: 16, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.45, ease: "easeOut", delay: accent === "amber" ? 0 : 0.1 }}
-      className={`theme-player-card theme-mvp-card bg-[#0a101f]/55 backdrop-blur-md border rounded-2xl p-5 transition-colors duration-300 flex flex-col ${a.border} ${a.glow}`}
+      className={`theme-player-card theme-mvp-card ${accent === "amber" ? "neon-offense" : "neon-barrier"} w-full cursor-pointer bg-[#0a101f]/55 backdrop-blur-md border rounded-2xl p-5 text-left transition-colors duration-300 flex flex-col focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:ring-offset-2 focus:ring-offset-[#050914] ${a.border} ${a.glow}`}
     >
       <div className={`flex items-center gap-2 ${a.heading} text-[11px] font-black uppercase tracking-widest mb-4`}>
         {accent === "amber" ? <Swords className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
@@ -131,12 +136,13 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label }: {
         {renderMedal(silver, "silver")}
         {renderMedal(bronze, "bronze")}
       </div>
-    </motion.div>
+    </motion.button>
   );
 }
 
 export default function OverviewView() {
   const { report } = useReport();
+  const { setActiveView } = useView();
   if (!report) return null;
   const s = report.stats;
 
@@ -154,14 +160,14 @@ export default function OverviewView() {
   };
 
   const perSecCards = [
-    { label: "Down Contrib /s", value: fmtFixedGrouped(perSec(s.maxDownContrib)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, accent: "text-slate-100" },
-    { label: "Healing /s", value: fmtFixedGrouped(perSec(s.maxHealing)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, accent: "text-slate-100" },
-    { label: "Barrier /s", value: fmtFixedGrouped(perSec(s.maxBarrier)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, accent: "text-slate-100" },
-    { label: "Cleanses /s", value: fmtFixedGrouped(perSec(s.maxCleanses)), icon: <Droplet className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, accent: "text-slate-100" },
-    { label: "Strips /s", value: fmtFixedGrouped(perSec(s.maxStrips)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, accent: "text-slate-100" },
-    { label: "Stability Gen /s", value: fmtFixedGrouped(perSec(s.maxStab)), icon: <Shield className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxStab.player, count: s.maxStab.count, accent: "text-slate-100" },
-    { label: "CC /s", value: fmtFixedGrouped(perSec(s.maxCC)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, accent: "text-slate-100" },
-    { label: "Interrupts /s", value: fmtFixedGrouped(perSec(s.maxInterrupts)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, accent: "text-slate-100" },
+    { label: "Down Contrib /s", value: fmtFixedGrouped(perSec(s.maxDownContrib)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, glow: "neon-offense" },
+    { label: "Healing /s", value: fmtFixedGrouped(perSec(s.maxHealing)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, glow: "neon-healing" },
+    { label: "Barrier /s", value: fmtFixedGrouped(perSec(s.maxBarrier)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, glow: "neon-barrier" },
+    { label: "Cleanses /s", value: fmtFixedGrouped(perSec(s.maxCleanses)), icon: <Droplet className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, glow: "neon-barrier" },
+    { label: "Strips /s", value: fmtFixedGrouped(perSec(s.maxStrips)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, glow: "neon-control" },
+    { label: "Stability Gen /s", value: fmtFixedGrouped(perSec(s.maxStab)), icon: <Shield className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxStab.player, count: s.maxStab.count, glow: "neon-control" },
+    { label: "CC /s", value: fmtFixedGrouped(perSec(s.maxCC)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, glow: "neon-control" },
+    { label: "Interrupts /s", value: fmtFixedGrouped(perSec(s.maxInterrupts)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, glow: "neon-control" },
   ];
 
   const recap = generateFightRecap(s);
@@ -197,20 +203,23 @@ export default function OverviewView() {
 
       {/* MVP cards */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <MvpBlock mvp={s.offensiveMvp} silver={s.offensiveSilver} bronze={s.offensiveBronze} accent="amber" label="Offensive MVP" />
-        <MvpBlock mvp={s.defensiveMvp} silver={s.defensiveSilver} bronze={s.defensiveBronze} accent="teal" label="Defensive MVP" />
+        <MvpBlock mvp={s.offensiveMvp} silver={s.offensiveSilver} bronze={s.offensiveBronze} accent="amber" label="Offensive MVP" onOpen={() => setActiveView("top-players")} />
+        <MvpBlock mvp={s.defensiveMvp} silver={s.defensiveSilver} bronze={s.defensiveBronze} accent="teal" label="Defensive MVP" onOpen={() => setActiveView("top-players")} />
       </div>
 
       {/* Metrics grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {perSecCards.map((c, i) => (
-          <motion.div
+          <motion.button
+            type="button"
+            onClick={() => setActiveView("top-players")}
+            aria-label={`View Top Players for ${c.label}`}
             key={c.label}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: 0.15 + i * 0.04 }}
             whileHover={{ y: -2 }}
-            className="theme-stat-card theme-metric-card bg-[#0a101f]/90 border border-slate-800/80 p-4 rounded-2xl shadow-lg hover:border-slate-700 transition-colors flex flex-col justify-between"
+            className={`theme-stat-card theme-metric-card ${c.glow} cursor-pointer bg-[#0a101f]/90 border border-slate-800/80 p-4 rounded-2xl text-left shadow-lg hover:border-slate-700 transition-colors flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:ring-offset-2 focus:ring-offset-[#050914]`}
           >
             <div>
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
@@ -223,7 +232,7 @@ export default function OverviewView() {
               <span className="text-sky-400 font-bold truncate">{c.player}</span>
               <span className="text-slate-500 font-mono">{c.count} logs</span>
             </div>
-          </motion.div>
+          </motion.button>
         ))}
       </div>
     </div>

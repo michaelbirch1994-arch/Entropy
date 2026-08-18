@@ -108,4 +108,15 @@ describe("computeTopHealingSkills cross-map lookup (Replenishing Despair / Life 
     expect(entry?.icon).toBe("life-siphon.png");
     expect(entry?.healing).toBe(8100);
   });
+
+  it("records fight coverage, contributors, and a per-fight healing range", () => {
+    const combined = buildReportFromFights([makeFight(), makeFight()]);
+    const entry = combined.stats.topHealingSkills?.find((source) => source.id === LIFE_SIPHON_SKILL_ID);
+    expect(entry).toBeTruthy();
+    expect(entry?.fightCount).toBe(2);
+    expect(entry?.playerCount).toBe(1);
+    expect(entry?.perFightMin).toBe(8100);
+    expect(entry?.perFightAverage).toBe(8100);
+    expect(entry?.perFightMax).toBe(8100);
+  });
 });

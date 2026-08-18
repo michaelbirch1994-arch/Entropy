@@ -687,7 +687,7 @@ export default function AxiForgeLabView() {
       <header className="theme-builder-command-deck">
         <div className="theme-builder-title-block">
           <div className="theme-builder-mark"><Wrench className="h-6 w-6" /></div>
-          <div><div className="theme-builder-kicker">Scorched Earth loadout workshop</div><h2>Entropy Builder</h2><p>Construct, verify, archive, and organize Guild Wars 2 squad doctrine.</p></div>
+          <div><div className="theme-builder-kicker">Neon systems loadout workshop</div><h2>Entropy Builder</h2><p>Construct, verify, archive, and organize Guild Wars 2 squad doctrine.</p></div>
         </div>
         <div className="theme-builder-command-actions">
           <button type="button" onClick={() => setImportOpen((open) => !open)} className="theme-command-button"><Download className="h-4 w-4" /> Import</button>
