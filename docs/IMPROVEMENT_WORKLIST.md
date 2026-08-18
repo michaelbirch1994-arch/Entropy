@@ -23,7 +23,9 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 ## P1 — Participation and statistical context
 
 - [x] Add active combat time, fights participated, total fights, and participation percentage to Squad Roster Overview.
-- [ ] Extend the same participation context to other player and skill tables where sample size changes interpretation.
+- [x] Add fights joined, session coverage, active combat time, and sample-reliability labels to Top Players.
+- [x] Add fight coverage, contributor counts, per-fight ranges, and low-sample warnings to Top Skills and Healing Sources.
+- [ ] Extend the same participation context to the remaining player tables where sample size changes interpretation.
 - [ ] Base rate metrics on the appropriate active/combat duration.
 - [ ] Flag low-duration and low-fight samples instead of presenting them as equally reliable.
 - [ ] Hide unsupported Siege/NPC Damage and other permanently empty columns.
@@ -61,7 +63,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 
 ## P2 — Top Skills context
 
-- [ ] Add minimum, average, maximum, and sample size where meaningful.
+- [x] Add minimum, average, maximum, and sample size where meaningful.
 - [ ] Expose the player, fight, and event context behind extremes.
 - [ ] Prefer ranked extremes when a single outlier would be misleading.
 - [ ] Include combat-time and participation context in skill comparisons.
