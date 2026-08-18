@@ -47,7 +47,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 
 ## P2 — Interaction and workflow
 
-- [ ] Make Overview cards real, keyboard-accessible navigation targets or remove button-like hover treatment.
+- [x] Make Overview cards real, keyboard-accessible navigation targets or remove button-like hover treatment. MVP and per-second metric cards now navigate to Top Players with native button semantics, visible focus treatment, and accessible labels.
 - [ ] Standardize pointer cursors and visible focus states for interactive elements.
 - [ ] Add Reload Current, Replace Logs, Add Logs, and Clear Logs actions while preserving drag-and-drop ingestion.
 - [ ] Keep the web ingestion path as direct as the desktop path.
