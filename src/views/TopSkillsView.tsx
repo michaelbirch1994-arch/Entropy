@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useReport } from "../store/ReportContext";
 import { fmtCompact, fmtNum } from "../utils/format";
 import type { TopSkill, TopHealingSource } from "../types/report";
+import { getSampleReliability, sampleReliabilityClasses } from "../lib/sampleReliability";
 import { Zap, ArrowDownLeft, Flame, Trophy, HeartPulse } from "lucide-react";
 
 type SortKey = "damage" | "downContribution" | "hits";
@@ -111,6 +112,61 @@ function buildHealingById(healingSources: TopHealingSource[]) {
   }
 
   return byId;
+}
+
+type SkillSample = Pick<TopSkill, "fightCount" | "playerCount" | "perFightMin" | "perFightAverage" | "perFightMax">;
+
+function SkillSampleContext({
+  sample,
+  totalFights,
+  playerLabel,
+}: {
+  sample: SkillSample;
+  totalFights: number;
+  playerLabel: string;
+}) {
+  if (sample.fightCount === undefined) {
+    return (
+      <div className="mt-2 text-[9px] font-mono text-slate-600" title="Re-import the logs to calculate skill sample coverage.">
+        Sample context unavailable for this archived report
+      </div>
+    );
+  }
+
+  const reliability = getSampleReliability(sample.fightCount, totalFights);
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] font-mono text-slate-500">
+      <span>{sample.fightCount}/{totalFights} fights</span>
+      <span>·</span>
+      <span>{sample.playerCount ?? 0} {playerLabel}</span>
+      <span
+        className={`rounded-full border px-1.5 py-0.5 font-bold ${sampleReliabilityClasses(reliability.level)}`}
+        title={reliability.detail}
+      >
+        {reliability.label}
+      </span>
+    </div>
+  );
+}
+
+function PerFightRange({ sample, label }: { sample: SkillSample; label: string }) {
+  if (sample.fightCount === undefined || sample.fightCount <= 0) return null;
+  return (
+    <div className="mt-2 grid grid-cols-3 gap-2 rounded-lg border border-slate-800/60 bg-slate-950/30 p-2 text-center">
+      <div>
+        <div className="text-[8px] uppercase tracking-wider text-slate-600">Min {label}</div>
+        <div className="mt-0.5 font-bold text-slate-300">{fmtCompact(sample.perFightMin ?? 0)}</div>
+      </div>
+      <div>
+        <div className="text-[8px] uppercase tracking-wider text-slate-600">Avg {label}</div>
+        <div className="mt-0.5 font-bold text-sky-300">{fmtCompact(sample.perFightAverage ?? 0)}</div>
+      </div>
+      <div>
+        <div className="text-[8px] uppercase tracking-wider text-slate-600">Max {label}</div>
+        <div className="mt-0.5 font-bold text-amber-300">{fmtCompact(sample.perFightMax ?? 0)}</div>
+      </div>
+    </div>
+  );
 }
 
 // Skills/traits/relics/sigils that GW2 actually classifies as life stealing
@@ -318,10 +374,12 @@ export default function TopSkillsView() {
             {sortedHealing.slice(0, 20).map((hs, i) => {
               const activeValue = metricValueForHealing(hs, sort);
               return (
-                <div
+                <button
+                  type="button"
                   key={`healing:${sort}:${hs.isTrait ? "trait" : "skill"}:${hs.id}:${hs.name}:${hs.healing}:${hs.hits}`}
-              onClick={() => setExpandedKey(expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}` ? null : `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}`)}
-              className="bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg hover:border-slate-700 transition-all cursor-pointer"
+                  onClick={() => setExpandedKey(expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}` ? null : `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}`)}
+                  aria-expanded={expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}`}
+                  className="w-full bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 text-left shadow-lg hover:border-slate-700 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500/40"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -338,6 +396,7 @@ export default function TopSkillsView() {
                           </span>
                         </div>
                         <div className="text-[10px] text-slate-500 font-mono">{fmtNum(hs.hits)} hits</div>
+                        <SkillSampleContext sample={hs} totalFights={s.total} playerLabel="contributors" />
                       </div>
                     </div>
                     <span className={`text-xs font-black font-mono ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>
@@ -366,9 +425,10 @@ export default function TopSkillsView() {
                     ) : (
                       <span className="text-slate-600">No single-hit data available</span>
                     )}
+                    <PerFightRange sample={hs} label="healing" />
                   </div>
                 )}
-                </div>
+                </button>
               );
             })}
           </div>
@@ -431,10 +491,12 @@ export default function TopSkillsView() {
           const healingMatch = tab === "outgoing" ? healingById.get(sk.id) : undefined;
           const activeValue = metricValueForSkill(sk, sort);
           return (
-            <div
+            <button
+              type="button"
               key={`${tab}:${sort}:${sk.id}:${sk.name}:${sk.damage}:${sk.downContribution}:${sk.hits}`}
               onClick={() => setExpandedKey(expandedKey === `${tab}:${sk.id}` ? null : `${tab}:${sk.id}`)}
-              className="bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 shadow-lg hover:border-slate-700 transition-all cursor-pointer"
+              aria-expanded={expandedKey === `${tab}:${sk.id}`}
+              className="w-full bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 text-left shadow-lg hover:border-slate-700 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500/40"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -449,6 +511,11 @@ export default function TopSkillsView() {
                       )}
                     </div>
                     <div className="text-[10px] text-slate-500 font-mono">{fmtNum(sk.hits)} hits</div>
+                    <SkillSampleContext
+                      sample={sk}
+                      totalFights={s.total}
+                      playerLabel={tab === "incoming" ? "players affected" : "contributors"}
+                    />
                   </div>
                 </div>
                 <span className={`text-xs font-black font-mono ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>
@@ -519,9 +586,10 @@ export default function TopSkillsView() {
                     ) : (
                       <span className="text-slate-600">No single-hit data available</span>
                     )}
+                    <PerFightRange sample={sk} label="damage" />
                   </div>
                 )}
-            </div>
+            </button>
           );
         })}
       </div>

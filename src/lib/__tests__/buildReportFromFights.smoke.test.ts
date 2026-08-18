@@ -55,6 +55,47 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  }
            });
 
+           it('records fight coverage, contributors, and per-fight range for Top Skills', () => {
+                 const firstRaw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const secondRaw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const firstPlayer = (firstRaw.players ?? []).find((p: any) => !p.notInSquad) as any;
+                 const secondPlayer = (secondRaw.players ?? []).find((p: any) => p.account === firstPlayer?.account) as any;
+                 expect(firstPlayer).toBeTruthy();
+                 expect(secondPlayer).toBeTruthy();
+
+                 const sampleSkillId = 8765432;
+                 (firstRaw as any).skillMap = {
+                         ...(firstRaw as any).skillMap,
+                         [`s${sampleSkillId}`]: { name: 'Sample Context Strike' },
+                 };
+                 (secondRaw as any).skillMap = {
+                         ...(secondRaw as any).skillMap,
+                         [`s${sampleSkillId}`]: { name: 'Sample Context Strike' },
+                 };
+                 firstPlayer.totalDamageDist = firstPlayer.totalDamageDist ?? [[]];
+                 secondPlayer.totalDamageDist = secondPlayer.totalDamageDist ?? [[]];
+                 firstPlayer.totalDamageDist[0] = [
+                         ...(firstPlayer.totalDamageDist[0] ?? []),
+                         { id: sampleSkillId, totalDamage: 10_000_000, connectedHits: 10, downContribution: 2_000_000, max: 1_000_000 },
+                 ];
+                 secondPlayer.totalDamageDist[0] = [
+                         ...(secondPlayer.totalDamageDist[0] ?? []),
+                         { id: sampleSkillId, totalDamage: 30_000_000, connectedHits: 30, downContribution: 6_000_000, max: 2_000_000 },
+                 ];
+
+                 const combined = buildReportFromFights([
+                         { summary: summarizeRawFight(firstRaw), raw: firstRaw },
+                         { summary: summarizeRawFight(secondRaw), raw: secondRaw },
+                 ]);
+                 const sample = combined.stats.topSkills.find((skill) => skill.id === sampleSkillId);
+                 expect(sample).toBeTruthy();
+                 expect(sample?.fightCount).toBe(2);
+                 expect(sample?.playerCount).toBe(1);
+                 expect(sample?.perFightMin).toBe(10_000_000);
+                 expect(sample?.perFightAverage).toBe(20_000_000);
+                 expect(sample?.perFightMax).toBe(30_000_000);
+           });
+
 
            it('synthesizes Untamed Natural Fortitude damage from Savage Slash hits', () => {
                  const raw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;

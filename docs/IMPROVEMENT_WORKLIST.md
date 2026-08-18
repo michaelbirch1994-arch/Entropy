@@ -23,7 +23,9 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 ## P1 — Participation and statistical context
 
 - [x] Add active combat time, fights participated, total fights, and participation percentage to Squad Roster Overview.
-- [ ] Extend the same participation context to other player and skill tables where sample size changes interpretation.
+- [x] Add fights joined, session coverage, active combat time, and sample-reliability labels to Top Players.
+- [x] Add fight coverage, contributor counts, per-fight ranges, and low-sample warnings to Top Skills and Healing Sources.
+- [ ] Extend the same participation context to the remaining player tables where sample size changes interpretation.
 - [ ] Base rate metrics on the appropriate active/combat duration.
 - [ ] Flag low-duration and low-fight samples instead of presenting them as equally reliable.
 - [ ] Hide unsupported Siege/NPC Damage and other permanently empty columns.
@@ -45,7 +47,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 
 ## P2 — Interaction and workflow
 
-- [ ] Make Overview cards real, keyboard-accessible navigation targets or remove button-like hover treatment.
+- [x] Make Overview cards real, keyboard-accessible navigation targets or remove button-like hover treatment. MVP and per-second metric cards now navigate to Top Players with native button semantics, visible focus treatment, and accessible labels.
 - [ ] Standardize pointer cursors and visible focus states for interactive elements.
 - [ ] Add Reload Current, Replace Logs, Add Logs, and Clear Logs actions while preserving drag-and-drop ingestion.
 - [ ] Keep the web ingestion path as direct as the desktop path.
@@ -53,6 +55,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 ## P2 — Visual polish
 
 - [x] Give Fight Replay enemies stable instance identities, reject implausible position jumps, keep markers screen-sized, and re-center zoom on the commander/squad.
+- [x] Replace the Scorched Earth presentation layer with a graphite mechanical command theme, cyan/teal system accents, amber instrumentation, and metric-aware neon underglows on player cards.
 - [ ] Improve accent foreground contrast and define explicit theme foreground tokens.
 - [ ] Remove fractional/tiny typography and text-container transforms that blur at 1080p.
 - [x] Remove profession-icon clipping, retain normal antialiasing, and optically center glyphs.
@@ -61,7 +64,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 
 ## P2 — Top Skills context
 
-- [ ] Add minimum, average, maximum, and sample size where meaningful.
+- [x] Add minimum, average, maximum, and sample size where meaningful.
 - [ ] Expose the player, fight, and event context behind extremes.
 - [ ] Prefer ranked extremes when a single outlier would be misleading.
 - [ ] Include combat-time and participation context in skill comparisons.

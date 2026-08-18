@@ -6,7 +6,8 @@ import Panel from "../components/ui/Panel";
 import LeaderboardTable from "../components/ui/LeaderboardTable";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 import type { DefensePlayer, HealingPlayer, LeaderboardEntry, OffensePlayer, PlayerSkillBreakdown, SupportPlayer } from "../types/report";
-import { fmtCompact, fmtNum, profChip, profStyle } from "../utils/format";
+import { fmtCompact, fmtDur, fmtNum, profChip, profStyle } from "../utils/format";
+import { getSampleReliability, sampleReliabilityClasses } from "../lib/sampleReliability";
 import { ChevronDown, ChevronUp, Trophy, Swords, Heart, Shield, Zap, Droplet, Target, Wind } from "lucide-react";
 
 type MetricKey =
@@ -38,6 +39,21 @@ const METRICS: { key: MetricKey; label: string; icon: typeof Trophy; unit?: stri
   { key: "kills", label: "Kills", icon: Swords },
 ];
 
+const METRIC_GLOW: Record<MetricKey, string> = {
+  dps: "neon-offense",
+  damage: "neon-offense",
+  downContrib: "neon-offense",
+  healing: "neon-healing",
+  barrier: "neon-barrier",
+  cleanses: "neon-barrier",
+  strips: "neon-control",
+  stability: "neon-control",
+  cc: "neon-control",
+  interrupts: "neon-control",
+  dodges: "neon-survival",
+  kills: "neon-offense",
+};
+
 function formatMetricValue(entry: LeaderboardEntry, unit?: string) {
   if (unit === "") return Math.round(entry.value).toLocaleString();
   return entry.value >= 100000 ? fmtCompact(entry.value) : fmtNum(entry.value);
@@ -61,6 +77,12 @@ type PlayerSourceBreakdown = {
   barrier: SourceRow[];
   support: SourceRow[];
   defense: SourceRow[];
+};
+
+type PlayerSampleContext = {
+  fights: number;
+  totalFights: number;
+  combatTimeMs: number;
 };
 
 function positiveRow(label: string, value: number | undefined, tone: string, icon?: string, hits?: number): SourceRow | null {
@@ -197,8 +219,10 @@ function PlayerMetricCard({
   index,
   max,
   metricLabel,
+  glowClass,
   unit,
   breakdown,
+  sample,
   expanded,
   onToggle,
 }: {
@@ -206,19 +230,22 @@ function PlayerMetricCard({
   index: number;
   max: number;
   metricLabel: string;
+  glowClass: string;
   unit?: string;
   breakdown: PlayerSourceBreakdown;
+  sample: PlayerSampleContext;
   expanded: boolean;
   onToggle: () => void;
 }) {
   const style = profStyle(entry.profession);
   const share = max > 0 ? Math.max(4, (entry.value / max) * 100) : 4;
+  const reliability = getSampleReliability(sample.fights, sample.totalFights);
 
   return (
     <button
       type="button"
       onClick={onToggle}
-      className="theme-player-card rounded-2xl p-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent/40"
+      className={`theme-player-card ${glowClass} rounded-2xl p-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent/40`}
     >
       <div className="theme-player-card-head flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
@@ -244,13 +271,26 @@ function PlayerMetricCard({
               {unit && <span className="ml-1 text-[10px] font-bold text-theme-muted">{unit}</span>}
             </div>
           </div>
-          <div className="text-right text-[10px] font-mono text-theme-muted">{entry.count} logs</div>
+          <div className="text-right text-[10px] font-mono text-theme-muted">
+            {sample.fights}/{sample.totalFights} fights
+          </div>
         </div>
         <div className="theme-progress-track mt-3 h-2 overflow-hidden rounded-full">
           <div className={`theme-progress-fill h-full rounded-full ${style.dot} transition-all duration-500`} style={{ width: `${share}%` }} />
         </div>
         <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-theme-muted">
           Share of current leader
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-mono text-theme-muted">
+          <span>{fmtDur(sample.combatTimeMs)} active</span>
+          <span>·</span>
+          <span>{Math.round(reliability.coverage * 100)}% participation</span>
+          <span
+            className={`rounded-full border px-2 py-0.5 font-bold ${sampleReliabilityClasses(reliability.level)}`}
+            title={reliability.detail}
+          >
+            {reliability.label}
+          </span>
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between border-t border-theme-border/50 pt-3 text-[10px] font-bold uppercase tracking-wider text-theme-accent">
@@ -282,6 +322,8 @@ export default function TopPlayersView() {
   const active = METRICS.find((m) => m.key === metric)!;
   const maxValue = entries.length ? entries[0].value : 1;
   const snapshotKey = leaderboardSnapshotKey(metric, entries);
+  const sampleByAccount = new Map(report.stats.generalPlayers.map((player) => [player.account, player]));
+  const totalFights = report.stats.total;
 
   return (
     // No snapshotKey in this key: that used to force a full unmount/remount
@@ -298,6 +340,7 @@ export default function TopPlayersView() {
           const isActive = metric === m.key;
           return (
             <button
+              type="button"
               key={m.key}
               onClick={() => setMetric(m.key)}
               className={`theme-filter-button flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 border ${
@@ -320,7 +363,7 @@ export default function TopPlayersView() {
           return (
             <div
               key={`${metric}:podium:${e.account}:${e.profession}:${e.rank}:${e.value}`}
-              className={`theme-podium-card is-rank-${place} rounded-2xl p-4 flex items-center gap-4`}
+              className={`theme-podium-card ${METRIC_GLOW[metric]} is-rank-${place} rounded-2xl p-4 flex items-center gap-4`}
             >
               <div className="theme-podium-rank text-3xl font-black font-mono">#{place}</div>
               <div className="flex-1 min-w-0">
@@ -356,7 +399,15 @@ export default function TopPlayersView() {
                 index={index}
                 max={maxValue}
                 metricLabel={active.label}
+                glowClass={METRIC_GLOW[metric]}
                 unit={active.unit}
+                sample={{
+                  fights: sampleByAccount.get(entry.account)?.logsJoined ?? entry.count,
+                  totalFights,
+                  combatTimeMs: sampleByAccount.get(entry.account)?.squadActiveMs
+                    ?? sampleByAccount.get(entry.account)?.totalFightMs
+                    ?? 0,
+                }}
                 expanded={expandedCard === `${metric}:${entry.account}`}
                 onToggle={() => setExpandedCard((current) => current === `${metric}:${entry.account}` ? null : `${metric}:${entry.account}`)}
                 breakdown={buildPlayerSourceBreakdown({
@@ -380,7 +431,13 @@ export default function TopPlayersView() {
 
       {/* Full leaderboard */}
       <Panel title={`${active.label} Leaderboard`} icon={<active.icon className="w-4 h-4" />} accent="text-sky-400">
-        <LeaderboardTable entries={entries} metricLabel={active.label} unit={active.unit} />
+        <LeaderboardTable
+          entries={entries}
+          metricLabel={active.label}
+          unit={active.unit}
+          totalFights={totalFights}
+          generalPlayers={report.stats.generalPlayers}
+        />
       </Panel>
     </div>
   );
