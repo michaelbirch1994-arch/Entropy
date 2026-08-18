@@ -106,12 +106,10 @@ kbd {
   display: block;
   object-fit: contain;
   object-position: center;
-  transform: scale(1.1) translateX(0.03em);
-  transform-origin: center;
   /*
-    Keep normal browser antialiasing for these 384px transparent PNGs. Pixelated
-    / crisp-edge rendering makes small class chips jagged. The glyph is enlarged
-    just enough to use the square frame without clipping its outer strokes.
+    Keep normal browser antialiasing and render directly at the requested integer
+    box size. A fractional transform forces a second resampling pass and makes the
+    transparent glyph edges softer at 14px and 16px.
   */
   image-rendering: auto;
 }
@@ -2132,7 +2130,7 @@ kbd {
 .theme-builder-notes:focus { border-color: rgba(239, 79, 35, 0.86); box-shadow: inset 2px 0 0 #e64620, 0 0 18px -13px #ff4d1f; }
 .theme-builder-input option { background: #0b0705; color: #ded0c7; }
 
-.theme-builder-professions { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 0.42rem; }
+.theme-builder-professions { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr)); gap: 0.42rem; }
 .theme-builder-professions button {
   min-width: 0;
   padding: 0.55rem 0.25rem 0.45rem;
@@ -2144,8 +2142,10 @@ kbd {
 .theme-builder-professions button span { display: grid; width: 2.35rem; height: 2.35rem; margin: 0 auto 0.35rem; place-items: center; filter: saturate(0.55); }
 .theme-builder-professions button img { width: 100%; height: 100%; object-fit: contain; }
 .theme-builder-professions button strong {
-  display: block;
-  min-height: 1.35rem;
+  display: flex;
+  min-height: 1.9rem;
+  align-items: center;
+  justify-content: center;
   font-size: 0.52rem;
   line-height: 1.2;
   overflow-wrap: anywhere;
@@ -2929,4 +2929,98 @@ button:disabled,
 
 @media (prefers-reduced-motion: reduce) {
   .animate-view { animation: none; }
+}
+
+/* Native-resolution readability ---------------------------------------------
+   Legacy 8–10px utility labels are promoted to an 11px floor. Numeric tables
+   use tabular figures and aligned cells so comparison data remains stable while
+   the surrounding plates keep their mechanical decoration. */
+
+.theme-app-shell .text-\[8px\],
+.theme-app-shell .text-\[9px\],
+.theme-app-shell .text-\[10px\] {
+  font-size: 0.6875rem !important;
+  line-height: 1.35;
+}
+
+.theme-cinematic-kicker,
+.theme-cinematic-readouts span,
+.theme-cinematic-readouts strong,
+.theme-ingress-header span,
+.theme-ingress-status,
+.theme-saved-report-gate summary,
+.theme-ingress-formats,
+.theme-builder-entry,
+.theme-cinematic-horizon,
+.theme-builder-command-deck::after,
+.theme-builder-kicker,
+.theme-builder-label,
+.theme-builder-command-actions .theme-command-button,
+.theme-builder-empty .theme-command-button,
+.theme-builder-section-head .theme-command-button,
+.theme-builder-squad-readout + .theme-command-button,
+.theme-builder-tabs > button strong,
+.theme-builder-mode-switch button,
+.theme-builder-import-actions span,
+.theme-builder-import-actions button,
+.theme-builder-row-actions button,
+.theme-builder-code-output button,
+.theme-builder-section-head .theme-quiet-button,
+.theme-builder-professions button strong,
+.theme-builder-equipment-group h4,
+.theme-builder-readiness ul,
+.theme-builder-readiness p.is-ready,
+.theme-builder-fact,
+.theme-builder-link,
+.theme-builder-code-output code,
+.theme-builder-search input,
+.theme-builder-boon-icon em,
+.theme-builder-boon-grid > div span,
+.theme-builder-empty span,
+.theme-builder-library-row h4 ~ span,
+.theme-builder-library-row p,
+.theme-builder-squad-readout span,
+.theme-builder-party-name > span,
+.theme-builder-party-name input,
+.theme-builder-party-slots label > span,
+.theme-builder-party-slots select,
+.theme-builder-party-slots small,
+.theme-builder-add-line {
+  font-size: 0.6875rem;
+  line-height: 1.35;
+}
+
+.theme-cinematic-readouts > div:nth-child(2),
+.theme-builder-spec-line:nth-child(2),
+.theme-builder-spec-line:nth-child(3),
+.theme-builder-library-row:nth-child(even),
+.theme-builder-party-line:nth-child(even) {
+  margin-left: 0;
+  margin-right: 0;
+  transform: none;
+}
+
+.theme-builder-boon-grid > div:hover {
+  transform: none;
+}
+
+.theme-data-table th,
+.theme-data-table td,
+.theme-app-shell .animate-view table th,
+.theme-app-shell .animate-view table td {
+  vertical-align: middle;
+}
+
+.theme-data-table td,
+.theme-app-shell .animate-view table td,
+.theme-stat-value,
+.theme-kdr-stat,
+.theme-dossier-metric {
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-data-table thead th,
+.theme-app-shell .animate-view table thead th {
+  line-height: 1.25;
+  white-space: nowrap;
 }

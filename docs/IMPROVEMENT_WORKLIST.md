@@ -64,10 +64,10 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 - [x] Give Fight Replay enemies stable instance identities, reject implausible position jumps, keep markers screen-sized, and re-center zoom on the commander/squad.
 - [x] Replace the Scorched Earth presentation layer with a graphite mechanical command theme, workspace-aware cyan/emerald/amber/rose/violet signals, brighter chart series, and metric-aware neon underglows on player cards.
 - [x] Improve accent foreground contrast and define explicit theme foreground tokens. The shared theme now exposes dark on-accent/on-warning/on-danger colors and high-contrast focus treatment.
-- [ ] Remove fractional/tiny typography and text-container transforms that blur at 1080p. Shared panel titles, subtitles, actions, stat labels, and supporting values are now at least 11px; view-specific microcopy still needs a final native-resolution audit.
+- [x] Remove fractional/tiny typography and text-container transforms that blur at 1080p. Shared and view-specific legacy labels now have an 11px floor, Builder microcopy follows the same floor, and comparison surfaces no longer shift text with decorative transforms.
 - [x] Remove profession-icon clipping, retain normal antialiasing, and optically center glyphs.
-- [ ] Verify every profession icon at each production size on desktop and web builds.
-- [ ] Keep metric content aligned while decorative asymmetry remains clearly intentional.
+- [x] Verify every profession icon at each production size on desktop and web builds. All 45 mapped assets are present at 384×384, the complete 14/16/24/32/48px contact sheet is readable, and the Builder renders the local assets without fractional transforms.
+- [x] Keep metric content aligned while decorative asymmetry remains clearly intentional. Table cells now share vertical alignment and tabular figures, while Builder spec, library, party, and landing readout rows no longer carry staggered content offsets.
 
 ## P2 — Top Skills context
 
