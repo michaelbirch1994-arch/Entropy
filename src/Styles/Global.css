@@ -3024,3 +3024,232 @@ button:disabled,
   line-height: 1.25;
   white-space: nowrap;
 }
+
+/* Futuristic command polish --------------------------------------------------
+   Final shared visual layer: keeps the graphite chassis, but gives the app a
+   brighter mechanical read with cyan, amber, emerald, rose, and violet signals. */
+
+.theme-main {
+  background:
+    radial-gradient(circle at 82% 8%, color-mix(in srgb, var(--theme-accent) 14%, transparent), transparent 26rem),
+    radial-gradient(circle at 18% 0%, rgba(255, 177, 69, 0.09), transparent 24rem),
+    linear-gradient(135deg, rgba(88, 255, 227, 0.055), transparent 36%),
+    linear-gradient(180deg, rgba(4, 15, 20, 0.34), rgba(2, 7, 11, 0.8));
+}
+
+.theme-topbar {
+  border-bottom-color: color-mix(in srgb, var(--theme-accent) 54%, rgba(255, 177, 69, 0.35));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 14%, transparent), transparent 26rem),
+    linear-gradient(180deg, rgba(8, 24, 30, 0.98), rgba(2, 9, 13, 0.92));
+  box-shadow:
+    inset 0 -1px 0 rgba(255, 177, 69, 0.14),
+    0 22px 54px -38px #000;
+}
+
+.theme-topbar::before {
+  content: "";
+  position: absolute;
+  right: 1.5rem;
+  bottom: -1px;
+  width: min(18vw, 13rem);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--theme-secondary), var(--theme-accentStrong));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--theme-secondary) 34%, transparent);
+  pointer-events: none;
+}
+
+.theme-view-title {
+  text-shadow:
+    0 0 18px color-mix(in srgb, var(--theme-accent) 18%, transparent),
+    0 14px 34px rgba(0, 0, 0, 0.72);
+}
+
+.theme-sidebar {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 8%, transparent), transparent 18rem),
+    linear-gradient(90deg, rgba(255, 177, 69, 0.035), transparent 55%),
+    rgba(2, 9, 13, 0.97);
+}
+
+.theme-sidebar-header {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 11%, transparent), transparent 58%),
+    rgba(2, 10, 14, 0.95);
+}
+
+.theme-nav-item,
+.theme-nav-section,
+.theme-quiet-button,
+.theme-command-button,
+.theme-filter-button {
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.theme-nav-item:hover,
+.theme-nav-section:hover,
+.theme-quiet-button:hover,
+.theme-command-button:hover,
+.theme-filter-button:hover {
+  transform: none !important;
+}
+
+.theme-search-shell,
+.theme-table-shell,
+.theme-status-pill {
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--theme-accent) 7%, transparent), transparent 72%),
+    rgba(2, 11, 15, 0.9) !important;
+}
+
+.theme-panel,
+.theme-stat-card {
+  border-color: color-mix(in srgb, var(--plate-accent) 38%, #17424b);
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--plate-accent) 13%, transparent), transparent 16rem),
+    linear-gradient(150deg, color-mix(in srgb, var(--theme-secondary) 4%, transparent), transparent 26%),
+    linear-gradient(118deg, color-mix(in srgb, var(--plate-accent) 10%, transparent), transparent 46%),
+    linear-gradient(180deg, rgba(9, 25, 31, 0.98), rgba(3, 12, 17, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(207, 255, 249, 0.055),
+    inset 3px 0 0 color-mix(in srgb, var(--plate-accent) 58%, transparent),
+    inset 0 -1px 0 rgba(255, 177, 69, 0.07),
+    0 24px 58px -42px #000,
+    0 0 34px -28px var(--plate-accent);
+}
+
+.theme-panel::before,
+.theme-stat-card::before {
+  height: 3px;
+  background:
+    linear-gradient(90deg, var(--plate-accent), color-mix(in srgb, var(--theme-secondary) 58%, var(--plate-accent)), transparent);
+  box-shadow: 0 0 16px -3px var(--plate-accent);
+}
+
+.theme-panel::after,
+.theme-stat-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, transparent 0 76%, color-mix(in srgb, var(--plate-accent) 12%, transparent) 77% 78%, transparent 79%),
+    linear-gradient(90deg, transparent 0 50%, rgba(255, 255, 255, 0.018) 50% 51%, transparent 51%);
+  background-size: auto, 18px 18px;
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.theme-panel:hover,
+.theme-stat-card:hover {
+  border-color: color-mix(in srgb, var(--plate-accent) 68%, #1b4b54);
+  box-shadow:
+    inset 0 1px 0 rgba(226, 255, 252, 0.065),
+    inset 3px 0 0 color-mix(in srgb, var(--plate-accent) 82%, transparent),
+    inset 0 -1px 0 rgba(255, 177, 69, 0.1),
+    0 24px 58px -42px #000,
+    0 0 32px -22px var(--plate-accent);
+}
+
+.theme-stat-value,
+.theme-podium-value,
+.theme-dossier-metric {
+  text-shadow: 0 0 18px color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.theme-player-card,
+.theme-podium-card,
+.theme-party-card,
+.theme-source-card,
+.theme-roster-player {
+  --player-glow: var(--theme-accent);
+  background:
+    radial-gradient(circle at 14% 100%, color-mix(in srgb, var(--player-glow) 16%, transparent), transparent 34%),
+    linear-gradient(118deg, color-mix(in srgb, var(--player-glow) 10%, transparent), transparent 44%),
+    linear-gradient(180deg, rgba(6, 18, 24, 0.98), rgba(2, 8, 13, 0.96));
+  border-color: color-mix(in srgb, var(--player-glow) 38%, var(--theme-border));
+  box-shadow:
+    inset 3px 0 0 color-mix(in srgb, var(--player-glow) 72%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--player-glow) 16%, transparent),
+    0 20px 50px -36px #000,
+    0 0 34px -30px var(--player-glow);
+}
+
+.theme-player-card::before,
+.theme-podium-card::before,
+.theme-party-card::before,
+.theme-roster-player::before {
+  content: "";
+  position: absolute;
+  inset-inline: 1rem;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--player-glow) 86%, white), transparent);
+  box-shadow: 0 0 18px 2px color-mix(in srgb, var(--player-glow) 42%, transparent);
+  opacity: 0.84;
+  pointer-events: none;
+}
+
+.theme-player-card:hover,
+.theme-podium-card:hover,
+.theme-party-card:hover,
+.theme-roster-player:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--player-glow) 64%, var(--theme-border));
+  box-shadow:
+    inset 3px 0 0 color-mix(in srgb, var(--player-glow) 90%, white),
+    inset 0 -1px 0 color-mix(in srgb, var(--player-glow) 22%, transparent),
+    0 22px 54px -38px #000,
+    0 0 40px -24px var(--player-glow);
+}
+
+.theme-progress-track {
+  background:
+    linear-gradient(90deg, rgba(88, 255, 227, 0.05), transparent),
+    rgba(1, 7, 11, 0.92);
+}
+
+.theme-progress-fill {
+  box-shadow:
+    0 0 16px -7px currentColor,
+    0 0 5px color-mix(in srgb, currentColor 34%, transparent);
+}
+
+.theme-data-table thead,
+.theme-app-shell .animate-view table thead,
+.theme-table-head {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 16%, transparent), transparent 42%),
+    linear-gradient(180deg, rgba(8, 28, 34, 0.98), rgba(2, 10, 14, 0.98));
+}
+
+.theme-data-table tbody tr:nth-child(even),
+.theme-app-shell .animate-view table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.012);
+}
+
+.theme-alert-plate,
+.theme-modal {
+  box-shadow:
+    inset 3px 0 0 color-mix(in srgb, var(--theme-warning) 70%, transparent),
+    0 28px 76px -48px #000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-nav-item,
+  .theme-nav-section,
+  .theme-quiet-button,
+  .theme-command-button,
+  .theme-filter-button,
+  .theme-panel,
+  .theme-stat-card,
+  .theme-player-card,
+  .theme-podium-card,
+  .theme-party-card,
+  .theme-roster-player {
+    transition: none;
+  }
+}
