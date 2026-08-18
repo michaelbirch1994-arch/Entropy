@@ -324,13 +324,13 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
                 </div>
                 {!compact && (
                   <ChevronDown
-                    className={`w-3.5 h-3.5 transition-transform duration-300 ${isOpen ? "rotate-180 text-theme-accent" : "text-theme-muted"}`}
+                    className={`w-3.5 h-3.5 transition-transform duration-150 ${isOpen ? "rotate-180 text-theme-accent" : "text-theme-muted"}`}
                   />
                 )}
               </button>
 
               <div
-                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                className={`overflow-hidden transition-opacity duration-150 ease-out ${
                   isOpen ? "max-h-96 opacity-100 mt-0.5" : "max-h-0 opacity-0"
                 }`}
               >

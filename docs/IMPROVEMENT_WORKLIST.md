@@ -72,6 +72,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 - [x] Verify every profession icon at each production size on desktop and web builds. All 45 mapped assets are present at 384×384, the complete 14/16/24/32/48px contact sheet is readable, and the Builder renders the local assets without fractional transforms.
 - [x] Keep metric content aligned while decorative asymmetry remains clearly intentional. Table cells now share vertical alignment and tabular figures, while Builder spec, library, party, and landing readout rows no longer carry staggered content offsets.
 - [x] Add a brighter futuristic command polish layer with multi-color workspace signals, stronger neon player-card underglows, mechanical panel trims, and reduced hover movement so shared report surfaces feel less monotone without changing analytics behavior.
+- [x] Smooth sidebar tab swaps by removing max-height accordion animation from navigation groups and using a short opacity transition instead.
 
 ## P2 — Top Skills context
 
