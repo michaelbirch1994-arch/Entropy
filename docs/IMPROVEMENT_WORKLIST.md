@@ -62,6 +62,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 - [ ] Add Reload Current, Replace Logs, Add Logs, and Clear Logs actions while preserving drag-and-drop ingestion.
   - [x] Header now separates Add Logs from Replace Logs and keeps Clear Logs explicit while preserving the raw-log drag/drop intake.
 - [ ] Keep the web ingestion path as direct as the desktop path.
+  - [x] Web users now get explicit guidance that drag/drop and dps.report links still work when folder watching is unavailable.
 
 ## P2 — Visual polish
 
