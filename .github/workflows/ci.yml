@@ -1,0 +1,31 @@
+name: CI
+
+# Catches broken builds and regressions before they show up as a blank
+# StackBlitz preview or a silently-broken view in production. Runs on every
+# push and pull request against main.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies (npm install, not ci - lockfile isn't regenerated in this dev environment)
+        run: npm install
+
+      - name: Type-check + build
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
