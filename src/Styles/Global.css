@@ -100,12 +100,12 @@ kbd {
   display: block;
   object-fit: contain;
   object-position: center;
-  transform: scale(1.16);
+  transform: scale(1.1) translateX(0.03em);
   transform-origin: center;
   /*
     Keep normal browser antialiasing for these 384px transparent PNGs. Pixelated
-    / crisp-edge rendering makes small class chips jagged; the frame crop above
-    handles the whitespace instead.
+    / crisp-edge rendering makes small class chips jagged. The glyph is enlarged
+    just enough to use the square frame without clipping its outer strokes.
   */
   image-rendering: auto;
 }
@@ -2299,3 +2299,5 @@ kbd {
   .theme-builder-row-actions { width: 100%; justify-content: flex-end; }
   .theme-builder-party-slots { grid-template-columns: 1fr; }
 }
+
+

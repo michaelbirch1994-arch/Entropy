@@ -31,7 +31,7 @@ export default function ClassIcon({
       aria-label={title ?? name}
       title={title ?? name}
       className={clsx(
-        "class-icon-frame inline-flex shrink-0 items-center justify-center overflow-hidden align-middle",
+        "class-icon-frame inline-flex shrink-0 items-center justify-center overflow-visible align-middle",
         SIZE_CLASS[size],
         className,
       )}
