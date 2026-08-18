@@ -4,8 +4,10 @@ import { useDamageScope, pickDamageScopeValue, type DamageScope } from "../store
 import { useStatsDisplay } from "../store/StatsDisplayContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
+import PlayerSampleCell from "../components/ui/PlayerSampleCell";
 import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped, profChip } from "../utils/format";
 import type { OffensePlayer } from "../types/report";
+import { resolvePlayerSampleContext, type PlayerSampleContextData } from "../lib/playerSampleContext";
 import {
   BarChart,
   Bar,
@@ -39,12 +41,14 @@ type SortKey =
   | "glanceRate"
   | "interrupts"
   | "invulned"
+  | "sample"
   | "account";
 
 type SortDir = "asc" | "desc";
 
 interface Row extends OffensePlayer {
   dps: number;
+  sample: PlayerSampleContextData;
   // EI's "criticalRate"/"flankingRate"/"glanceRate" fields are actually raw
   // hit counts, not percentages - offenseRateWeights carries the matching
   // denominator (critable / connected direct-damage hit count) so the real
@@ -60,6 +64,7 @@ const COLUMNS: {
   align: "left" | "right";
 }[] = [
   { key: "account", label: "Player", align: "left" },
+  { key: "sample", label: "Sample", align: "right" },
   { key: "damage", label: "Damage", align: "right" },
   { key: "dps", label: "DPS", align: "right" },
   { key: "directDmg", label: "Target/Cleave", align: "right" },
@@ -75,6 +80,7 @@ const COLUMNS: {
 
 function numVal(row: Row, key: SortKey, scope: DamageScope): number {
   if (key === "account") return 0;
+  if (key === "sample") return row.sample.fights;
   if (key === "damage") return pickDamageScopeValue(scope, row.offenseTotals.damage, row.offenseTotals.damageAll);
   if (key === "dps") return row.dps;
   if (key === "critRate") return row.critRate;
@@ -131,6 +137,12 @@ export default function OffensiveView() {
     const players = Array.from(new Map(report.stats.offensePlayers.map((pl) => [pl.account, pl])).values());
     return players.map((p) => {
       const secs = p.totalFightMs / 1000;
+      const sample = resolvePlayerSampleContext(
+        report.stats.generalPlayers,
+        report.stats.total,
+        p.account,
+        { activeMs: p.totalFightMs },
+      );
       const weights = p.offenseRateWeights ?? {};
       const pct = (id: "criticalRate" | "flankingRate" | "glanceRate") => {
         const denom = weights[id] || 0;
@@ -139,6 +151,7 @@ export default function OffensiveView() {
       return {
         ...p,
         dps: secs > 0 ? pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll) / secs : 0,
+        sample,
         critRate: pct("criticalRate"),
         flankRate: pct("flankingRate"),
         glanceRate: pct("glanceRate"),
@@ -344,6 +357,9 @@ export default function OffensiveView() {
                         </span>
                         <span className="text-slate-200 font-semibold whitespace-nowrap">{p.account}</span>
                       </div>
+                    </td>
+                    <td className="p-2.5 text-right">
+                      <PlayerSampleCell sample={p.sample} />
                     </td>
                     {/* Damage + inline bar */}
                     <td className="p-2.5 text-right relative">

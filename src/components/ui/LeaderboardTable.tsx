@@ -36,7 +36,7 @@ export default function LeaderboardTable({ entries, metricLabel, compact = false
             const fights = general?.logsJoined ?? e.count;
             const reportFights = Math.max(fights, totalFights ?? fights);
             const combatTimeMs = general?.squadActiveMs ?? general?.totalFightMs ?? 0;
-            const reliability = getSampleReliability(fights, reportFights);
+            const reliability = getSampleReliability(fights, reportFights, combatTimeMs);
             return (
               <tr key={`${e.account}:${e.profession}`} className="theme-table-row transition-colors">
                 <td className={`px-2 py-2 font-bold ${e.rank <= 3 ? "text-theme-accent-strong" : "text-theme-muted"}`}>{e.rank}</td>
