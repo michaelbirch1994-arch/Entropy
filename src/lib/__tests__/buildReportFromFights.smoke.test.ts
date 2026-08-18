@@ -124,6 +124,70 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(after!.offenseTotals.damage).toBe((before!.offenseTotals.damage || 0) + expectedDamage);
            });
 
+           it('aggregates one account across professions, characters, roles, and fights', () => {
+                 const firstRaw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const secondRaw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const firstPlayer = (firstRaw.players ?? []).find((p: any) => !p.notInSquad) as any;
+                 const secondPlayer = (secondRaw.players ?? []).find((p: any) => p.account === firstPlayer?.account) as any;
+                 expect(firstPlayer).toBeTruthy();
+                 expect(secondPlayer).toBeTruthy();
+
+                 const firstProfession = String(firstPlayer.profession || 'Guardian');
+                 const secondProfession = firstProfession === 'Chronomancer' ? 'Untamed' : 'Chronomancer';
+                 secondPlayer.profession = secondProfession;
+                 secondPlayer.name = `${secondPlayer.name || 'Character'} Alt`;
+
+                 firstPlayer.support = [{ ...(firstPlayer.support?.[0] ?? {}), condiCleanse: 3, condiCleanseSelf: 1, boonStrips: 5 }];
+                 secondPlayer.support = [{ ...(secondPlayer.support?.[0] ?? {}), condiCleanse: 4, condiCleanseSelf: 2, boonStrips: 7 }];
+                 firstPlayer.extHealingStats = { ...(firstPlayer.extHealingStats ?? {}), outgoingHealingAllies: [[{ healing: 1000 }]] };
+                 secondPlayer.extHealingStats = { ...(secondPlayer.extHealingStats ?? {}), outgoingHealingAllies: [[{ healing: 2000 }]] };
+
+                 const firstInput = { summary: summarizeRawFight(firstRaw), raw: firstRaw };
+                 const secondInput = { summary: summarizeRawFight(secondRaw), raw: secondRaw };
+                 const firstReport = buildReportFromFights([firstInput]);
+                 const secondReport = buildReportFromFights([secondInput]);
+                 const combined = buildReportFromFights([firstInput, secondInput]);
+                 const account = String(firstPlayer.account);
+
+                 const offenseRows = combined.stats.offensePlayers.filter((p) => p.account === account);
+                 const supportRows = combined.stats.supportPlayers.filter((p) => p.account === account);
+                 const healingRows = combined.stats.healingPlayers.filter((p) => p.account === account);
+                 const generalRows = combined.stats.generalPlayers.filter((p) => p.account === account);
+                 expect(offenseRows).toHaveLength(1);
+                 expect(supportRows).toHaveLength(1);
+                 expect(healingRows).toHaveLength(1);
+                 expect(generalRows).toHaveLength(1);
+
+                 const firstOffense = firstReport.stats.offensePlayers.find((p) => p.account === account)!;
+                 const secondOffense = secondReport.stats.offensePlayers.find((p) => p.account === account)!;
+                 expect(offenseRows[0].offenseTotals.damage).toBe(firstOffense.offenseTotals.damage + secondOffense.offenseTotals.damage);
+                 expect(offenseRows[0].totalFightMs).toBe(firstOffense.totalFightMs + secondOffense.totalFightMs);
+                 expect(offenseRows[0].professionList).toEqual(expect.arrayContaining([firstProfession, secondProfession]));
+                 expect(supportRows[0].supportTotals.condiCleanse).toBe(7);
+                 expect(supportRows[0].supportTotals.condiCleanseSelf).toBe(3);
+                 expect(supportRows[0].supportTotals.boonStrips).toBe(12);
+                 expect(healingRows[0].healingTotals.healing).toBe(3000);
+                 expect(generalRows[0].logsJoined).toBe(2);
+           });
+
+           it('keeps partial attendance distinct from full-session attendance', () => {
+                 const firstRaw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const secondRaw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const partialPlayer = (firstRaw.players ?? []).find((p: any) => !p.notInSquad) as any;
+                 expect(partialPlayer).toBeTruthy();
+                 secondRaw.players = (secondRaw.players ?? []).filter((p: any) => p.account !== partialPlayer.account);
+
+                 const combined = buildReportFromFights([
+                         { summary: summarizeRawFight(firstRaw), raw: firstRaw },
+                         { summary: summarizeRawFight(secondRaw), raw: secondRaw },
+                 ]);
+                 const partial = combined.stats.generalPlayers.find((p) => p.account === partialPlayer.account);
+                 const full = combined.stats.generalPlayers.find((p) => p.account !== partialPlayer.account);
+                 expect(partial?.logsJoined).toBe(1);
+                 expect(full?.logsJoined).toBe(2);
+                 expect(partial?.totalFightMs).toBeLessThan(full?.totalFightMs ?? 0);
+           });
+
            it('builds a squad rotation timeline covering the same players', () => {
                  expect(report.stats.rotations?.fights.length).toBeGreaterThan(0);
                  const rotFight = report.stats.rotations!.fights[0];

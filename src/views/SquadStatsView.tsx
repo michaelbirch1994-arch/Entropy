@@ -4,7 +4,7 @@ import { useDamageScope, pickDamageScopeValue } from "../store/DamageScopeContex
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
-import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped } from "../utils/format";
+import { fmtNum, fmtCompact, fmtDur, fmtFixed, fmtFixedGrouped } from "../utils/format";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 import { Users, Swords, Shield, Heart, Zap, Target, Activity, Crosshair, MapPin } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, ReferenceLine } from "recharts";
@@ -14,7 +14,7 @@ import type { HealingPlayer, HealingCoverage, OffensePlayer, TopBarrierSource, T
 import { buildHealingFightDrilldowns } from "../lib/squadStatsDrilldowns";
 import DistanceToTagPanel, { resolveDistanceToTagResult } from "../components/squad/DistanceToTagPanel";
 
-type SquadOverviewSortKey = "player" | "class" | "damage" | "dps" | "downContribution" | "healing" | "cleanses" | "strips" | "logs";
+type SquadOverviewSortKey = "player" | "class" | "damage" | "dps" | "downContribution" | "healing" | "cleanses" | "strips" | "combat" | "participation";
 
 /**
  * Render a healing figure honestly.
@@ -293,11 +293,20 @@ export default function SquadStatsView() {
   const tightCount = distanceRows.filter((player) => player.avg <= 600).length;
   const pressureLeader = topPressureRows[0];
   const squadOverviewRows = (() => {
+    const healingByAccount = new Map(s.healingPlayers.map((player) => [player.account, player]));
+    const supportByAccount = new Map(s.supportPlayers.map((player) => [player.account, player]));
+    const generalByAccount = new Map(s.generalPlayers.map((player) => [player.account, player]));
+    const attendanceByAccount = new Map(s.attendanceData.map((player) => [player.account, player]));
     const rows = s.offensePlayers.map((p) => {
-      const heal = s.healingPlayers.find((h) => h.account === p.account);
-      const sup = s.supportPlayers.find((sp) => sp.account === p.account);
+      const heal = healingByAccount.get(p.account);
+      const sup = supportByAccount.get(p.account);
+      const general = generalByAccount.get(p.account);
+      const attendance = attendanceByAccount.get(p.account);
       const damage = pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll);
       const dps = safeDiv(damage, p.totalFightMs / 1000);
+      const logs = general?.logsJoined ?? 0;
+      const combatMs = general?.squadActiveMs ?? attendance?.combatTimeMs ?? 0;
+      const participation = Math.min(1, safeDiv(logs, s.total));
       return {
         account: p.account,
         profession: p.profession,
@@ -308,7 +317,9 @@ export default function SquadStatsView() {
         healing: heal ? pickAllyScopeValue(allyScope, heal.healingTotals.healing, heal.healingTotals.squadHealing) : 0,
         cleanses: sup?.supportTotals.condiCleanse ?? 0,
         strips: sup?.supportTotals.boonStrips ?? 0,
-        logs: s.generalPlayers.find((g) => g.account === p.account)?.logsJoined ?? 0,
+        combatMs,
+        logs,
+        participation,
       };
     });
     if (!overviewSort) return rows.sort((a, b) => b.damage - a.damage || a.account.localeCompare(b.account)).slice(0, 25);
@@ -325,7 +336,8 @@ export default function SquadStatsView() {
             case "healing": return row.healing;
             case "cleanses": return row.cleanses;
             case "strips": return row.strips;
-            case "logs": return row.logs;
+            case "combat": return row.combatMs;
+            case "participation": return row.participation;
             default: return 0;
           }
         };
@@ -653,15 +665,21 @@ export default function SquadStatsView() {
                 <SortHeader label="Healing" k="healing" align="right" />
                 <SortHeader label="Cleanses" k="cleanses" align="right" />
                 <SortHeader label="Strips" k="strips" align="right" />
-                <SortHeader label="Logs" k="logs" align="right" />
+                <SortHeader label="Combat" k="combat" align="right" />
+                <SortHeader label="Fights" k="participation" align="right" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/30 font-mono">
               {squadOverviewRows.map((p) => {
                 return (
-                  <tr key={`${p.account}:${p.profession}`} className="hover:bg-blue-950/20 transition-colors">
+                  <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
                     <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
-                    <td className="p-2.5 text-slate-400">{p.profession}</td>
+                    <td className="p-2.5 text-slate-400">
+                      <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                        <ProfessionIcon profession={p.profession} />
+                        {p.profession}
+                      </span>
+                    </td>
                     <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.damage)}</td>
                     <td className="p-2.5 text-right text-slate-200 font-bold">{fmtFixedGrouped(p.dps, 0)}</td>
                     <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.downContribution)}</td>
@@ -670,7 +688,13 @@ export default function SquadStatsView() {
                     </td>
                     <td className="p-2.5 text-right text-cyan-400">{p.cleanses > 0 ? fmtNum(p.cleanses) : "-"}</td>
                     <td className="p-2.5 text-right text-amber-400">{p.strips > 0 ? fmtNum(p.strips) : "-"}</td>
-                    <td className="p-2.5 text-right text-slate-500">{p.logs || "-"}</td>
+                    <td className="p-2.5 text-right text-slate-300" title="Active combat time across the fights this player joined">
+                      {p.combatMs > 0 ? fmtDur(p.combatMs) : "-"}
+                    </td>
+                    <td className="p-2.5 text-right text-slate-400" title={`${p.logs} of ${s.total} fights (${pct(p.participation)})`}>
+                      <span className="text-slate-200">{p.logs}/{s.total}</span>
+                      <span className="ml-1 text-[10px] text-slate-500">{pct(p.participation)}</span>
+                    </td>
                   </tr>
                 );
               })}
@@ -681,3 +705,5 @@ export default function SquadStatsView() {
     </div>
   );
 }
+
+

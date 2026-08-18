@@ -4,6 +4,13 @@ import Panel from "../components/ui/Panel";
 import { fmtCompact, profChip } from "../utils/format";
 import type { DeathRecapEntry, DeathRecapHit } from "../types/report";
 import { Skull, ArrowDown, Swords, ShieldAlert } from "lucide-react";
+import {
+  buildDeathBoonCorrelationRows,
+  nextDeathBoonSort,
+  sortDeathBoonRows,
+  type DeathBoonSortKey,
+  type DeathBoonSortState,
+} from "../lib/deathRecapTable";
 
 function fmtClock(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -108,8 +115,6 @@ function DeathCard({ entry }: { entry: DeathRecapEntry }) {
 }
 
 const DEFENSIVE_BOON_NAMES = ["Stability", "Protection", "Resistance", "Aegis"];
-type DeathBoonSortKey = "player" | "deaths" | number;
-type DeathBoonSortState = { key: DeathBoonSortKey; dir: "asc" | "desc" } | null;
 
 // Correlates each player's death count against their aggregate defensive-boon
 // uptime (already computed for the Buffs view) so a squad can spot "this
@@ -132,27 +137,7 @@ function useDeathBoonCorrelation(report: ReturnType<typeof useReport>["report"])
     );
     if (cols.length === 0) return null;
 
-    const deathsByAccount = new Map<string, number>();
-    recaps.forEach((r) => deathsByAccount.set(r.account, (deathsByAccount.get(r.account) ?? 0) + 1));
-
-    const squadAvg: Record<number, number> = {};
-    cols.forEach((c) => {
-      const vals = boonData.rows.map((r) => r.uptimes[c.id]).filter((v): v is number => v !== undefined);
-      squadAvg[c.id] = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-    });
-
-    const rows = boonData.rows
-      .map((r) => ({
-        account: r.account,
-        profession: r.profession,
-        deaths: deathsByAccount.get(r.account) ?? 0,
-        boons: cols.map((c) => {
-          const pct = r.uptimes[c.id] ?? 0;
-          return { id: c.id, name: c.name, icon: c.icon, pct, squadAvgPct: squadAvg[c.id], belowAvg: pct < squadAvg[c.id] - 10 };
-        }),
-      }))
-      .filter((r) => r.deaths > 0)
-      .sort((a, b) => b.deaths - a.deaths);
+    const rows = buildDeathBoonCorrelationRows(boonData.rows, cols, recaps);
 
     return rows.length > 0 ? { rows, cols } : null;
   }, [report]);
@@ -160,25 +145,10 @@ function useDeathBoonCorrelation(report: ReturnType<typeof useReport>["report"])
 
 function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<typeof useDeathBoonCorrelation>> }) {
   const [sort, setSort] = useState<DeathBoonSortState>(null);
-  const rows = useMemo(() => {
-    const base = [...data.rows].sort((a, b) => a.account.localeCompare(b.account));
-    if (!sort) return base;
-    const dir = sort.dir === "asc" ? 1 : -1;
-    return base.sort((a, b) => {
-      if (sort.key === "player") return a.account.localeCompare(b.account) * dir;
-      if (sort.key === "deaths") return (a.deaths - b.deaths) * dir || a.account.localeCompare(b.account);
-      const av = a.boons.find((boon) => boon.id === sort.key)?.pct ?? 0;
-      const bv = b.boons.find((boon) => boon.id === sort.key)?.pct ?? 0;
-      return (av - bv) * dir || a.account.localeCompare(b.account);
-    });
-  }, [data.rows, sort]);
+  const rows = useMemo(() => sortDeathBoonRows(data.rows, sort), [data.rows, sort]);
 
   const toggleSort = (key: DeathBoonSortKey) => {
-    setSort((prev) => {
-      if (!prev || prev.key !== key) return { key, dir: "desc" };
-      if (prev.dir === "desc") return { key, dir: "asc" };
-      return null;
-    });
+    setSort((prev) => nextDeathBoonSort(prev, key));
   };
 
   const sortLabel = (key: DeathBoonSortKey) => (!sort || sort.key !== key ? "SORT" : sort.dir === "desc" ? "DESC" : "ASC");
@@ -221,7 +191,7 @@ function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<type
           <tbody>
             {rows.map((row, i) => (
               <tr
-                key={row.account}
+                key={row.key}
                 className={`border-b border-slate-800/40 hover:bg-white/[0.02] transition-colors ${i % 2 === 0 ? "bg-white/[0.01]" : ""}`}
               >
                 <td className="px-4 py-2.5 font-semibold text-slate-200 sticky left-0 bg-[#0a0e1f]/95 whitespace-nowrap">

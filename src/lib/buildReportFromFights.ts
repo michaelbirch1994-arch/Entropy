@@ -332,8 +332,10 @@ function resolveRawPlayerAggregationKey(player: Record<string, unknown>): string
       : typeof player.name === 'string'
         ? player.name
         : 'Unknown';
-    const profession = String(player.profession || 'Unknown');
-    return profession !== 'Unknown' ? `${account}::${profession}` : account;
+    // Natural Fortitude is attributed to the person, not to a fight-local
+    // account+profession row. This keeps its synthetic damage attached when an
+    // account changes character or specialization during a combined report.
+    return account;
 }
 
 function computeNaturalFortitudeDamage(fights: FightInput[]): NaturalFortitudeDamageAdjustment {
@@ -1904,8 +1906,6 @@ function computeFightTables(fights: FightInput[]): {
 
   return { fightBreakdown, mapData, timelineData };
 }
-
-
 interface PersistedIntelligence {
     combatEvents: CombatEvent[];
     criticalEvents: CriticalEvent[];
@@ -1969,12 +1969,11 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
         validLogs,
         method: 'count',
         skillDamageSource: 'target',
-        // When a player relogs onto a different profession mid-session, key their
-        // stats by account+class instead of just account, so a build swap (e.g.
-        // Firebrand for 2 fights, then Scrapper for the rest) shows up as two
-        // separate rows instead of blending both classes' numbers into one
-        // misleading average.
-        splitPlayersByClass: true,
+        // Combined performance tables represent people. Keep one stable row per
+        // account even when that person swaps character, profession, role, or
+        // subgroup between fights; professionList preserves the build history
+        // and the longest-played profession remains the display profession.
+        splitPlayersByClass: false,
   });
 
   const {
@@ -2033,8 +2032,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
   const naturalFortitudePlayerDamage = computeNaturalFortitudeDamage(fights);
     if (naturalFortitudePlayerDamage.damage > 0) {
           for (const stat of playerEntries) {
-                  const key = stat.profession && stat.profession !== 'Unknown' ? `${stat.account}::${stat.profession}` : stat.account;
-                  const adjustment = naturalFortitudePlayerDamage.byPlayerKey.get(key);
+                  const adjustment = naturalFortitudePlayerDamage.byPlayerKey.get(stat.account);
                   if (!adjustment) continue;
                   addNaturalFortitudeDamageToPlayer(stat, adjustment.damage, adjustment.hits);
           }
@@ -2297,3 +2295,4 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
         stats,
   };
 }
+

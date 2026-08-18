@@ -656,6 +656,7 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
         // identity (relog / build swap / subgroup move) must not inflate attendance.
         const joinedIdentityKeys = new Set<string>();
         const stackedIdentityKeys = new Set<string>();
+        const fightDurationIdentityKeys = new Set<string>();
 
         players.forEach((p, playerIndex) => {
                     if (p.notInSquad) return;
@@ -717,7 +718,13 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
                     s.misses += getPlayerMissed(p);
                     s.kills += getTargetStatTotal(p, 'killed');
                     s.enemyDowns += getTargetStatTotal(p, 'downed');
-                    if (details.durationMS) s.totalFightMs += details.durationMS;
+                    // A relog/build swap can emit multiple EI player entries for
+                    // the same account in one fight. Their active times and metric
+                    // slices are additive, but the fight duration is not.
+                    if (details.durationMS && !fightDurationIdentityKeys.has(key)) {
+                                    fightDurationIdentityKeys.add(key);
+                                    s.totalFightMs += details.durationMS;
+                    }
                     const activeMs = Array.isArray(p.activeTimes) && typeof p.activeTimes[0] === 'number' ? p.activeTimes[0] : details.durationMS || 0;
                     s.squadActiveMs += activeMs;
                     const group = Number((p as any).group);
