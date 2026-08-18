@@ -93,6 +93,7 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(sample).toBeTruthy();
                  expect(sample?.fightCount).toBe(2);
                  expect(sample?.playerCount).toBe(1);
+                 expect(sample?.activeMs).toBeGreaterThan(0);
                  expect(sample?.perFightMin).toBe(10_000_000);
                  expect(sample?.perFightAverage).toBe(20_000_000);
                  expect(sample?.perFightMax).toBe(30_000_000);

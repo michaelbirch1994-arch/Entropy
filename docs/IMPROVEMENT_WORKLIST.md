@@ -84,6 +84,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 - [ ] Prefer ranked extremes when a single outlier would be misleading.
   - [x] Top Skills and Healing Sources now flag spike-heavy sources where the peak fight is far above the average.
 - [ ] Include combat-time and participation context in skill comparisons.
+  - [x] Top Skills and Healing Sources now show contributor/affected active time and per-active-minute rates for newly built reports.
 
 ## Definition of done for this feedback round
 

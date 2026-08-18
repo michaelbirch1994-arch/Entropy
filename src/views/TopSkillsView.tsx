@@ -114,7 +114,7 @@ function buildHealingById(healingSources: TopHealingSource[]) {
   return byId;
 }
 
-type SkillSample = Pick<TopSkill, "fightCount" | "playerCount" | "perFightMin" | "perFightAverage" | "perFightMax" | "perFightMaxContext">;
+type SkillSample = Pick<TopSkill, "fightCount" | "playerCount" | "activeMs" | "perFightMin" | "perFightAverage" | "perFightMax" | "perFightMaxContext">;
 
 type ExtremeContext = {
   value: number;
@@ -132,6 +132,22 @@ function fightContextLabel(context: { fightIndex?: number; fightName?: string; f
   if (context.fightName) return context.fightName;
   if (context.fightIndex !== undefined) return `Fight ${context.fightIndex + 1}`;
   return null;
+}
+
+function formatActiveTime(ms: number | undefined): string | null {
+  if (!ms || ms <= 0) return null;
+  const minutes = Math.round(ms / 60000);
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const remainder = minutes % 60;
+    return remainder > 0 ? `${hours}h ${remainder}m active` : `${hours}h active`;
+  }
+  return `${minutes}m active`;
+}
+
+function perActiveMinute(value: number, activeMs: number | undefined): string | null {
+  if (!activeMs || activeMs <= 0) return null;
+  return `${fmtCompact(value / (activeMs / 60000))}/active min`;
 }
 
 function SkillSampleContext({
@@ -152,11 +168,18 @@ function SkillSampleContext({
   }
 
   const reliability = getSampleReliability(sample.fightCount, totalFights);
+  const activeTime = formatActiveTime(sample.activeMs);
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] font-mono text-slate-500">
       <span>{sample.fightCount}/{totalFights} fights</span>
       <span>·</span>
       <span>{sample.playerCount ?? 0} {playerLabel}</span>
+      {activeTime && (
+        <>
+          <span>·</span>
+          <span>{activeTime}</span>
+        </>
+      )}
       <span
         className={`rounded-full border px-1.5 py-0.5 font-bold ${sampleReliabilityClasses(reliability.level)}`}
         title={reliability.detail}
@@ -203,6 +226,17 @@ function PerFightRange({ sample, label }: { sample: SkillSample; label: string }
           Spike-heavy source: peak is {spikeRatio.toFixed(1)}× its average fight.
         </div>
       )}
+    </div>
+  );
+}
+
+function ActiveRateLine({ label, value, activeMs }: { label: string; value: number; activeMs: number | undefined }) {
+  const rate = perActiveMinute(value, activeMs);
+  if (!rate) return null;
+  return (
+    <div className="mt-2 flex items-center justify-between rounded-lg border border-sky-400/10 bg-sky-500/[0.04] px-2 py-1.5">
+      <span className="text-slate-500">{label}</span>
+      <span className="font-bold text-sky-300">{rate}</span>
     </div>
   );
 }
@@ -479,6 +513,7 @@ export default function TopSkillsView() {
                     ) : (
                       <span className="text-slate-600">No single-hit data available</span>
                     )}
+                    <ActiveRateLine label="Healing rate by contributor active time" value={hs.healing} activeMs={hs.activeMs} />
                     <PerFightRange sample={hs} label="healing" />
                   </div>
                 )}
@@ -641,6 +676,11 @@ export default function TopSkillsView() {
                     ) : (
                       <span className="text-slate-600">No single-hit data available</span>
                     )}
+                    <ActiveRateLine
+                      label={tab === "incoming" ? "Damage taken by affected active time" : "Damage by contributor active time"}
+                      value={sk.damage}
+                      activeMs={sk.activeMs}
+                    />
                     <PerFightRange sample={sk} label="damage" />
                   </div>
                 )}

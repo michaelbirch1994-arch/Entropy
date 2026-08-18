@@ -373,6 +373,8 @@ export interface TopSkill {
   fightCount?: number;
     /** Distinct squad players who contributed this outgoing skill, or were affected by this incoming skill. */
   playerCount?: number;
+    /** Sum of EI active time for players in fights where this skill appeared, counted once per player per fight. */
+  activeMs?: number;
     /** Per-fight squad total among fights where the skill appeared. */
   perFightMin?: number;
     /** Per-fight squad average among fights where the skill appeared. */
@@ -675,6 +677,8 @@ export interface TopHealingSource {
   fightCount?: number;
     /** Distinct squad players who produced this healing source. */
   playerCount?: number;
+    /** Sum of EI active time for players in fights where this healing source appeared, counted once per player per fight. */
+  activeMs?: number;
     /** Per-fight squad total among fights where the source appeared. */
   perFightMin?: number;
     /** Per-fight squad average among fights where the source appeared. */
