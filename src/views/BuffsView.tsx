@@ -5,6 +5,8 @@ import Panel from "../components/ui/Panel";
 import { Sparkles } from "lucide-react";
 import type { BoonUptimeData } from "../types/report";
 import { BUFF_TAB_ORDER } from "../lib/bridge-metrics/boonGeneration";
+import PlayerSampleCell from "../components/ui/PlayerSampleCell";
+import { resolvePlayerSampleContext } from "../lib/playerSampleContext";
 
 function uptimeColor(pct: number): string {
   if (pct >= 90) return "text-emerald-400";
@@ -17,7 +19,7 @@ function uptimeColor(pct: number): string {
 // (BUFF_TAB_ORDER) so the two pages can never present these categories in a
 // different order from each other.
 const TAB_ORDER = BUFF_TAB_ORDER;
-type SortKey = "player" | "class" | number;
+type SortKey = "player" | "class" | "sample" | number;
 type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
 
 export default function BuffsView() {
@@ -55,11 +57,18 @@ export default function BuffsView() {
 
   const { columns, rows } = data;
   const sortedRows = (() => {
-    const base = Array.from(new Map(rows.map((r) => [r.account, r])).values()).sort((a, b) => a.account.localeCompare(b.account));    if (!sort) return base;
+    const base = Array.from(new Map(rows.map((r) => [r.account, r])).values())
+      .map((row) => ({
+        ...row,
+        sample: resolvePlayerSampleContext(s.generalPlayers, s.total, row.account, { fights: row.logsJoined }),
+      }))
+      .sort((a, b) => a.account.localeCompare(b.account));
+    if (!sort) return base;
     const dir = sort.dir === "asc" ? 1 : -1;
     return base.sort((a, b) => {
       if (sort.key === "player") return a.account.localeCompare(b.account) * dir;
       if (sort.key === "class") return a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account);
+      if (sort.key === "sample") return (a.sample.fights - b.sample.fights) * dir || a.account.localeCompare(b.account);
       if (typeof sort.key !== "number") return 0;
       const av = a.uptimes[sort.key];
       const bv = b.uptimes[sort.key];
@@ -137,6 +146,11 @@ export default function BuffsView() {
                     Class <span className="text-[8px] opacity-70">{sortLabel("class")}</span>
                   </button>
                 </th>
+                <th className="text-right font-bold px-2 py-3">
+                  <button type="button" onClick={() => toggleSort("sample")} className={sortButtonClass("sample", "justify-end w-full")}>
+                    Sample <span className="text-[8px] opacity-70">{sortLabel("sample")}</span>
+                  </button>
+                </th>
                 {columns.map((c) => (
                   <th key={c.id} className="text-center font-bold px-2 py-3 min-w-[64px]" title={c.name}>
                     <button type="button" onClick={() => toggleSort(c.id)} className={sortButtonClass(c.id, "flex w-full flex-col items-center")}>
@@ -164,6 +178,9 @@ export default function BuffsView() {
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(row.profession)}`}>
                       {row.profession}
                     </span>
+                  </td>
+                  <td className="px-2 py-2.5 text-right">
+                    <PlayerSampleCell sample={row.sample} />
                   </td>
                   {columns.map((c) => {
                     const val = row.uptimes[c.id];
