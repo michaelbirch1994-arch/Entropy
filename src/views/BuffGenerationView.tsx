@@ -7,6 +7,8 @@ import { getBoonMetricValue, getBoonWastedValue, getBoonOverstackValue, BUFF_TAB
 import { Sparkles } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { CHART_COLORS, TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE } from "../utils/chartTheme";
+import PlayerSampleCell from "../components/ui/PlayerSampleCell";
+import { resolvePlayerSampleContext } from "../lib/playerSampleContext";
 
 const CATEGORY_LABELS = {
   selfBuffs: "Self",
@@ -15,7 +17,7 @@ const CATEGORY_LABELS = {
 } as const;
 
 type SortDirection = "desc" | "asc";
-type SortKey = "player" | "class" | keyof typeof CATEGORY_LABELS | "wasted" | "overstack";
+type SortKey = "player" | "class" | "sample" | keyof typeof CATEGORY_LABELS | "wasted" | "overstack";
 type SortState = { key: SortKey; direction: SortDirection } | null;
 
 const BAR_COLORS = [CHART_COLORS.amber, CHART_COLORS.sky, CHART_COLORS.rose, CHART_COLORS.emerald, CHART_COLORS.teal, CHART_COLORS.orange, CHART_COLORS.cyan, CHART_COLORS.blue, CHART_COLORS.red];
@@ -97,12 +99,21 @@ export default function BuffGenerationView() {
   const selectedBreakdown = useMemo(() => {
     if (!selectedTable) return null;
     const table = selectedTable;
-    const defaultRows = [...table.rows].sort((a, b) => a.account.localeCompare(b.account));
+    const defaultRows = table.rows
+      .map((row) => ({
+        ...row,
+        sample: resolvePlayerSampleContext(report?.stats.generalPlayers, report?.stats.total ?? 0, row.account, {
+          fights: row.numFights,
+          activeMs: row.activeTimeMs,
+        }),
+      }))
+      .sort((a, b) => a.account.localeCompare(b.account));
     const rows = sort
       ? [...defaultRows].sort((a, b) => {
           const direction = sort.direction === "desc" ? -1 : 1;
           if (sort.key === "player") return a.account.localeCompare(b.account) * direction;
           if (sort.key === "class") return a.profession.localeCompare(b.profession) * direction || a.account.localeCompare(b.account);
+          if (sort.key === "sample") return (a.sample.fights - b.sample.fights) * direction || a.account.localeCompare(b.account);
           const valueA =
             sort.key === "wasted"
               ? getBoonWastedValue(a, "squadBuffs", table.stacking)
@@ -138,7 +149,7 @@ export default function BuffGenerationView() {
       : null;
 
     return { table, rows, unit, totalSquadOutput, totalWasted, totalOverstack, columnValuesByCategory };
-  }, [selectedTable, sort]);
+  }, [selectedTable, sort, report]);
   const iconsByName = useMemo(() => Object.fromEntries(chartData.map((d) => [d.name, d.icon])), [chartData]);
 
   function toggleSort(key: SortKey) {
@@ -332,6 +343,9 @@ export default function BuffGenerationView() {
                     <SortHeader sortKey="class" className="text-left px-2 py-3">
                       Class
                     </SortHeader>
+                    <SortHeader sortKey="sample" className="text-right px-2 py-3" title="Fights joined, session coverage, active combat time, and sample reliability">
+                      Sample
+                    </SortHeader>
                     {(Object.keys(CATEGORY_LABELS) as Array<keyof typeof CATEGORY_LABELS>).map((cat) => (
                       <SortHeader key={cat} sortKey={cat} className="text-center px-3 py-3">
                         {CATEGORY_LABELS[cat]}
@@ -359,6 +373,9 @@ export default function BuffGenerationView() {
                         </td>
                         <td className="px-2 py-2.5">
                           <ClassCell profession={row.profession} />
+                        </td>
+                        <td className="px-2 py-2.5 text-right">
+                          <PlayerSampleCell sample={row.sample} />
                         </td>
                         {(Object.keys(CATEGORY_LABELS) as Array<keyof typeof CATEGORY_LABELS>).map((cat) => {
                           const value = getBoonMetricValue(row, cat, table.stacking, "uptime");
