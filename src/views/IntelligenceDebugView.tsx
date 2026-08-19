@@ -25,6 +25,8 @@ import {
   type IntelligenceTimelineItem,
 } from "../lib/intelligence/intelligenceDashboard";
 import type { FindingSeverity, IntelligenceFinding, CriticalEvent } from "../lib/intelligence/types";
+import { buildEventInspection } from "../lib/intelligence/eventInspection";
+import IntelligenceEventInspector from "../components/intelligence/IntelligenceEventInspector";
 import type { WvWReport } from "../types/report";
 
 function formatNumber(value: number): string {
@@ -616,9 +618,24 @@ function FindingCard({ finding, fightContext }: { finding: IntelligenceFinding; 
   );
 }
 
-function CriticalEventCard({ event, fightContext }: { event: CriticalEvent; fightContext: FightContext }) {
+function CriticalEventCard({
+  event,
+  fightContext,
+  selected,
+  onInspect,
+}: {
+  event: CriticalEvent;
+  fightContext: FightContext;
+  selected: boolean;
+  onInspect: () => void;
+}) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onInspect}
+      className={`w-full rounded-xl border p-3 text-left transition ${selected ? "border-sky-300/35 bg-sky-500/[0.08] ring-1 ring-sky-300/15" : "border-white/[0.06] bg-black/25 hover:border-sky-400/25 hover:bg-sky-500/[0.035]"}`}
+    >
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <Pill className="border-sky-400/20 bg-sky-500/[0.06] text-sky-200">{fightContext.label}</Pill>
         <Pill>{formatTime(event.timestampMs)} into fight</Pill>
@@ -626,10 +643,11 @@ function CriticalEventCard({ event, fightContext }: { event: CriticalEvent; figh
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs font-black uppercase tracking-wider text-slate-100">{event.kind}</span>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{fightContext.name}</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{selected ? "inspecting" : fightContext.name}</span>
       </div>
       <p className="mt-2 text-xs leading-5 text-slate-400">{event.summary}</p>
-    </div>
+      <div className="mt-2 text-[10px] font-bold uppercase tracking-wider text-sky-400/70">Inspect ±15s event context</div>
+    </button>
   );
 }
 
@@ -811,6 +829,7 @@ export default function IntelligenceDebugView() {
   const [pressureFilter, setPressureFilter] = useState<PressureFilter>("all");
   const [selectedEngagementId, setSelectedEngagementId] = useState<string | null>(null);
   const [showEvidenceInspector, setShowEvidenceInspector] = useState(false);
+  const [selectedCriticalEventId, setSelectedCriticalEventId] = useState<string | null>(null);
   const dashboard = useMemo(() => (report ? buildIntelligenceDashboard(report) : null), [report]);
 
   function toggleSection(section: ExpandableSection) {
@@ -824,6 +843,7 @@ export default function IntelligenceDebugView() {
     setCriticalEventKindFilter("all");
     setSeverityFilter("all");
     setPressureFilter("all");
+    setSelectedCriticalEventId(null);
     setExpandedSections({ findings: false, criticalEvents: false });
   }
 
@@ -876,6 +896,17 @@ export default function IntelligenceDebugView() {
   const highestPressure = scopedEngagements[0];
   const visibleFindings = expandedSections.findings ? scopedFindings : scopedFindings.slice(0, FINDINGS_PREVIEW_COUNT);
   const visibleCriticalEvents = expandedSections.criticalEvents ? filteredCriticalEvents : filteredCriticalEvents.slice(0, CRITICAL_EVENTS_PREVIEW_COUNT);
+  const selectedCriticalEvent = selectedCriticalEventId
+    ? dashboard.criticalEvents.find((event) => event.id === selectedCriticalEventId) ?? null
+    : null;
+  const selectedEventInspection = selectedCriticalEvent
+    ? buildEventInspection({
+        event: selectedCriticalEvent,
+        segments: dashboard.segments,
+        findings: dashboard.findings,
+        criticalEvents: dashboard.criticalEvents,
+      })
+    : null;
   const scopedTotals = {
     downs: scopedEngagements.reduce((sum, engagement) => sum + engagement.downs, 0),
     deaths: scopedEngagements.reduce((sum, engagement) => sum + engagement.deaths, 0),
@@ -1178,9 +1209,24 @@ export default function IntelligenceDebugView() {
               </button>
             ))}
           </div>
+          {selectedEventInspection && (
+            <div className="mt-4">
+              <IntelligenceEventInspector
+                inspection={selectedEventInspection}
+                fightLabel={fightContextFor(fightContexts, selectedEventInspection.event.fightId).label}
+                onClose={() => setSelectedCriticalEventId(null)}
+              />
+            </div>
+          )}
           <div className="mt-4 grid max-h-[720px] gap-2 overflow-y-auto pr-1 custom-scrollbar">
             {visibleCriticalEvents.map((event) => (
-              <CriticalEventCard key={event.id} event={event} fightContext={fightContextFor(fightContexts, event.fightId)} />
+              <CriticalEventCard
+                key={event.id}
+                event={event}
+                fightContext={fightContextFor(fightContexts, event.fightId)}
+                selected={selectedCriticalEventId === event.id}
+                onInspect={() => setSelectedCriticalEventId(event.id)}
+              />
             ))}
             {filteredCriticalEvents.length === 0 && <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}
           </div>
