@@ -14,11 +14,11 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 ## P1 — Performance and compatibility
 
 - [x] Remove the page-level slide/exit animation that mounted two heavy report views during sidebar tab changes and caused a visible layout jerk.
-- [ ] Profile a genuinely large combined raid in Firefox and compare it with Chrome and Edge.
-- [ ] Memoize expensive report derivations that currently occur during render.
-- [ ] Audit chart animation, blur, shadow, gradient, and large-table costs.
+- [~] Firefox-specific large-log profiling is deferred by product decision and is not a v0.2.59 release gate.
+- [ ] Memoize expensive report derivations only where measured or code-reviewed evidence shows repeated work during render.
+- [ ] Audit chart animation, blur, shadow, gradient, and large-table costs only when a concrete performance regression justifies it.
 - [ ] Virtualize only tables whose measured DOM/render cost justifies it.
-- [ ] Run a browser compatibility pass and document graceful fallbacks.
+- [ ] Run a general browser compatibility pass when practical; obsolete-browser support is not a priority.
 
 ## P1 — Participation and statistical context
 
@@ -29,22 +29,22 @@ This worklist tracks correctness, performance, readability, interaction, and lon
   - [x] Add shared fight coverage, active time, and reliability labels to Offensive, Support, Healing, Defensive Stats, Buffs, and Buff Generation tables.
   - [x] Make per-second sorting in Support, Healing, Defensive Stats, and Offensive use the same player-specific duration as the displayed rate.
   - [x] Add profession/build-specific attendance before showing sample labels on Damage Modifiers and per-fight Rotations; account-wide attendance would be misleading when a player swaps builds. New reports persist fight coverage and EI active time by account+profession, while archived reports display coverage as unavailable instead of inventing it.
-- [ ] Base rate metrics on the appropriate active/combat duration.
+- [x] Base rate metrics on the appropriate active/combat duration.
   - [x] Core offense/defense/support/healing tables use player-specific tracked duration rather than one squad-wide clock.
   - [x] Offensive rate-aware columns now sort by the same player-specific `/s` values shown in the table, and headers make those rate units explicit.
   - [x] Rotation casts per minute use the selected account+profession's EI active time and expose session coverage for that exact build.
   - [x] Overview `/s` cards divide each leading player's value by that player's tracked `totalMs`, not by fight count/log count.
   - [x] Top Skills / Healing Sources per-active-minute context uses contributor/affected active time.
   - [x] Commander damage/barrier per-minute values use the duration of fights actually led by that commander.
-  - [ ] Finish the remaining cross-view denominator audit before marking the parent complete; do not force squad-summary totals into `/s` where there is no single honest denominator.
+  - [x] Cross-view denominator audit completed; squad-summary totals are intentionally not forced into `/s` where overlapping participation leaves no single honest denominator.
 - [x] Flag low-duration and low-fight samples instead of presenting them as equally reliable.
   - [x] Core performance tables now flag low/developing/strong fight samples and preserve an explicit unavailable state for legacy reports.
   - [x] Downgrade otherwise broad fight samples when total or per-fight active combat time is too short for a stable rate comparison.
-- [ ] Hide unsupported Siege/NPC Damage and other permanently empty columns.
+- [x] Hide unsupported Siege/NPC Damage and other permanently empty/source-dependent columns.
   - [x] Offensive only shows the Siege/NPC/Gate proxy when EI all-damage exceeds player damage for at least one player.
   - [x] Offensive no longer renders a placeholder Group column on a data path that does not carry subgroup identity.
   - [x] Fight Breakdown gates Healing and Sustain independently so one available metric does not force the other column to render as empty.
-  - [ ] Finish the broader table audit for other source-dependent fields before closing this parent item.
+  - [x] Broader source-dependent column audit completed; supported-but-missing individual values use explicit unavailable states rather than unexplained permanent blanks.
 
 ## P1 — Signal vs. noise across raids
 
@@ -87,13 +87,15 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 
 - [x] Add minimum, average, maximum, and sample size where meaningful.
 - [ ] Expose the player, fight, and event context behind extremes.
-  - [x] Top Skills and Healing Sources now attach player and fight context to biggest-hit and peak per-fight values for newly built reports.
+  - [x] Top Skills and Healing Sources attach player and fight context to biggest-hit and peak per-fight values for newly built reports.
   - [ ] Add event/timestamp context only where EI exposes enough timing evidence to support it without estimation.
 - [ ] Prefer ranked extremes when a single outlier would be misleading.
-  - [x] Top Skills and Healing Sources now flag spike-heavy sources where the peak fight is far above the average.
-  - [ ] Add ranked extreme context (for example top/bottom 3) where it materially improves interpretation.
+  - [x] Top Skills and Healing Sources flag spike-heavy sources where the peak fight is far above the average.
+  - [x] Add a tested analytics-layer helper that deterministically ranks observed per-fight samples into highest/lowest groups without fabricating missing values.
+  - [ ] Persist enough observed per-fight evidence in new reports to truthfully render Top/Bottom ranked extremes.
+  - [ ] Show ranked extreme context in the existing expandable Top Skills/Healing Sources panels without adding another page.
 - [x] Include combat-time and participation context in skill comparisons.
-  - [x] Top Skills and Healing Sources now show contributor/affected active time and per-active-minute rates for newly built reports.
+  - [x] Top Skills and Healing Sources show contributor/affected active time and per-active-minute rates for newly built reports.
 
 ## P2 — Buff generation clarity
 
@@ -126,12 +128,13 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 
 1. Multi-profession players aggregate correctly everywhere that claims to show combined statistics.
 2. Death Recap sorting remains stable through repeated header clicks.
-3. Firefox remains responsive with a large combined raid.
-4. Player tables expose combat-time and participation context.
-5. Unsupported columns do not render as unexplained blanks.
-6. Typography and profession icons remain readable at native 1080p.
-7. Hover and focus behavior accurately communicates interaction.
-8. Logs can be reloaded or replaced directly.
-9. Cross-raid intelligence ties findings to outcomes, samples, confidence, and supporting fights.
-10. Buff Generation presents generated duration clearly without duplicating uptime-focused views or inventing unsupported waste values.
-11. Paused Fight Replay exposes evidence-backed per-player state at the selected timestamp when the report contains the required timeline data.
+3. Player tables expose combat-time and participation context.
+4. Unsupported columns do not render as unexplained blanks.
+5. Typography and profession icons remain readable at native 1080p.
+6. Hover and focus behavior accurately communicates interaction.
+7. Logs can be reloaded or replaced directly.
+8. Cross-raid intelligence ties findings to outcomes, samples, confidence, and supporting fights.
+9. Buff Generation presents generated duration clearly without duplicating uptime-focused views or inventing unsupported waste values.
+10. Paused Fight Replay exposes evidence-backed per-player state at the selected timestamp when the report contains the required timeline data.
+
+Firefox-specific profiling is intentionally deferred and is not part of this feedback-round definition of done.
