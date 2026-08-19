@@ -9,7 +9,8 @@ import {
   type BoonTable,
 } from "../lib/bridge-metrics/boonGeneration";
 import {
-  formatGeneratedDuration,
+  formatGeneratedEffect,
+  generatedUnitLabel,
   getGeneratedSeconds,
   getWastedSeconds,
 } from "../lib/buffGenerationDuration";
@@ -110,7 +111,7 @@ export default function BuffGenerationView() {
       .map((table) => {
         const value = getTableGeneratedSeconds(table);
         if (value <= 0) return null;
-        return { id: table.id, name: table.name, icon: table.icon, value };
+        return { id: table.id, name: table.name, icon: table.icon, value, stacking: table.stacking };
       })
       .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
       .sort((a, b) => b.value - a.value);
@@ -241,7 +242,7 @@ export default function BuffGenerationView() {
             <div className="py-10 text-center text-sm text-slate-500">
               No boon generation data available for this report.
               <p className="text-[11px] text-slate-500 mt-1">
-                Buff Generation shows how much boon duration each player actually created. Buff uptime remains under Buffs and Party Boons.
+                Buff Generation shows how much effect-time each player actually created. Buff uptime remains under Buffs and Party Boons.
               </p>
             </div>
           }
@@ -278,8 +279,8 @@ export default function BuffGenerationView() {
       )}
 
       <Panel
-        title={`Squad ${activeTab} Generated Duration`}
-        subtitle="Total squad-facing duration generated for each buff. Buffs and Party Boons remain the uptime-percentage views."
+        title={`Squad ${activeTab} Generated Effect-Time`}
+        subtitle="Duration buffs are ordinary boon-seconds; intensity buffs such as Might and Stability are stack-seconds. Buffs and Party Boons remain the uptime views."
         icon={<Sparkles className="w-3.5 h-3.5" />}
       >
         <div className="h-64">
@@ -296,17 +297,20 @@ export default function BuffGenerationView() {
               <YAxis
                 tick={{ fill: "#64748b", fontSize: 10 }}
                 stroke="#334155"
-                width={52}
-                tickFormatter={(value) => formatGeneratedDuration(Number(value))}
+                width={58}
+                tickFormatter={(value) => `${Math.round(Number(value))} e-s`}
               />
               <Tooltip
                 contentStyle={TOOLTIP_STYLE}
                 itemStyle={TOOLTIP_ITEM_STYLE}
                 labelStyle={TOOLTIP_LABEL_STYLE}
-                formatter={(value, _name, item) => [
-                  `${formatGeneratedDuration(Number(value))} (${Number(value).toLocaleString(undefined, { maximumFractionDigits: 1 })}s)`,
-                  item?.payload?.name,
-                ]}
+                formatter={(value, _name, item) => {
+                  const stacking = Boolean(item?.payload?.stacking);
+                  return [
+                    `${formatGeneratedEffect(Number(value), stacking)} (${generatedUnitLabel(stacking)})`,
+                    item?.payload?.name,
+                  ];
+                }}
               />
               <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                 {chartData.map((entry, index) => (
@@ -320,10 +324,15 @@ export default function BuffGenerationView() {
           </ResponsiveContainer>
         </div>
 
+        <div className="mt-2 text-[10px] leading-4 text-slate-500">
+          The chart uses a shared effect-second scale for ranking. Duration seconds and intensity stack-seconds are different physical meanings, so compare individual values with their unit labels rather than treating them as identical wall-clock time.
+        </div>
+
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {sortedTables.map((table) => {
             const seconds = generatedById.get(table.id) ?? 0;
             const selected = selectedTable?.id === table.id;
+            const unit = generatedUnitLabel(table.stacking);
             return (
               <button
                 key={table.id}
@@ -334,7 +343,7 @@ export default function BuffGenerationView() {
                     ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
                     : "border-slate-800/70 bg-slate-950/40 text-slate-400 hover:border-slate-700 hover:text-slate-200"
                 }`}
-                title={`${seconds.toLocaleString(undefined, { maximumFractionDigits: 1 })} seconds generated`}
+                title={`${seconds.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${unit} generated`}
               >
                 <span className="flex min-w-0 items-center gap-2">
                   {table.icon ? (
@@ -345,7 +354,7 @@ export default function BuffGenerationView() {
                   <span className="truncate text-xs font-semibold">{table.name}</span>
                 </span>
                 <span className="shrink-0 text-right font-mono text-[11px]">
-                  <span className="block font-bold">{formatGeneratedDuration(seconds)}</span>
+                  <span className="block font-bold">{formatGeneratedEffect(seconds, table.stacking)}</span>
                   <span className="text-[9px] uppercase tracking-wider text-slate-500">{table.rows.length} players</span>
                 </span>
               </button>
@@ -356,10 +365,13 @@ export default function BuffGenerationView() {
 
       {selectedBreakdown && (() => {
         const { table, rows, totalSquadGeneratedSeconds, totalWastedSeconds, totalOverstack } = selectedBreakdown;
+        const unit = generatedUnitLabel(table.stacking);
         return (
           <Panel
             title={`${table.name} Generation`}
-            subtitle="Self, group, squad, and reapplied values are total duration. EI's exported Overstack field is not presented as seconds because it includes generation and is not a pure overcap-duration measure."
+            subtitle={table.stacking
+              ? "Self, group, squad, and reapplied values are stack-seconds: one stack maintained for one second equals one stack-second. EI Overstack remains separate and unverified as a pure waste measure."
+              : "Self, group, squad, and reapplied values are total boon-duration seconds. EI Overstack remains separate and unverified as a pure waste measure."}
             icon={
               table.icon ? (
                 <img src={table.icon} alt="" referrerPolicy="no-referrer" className="w-4 h-4 rounded-sm" />
@@ -374,13 +386,13 @@ export default function BuffGenerationView() {
               <div className="rounded-lg bg-slate-950/50 p-2">
                 <div>Squad Generated</div>
                 <div className="mt-1 font-mono text-sm font-bold text-emerald-400">
-                  {formatGeneratedDuration(totalSquadGeneratedSeconds)}
+                  {formatGeneratedEffect(totalSquadGeneratedSeconds, table.stacking)}
                 </div>
               </div>
               <div className="rounded-lg bg-slate-950/50 p-2">
                 <div>Reapplied / Wasted</div>
                 <div className="mt-1 font-mono text-sm font-bold text-amber-400">
-                  {formatGeneratedDuration(totalWastedSeconds)}
+                  {formatGeneratedEffect(totalWastedSeconds, table.stacking)}
                 </div>
               </div>
               <div className="rounded-lg bg-slate-950/50 p-2">
@@ -401,14 +413,19 @@ export default function BuffGenerationView() {
                       Sample
                     </SortHeader>
                     {(Object.keys(CATEGORY_LABELS) as GenerationCategory[]).map((category) => (
-                      <SortHeader key={category} sortKey={category} className="text-center px-3 py-3" title={`Total ${CATEGORY_LABELS[category].toLowerCase()} generated duration`}>
+                      <SortHeader
+                        key={category}
+                        sortKey={category}
+                        className="text-center px-3 py-3"
+                        title={`Total ${CATEGORY_LABELS[category].toLowerCase()} generated ${unit}`}
+                      >
                         {CATEGORY_LABELS[category]}
                       </SortHeader>
                     ))}
-                    <SortHeader sortKey="wasted" className="text-center px-3 py-3 text-amber-500/70" title="Total EI wasted/reapplied generation converted back to duration">
+                    <SortHeader sortKey="wasted" className="text-center px-3 py-3 text-amber-500/70" title={`Total EI wasted/reapplied generation converted back to ${unit}`}>
                       Reapplied
                     </SortHeader>
-                    <SortHeader sortKey="overstack" className="text-center px-3 py-3 text-rose-500/70" title="Raw EI-normalized Overstack representation; not seconds because EI includes generation in this exported value">
+                    <SortHeader sortKey="overstack" className="text-center px-3 py-3 text-rose-500/70" title="Raw EI-normalized Overstack representation; not relabeled as time because EI includes generation in this exported value">
                       EI Overstack
                     </SortHeader>
                   </tr>
@@ -431,9 +448,9 @@ export default function BuffGenerationView() {
                             <td key={category} className="text-center px-3 py-2.5 font-mono">
                               <span
                                 className={seconds > 0 ? "font-bold text-emerald-400" : "font-bold text-slate-600"}
-                                title={`${seconds.toLocaleString(undefined, { maximumFractionDigits: 1 })} seconds generated`}
+                                title={`${seconds.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${unit} generated`}
                               >
-                                {formatGeneratedDuration(seconds)}
+                                {formatGeneratedEffect(seconds, table.stacking)}
                               </span>
                             </td>
                           );
@@ -441,9 +458,9 @@ export default function BuffGenerationView() {
                         <td className="text-center px-3 py-2.5 font-mono">
                           <span
                             className={wastedSeconds > 0 ? "text-amber-400/80" : "text-slate-700"}
-                            title={`${wastedSeconds.toLocaleString(undefined, { maximumFractionDigits: 1 })} seconds wasted/reapplied`}
+                            title={`${wastedSeconds.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${unit} wasted/reapplied`}
                           >
-                            {formatGeneratedDuration(wastedSeconds)}
+                            {formatGeneratedEffect(wastedSeconds, table.stacking)}
                           </span>
                         </td>
                         <td className="text-center px-3 py-2.5 font-mono">

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatGeneratedDuration, getGeneratedSeconds, getWastedSeconds } from '../buffGenerationDuration';
+import {
+  formatGeneratedDuration,
+  formatGeneratedEffect,
+  generatedUnitLabel,
+  getGeneratedSeconds,
+  getWastedSeconds,
+} from '../buffGenerationDuration';
 import type { BoonRow } from '../bridge-metrics/boonGeneration';
 
 const row: BoonRow = {
@@ -29,14 +35,24 @@ describe('Buff Generation duration display', () => {
     expect(getWastedSeconds(row, 'squadBuffs', false)).toBe(23.5);
   });
 
-  it('formats seconds compactly', () => {
+  it('formats duration-stacking boon seconds compactly', () => {
     expect(formatGeneratedDuration(12.4)).toBe('12s');
     expect(formatGeneratedDuration(154)).toBe('2m 34s');
     expect(formatGeneratedDuration(3_725)).toBe('1h 2m 5s');
+    expect(formatGeneratedEffect(154, false)).toBe('2m 34s');
+    expect(generatedUnitLabel(false)).toBe('seconds');
+  });
+
+  it('labels intensity-stacking totals as stack-seconds rather than wall-clock duration', () => {
+    expect(formatGeneratedEffect(154, true)).toBe('154 stack-s');
+    expect(formatGeneratedEffect(3_725, true)).toBe('3,725 stack-s');
+    expect(generatedUnitLabel(true)).toBe('stack-seconds');
   });
 
   it('handles invalid or negative values safely', () => {
     expect(formatGeneratedDuration(Number.NaN)).toBe('0s');
     expect(formatGeneratedDuration(-10)).toBe('0s');
+    expect(formatGeneratedEffect(Number.NaN, true)).toBe('0 stack-s');
+    expect(formatGeneratedEffect(-10, true)).toBe('0 stack-s');
   });
 });
