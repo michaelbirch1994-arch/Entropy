@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import { useDamageScope, pickDamageScopeValue } from "../store/DamageScopeContext";
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
+import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
 import LeaderboardTable from "../components/ui/LeaderboardTable";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
@@ -53,6 +54,10 @@ const METRIC_GLOW: Record<MetricKey, string> = {
   dodges: "neon-survival",
   kills: "neon-offense",
 };
+
+function isMetricKey(value: string | undefined): value is MetricKey {
+  return !!value && METRICS.some((metric) => metric.key === value);
+}
 
 function formatMetricValue(entry: LeaderboardEntry, unit?: string) {
   if (unit === "") return Math.round(entry.value).toLocaleString();
@@ -314,8 +319,19 @@ export default function TopPlayersView() {
   const { report } = useReport();
   const { scope: damageScope } = useDamageScope();
   const { scope: allyScope } = useAllyScope();
+  const { navigationTarget, clearNavigationTarget } = useView();
   const [metric, setMetric] = useState<MetricKey>("downContrib");
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (navigationTarget?.targetView !== "top-players") return;
+    if (isMetricKey(navigationTarget.metric)) {
+      setMetric(navigationTarget.metric);
+      setExpandedCard(navigationTarget.account ? `${navigationTarget.metric}:${navigationTarget.account}` : null);
+    }
+    clearNavigationTarget();
+  }, [navigationTarget]);
+
   if (!report) return null;
   const lb = report.stats.leaderboards;
   const entries: LeaderboardEntry[] = lb[metric] ?? [];
@@ -326,14 +342,7 @@ export default function TopPlayersView() {
   const totalFights = report.stats.total;
 
   return (
-    // No snapshotKey in this key: that used to force a full unmount/remount
-    // of the whole view (replaying the animate-view fadeSlideUp entrance
-    // animation) on every metric click, which felt like a jerky page reset
-    // instead of a smooth swap of just the numbers. The inner podium/panel/
-    // card keys below still carry snapshotKey so their own list items
-    // reconcile correctly when the metric changes.
     <div className="theme-view-layout space-y-5 animate-view pb-12">
-      {/* Metric selector */}
       <div className="theme-filter-strip flex flex-wrap gap-2">
         {METRICS.map((m) => {
           const Icon = m.icon;
@@ -343,11 +352,7 @@ export default function TopPlayersView() {
               type="button"
               key={m.key}
               onClick={() => setMetric(m.key)}
-              className={`theme-filter-button flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 border ${
-                isActive
-                  ? "is-active"
-                  : ""
-              }`}
+              className={`theme-filter-button flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 border ${isActive ? "is-active" : ""}`}
             >
               <Icon className="w-3.5 h-3.5" />
               {m.label}
@@ -356,7 +361,6 @@ export default function TopPlayersView() {
         })}
       </div>
 
-      {/* Top 3 podium */}
       <div className="theme-podium-grid grid grid-cols-1 md:grid-cols-3 gap-4" key={`podium:${snapshotKey}`}>
         {entries.slice(0, 3).map((e, i) => {
           const place = i + 1;
@@ -382,7 +386,6 @@ export default function TopPlayersView() {
         })}
       </div>
 
-      {/* Metric-bound player cards */}
       <Panel
         key={`panel:${snapshotKey}`}
         title={`${active.label} Player Cards`}
@@ -429,7 +432,6 @@ export default function TopPlayersView() {
         )}
       </Panel>
 
-      {/* Full leaderboard */}
       <Panel title={`${active.label} Leaderboard`} icon={<active.icon className="w-4 h-4" />} accent="text-sky-400">
         <LeaderboardTable
           entries={entries}
