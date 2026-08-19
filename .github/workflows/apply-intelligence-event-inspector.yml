@@ -1,0 +1,81 @@
+name: Apply Intelligence event inspector wiring
+
+on:
+  push:
+    branches:
+      - feature/intelligence-clickable-event-inspector
+    paths:
+      - .github/workflows/apply-intelligence-event-inspector.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Wire forensic event inspection into Intelligence
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/views/IntelligenceDebugView.tsx')
+          text = path.read_text()
+
+          def replace_once(old: str, new: str, label: str):
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, found {count}')
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              'import type { FindingSeverity, IntelligenceFinding, CriticalEvent } from "../lib/intelligence/types";\nimport type { WvWReport } from "../types/report";',
+              'import type { FindingSeverity, IntelligenceFinding, CriticalEvent } from "../lib/intelligence/types";\nimport { buildEventInspection } from "../lib/intelligence/eventInspection";\nimport IntelligenceEventInspector from "../components/intelligence/IntelligenceEventInspector";\nimport type { WvWReport } from "../types/report";',
+              'imports',
+          )
+
+          replace_once(
+              '''function CriticalEventCard({ event, fightContext }: { event: CriticalEvent; fightContext: FightContext }) {\n  return (\n    <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">\n      <div className="mb-2 flex flex-wrap items-center gap-2">\n        <Pill className="border-sky-400/20 bg-sky-500/[0.06] text-sky-200">{fightContext.label}</Pill>\n        <Pill>{formatTime(event.timestampMs)} into fight</Pill>\n        <Pill>{event.confidence}</Pill>\n      </div>\n      <div className="flex flex-wrap items-center justify-between gap-2">\n        <span className="text-xs font-black uppercase tracking-wider text-slate-100">{event.kind}</span>\n        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{fightContext.name}</span>\n      </div>\n      <p className="mt-2 text-xs leading-5 text-slate-400">{event.summary}</p>\n    </div>\n  );\n}''',
+              '''function CriticalEventCard({\n  event,\n  fightContext,\n  selected,\n  onInspect,\n}: {\n  event: CriticalEvent;\n  fightContext: FightContext;\n  selected: boolean;\n  onInspect: () => void;\n}) {\n  return (\n    <button\n      type="button"\n      aria-pressed={selected}\n      onClick={onInspect}\n      className={`w-full rounded-xl border p-3 text-left transition ${selected ? "border-sky-300/35 bg-sky-500/[0.08] ring-1 ring-sky-300/15" : "border-white/[0.06] bg-black/25 hover:border-sky-400/25 hover:bg-sky-500/[0.035]"}`}\n    >\n      <div className="mb-2 flex flex-wrap items-center gap-2">\n        <Pill className="border-sky-400/20 bg-sky-500/[0.06] text-sky-200">{fightContext.label}</Pill>\n        <Pill>{formatTime(event.timestampMs)} into fight</Pill>\n        <Pill>{event.confidence}</Pill>\n      </div>\n      <div className="flex flex-wrap items-center justify-between gap-2">\n        <span className="text-xs font-black uppercase tracking-wider text-slate-100">{event.kind}</span>\n        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{selected ? "inspecting" : fightContext.name}</span>\n      </div>\n      <p className="mt-2 text-xs leading-5 text-slate-400">{event.summary}</p>\n      <div className="mt-2 text-[10px] font-bold uppercase tracking-wider text-sky-400/70">Inspect ±15s event context</div>\n    </button>\n  );\n}''',
+              'CriticalEventCard',
+          )
+
+          replace_once(
+              '  const [showEvidenceInspector, setShowEvidenceInspector] = useState(false);\n  const dashboard = useMemo(() => (report ? buildIntelligenceDashboard(report) : null), [report]);',
+              '  const [showEvidenceInspector, setShowEvidenceInspector] = useState(false);\n  const [selectedCriticalEventId, setSelectedCriticalEventId] = useState<string | null>(null);\n  const dashboard = useMemo(() => (report ? buildIntelligenceDashboard(report) : null), [report]);',
+              'event state',
+          )
+
+          replace_once(
+              '    setPressureFilter("all");\n    setExpandedSections({ findings: false, criticalEvents: false });',
+              '    setPressureFilter("all");\n    setSelectedCriticalEventId(null);\n    setExpandedSections({ findings: false, criticalEvents: false });',
+              'fight reset',
+          )
+
+          replace_once(
+              '  const visibleCriticalEvents = expandedSections.criticalEvents ? filteredCriticalEvents : filteredCriticalEvents.slice(0, CRITICAL_EVENTS_PREVIEW_COUNT);\n  const scopedTotals = {',
+              '''  const visibleCriticalEvents = expandedSections.criticalEvents ? filteredCriticalEvents : filteredCriticalEvents.slice(0, CRITICAL_EVENTS_PREVIEW_COUNT);\n  const selectedCriticalEvent = selectedCriticalEventId\n    ? dashboard.criticalEvents.find((event) => event.id === selectedCriticalEventId) ?? null\n    : null;\n  const selectedEventInspection = selectedCriticalEvent\n    ? buildEventInspection({\n        event: selectedCriticalEvent,\n        segments: dashboard.segments,\n        findings: dashboard.findings,\n        criticalEvents: dashboard.criticalEvents,\n      })\n    : null;\n  const scopedTotals = {''',
+              'inspection calculation',
+          )
+
+          replace_once(
+              '''          <div className="mt-4 grid max-h-[720px] gap-2 overflow-y-auto pr-1 custom-scrollbar">\n            {visibleCriticalEvents.map((event) => (\n              <CriticalEventCard key={event.id} event={event} fightContext={fightContextFor(fightContexts, event.fightId)} />\n            ))}\n            {filteredCriticalEvents.length === 0 && <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}\n          </div>''',
+              '''          {selectedEventInspection && (\n            <div className="mt-4">\n              <IntelligenceEventInspector\n                inspection={selectedEventInspection}\n                fightLabel={fightContextFor(fightContexts, selectedEventInspection.event.fightId).label}\n                onClose={() => setSelectedCriticalEventId(null)}\n              />\n            </div>\n          )}\n          <div className="mt-4 grid max-h-[720px] gap-2 overflow-y-auto pr-1 custom-scrollbar">\n            {visibleCriticalEvents.map((event) => (\n              <CriticalEventCard\n                key={event.id}\n                event={event}\n                fightContext={fightContextFor(fightContexts, event.fightId)}\n                selected={selectedCriticalEventId === event.id}\n                onInspect={() => setSelectedCriticalEventId(event.id)}\n              />\n            ))}\n            {filteredCriticalEvents.length === 0 && <EmptyState dashboard={dashboard} scope={selectedScopeLabel} />}\n          </div>''',
+              'event feed wiring',
+          )
+
+          path.write_text(text)
+
+          workflow = Path('.github/workflows/apply-intelligence-event-inspector.yml')
+          workflow.unlink()
+      - name: Commit generated wiring
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/views/IntelligenceDebugView.tsx .github/workflows/apply-intelligence-event-inspector.yml
+          git commit -m "Wire Critical Events into forensic inspector"
+          git push
