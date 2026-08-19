@@ -8,6 +8,7 @@ import PlayerSampleCell from "../components/ui/PlayerSampleCell";
 import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped, profChip } from "../utils/format";
 import type { OffensePlayer } from "../types/report";
 import { resolvePlayerSampleContext, type PlayerSampleContextData } from "../lib/playerSampleContext";
+import { hasNonPlayerObjectiveDamage, nonPlayerObjectiveDamage } from "../lib/offenseColumns";
 import {
   BarChart,
   Bar,
@@ -188,8 +189,8 @@ export default function OffensiveView() {
     // proxy for "siege/objective damage" EI's export supports - it can't be
     // split further into siege vs. gate vs. NPC without per-hit target-type
     // data the JSON doesn't expose.
-    const hasSiegeData = rows.some((r) => r.offenseTotals.damageAll !== undefined);
-    const totalSiegeDamage = rows.reduce((a, r) => a + Math.max(0, (r.offenseTotals.damageAll ?? 0) - (r.offenseTotals.damage ?? 0)), 0);
+    const hasSiegeData = hasNonPlayerObjectiveDamage(rows);
+    const totalSiegeDamage = rows.reduce((a, r) => a + nonPlayerObjectiveDamage(r), 0);
     const byDamage = [...rows].sort(
       (a, b) => pickDamageScopeValue(scope, b.offenseTotals.damage, b.offenseTotals.damageAll) - pickDamageScopeValue(scope, a.offenseTotals.damage, a.offenseTotals.damageAll),
     );
@@ -389,7 +390,7 @@ export default function OffensiveView() {
 
                 {derived.hasSiegeData && (
                   <td className="p-2.5 text-right text-slate-500">
-                    {fmtCompact(Math.max(0, (p.offenseTotals.damageAll ?? 0) - (p.offenseTotals.damage ?? 0)))}
+                    {fmtCompact(nonPlayerObjectiveDamage(p))}
                   </td>
                 )}</tr>
                 );

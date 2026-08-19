@@ -27,6 +27,7 @@ interface ReportContextValue {
   source: ReportSource | null;
   uploadReport: (file: File) => Promise<void>;
   loadFromUrl: (url: string) => Promise<void>;
+  reloadReport: () => Promise<void>;
   /** Loads an already-built report object directly (e.g. combined from raw fights). */
   setReport: (report: WvWReport) => Promise<void>;
   clearReport: () => Promise<void>;
@@ -42,6 +43,7 @@ const ReportContext = createContext<ReportContextValue>({
   source: null,
   uploadReport: async () => {},
   loadFromUrl: async () => {},
+  reloadReport: async () => {},
   setReport: async () => {},
   clearReport: async () => {},
 });
@@ -80,6 +82,18 @@ function parseReport(text: string, labelForError: string): WvWReport {
 function reportCacheId(report: WvWReport, source: ReportSource): string {
   const base = report.meta?.id ?? (source === "upload" ? "upload" : "url");
   return `${source}:${base}`;
+}
+
+
+function reportPermalinks(report: WvWReport | null): string[] {
+  const rows = report?.stats?.fightBreakdown ?? [];
+  return Array.from(
+    new Set(
+      rows
+        .map((row) => row.permalink)
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0),
+    ),
+  );
 }
 
 
@@ -249,6 +263,66 @@ export function ReportProvider({ children }: { children: ReactNode }) {
   }, []);
 
 
+  const reloadReport = useCallback(async () => {
+    if (!report) {
+      setError("No report is loaded to reload.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const permalinks = reportPermalinks(report);
+      if (permalinks.length > 0) {
+        const fights = await Promise.all(
+          permalinks.map(async (permalink) => {
+            const raw = await fetchDpsReportJson(permalink);
+            return { summary: summarizeRawFight(raw, permalink), raw };
+          }),
+        );
+        const data = buildReportFromFights(fights);
+        const nextSource: ReportSource = source === "upload" ? "raw" : (source ?? "raw");
+        setReportState(data);
+        setSource(nextSource);
+        setReportId(null);
+        setLoading(false);
+        await putActiveReport({
+          id: reportCacheId(data, nextSource),
+          source: nextSource,
+          savedAt: Date.now(),
+          report: data,
+        });
+        void recordReportIntoProfiles(data);
+        void saveToArchive(data);
+        return;
+      }
+
+      if (reportId) {
+        const res = await fetch(`${import.meta.env.BASE_URL}reports/${reportId}/report.json`);
+        if (!res.ok) throw new Error(`Report not found (${res.status})`);
+        const data = parseReport(await res.text(), `Report ${reportId}`);
+        setReportState(data);
+        setSource("url");
+        setLoading(false);
+        await putActiveReport({
+          id: reportCacheId(data, "url"),
+          source: "url",
+          savedAt: Date.now(),
+          report: data,
+        });
+        void recordReportIntoProfiles(data);
+        void saveToArchive(data);
+        return;
+      }
+
+      throw new Error("This report cannot be reloaded automatically. Re-import the raw .zevtc logs or paste the dps.report links again.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to reload report");
+      setLoading(false);
+    }
+  }, [report, reportId, source]);
+
+
   const setReport = useCallback(async (data: WvWReport) => {
     setLoading(true);
     setError(null);
@@ -293,6 +367,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         source,
         uploadReport,
         loadFromUrl,
+        reloadReport,
         setReport,
         clearReport,
       }}

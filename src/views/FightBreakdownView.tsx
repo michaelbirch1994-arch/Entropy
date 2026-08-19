@@ -96,6 +96,7 @@ export default function FightBreakdownView() {
   };
 
   const hasHealingData = fights.some((f) => f.totalOutgoingHealing !== undefined);
+  const hasSustainData = fights.some((f) => f.effectiveHealing !== undefined);
 
   // Recharts data for the damage/sustain chart and the KDR trend line, built
   // from whatever's currently shown (respects the outcome filter and the
@@ -170,12 +171,8 @@ export default function FightBreakdownView() {
                 <SortHeader k="outDamage" className="text-right">Out Dmg</SortHeader>
                 <SortHeader k="inDamage" className="text-right">In Dmg</SortHeader>
                 <SortHeader k="strips" className="text-right">Strips</SortHeader>
-                {hasHealingData && (
-                  <>
-                    <SortHeader k="healing" className="text-right">Healing</SortHeader>
-                    <SortHeader k="sustain" className="text-right">Sustain</SortHeader>
-                  </>
-                )}
+                {hasHealingData && <SortHeader k="healing" className="text-right">Healing</SortHeader>}
+                {hasSustainData && <SortHeader k="sustain" className="text-right">Sustain</SortHeader>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/30 font-mono">
@@ -222,14 +219,14 @@ export default function FightBreakdownView() {
                   <td className="p-2.5 text-right text-slate-400">{fmtCompact(f.totalIncomingDamage)}</td>
                   <td className="p-2.5 text-right text-slate-400">{f.totalOutgoingStrips}</td>
                   {hasHealingData && (
-                    <>
-                      <td className="p-2.5 text-right text-emerald-300">
-                        {f.totalOutgoingHealing !== undefined ? fmtCompact(f.totalOutgoingHealing) : "-"}
-                      </td>
-                      <td className={`p-2.5 text-right ${(f.effectiveHealing ?? 0) >= 0 ? "text-emerald-300" : "text-rose-400"}`}>
-                        {f.effectiveHealing !== undefined ? fmtCompact(f.effectiveHealing) : "-"}
-                      </td>
-                    </>
+                    <td className="p-2.5 text-right text-emerald-300">
+                      {f.totalOutgoingHealing !== undefined ? fmtCompact(f.totalOutgoingHealing) : "-"}
+                    </td>
+                  )}
+                  {hasSustainData && (
+                    <td className={`p-2.5 text-right ${(f.effectiveHealing ?? 0) >= 0 ? "text-emerald-300" : "text-rose-400"}`}>
+                      {f.effectiveHealing !== undefined ? fmtCompact(f.effectiveHealing) : "-"}
+                    </td>
                   )}
                 </tr>
               ))}

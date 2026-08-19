@@ -16,6 +16,9 @@
   --color-theme-accent: var(--theme-accent);
   --color-theme-accent-dim: var(--theme-accentDim);
   --color-theme-accent-strong: var(--theme-accentStrong);
+  --color-theme-on-accent: var(--theme-onAccent);
+  --color-theme-on-warning: var(--theme-onWarning);
+  --color-theme-on-danger: var(--theme-onDanger);
   --color-theme-secondary: var(--theme-secondary);
   --color-theme-danger: var(--theme-danger);
   --color-theme-warning: var(--theme-warning);
@@ -41,6 +44,9 @@
   --theme-accent: #18D9BD;
   --theme-accentDim: #08655F;
   --theme-accentStrong: #58FFE3;
+  --theme-onAccent: #001714;
+  --theme-onWarning: #1B0D00;
+  --theme-onDanger: #210009;
   --theme-secondary: #FFAB45;
   --theme-danger: #FF5D7D;
   --theme-warning: #FFB84D;
@@ -100,12 +106,10 @@ kbd {
   display: block;
   object-fit: contain;
   object-position: center;
-  transform: scale(1.1) translateX(0.03em);
-  transform-origin: center;
   /*
-    Keep normal browser antialiasing for these 384px transparent PNGs. Pixelated
-    / crisp-edge rendering makes small class chips jagged. The glyph is enlarged
-    just enough to use the square frame without clipping its outer strokes.
+    Keep normal browser antialiasing and render directly at the requested integer
+    box size. A fractional transform forces a second resampling pass and makes the
+    transparent glyph edges softer at 14px and 16px.
   */
   image-rendering: auto;
 }
@@ -2126,7 +2130,7 @@ kbd {
 .theme-builder-notes:focus { border-color: rgba(239, 79, 35, 0.86); box-shadow: inset 2px 0 0 #e64620, 0 0 18px -13px #ff4d1f; }
 .theme-builder-input option { background: #0b0705; color: #ded0c7; }
 
-.theme-builder-professions { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 0.42rem; }
+.theme-builder-professions { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr)); gap: 0.42rem; }
 .theme-builder-professions button {
   min-width: 0;
   padding: 0.55rem 0.25rem 0.45rem;
@@ -2138,8 +2142,10 @@ kbd {
 .theme-builder-professions button span { display: grid; width: 2.35rem; height: 2.35rem; margin: 0 auto 0.35rem; place-items: center; filter: saturate(0.55); }
 .theme-builder-professions button img { width: 100%; height: 100%; object-fit: contain; }
 .theme-builder-professions button strong {
-  display: block;
-  min-height: 1.35rem;
+  display: flex;
+  min-height: 1.9rem;
+  align-items: center;
+  justify-content: center;
   font-size: 0.52rem;
   line-height: 1.2;
   overflow-wrap: anywhere;
@@ -2719,4 +2725,531 @@ kbd {
   .theme-podium-card,
   .theme-party-card,
   .theme-roster-player { transition: none; }
+}
+
+/* Spectrum command polish ----------------------------------------------------
+   Each workspace gets a distinct signal color while metric surfaces keep their
+   semantic identity. Graphite remains the shared chassis, so color communicates
+   context instead of becoming decoration. */
+
+.theme-main[data-workspace-tone="overview"] {
+  --theme-accent: #40ddff;
+  --theme-accentStrong: #9bf3ff;
+  --theme-accentDim: #126b82;
+  --theme-glow: rgba(64, 221, 255, 0.38);
+}
+
+.theme-main[data-workspace-tone="squad"] {
+  --theme-accent: #51edab;
+  --theme-accentStrong: #a6ffd4;
+  --theme-accentDim: #176e50;
+  --theme-glow: rgba(81, 237, 171, 0.36);
+}
+
+.theme-main[data-workspace-tone="performance"] {
+  --theme-accent: #ffad45;
+  --theme-accentStrong: #ffd18a;
+  --theme-accentDim: #89531c;
+  --theme-glow: rgba(255, 173, 69, 0.38);
+}
+
+.theme-main[data-workspace-tone="combat"] {
+  --theme-accent: #ff6688;
+  --theme-accentStrong: #ffb0c2;
+  --theme-accentDim: #8a2941;
+  --theme-glow: rgba(255, 102, 136, 0.36);
+}
+
+.theme-main[data-workspace-tone="extras"] {
+  --theme-accent: #aa89ff;
+  --theme-accentStrong: #d4c4ff;
+  --theme-accentDim: #58418f;
+  --theme-glow: rgba(170, 137, 255, 0.38);
+}
+
+.theme-main[data-workspace-tone] {
+  background:
+    radial-gradient(circle at 76% 4%, color-mix(in srgb, var(--theme-accent) 9%, transparent), transparent 28rem),
+    linear-gradient(90deg, rgba(2, 8, 12, 0.74), rgba(2, 8, 12, 0.18) 52%, rgba(2, 8, 12, 0.48)),
+    linear-gradient(180deg, rgba(4, 15, 20, 0.2), rgba(2, 7, 11, 0.66));
+}
+
+.theme-main[data-workspace-tone] .theme-topbar {
+  border-bottom-color: color-mix(in srgb, var(--theme-accent) 48%, transparent);
+  background:
+    linear-gradient(102deg, color-mix(in srgb, var(--theme-accent) 13%, transparent), transparent 24rem),
+    rgba(3, 10, 14, 0.93);
+}
+
+.theme-main[data-workspace-tone] .theme-topbar::after {
+  background: linear-gradient(90deg, var(--theme-accentStrong) 0 5%, var(--theme-accent) 24%, color-mix(in srgb, var(--theme-secondary) 72%, var(--theme-accent)) 70%, transparent);
+  box-shadow: 0 0 18px var(--theme-glow);
+}
+
+.theme-main[data-workspace-tone] .theme-topbar::before {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--theme-secondary) 72%, var(--theme-accent)), transparent);
+  box-shadow: 0 0 13px color-mix(in srgb, var(--theme-secondary) 28%, transparent);
+}
+
+.theme-nav-item[data-tone="overview"],
+.theme-nav-section[data-tone="overview"] { --nav-signal: #40ddff; --nav-signal-strong: #9bf3ff; }
+.theme-nav-item[data-tone="squad"],
+.theme-nav-section[data-tone="squad"] { --nav-signal: #51edab; --nav-signal-strong: #a6ffd4; }
+.theme-nav-item[data-tone="performance"],
+.theme-nav-section[data-tone="performance"] { --nav-signal: #ffad45; --nav-signal-strong: #ffd18a; }
+.theme-nav-item[data-tone="combat"],
+.theme-nav-section[data-tone="combat"] { --nav-signal: #ff6688; --nav-signal-strong: #ffb0c2; }
+.theme-nav-item[data-tone="extras"],
+.theme-nav-section[data-tone="extras"] { --nav-signal: #aa89ff; --nav-signal-strong: #d4c4ff; }
+
+.theme-nav-item[aria-current="page"][data-tone] {
+  color: var(--nav-signal-strong) !important;
+  border-left-color: var(--nav-signal-strong);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--nav-signal) 24%, transparent), color-mix(in srgb, var(--nav-signal) 7%, transparent) 64%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--nav-signal-strong), inset 0 -1px 0 color-mix(in srgb, var(--nav-signal) 30%, transparent), 0 0 22px -15px var(--nav-signal) !important;
+}
+
+.theme-nav-section[data-tone][aria-expanded="true"] {
+  color: var(--nav-signal-strong) !important;
+  border-color: color-mix(in srgb, var(--nav-signal) 54%, transparent) !important;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--nav-signal) 20%, transparent), transparent 72%), rgba(8, 27, 32, 0.82) !important;
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--nav-signal) 70%, transparent);
+}
+
+.theme-panel[data-tone="system"],
+.theme-stat-card[data-tone="system"] { --plate-accent: var(--theme-accent); }
+.theme-panel[data-tone="info"],
+.theme-stat-card[data-tone="info"] { --plate-accent: #4dc8ff; }
+.theme-panel[data-tone="success"],
+.theme-stat-card[data-tone="success"] { --plate-accent: #51edab; }
+.theme-panel[data-tone="warning"],
+.theme-stat-card[data-tone="warning"] { --plate-accent: #ffad45; }
+.theme-panel[data-tone="danger"],
+.theme-stat-card[data-tone="danger"] { --plate-accent: #ff6688; }
+.theme-panel[data-tone="violet"],
+.theme-stat-card[data-tone="violet"] { --plate-accent: #aa89ff; }
+
+.theme-panel,
+.theme-stat-card {
+  border-color: color-mix(in srgb, var(--plate-accent) 30%, #163d46);
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--plate-accent) 8%, transparent), transparent 18rem),
+    linear-gradient(132deg, color-mix(in srgb, var(--plate-accent) 8%, transparent), transparent 17rem),
+    linear-gradient(180deg, rgba(9, 25, 31, 0.96), rgba(3, 12, 17, 0.92));
+  box-shadow: inset 0 1px 0 rgba(207, 255, 249, 0.05), inset 3px 0 0 color-mix(in srgb, var(--plate-accent) 48%, transparent), 0 24px 58px -42px #000;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.theme-panel::after,
+.theme-stat-card::after {
+  background:
+    linear-gradient(140deg, transparent 0 48%, color-mix(in srgb, var(--plate-accent) 13%, transparent) 49% 50%, transparent 51%),
+    linear-gradient(165deg, transparent 0 69%, color-mix(in srgb, var(--plate-accent) 16%, transparent) 70% 71%, transparent 72%);
+}
+
+.theme-panel:hover,
+.theme-stat-card:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--plate-accent) 58%, #1b4b54);
+  box-shadow: inset 0 1px 0 rgba(226, 255, 252, 0.06), inset 3px 0 0 color-mix(in srgb, var(--plate-accent) 76%, transparent), 0 24px 58px -42px #000, 0 0 26px -20px var(--plate-accent);
+}
+
+.theme-panel-header {
+  border-bottom-color: color-mix(in srgb, var(--plate-accent) 26%, #173c45) !important;
+  background: linear-gradient(102deg, color-mix(in srgb, var(--plate-accent) 12%, transparent), transparent 14rem), linear-gradient(180deg, rgba(5, 18, 23, 0.8), rgba(3, 12, 16, 0.64));
+}
+
+.theme-panel-header::after {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--plate-accent) 72%, var(--theme-secondary)));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--plate-accent) 25%, transparent);
+}
+
+.theme-stat-card:nth-child(4n + 2):not([data-tone]),
+.theme-panel:nth-of-type(4n + 2):not([data-tone]) { --plate-accent: #ffad45; }
+.theme-stat-card:nth-child(4n + 3):not([data-tone]),
+.theme-panel:nth-of-type(4n + 3):not([data-tone]) { --plate-accent: #51edab; }
+.theme-stat-card:nth-child(4n):not([data-tone]),
+.theme-panel:nth-of-type(4n):not([data-tone]) { --plate-accent: #aa89ff; }
+
+.theme-app-shell .animate-view table thead,
+.theme-table-head {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 14%, transparent), transparent 48%), rgba(4, 16, 21, 0.97);
+  color: color-mix(in srgb, var(--theme-accentStrong) 36%, var(--theme-textMuted));
+}
+
+.theme-table-row:hover,
+.theme-app-shell .animate-view table tbody tr:hover {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 12%, transparent), color-mix(in srgb, var(--theme-accent) 3%, transparent) 72%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--theme-accentStrong);
+}
+
+.theme-chart-stage {
+  border-color: color-mix(in srgb, var(--theme-accent) 36%, #17424b);
+  background:
+    radial-gradient(circle at 72% 28%, color-mix(in srgb, var(--theme-accent) 8%, transparent), transparent 30%),
+    linear-gradient(color-mix(in srgb, var(--theme-accent) 18%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 15%, transparent) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(7, 24, 29, 0.96), rgba(2, 10, 14, 0.98));
+  background-size: auto, 32px 32px, 32px 32px, auto;
+  box-shadow: inset 0 0 70px rgba(0, 0, 0, 0.58), inset 3px 0 0 color-mix(in srgb, var(--theme-accent) 44%, transparent);
+}
+
+button:not(:disabled),
+a[href],
+summary,
+select,
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+:where(button, a[href], input, select, textarea, summary, [role="button"]):focus-visible {
+  outline: 2px solid var(--theme-accentStrong);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--theme-accent) 16%, transparent), 0 0 22px -12px var(--theme-accent);
+}
+
+.theme-panel-title,
+.theme-stat-label {
+  letter-spacing: 0.075em;
+}
+
+@keyframes entropyViewFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-view {
+  animation: entropyViewFade 170ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-view { animation: none; }
+}
+
+/* Native-resolution readability ---------------------------------------------
+   Legacy 8–10px utility labels are promoted to an 11px floor. Numeric tables
+   use tabular figures and aligned cells so comparison data remains stable while
+   the surrounding plates keep their mechanical decoration. */
+
+.theme-app-shell .text-\[8px\],
+.theme-app-shell .text-\[9px\],
+.theme-app-shell .text-\[10px\] {
+  font-size: 0.6875rem !important;
+  line-height: 1.35;
+}
+
+.theme-cinematic-kicker,
+.theme-cinematic-readouts span,
+.theme-cinematic-readouts strong,
+.theme-ingress-header span,
+.theme-ingress-status,
+.theme-saved-report-gate summary,
+.theme-ingress-formats,
+.theme-builder-entry,
+.theme-cinematic-horizon,
+.theme-builder-command-deck::after,
+.theme-builder-kicker,
+.theme-builder-label,
+.theme-builder-command-actions .theme-command-button,
+.theme-builder-empty .theme-command-button,
+.theme-builder-section-head .theme-command-button,
+.theme-builder-squad-readout + .theme-command-button,
+.theme-builder-tabs > button strong,
+.theme-builder-mode-switch button,
+.theme-builder-import-actions span,
+.theme-builder-import-actions button,
+.theme-builder-row-actions button,
+.theme-builder-code-output button,
+.theme-builder-section-head .theme-quiet-button,
+.theme-builder-professions button strong,
+.theme-builder-equipment-group h4,
+.theme-builder-readiness ul,
+.theme-builder-readiness p.is-ready,
+.theme-builder-fact,
+.theme-builder-link,
+.theme-builder-code-output code,
+.theme-builder-search input,
+.theme-builder-boon-icon em,
+.theme-builder-boon-grid > div span,
+.theme-builder-empty span,
+.theme-builder-library-row h4 ~ span,
+.theme-builder-library-row p,
+.theme-builder-squad-readout span,
+.theme-builder-party-name > span,
+.theme-builder-party-name input,
+.theme-builder-party-slots label > span,
+.theme-builder-party-slots select,
+.theme-builder-party-slots small,
+.theme-builder-add-line {
+  font-size: 0.6875rem;
+  line-height: 1.35;
+}
+
+.theme-cinematic-readouts > div:nth-child(2),
+.theme-builder-spec-line:nth-child(2),
+.theme-builder-spec-line:nth-child(3),
+.theme-builder-library-row:nth-child(even),
+.theme-builder-party-line:nth-child(even) {
+  margin-left: 0;
+  margin-right: 0;
+  transform: none;
+}
+
+.theme-builder-boon-grid > div:hover {
+  transform: none;
+}
+
+.theme-data-table th,
+.theme-data-table td,
+.theme-app-shell .animate-view table th,
+.theme-app-shell .animate-view table td {
+  vertical-align: middle;
+}
+
+.theme-data-table td,
+.theme-app-shell .animate-view table td,
+.theme-stat-value,
+.theme-kdr-stat,
+.theme-dossier-metric {
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-data-table thead th,
+.theme-app-shell .animate-view table thead th {
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+/* Futuristic command polish --------------------------------------------------
+   Final shared visual layer: keeps the graphite chassis, but gives the app a
+   brighter mechanical read with cyan, amber, emerald, rose, and violet signals. */
+
+.theme-main {
+  background:
+    radial-gradient(circle at 82% 8%, color-mix(in srgb, var(--theme-accent) 14%, transparent), transparent 26rem),
+    radial-gradient(circle at 18% 0%, rgba(255, 177, 69, 0.09), transparent 24rem),
+    linear-gradient(135deg, rgba(88, 255, 227, 0.055), transparent 36%),
+    linear-gradient(180deg, rgba(4, 15, 20, 0.34), rgba(2, 7, 11, 0.8));
+}
+
+.theme-topbar {
+  border-bottom-color: color-mix(in srgb, var(--theme-accent) 54%, rgba(255, 177, 69, 0.35));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 14%, transparent), transparent 26rem),
+    linear-gradient(180deg, rgba(8, 24, 30, 0.98), rgba(2, 9, 13, 0.92));
+  box-shadow:
+    inset 0 -1px 0 rgba(255, 177, 69, 0.14),
+    0 22px 54px -38px #000;
+}
+
+.theme-topbar::before {
+  content: "";
+  position: absolute;
+  right: 1.5rem;
+  bottom: -1px;
+  width: min(18vw, 13rem);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--theme-secondary), var(--theme-accentStrong));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--theme-secondary) 34%, transparent);
+  pointer-events: none;
+}
+
+.theme-view-title {
+  text-shadow:
+    0 0 18px color-mix(in srgb, var(--theme-accent) 18%, transparent),
+    0 14px 34px rgba(0, 0, 0, 0.72);
+}
+
+.theme-sidebar {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-accent) 8%, transparent), transparent 18rem),
+    linear-gradient(90deg, rgba(255, 177, 69, 0.035), transparent 55%),
+    rgba(2, 9, 13, 0.97);
+}
+
+.theme-sidebar-header {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 11%, transparent), transparent 58%),
+    rgba(2, 10, 14, 0.95);
+}
+
+.theme-nav-item,
+.theme-nav-section,
+.theme-quiet-button,
+.theme-command-button,
+.theme-filter-button {
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.theme-nav-item:hover,
+.theme-nav-section:hover,
+.theme-quiet-button:hover,
+.theme-command-button:hover,
+.theme-filter-button:hover {
+  transform: none !important;
+}
+
+.theme-search-shell,
+.theme-table-shell,
+.theme-status-pill {
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--theme-accent) 7%, transparent), transparent 72%),
+    rgba(2, 11, 15, 0.9) !important;
+}
+
+.theme-panel,
+.theme-stat-card {
+  border-color: color-mix(in srgb, var(--plate-accent) 38%, #17424b);
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--plate-accent) 13%, transparent), transparent 16rem),
+    linear-gradient(150deg, color-mix(in srgb, var(--theme-secondary) 4%, transparent), transparent 26%),
+    linear-gradient(118deg, color-mix(in srgb, var(--plate-accent) 10%, transparent), transparent 46%),
+    linear-gradient(180deg, rgba(9, 25, 31, 0.98), rgba(3, 12, 17, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(207, 255, 249, 0.055),
+    inset 3px 0 0 color-mix(in srgb, var(--plate-accent) 58%, transparent),
+    inset 0 -1px 0 rgba(255, 177, 69, 0.07),
+    0 24px 58px -42px #000,
+    0 0 34px -28px var(--plate-accent);
+}
+
+.theme-panel::before,
+.theme-stat-card::before {
+  height: 3px;
+  background:
+    linear-gradient(90deg, var(--plate-accent), color-mix(in srgb, var(--theme-secondary) 58%, var(--plate-accent)), transparent);
+  box-shadow: 0 0 16px -3px var(--plate-accent);
+}
+
+.theme-panel::after,
+.theme-stat-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, transparent 0 76%, color-mix(in srgb, var(--plate-accent) 12%, transparent) 77% 78%, transparent 79%),
+    linear-gradient(90deg, transparent 0 50%, rgba(255, 255, 255, 0.018) 50% 51%, transparent 51%);
+  background-size: auto, 18px 18px;
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.theme-panel:hover,
+.theme-stat-card:hover {
+  border-color: color-mix(in srgb, var(--plate-accent) 68%, #1b4b54);
+  box-shadow:
+    inset 0 1px 0 rgba(226, 255, 252, 0.065),
+    inset 3px 0 0 color-mix(in srgb, var(--plate-accent) 82%, transparent),
+    inset 0 -1px 0 rgba(255, 177, 69, 0.1),
+    0 24px 58px -42px #000,
+    0 0 32px -22px var(--plate-accent);
+}
+
+.theme-stat-value,
+.theme-podium-value,
+.theme-dossier-metric {
+  text-shadow: 0 0 18px color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.theme-player-card,
+.theme-podium-card,
+.theme-party-card,
+.theme-source-card,
+.theme-roster-player {
+  --player-glow: var(--theme-accent);
+  background:
+    radial-gradient(circle at 14% 100%, color-mix(in srgb, var(--player-glow) 16%, transparent), transparent 34%),
+    linear-gradient(118deg, color-mix(in srgb, var(--player-glow) 10%, transparent), transparent 44%),
+    linear-gradient(180deg, rgba(6, 18, 24, 0.98), rgba(2, 8, 13, 0.96));
+  border-color: color-mix(in srgb, var(--player-glow) 38%, var(--theme-border));
+  box-shadow:
+    inset 3px 0 0 color-mix(in srgb, var(--player-glow) 72%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--player-glow) 16%, transparent),
+    0 20px 50px -36px #000,
+    0 0 34px -30px var(--player-glow);
+}
+
+.theme-player-card::before,
+.theme-podium-card::before,
+.theme-party-card::before,
+.theme-roster-player::before {
+  content: "";
+  position: absolute;
+  inset-inline: 1rem;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--player-glow) 86%, white), transparent);
+  box-shadow: 0 0 18px 2px color-mix(in srgb, var(--player-glow) 42%, transparent);
+  opacity: 0.84;
+  pointer-events: none;
+}
+
+.theme-player-card:hover,
+.theme-podium-card:hover,
+.theme-party-card:hover,
+.theme-roster-player:hover {
+  transform: none;
+  border-color: color-mix(in srgb, var(--player-glow) 64%, var(--theme-border));
+  box-shadow:
+    inset 3px 0 0 color-mix(in srgb, var(--player-glow) 90%, white),
+    inset 0 -1px 0 color-mix(in srgb, var(--player-glow) 22%, transparent),
+    0 22px 54px -38px #000,
+    0 0 40px -24px var(--player-glow);
+}
+
+.theme-progress-track {
+  background:
+    linear-gradient(90deg, rgba(88, 255, 227, 0.05), transparent),
+    rgba(1, 7, 11, 0.92);
+}
+
+.theme-progress-fill {
+  box-shadow:
+    0 0 16px -7px currentColor,
+    0 0 5px color-mix(in srgb, currentColor 34%, transparent);
+}
+
+.theme-data-table thead,
+.theme-app-shell .animate-view table thead,
+.theme-table-head {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 16%, transparent), transparent 42%),
+    linear-gradient(180deg, rgba(8, 28, 34, 0.98), rgba(2, 10, 14, 0.98));
+}
+
+.theme-data-table tbody tr:nth-child(even),
+.theme-app-shell .animate-view table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.012);
+}
+
+.theme-alert-plate,
+.theme-modal {
+  box-shadow:
+    inset 3px 0 0 color-mix(in srgb, var(--theme-warning) 70%, transparent),
+    0 28px 76px -48px #000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-nav-item,
+  .theme-nav-section,
+  .theme-quiet-button,
+  .theme-command-button,
+  .theme-filter-button,
+  .theme-panel,
+  .theme-stat-card,
+  .theme-player-card,
+  .theme-podium-card,
+  .theme-party-card,
+  .theme-roster-player {
+    transition: none;
+  }
 }

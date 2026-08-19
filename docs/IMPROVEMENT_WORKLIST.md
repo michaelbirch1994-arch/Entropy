@@ -25,17 +25,20 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 - [x] Add active combat time, fights participated, total fights, and participation percentage to Squad Roster Overview.
 - [x] Add fights joined, session coverage, active combat time, and sample-reliability labels to Top Players.
 - [x] Add fight coverage, contributor counts, per-fight ranges, and low-sample warnings to Top Skills and Healing Sources.
-- [ ] Extend the same participation context to the remaining player tables where sample size changes interpretation.
+- [x] Extend the same participation context to the remaining player tables where sample size changes interpretation.
   - [x] Add shared fight coverage, active time, and reliability labels to Offensive, Support, Healing, Defensive Stats, Buffs, and Buff Generation tables.
   - [x] Make per-second sorting in Support, Healing, and Defensive Stats use the same player-specific duration as the displayed rate.
-  - [ ] Add profession/build-specific attendance before showing sample labels on Damage Modifiers and per-fight Rotations; account-wide attendance would be misleading when a player swaps builds.
+  - [x] Add profession/build-specific attendance before showing sample labels on Damage Modifiers and per-fight Rotations; account-wide attendance would be misleading when a player swaps builds. New reports persist fight coverage and EI active time by account+profession, while archived reports display coverage as unavailable instead of inventing it.
 - [ ] Base rate metrics on the appropriate active/combat duration.
   - [x] Core offense/defense/support/healing tables use player-specific tracked duration rather than one squad-wide clock.
+  - [x] Rotation casts per minute use the selected account+profession's EI active time and expose session coverage for that exact build.
   - [ ] Audit remaining rate labels and cross-view denominator consistency before marking this complete.
 - [x] Flag low-duration and low-fight samples instead of presenting them as equally reliable.
   - [x] Core performance tables now flag low/developing/strong fight samples and preserve an explicit unavailable state for legacy reports.
   - [x] Downgrade otherwise broad fight samples when total or per-fight active combat time is too short for a stable rate comparison.
 - [ ] Hide unsupported Siege/NPC Damage and other permanently empty columns.
+  - [x] Offensive only shows the Siege/NPC/Gate proxy when EI all-damage exceeds player damage for at least one player.
+  - [x] Fight Breakdown gates Healing and Sustain independently so one available metric does not force the other column to render as empty.
 
 ## P1 — Signal vs. noise across raids
 
@@ -55,26 +58,34 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 ## P2 — Interaction and workflow
 
 - [x] Make Overview cards real, keyboard-accessible navigation targets or remove button-like hover treatment. MVP and per-second metric cards now navigate to Top Players with native button semantics, visible focus treatment, and accessible labels.
-- [ ] Standardize pointer cursors and visible focus states for interactive elements.
+- [x] Standardize pointer cursors and visible focus states for interactive elements. Native controls, links, summaries, and role-based buttons now share a high-contrast neon focus ring and honest pointer/disabled cursors.
 - [ ] Add Reload Current, Replace Logs, Add Logs, and Clear Logs actions while preserving drag-and-drop ingestion.
+  - [x] Header now separates Add Logs from Replace Logs and keeps Clear Logs explicit while preserving the raw-log drag/drop intake.
+  - [x] Header now includes Reload Current, which rebuilds reports from stored dps.report fight links when available and explains when a one-off upload cannot be reloaded automatically.
 - [ ] Keep the web ingestion path as direct as the desktop path.
+  - [x] Web users now get explicit guidance that drag/drop and dps.report links still work when folder watching is unavailable.
 
 ## P2 — Visual polish
 
 - [x] Give Fight Replay enemies stable instance identities, reject implausible position jumps, keep markers screen-sized, and re-center zoom on the commander/squad.
-- [x] Replace the Scorched Earth presentation layer with a graphite mechanical command theme, cyan/teal system accents, amber instrumentation, and metric-aware neon underglows on player cards.
-- [ ] Improve accent foreground contrast and define explicit theme foreground tokens.
-- [ ] Remove fractional/tiny typography and text-container transforms that blur at 1080p.
+- [x] Replace the Scorched Earth presentation layer with a graphite mechanical command theme, workspace-aware cyan/emerald/amber/rose/violet signals, brighter chart series, and metric-aware neon underglows on player cards.
+- [x] Improve accent foreground contrast and define explicit theme foreground tokens. The shared theme now exposes dark on-accent/on-warning/on-danger colors and high-contrast focus treatment.
+- [x] Remove fractional/tiny typography and text-container transforms that blur at 1080p. Shared and view-specific legacy labels now have an 11px floor, Builder microcopy follows the same floor, and comparison surfaces no longer shift text with decorative transforms.
 - [x] Remove profession-icon clipping, retain normal antialiasing, and optically center glyphs.
-- [ ] Verify every profession icon at each production size on desktop and web builds.
-- [ ] Keep metric content aligned while decorative asymmetry remains clearly intentional.
+- [x] Verify every profession icon at each production size on desktop and web builds. All 45 mapped assets are present at 384×384, the complete 14/16/24/32/48px contact sheet is readable, and the Builder renders the local assets without fractional transforms.
+- [x] Keep metric content aligned while decorative asymmetry remains clearly intentional. Table cells now share vertical alignment and tabular figures, while Builder spec, library, party, and landing readout rows no longer carry staggered content offsets.
+- [x] Add a brighter futuristic command polish layer with multi-color workspace signals, stronger neon player-card underglows, mechanical panel trims, and reduced hover movement so shared report surfaces feel less monotone without changing analytics behavior.
+- [x] Smooth sidebar tab swaps by removing max-height accordion animation from navigation groups and using a short opacity transition instead.
 
 ## P2 — Top Skills context
 
 - [x] Add minimum, average, maximum, and sample size where meaningful.
 - [ ] Expose the player, fight, and event context behind extremes.
+  - [x] Top Skills and Healing Sources now attach player and fight context to biggest-hit and peak per-fight values for newly built reports.
 - [ ] Prefer ranked extremes when a single outlier would be misleading.
+  - [x] Top Skills and Healing Sources now flag spike-heavy sources where the peak fight is far above the average.
 - [ ] Include combat-time and participation context in skill comparisons.
+  - [x] Top Skills and Healing Sources now show contributor/affected active time and per-active-minute rates for newly built reports.
 
 ## Definition of done for this feedback round
 

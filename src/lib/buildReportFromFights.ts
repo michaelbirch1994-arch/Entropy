@@ -715,9 +715,9 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
   // relics "active" at once) just because the same account played other
   // classes in other fights. One row per account+class keeps every row's
   // modifiers honest to the class actually shown.
-  const rowsByKey = new Map<string, { account: string; profession: string; professionList: string[]; group: number; values: Map<number, { damage: number; hits: number }> }>();
+  const rowsByKey = new Map<string, { account: string; profession: string; professionList: string[]; group: number; fightsJoined: number; activeMs: number; seenFights: Set<number>; values: Map<number, { damage: number; hits: number }> }>();
 
-  for (const f of fights) {
+  for (const [fightIndex, f] of fights.entries()) {
         const raw = f.raw as Record<string, unknown>;
         const modMap = (raw.damageModMap ?? {}) as Record<string, { name?: string; icon?: string; description?: string; incoming?: boolean; nonMultiplier?: boolean; isCounter?: boolean }>;
         const idToDesc = new Map<number, { name?: string; icon?: string; description?: string; incoming?: boolean; nonMultiplier?: boolean; isCounter?: boolean }>();
@@ -737,8 +737,17 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
 
           let row = rowsByKey.get(rowKey);
                 if (!row) {
-                          row = { account, profession, professionList: [], group: Number(p.group) || 0, values: new Map() };
+                          row = { account, profession, professionList: [], group: Number(p.group) || 0, fightsJoined: 0, activeMs: 0, seenFights: new Set(), values: new Map() };
                           rowsByKey.set(rowKey, row);
+                }
+                if (!row.seenFights.has(fightIndex)) {
+                          row.seenFights.add(fightIndex);
+                          row.fightsJoined += 1;
+                          const activeTimes = p.activeTimes as unknown;
+                          const activeMs = Array.isArray(activeTimes) && typeof activeTimes[0] === 'number'
+                            ? activeTimes[0]
+                            : Number(raw.durationMS) || 0;
+                          row.activeMs += Math.max(0, activeMs);
                 }
 
           const mods = (p.damageModifiers ?? []) as ModEntry[];
@@ -794,12 +803,12 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
               row.values.forEach((v, id) => {
                         if (columnIds.has(id)) values[id] = v;
               });
-              return { account: row.account, profession: row.profession, professionList: row.professionList, group: row.group, values };
+              return { account: row.account, profession: row.profession, professionList: row.professionList, group: row.group, fightsJoined: row.fightsJoined, activeMs: row.activeMs, values };
       })
       .filter((row) => Object.keys(row.values).length > 0)
       .sort((a, b) => a.group - b.group || a.account.localeCompare(b.account) || a.profession.localeCompare(b.profession));
 
-  return { columns, rows };
+  return { columns, rows, totalFights: fights.length };
 }
 
 // Per-fight skill-cast timeline (dps.report's "Rotations" tab). Reads
@@ -863,6 +872,13 @@ function computeRotations(fights: FightInput[]): RotationsData {
                           account,
                           profession: String(p.profession || 'Unknown'),
                           professionList: [],
+                          activeMs: (() => {
+                                    const activeTimes = p.activeTimes as unknown;
+                                    const value = Array.isArray(activeTimes) && typeof activeTimes[0] === 'number'
+                                      ? activeTimes[0]
+                                      : durationMs;
+                                    return Math.max(0, value);
+                          })(),
                           casts,
                 });
         }
@@ -878,7 +894,7 @@ function computeRotations(fights: FightInput[]): RotationsData {
                      }
   });
 
-  return { skillMeta, fights: fightRows };
+  return { skillMeta, fights: fightRows, totalFights: fights.length };
 }
 
 // Per-fight cumulative-damage-over-time series (dps.report's "Graph" tab).
@@ -945,10 +961,14 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
     const incoming = new Map<number, { damage: number; hits: number; downContribution: number }>();
     const outgoingFightValues = new Map<number, number[]>();
     const incomingFightValues = new Map<number, number[]>();
+    const outgoingFightPeaks = new Map<number, { value: number; fightIndex: number; fightName: string; fightLabel: string }>();
+    const incomingFightPeaks = new Map<number, { value: number; fightIndex: number; fightName: string; fightLabel: string }>();
     const outgoingPlayers = new Map<number, Set<string>>();
     const incomingPlayers = new Map<number, Set<string>>();
-    const outgoingBest = new Map<number, { value: number; account: string; profession: string }>();
-    const incomingBest = new Map<number, { value: number; account: string; profession: string }>();
+    const outgoingActiveMs = new Map<number, number>();
+    const incomingActiveMs = new Map<number, number>();
+    const outgoingBest = new Map<number, { value: number; account: string; profession: string; fightIndex: number; fightName: string; fightLabel: string }>();
+    const incomingBest = new Map<number, { value: number; account: string; profession: string; fightIndex: number; fightName: string; fightLabel: string }>();
 
   function accumulate(
         target: Map<number, { damage: number; hits: number; downContribution: number }>,
@@ -970,18 +990,52 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
         target.set(id, players);
   }
 
-  function recordFightValues(target: Map<number, number[]>, values: Map<number, number>) {
+  function playerActiveMs(p: Record<string, unknown>, raw: Record<string, unknown>): number {
+        const activeTimes = p.activeTimes as unknown;
+        const activeMs = Array.isArray(activeTimes) && typeof activeTimes[0] === 'number'
+          ? activeTimes[0]
+          : Number(raw.durationMS) || 0;
+        return Math.max(0, activeMs);
+  }
+
+  function recordActiveMs(target: Map<number, number>, ids: Set<number>, activeMs: number) {
+        if (activeMs <= 0) return;
+        for (const id of ids) {
+          target.set(id, (target.get(id) ?? 0) + activeMs);
+        }
+  }
+
+  function fightContext(f: FightInput, fightIndex: number) {
+        const fightName = f.summary.fightName || `Fight ${fightIndex + 1}`;
+        return {
+          fightIndex,
+          fightName,
+          fightLabel: `F${fightIndex + 1} · ${fightName}`,
+        };
+  }
+
+  function recordFightValues(
+        target: Map<number, number[]>,
+        peaks: Map<number, { value: number; fightIndex: number; fightName: string; fightLabel: string }>,
+        values: Map<number, number>,
+        context: { fightIndex: number; fightName: string; fightLabel: string },
+      ) {
         for (const [id, value] of values) {
           const samples = target.get(id) ?? [];
           samples.push(value);
           target.set(id, samples);
+          const currentPeak = peaks.get(id);
+          if (!currentPeak || value > currentPeak.value) {
+                peaks.set(id, { ...context, value });
+          }
         }
   }
 
     type DistEntry = { id?: number; totalDamage?: number; connectedHits?: number; hits?: number; downContribution?: number; max?: number };
 
-  for (const f of fights) {
+  for (const [fightIndex, f] of fights.entries()) {
         const raw = f.raw as Record<string, unknown>;
+        const context = fightContext(f, fightIndex);
         const fightOutgoing = new Map<number, number>();
         const fightIncoming = new Map<number, number>();
         const skillMap = (raw.skillMap ?? {}) as Record<string, { name?: string; icon?: string }>;
@@ -1010,6 +1064,9 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
         for (const p of players) {
                 if (p.notInSquad) continue;
                 const account = String(p.account ?? p.name ?? 'Unknown');
+                const activeMs = playerActiveMs(p, raw);
+                const playerOutgoingSkillIds = new Set<number>();
+                const playerIncomingSkillIds = new Set<number>();
 
           const outDist = (p.totalDamageDist ?? []) as DistEntry[][];
                 for (const entry of outDist[0] ?? []) {
@@ -1020,6 +1077,7 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                           const downContrib = Number(entry?.downContribution) || 0;
                           if (dmg === 0 && hits === 0 && downContrib === 0) continue;
                 fightOutgoing.set(id, (fightOutgoing.get(id) ?? 0) + dmg);
+                playerOutgoingSkillIds.add(id);
                 recordPlayer(outgoingPlayers, id, account);
                 const hitMax = Number(entry?.max) || 0;
                 if (hitMax > 0) {
@@ -1029,6 +1087,7 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                             value: hitMax,
                             account,
                             profession: String(p.profession ?? 'Unknown'),
+                            ...context,
                         });
                     }
                 }
@@ -1050,6 +1109,7 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                   const downContrib = Number(entry?.downContribution) || 0;
                           if (dmg === 0 && hits === 0 && downContrib === 0) continue;
                 fightIncoming.set(id, (fightIncoming.get(id) ?? 0) + dmg);
+                playerIncomingSkillIds.add(id);
                 recordPlayer(incomingPlayers, id, account);
                 const hitMaxIn = Number(entry?.max) || 0;
                 if (hitMaxIn > 0) {
@@ -1059,14 +1119,17 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                             value: hitMaxIn,
                             account,
                             profession: String(p.profession ?? 'Unknown'),
+                            ...context,
                         });
                     }
                 }
                           accumulate(incoming, id, dmg, hits, downContrib);
                 }
+                recordActiveMs(outgoingActiveMs, playerOutgoingSkillIds, activeMs);
+                recordActiveMs(incomingActiveMs, playerIncomingSkillIds, activeMs);
         }
-        recordFightValues(outgoingFightValues, fightOutgoing);
-        recordFightValues(incomingFightValues, fightIncoming);
+        recordFightValues(outgoingFightValues, outgoingFightPeaks, fightOutgoing, context);
+        recordFightValues(incomingFightValues, incomingFightPeaks, fightIncoming, context);
   }
 
   if (naturalFortitude.damage > 0 || naturalFortitude.hits > 0) {
@@ -1081,9 +1144,11 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
 
     function toRows(
       map: Map<number, { damage: number; hits: number; downContribution: number }>,
-      bestMap: Map<number, { value: number; account: string; profession: string }>,
+      bestMap: Map<number, { value: number; account: string; profession: string; fightIndex: number; fightName: string; fightLabel: string }>,
       fightValues: Map<number, number[]>,
+      fightPeaks: Map<number, { value: number; fightIndex: number; fightName: string; fightLabel: string }>,
       players: Map<number, Set<string>>,
+      activeMs: Map<number, number>,
     ): TopSkill[] {
         return Array.from(map.entries())
           .map(([id, v]) => {
@@ -1099,16 +1164,18 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
                     biggestHit: bestMap.get(id) ?? null,
                     fightCount: samples.length,
                     playerCount: players.get(id)?.size ?? 0,
+                    activeMs: activeMs.get(id),
                     perFightMin: samples.length > 0 ? Math.min(...samples) : 0,
                     perFightAverage: samples.length > 0 ? sampleTotal / samples.length : 0,
                     perFightMax: samples.length > 0 ? Math.max(...samples) : 0,
+                    perFightMaxContext: fightPeaks.get(id) ?? null,
                 };
           })
           .filter((s) => s.damage > 0 || s.hits > 0 || s.downContribution > 0);
   }
 
-    const outgoingRows = toRows(outgoing, outgoingBest, outgoingFightValues, outgoingPlayers);
-    const incomingRows = toRows(incoming, incomingBest, incomingFightValues, incomingPlayers);
+    const outgoingRows = toRows(outgoing, outgoingBest, outgoingFightValues, outgoingFightPeaks, outgoingPlayers, outgoingActiveMs);
+    const incomingRows = toRows(incoming, incomingBest, incomingFightValues, incomingFightPeaks, incomingPlayers, incomingActiveMs);
   const byDamage = (rows: TopSkill[]) => [...rows].sort((a, b) => b.damage - a.damage || b.downContribution - a.downContribution).slice(0, 30);
   const byDownContribution = (rows: TopSkill[]) => [...rows].sort((a, b) => b.downContribution - a.downContribution || b.damage - a.damage).slice(0, 30);
 
@@ -1166,15 +1233,23 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
 
   const totals = new Map<string, { id: number; healing: number; hits: number; isTrait: boolean }>();
     const fightValues = new Map<string, number[]>();
+    const fightPeaks = new Map<string, { value: number; fightIndex: number; fightName: string; fightLabel: string }>();
     const sourcePlayers = new Map<string, Set<string>>();
-    const bestHeal = new Map<string, { value: number; account: string; profession: string }>();
+    const sourceActiveMs = new Map<string, number>();
+    const bestHeal = new Map<string, { value: number; account: string; profession: string; fightIndex: number; fightName: string; fightLabel: string }>();
     // Merged skill+buff name/icon lookup, keyed by numeric id regardless of
   // which map it came from - same precedence (skillMap first, buffMap only
   // fills gaps) as computeTopSkills' skillMeta above.
   const nameMeta = new Map<number, { name: string; icon?: string }>();
 
-  for (const f of fights) {
+  for (const [fightIndex, f] of fights.entries()) {
         const raw = f.raw as Record<string, unknown>;
+        const fightName = f.summary.fightName || `Fight ${fightIndex + 1}`;
+        const context = {
+                fightIndex,
+                fightName,
+                fightLabel: `F${fightIndex + 1} · ${fightName}`,
+        };
         const fightHealing = new Map<string, number>();
         const skillMap = (raw.skillMap ?? {}) as Record<string, { name?: string; icon?: string }>;
         const buffMap = (raw.buffMap ?? {}) as Record<string, { name?: string; icon?: string }>;
@@ -1198,6 +1273,11 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
       for (const p of players) {
               if (p.notInSquad) continue;
               const account = String(p.account ?? p.name ?? 'Unknown');
+              const activeTimes = p.activeTimes as unknown;
+              const activeMs = Math.max(0, Array.isArray(activeTimes) && typeof activeTimes[0] === 'number'
+                ? activeTimes[0]
+                : Number(raw.durationMS) || 0);
+              const playerHealingKeys = new Set<string>();
               const ext = p.extHealingStats as Record<string, unknown> | undefined;
               const dist = (ext?.totalHealingDist as HealDistEntry[][] | undefined)?.[0];
               if (!Array.isArray(dist)) continue;
@@ -1218,6 +1298,7 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
                 const playersForSource = sourcePlayers.get(key) ?? new Set<string>();
                 playersForSource.add(account);
                 sourcePlayers.set(key, playersForSource);
+                playerHealingKeys.add(key);
                 const healMax = Number(entry?.max) || 0;
                 if (healMax > 0) {
                     const prevBestHeal = bestHeal.get(key);
@@ -1226,16 +1307,26 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
                             value: healMax,
                             account,
                             profession: String(p.profession ?? 'Unknown'),
+                            ...context,
                         });
                     }
                 }
                     totals.set(key, cur);
+          }
+          if (activeMs > 0) {
+                  for (const key of playerHealingKeys) {
+                          sourceActiveMs.set(key, (sourceActiveMs.get(key) ?? 0) + activeMs);
+                  }
           }
       }
       for (const [key, value] of fightHealing) {
               const samples = fightValues.get(key) ?? [];
               samples.push(value);
               fightValues.set(key, samples);
+              const currentPeak = fightPeaks.get(key);
+              if (!currentPeak || value > currentPeak.value) {
+                      fightPeaks.set(key, { ...context, value });
+              }
       }
   }
 
@@ -1255,9 +1346,11 @@ function computeTopHealingSkills(fights: FightInput[]): TopHealingSource[] {
                 biggestHit: bestHeal.get(key) ?? null,
                 fightCount: samples.length,
                 playerCount: sourcePlayers.get(key)?.size ?? 0,
+                activeMs: sourceActiveMs.get(key),
                 perFightMin: samples.length > 0 ? Math.min(...samples) : 0,
                 perFightAverage: samples.length > 0 ? sampleTotal / samples.length : 0,
                 perFightMax: samples.length > 0 ? Math.max(...samples) : 0,
+                perFightMaxContext: fightPeaks.get(key) ?? null,
               };
       })
       .sort((a, b) => b.healing - a.healing)
