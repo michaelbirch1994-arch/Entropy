@@ -60,7 +60,7 @@ export function getSampleReliability(fights: number, totalFights: number, active
   ) {
     return {
       level: "moderate",
-      label: "Developing sample",
+      label: "Moderate sample",
       coverage,
       detail: `${safeFights} of ${safeTotal} fights; useful context, but still sensitive to a few fights.${durationDetail}`,
     };
