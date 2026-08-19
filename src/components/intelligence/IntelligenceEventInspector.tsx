@@ -3,6 +3,7 @@ import { useReport } from "../../store/ReportContext";
 import { useView } from "../../store/ViewContext";
 import { buildEventDeathEvidence } from "../../lib/intelligence/eventDeathEvidence";
 import { buildEventReplaySnapshotEvidence } from "../../lib/intelligence/eventReplayEvidence";
+import IntelligenceMechanicEvidencePanel from "./IntelligenceMechanicEvidencePanel";
 import type { IntelligenceEventInspection } from "../../lib/intelligence/eventInspection";
 import type { CriticalEvent } from "../../lib/intelligence/types";
 import type { DeathRecapHit, WvWReport } from "../../types/report";
@@ -207,56 +208,19 @@ export default function IntelligenceEventInspector({
             This is a frozen read of the same replay tracks used by Fight Replay at the selected Intelligence timestamp. Unknown positioning stays unknown; this panel does not infer movement or causation.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
-              <div className="text-[10px] font-bold uppercase text-slate-500">Squad alive</div>
-              <div className="mt-1 font-mono text-lg font-black text-slate-100">{replaySnapshot.squadAlive}</div>
-            </div>
-            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
-              <div className="text-[10px] font-bold uppercase text-slate-500">Squad down</div>
-              <div className="mt-1 font-mono text-lg font-black text-amber-200">{replaySnapshot.squadDown}</div>
-            </div>
-            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
-              <div className="text-[10px] font-bold uppercase text-slate-500">Enemies alive</div>
-              <div className="mt-1 font-mono text-lg font-black text-slate-100">{replaySnapshot.enemiesAlive}</div>
-            </div>
-            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
-              <div className="text-[10px] font-bold uppercase text-slate-500">Enemies down</div>
-              <div className="mt-1 font-mono text-lg font-black text-rose-200">{replaySnapshot.enemiesDown}</div>
-            </div>
-            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
-              <div className="text-[10px] font-bold uppercase text-slate-500">Avg. dist to tag</div>
-              <div className="mt-1 font-mono text-lg font-black text-cyan-100">{formatDistance(replaySnapshot.averageSquadDistanceToCommander)}</div>
-            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Squad alive</div><div className="mt-1 font-mono text-lg font-black text-slate-100">{replaySnapshot.squadAlive}</div></div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Squad down</div><div className="mt-1 font-mono text-lg font-black text-amber-200">{replaySnapshot.squadDown}</div></div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Enemies alive</div><div className="mt-1 font-mono text-lg font-black text-slate-100">{replaySnapshot.enemiesAlive}</div></div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Enemies down</div><div className="mt-1 font-mono text-lg font-black text-rose-200">{replaySnapshot.enemiesDown}</div></div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Avg. dist to tag</div><div className="mt-1 font-mono text-lg font-black text-cyan-100">{formatDistance(replaySnapshot.averageSquadDistanceToCommander)}</div></div>
           </div>
-          <div className="mt-3 rounded-xl border border-white/[0.06] bg-black/20 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">Commander state</div>
-              <div className="font-mono text-[11px] font-bold text-slate-300">{replaySnapshot.commanderAccount ?? "commander unavailable/dead"}</div>
-            </div>
-          </div>
+          <div className="mt-3 rounded-xl border border-white/[0.06] bg-black/20 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-wider text-slate-500">Commander state</div><div className="font-mono text-[11px] font-bold text-slate-300">{replaySnapshot.commanderAccount ?? "commander unavailable/dead"}</div></div></div>
           {replaySnapshot.linkedPlayers.length > 0 && (
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               {replaySnapshot.linkedPlayers.map((player) => (
                 <div key={player.account} className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <div className="text-xs font-black text-slate-100">{player.account}</div>
-                      <div className="mt-0.5 text-[10px] text-slate-500">{player.name} · {player.profession}</div>
-                    </div>
-                    <div className="flex gap-1.5">
-                      {player.isCommander && <span className="rounded-full border border-amber-400/20 bg-amber-500/[0.06] px-2 py-0.5 text-[9px] font-bold uppercase text-amber-200">tag</span>}
-                      {player.isDown && <span className="rounded-full border border-rose-400/20 bg-rose-500/[0.06] px-2 py-0.5 text-[9px] font-bold uppercase text-rose-200">down</span>}
-                      {player.isDead && <span className="rounded-full border border-rose-400/30 bg-rose-500/[0.08] px-2 py-0.5 text-[9px] font-bold uppercase text-rose-100">dead</span>}
-                    </div>
-                  </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
-                    <div className="rounded-lg border border-white/[0.05] bg-black/20 px-2 py-1.5 text-slate-500">
-                      Position <span className="float-right font-mono text-slate-300">{player.x == null || player.y == null ? "unknown" : `${Math.round(player.x)}, ${Math.round(player.y)}`}</span>
-                    </div>
-                    <div className="rounded-lg border border-white/[0.05] bg-black/20 px-2 py-1.5 text-slate-500">
-                      Dist. to tag <span className="float-right font-mono text-slate-300">{formatDistance(player.distanceToCommander)}</span>
-                    </div>
-                  </div>
+                  <div className="flex flex-wrap items-start justify-between gap-2"><div><div className="text-xs font-black text-slate-100">{player.account}</div><div className="mt-0.5 text-[10px] text-slate-500">{player.name} · {player.profession}</div></div><div className="flex gap-1.5">{player.isCommander && <span className="rounded-full border border-amber-400/20 bg-amber-500/[0.06] px-2 py-0.5 text-[9px] font-bold uppercase text-amber-200">tag</span>}{player.isDown && <span className="rounded-full border border-rose-400/20 bg-rose-500/[0.06] px-2 py-0.5 text-[9px] font-bold uppercase text-rose-200">down</span>}{player.isDead && <span className="rounded-full border border-rose-400/30 bg-rose-500/[0.08] px-2 py-0.5 text-[9px] font-bold uppercase text-rose-100">dead</span>}</div></div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]"><div className="rounded-lg border border-white/[0.05] bg-black/20 px-2 py-1.5 text-slate-500">Position <span className="float-right font-mono text-slate-300">{player.x == null || player.y == null ? "unknown" : `${Math.round(player.x)}, ${Math.round(player.y)}`}</span></div><div className="rounded-lg border border-white/[0.05] bg-black/20 px-2 py-1.5 text-slate-500">Dist. to tag <span className="float-right font-mono text-slate-300">{formatDistance(player.distanceToCommander)}</span></div></div>
                 </div>
               ))}
             </div>
@@ -264,51 +228,21 @@ export default function IntelligenceEventInspector({
         </div>
       )}
 
+      <IntelligenceMechanicEvidencePanel fightId={event.fightId} window={window} relatedPlayerKeys={relatedPlayerKeys} />
+
       {deathEvidence.length > 0 && (
         <div className="mt-4 rounded-2xl border border-rose-400/15 bg-rose-500/[0.025] p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-rose-300">
-              <Skull className="h-4 w-4" /> Death Recap evidence inside this window
-            </div>
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-rose-300"><Skull className="h-4 w-4" /> Death Recap evidence inside this window</div>
             <span className="text-[10px] font-bold uppercase text-slate-500">{deathEvidence.length} recorded death{deathEvidence.length === 1 ? "" : "s"}</span>
           </div>
-          <p className="mt-2 text-[11px] leading-5 text-slate-500">
-            These are the original Death Recap packets whose death timestamps fall inside this event window. Linked player means the account was already attached to the selected Intelligence evidence; it does not assert causation.
-          </p>
+          <p className="mt-2 text-[11px] leading-5 text-slate-500">These are the original Death Recap packets whose death timestamps fall inside this event window. Linked player means the account was already attached to the selected Intelligence evidence; it does not assert causation.</p>
           <div className="mt-3 grid gap-3">
             {deathEvidence.map(({ recap, linkedPlayer, offsetMs }) => (
               <details key={`${recap.fightIndex}-${recap.account}-${recap.deathTimeMs}`} className="group rounded-xl border border-white/[0.06] bg-black/25 p-3">
-                <summary className="cursor-pointer list-none">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-black text-slate-100">{recap.account}</div>
-                      <div className="mt-1 text-[11px] text-slate-500">{recap.characterName} · {recap.profession}</div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {linkedPlayer && <span className="rounded-full border border-sky-400/20 bg-sky-500/[0.06] px-2 py-1 text-[10px] font-bold uppercase text-sky-200">linked player</span>}
-                      <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 font-mono text-[10px] font-bold text-slate-400">{formatTime(recap.deathTimeMs)} · {formatOffset(offsetMs)}</span>
-                    </div>
-                  </div>
-                </summary>
-                <div className="mt-4 grid gap-4 xl:grid-cols-2">
-                  <HitList title={`To down · ${recap.toDown.length} hits`} hits={recap.toDown} />
-                  <HitList title={`Down to death · ${recap.toKill.length} hits`} hits={recap.toKill} />
-                </div>
-                <div className="mt-4 flex justify-end border-t border-white/[0.06] pt-3">
-                  <button
-                    type="button"
-                    onClick={() => navigateToView("death-recap", {
-                      source: "intelligence",
-                      fightIndex: recap.fightIndex,
-                      account: recap.account,
-                      timestampMs: recap.deathTimeMs,
-                      eventId: event.id,
-                    })}
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-rose-400/20 bg-rose-500/[0.06] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-rose-200 transition hover:border-rose-300/35 hover:bg-rose-500/[0.1]"
-                  >
-                    Open full Death Recap <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                <summary className="cursor-pointer list-none"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-sm font-black text-slate-100">{recap.account}</div><div className="mt-1 text-[11px] text-slate-500">{recap.characterName} · {recap.profession}</div></div><div className="flex flex-wrap items-center gap-2">{linkedPlayer && <span className="rounded-full border border-sky-400/20 bg-sky-500/[0.06] px-2 py-1 text-[10px] font-bold uppercase text-sky-200">linked player</span>}<span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 font-mono text-[10px] font-bold text-slate-400">{formatTime(recap.deathTimeMs)} · {formatOffset(offsetMs)}</span></div></div></summary>
+                <div className="mt-4 grid gap-4 xl:grid-cols-2"><HitList title={`To down · ${recap.toDown.length} hits`} hits={recap.toDown} /><HitList title={`Down to death · ${recap.toKill.length} hits`} hits={recap.toKill} /></div>
+                <div className="mt-4 flex justify-end border-t border-white/[0.06] pt-3"><button type="button" onClick={() => navigateToView("death-recap", { source: "intelligence", fightIndex: recap.fightIndex, account: recap.account, timestampMs: recap.deathTimeMs, eventId: event.id })} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-rose-400/20 bg-rose-500/[0.06] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-rose-200 transition hover:border-rose-300/35 hover:bg-rose-500/[0.1]">Open full Death Recap <ArrowRight className="h-3.5 w-3.5" /></button></div>
               </details>
             ))}
           </div>
@@ -320,21 +254,13 @@ export default function IntelligenceEventInspector({
           <div className="text-xs font-black uppercase tracking-wider text-violet-300">Evidence-backed findings connected to this event</div>
           <div className="mt-3 grid gap-2 md:grid-cols-2">
             {relatedFindings.map((finding) => (
-              <div key={finding.id} className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-black uppercase text-slate-100">{finding.title}</span>
-                  <span className="text-[10px] font-bold uppercase text-slate-500">{finding.confidence}</span>
-                </div>
-                <p className="mt-2 text-xs leading-5 text-slate-400">{finding.summary}</p>
-              </div>
+              <div key={finding.id} className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-black uppercase text-slate-100">{finding.title}</span><span className="text-[10px] font-bold uppercase text-slate-500">{finding.confidence}</span></div><p className="mt-2 text-xs leading-5 text-slate-400">{finding.summary}</p></div>
             ))}
           </div>
         </div>
       )}
 
-      <p className="mt-4 text-[11px] leading-5 text-slate-500">
-        Events shown before and after are temporal neighbors in the same fight window. Entropy does not treat proximity alone as causation.
-      </p>
+      <p className="mt-4 text-[11px] leading-5 text-slate-500">Events shown before and after are temporal neighbors in the same fight window. Entropy does not treat proximity alone as causation.</p>
     </section>
   );
 }
