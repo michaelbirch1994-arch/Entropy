@@ -17,7 +17,7 @@ function squadGeneration(generation: number, wasted: number) {
 
 describe('Buff Generation multi-fight duration aggregation', () => {
   it('sums generated and wasted duration across fights while preserving stable account identity', () => {
-    const tables = buildBoonTables([
+    const { boonTables } = buildBoonTables([
       {
         details: {
           durationMS: 100_000,
@@ -55,7 +55,7 @@ describe('Buff Generation multi-fight duration aggregation', () => {
       },
     ]);
 
-    const quickness = tables.find((table) => table.id === `b${QUICKNESS_ID}`);
+    const quickness = boonTables.find((table) => table.id === `b${QUICKNESS_ID}`);
     expect(quickness).toBeDefined();
 
     const row = quickness!.rows.find((candidate) => candidate.account === 'MultiSpec.1234');
@@ -77,7 +77,7 @@ describe('Buff Generation multi-fight duration aggregation', () => {
   });
 
   it('keeps partial attendance separate instead of normalizing it to the full session', () => {
-    const tables = buildBoonTables([
+    const { boonTables } = buildBoonTables([
       {
         details: {
           durationMS: 100_000,
@@ -107,7 +107,7 @@ describe('Buff Generation multi-fight duration aggregation', () => {
       },
     ]);
 
-    const quickness = tables.find((table) => table.id === `b${QUICKNESS_ID}`)!;
+    const quickness = boonTables.find((table) => table.id === `b${QUICKNESS_ID}`)!;
     const partial = quickness.rows.find((row) => row.account === 'Partial.2000');
 
     expect(partial).toBeDefined();
