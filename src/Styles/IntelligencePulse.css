@@ -1,0 +1,60 @@
+/* Intelligence-only atmosphere.
+   The Intelligence workspace should feel quietly alive without changing the
+   evidence hierarchy or suggesting that static data is updating in real time.
+   Only opacity breathes; layout/scale never moves. */
+
+.theme-intelligence-dossier,
+.theme-evidence-gate,
+.theme-intel-rail-item {
+  position: relative;
+  isolation: isolate;
+}
+
+.theme-intelligence-dossier::after,
+.theme-evidence-gate::after,
+.theme-intel-rail-item::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 10%;
+  right: 10%;
+  bottom: -8px;
+  height: 18px;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--theme-accentStrong) 17%, transparent) 0%,
+    color-mix(in srgb, var(--theme-accent) 8%, transparent) 42%,
+    transparent 74%
+  );
+  filter: blur(8px);
+  opacity: 0.11;
+  animation: entropy-intelligence-breathe 6.4s ease-in-out infinite;
+}
+
+.theme-evidence-gate::after {
+  animation-delay: -1.8s;
+}
+
+.theme-intel-rail-item:nth-child(2n)::after {
+  animation-delay: -3.1s;
+}
+
+.theme-intel-rail-item:nth-child(3n)::after {
+  animation-delay: -4.7s;
+}
+
+@keyframes entropy-intelligence-breathe {
+  0%, 100% { opacity: 0.08; }
+  48% { opacity: 0.18; }
+  58% { opacity: 0.16; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-intelligence-dossier::after,
+  .theme-evidence-gate::after,
+  .theme-intel-rail-item::after {
+    animation: none;
+    opacity: 0.1;
+  }
+}
