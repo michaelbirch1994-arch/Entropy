@@ -85,6 +85,38 @@ describe('buildEventInspection', () => {
     expect(inspection.relatedPlayerKeys).toEqual(['player:a', 'player:b', 'player:c']);
   });
 
+  it('builds a chronological nervous-system view of real events immediately before and after the selected event', () => {
+    const criticalEvents: CriticalEvent[] = [
+      { ...event, id: 'critical:before:far', timestampMs: 20_000, kind: 'enemy-spike' },
+      { ...event, id: 'critical:before:near', timestampMs: 39_000, kind: 'squad-separation' },
+      event,
+      { ...event, id: 'critical:same-time', timestampMs: 42_000, kind: 'defensive-failure' },
+      { ...event, id: 'critical:after:near', timestampMs: 46_000, kind: 'failed-recovery' },
+      { ...event, id: 'critical:other-fight', timestampMs: 44_000, fightId: 'fight-2' },
+      { ...event, id: 'critical:after:far', timestampMs: 60_000, kind: 'death-recap' },
+    ];
+
+    const inspection = buildEventInspection({
+      event,
+      segments: [segment],
+      findings: [finding],
+      criticalEvents,
+      beforeMs: 5_000,
+      afterMs: 5_000,
+    });
+
+    expect(inspection.nearbyEvents.map((item) => item.id)).toEqual([
+      'critical:before:near',
+      'critical:same-time',
+      'critical:after:near',
+    ]);
+    expect(inspection.eventsBefore.map((item) => item.id)).toEqual(['critical:before:near']);
+    expect(inspection.eventsAfter.map((item) => item.id)).toEqual([
+      'critical:same-time',
+      'critical:after:near',
+    ]);
+  });
+
   it('does not connect evidence from another fight', () => {
     const foreignFinding: IntelligenceFinding = { ...finding, id: 'finding:foreign', relatedFight: 'fight-2' };
     const foreignSegment: EngagementSegment = { ...segment, id: 'segment:fight-2:0', fightId: 'fight-2' };
@@ -93,11 +125,13 @@ describe('buildEventInspection', () => {
       event,
       segments: [foreignSegment],
       findings: [foreignFinding],
+      criticalEvents: [{ ...event, id: 'foreign-event', fightId: 'fight-2' }],
     });
 
     expect(inspection.relatedSegments).toEqual([]);
     expect(inspection.relatedFindings).toEqual([]);
     expect(inspection.relatedPlayerKeys).toEqual(['player:a', 'player:b']);
+    expect(inspection.nearbyEvents).toEqual([]);
   });
 
   it('clamps the review window at fight-relative zero', () => {
