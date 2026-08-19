@@ -1,0 +1,155 @@
+name: Cut guarded release tag
+
+# Manually creates an immutable release tag only after validating that main is
+# already prepared for the requested version. The existing release.yml workflow
+# remains responsible for building and publishing desktop installers.
+#
+# IMPORTANT: Tags created with the repository GITHUB_TOKEN do not trigger a
+# second workflow from the resulting push event. Therefore this workflow also
+# dispatches release.yml explicitly after the tag is created.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without the v prefix (example: 0.2.58)"
+        required: true
+        type: string
+      confirm:
+        description: "Type RELEASE to confirm tag creation"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: cut-release
+  cancel-in-progress: false
+
+jobs:
+  validate-and-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require explicit confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ inputs.confirm }}" != "RELEASE" ]]; then
+            echo "Confirmation must be exactly RELEASE."
+            exit 1
+          fi
+
+      - name: Validate version input
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION='${{ inputs.version }}'
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version must be strict semver x.y.z with no v prefix."
+            exit 1
+          fi
+
+      - name: Check out main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify main has not moved since dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags
+          LOCAL_SHA="$(git rev-parse HEAD)"
+          REMOTE_SHA="$(git rev-parse origin/main)"
+          if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
+            echo "main moved while this release was starting; refusing to tag stale code."
+            exit 1
+          fi
+
+      - name: Verify all version sources match
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION='${{ inputs.version }}'
+          node - <<'NODE'
+          const fs = require('fs');
+          const expected = process.env.VERSION;
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const tauri = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+          const cargo = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
+          const cargoMatch = cargo.match(/^version\s*=\s*"([^"]+)"/m);
+          const values = {
+            'package.json': pkg.version,
+            'src-tauri/tauri.conf.json': tauri.version,
+            'src-tauri/Cargo.toml': cargoMatch?.[1],
+          };
+          let bad = false;
+          for (const [file, actual] of Object.entries(values)) {
+            if (actual !== expected) {
+              console.error(`${file}: expected ${expected}, found ${actual ?? 'missing'}`);
+              bad = true;
+            } else {
+              console.log(`${file}: ${actual} OK`);
+            }
+          }
+          if (bad) process.exit(1);
+          NODE
+        env:
+          VERSION: ${{ inputs.version }}
+
+      - name: Refuse duplicate tag or release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="v${{ inputs.version }}"
+          if git show-ref --tags --verify --quiet "refs/tags/$TAG"; then
+            echo "Tag $TAG already exists; release tags are immutable."
+            exit 1
+          fi
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; refusing duplicate release."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test -- --run
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Create immutable release tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="v${{ inputs.version }}"
+          SHA="$(git rev-parse HEAD)"
+          gh api --method POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/${{ github.repository }}/git/refs" \
+            -f ref="refs/tags/$TAG" \
+            -f sha="$SHA"
+          echo "Created $TAG at $SHA"
+
+      - name: Dispatch existing desktop release workflow
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="v${{ inputs.version }}"
+          gh workflow run release.yml --repo "${{ github.repository }}" --ref "$TAG"
+          echo "Dispatched release.yml for $TAG"
