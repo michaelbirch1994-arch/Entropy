@@ -27,20 +27,22 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 - [x] Add fight coverage, contributor counts, per-fight ranges, and low-sample warnings to Top Skills and Healing Sources.
 - [x] Extend the same participation context to the remaining player tables where sample size changes interpretation.
   - [x] Add shared fight coverage, active time, and reliability labels to Offensive, Support, Healing, Defensive Stats, Buffs, and Buff Generation tables.
-  - [x] Make per-second sorting in Support, Healing, and Defensive Stats use the same player-specific duration as the displayed rate.
+  - [x] Make per-second sorting in Support, Healing, Defensive Stats, and Offensive use the same player-specific duration as the displayed rate.
   - [x] Add profession/build-specific attendance before showing sample labels on Damage Modifiers and per-fight Rotations; account-wide attendance would be misleading when a player swaps builds. New reports persist fight coverage and EI active time by account+profession, while archived reports display coverage as unavailable instead of inventing it.
 - [ ] Base rate metrics on the appropriate active/combat duration.
   - [x] Core offense/defense/support/healing tables use player-specific tracked duration rather than one squad-wide clock.
+  - [x] Offensive rate-aware columns now sort by the same player-specific `/s` values shown in the table, and headers make those rate units explicit.
   - [x] Rotation casts per minute use the selected account+profession's EI active time and expose session coverage for that exact build.
   - [x] Overview `/s` cards divide each leading player's value by that player's tracked `totalMs`, not by fight count/log count.
   - [x] Top Skills / Healing Sources per-active-minute context uses contributor/affected active time.
   - [x] Commander damage/barrier per-minute values use the duration of fights actually led by that commander.
-  - [ ] Finish the remaining cross-view denominator audit before marking the parent complete.
+  - [ ] Finish the remaining cross-view denominator audit before marking the parent complete; do not force squad-summary totals into `/s` where there is no single honest denominator.
 - [x] Flag low-duration and low-fight samples instead of presenting them as equally reliable.
   - [x] Core performance tables now flag low/developing/strong fight samples and preserve an explicit unavailable state for legacy reports.
   - [x] Downgrade otherwise broad fight samples when total or per-fight active combat time is too short for a stable rate comparison.
 - [ ] Hide unsupported Siege/NPC Damage and other permanently empty columns.
   - [x] Offensive only shows the Siege/NPC/Gate proxy when EI all-damage exceeds player damage for at least one player.
+  - [x] Offensive no longer renders a placeholder Group column on a data path that does not carry subgroup identity.
   - [x] Fight Breakdown gates Healing and Sustain independently so one available metric does not force the other column to render as empty.
   - [ ] Finish the broader table audit for other source-dependent fields before closing this parent item.
 
@@ -104,7 +106,8 @@ This worklist tracks correctness, performance, readability, interaction, and lon
   - [x] EI `Overstack` remains separate because the current EI export includes generation in that normalized field; Entropy does not relabel it as wasted seconds.
 - [x] Verify generation totals across multiple fights, subgroup changes, profession changes, and partial attendance, and make sorting use the displayed duration values.
   - [x] Regression coverage verifies stable account aggregation, subgroup/squad recipient counts, generated duration, wasted duration, and partial attendance across multiple fights.
-- [ ] Make intensity-stacking buff units explicit in presentation: generated/wasted values for Might, Stability, etc. are stack-seconds/effect-seconds rather than unweighted wall-clock seconds.
+- [x] Make intensity-stacking buff units explicit in presentation: generated/wasted values for Might, Stability, etc. are stack-seconds/effect-seconds rather than unweighted wall-clock seconds.
+  - [x] Duration-stacking boons keep compact h/m/s formatting; intensity-stacking effects are explicitly rendered as `stack-s`, including chart/tooltips and wasted/reapplied values.
 
 ## P2 — Fight Replay inspection
 
