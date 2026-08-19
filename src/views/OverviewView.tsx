@@ -142,45 +142,33 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label, onOpen }: {
 
 export default function OverviewView() {
   const { report } = useReport();
-  const { setActiveView } = useView();
+  const { navigateToView } = useView();
   if (!report) return null;
   const s = report.stats;
 
-  // "/s" here is a real per-second rate: value divided by the leading
-  // player's actual tracked playtime (totalMs), not by how many logs they
-  // joined. logsJoined (shown as "N logs" below the number) is a much
-  // smaller number than seconds-played, so dividing by it instead - like an
-  // earlier version of this card did - inflated these into per-fight
-  // averages while still being labelled "/s", which is why a healing number
-  // could read as ~98k/s (impossible for one player) when it was really
-  // ~98k healing per fight.
   const perSec = (stat: { value: number; totalMs?: number }) => {
     const secs = (stat.totalMs ?? 0) / 1000;
     return secs > 0 ? stat.value / secs : 0;
   };
 
   const perSecCards = [
-    { label: "Down Contrib /s", value: fmtFixedGrouped(perSec(s.maxDownContrib)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, glow: "neon-offense" },
-    { label: "Healing /s", value: fmtFixedGrouped(perSec(s.maxHealing)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, glow: "neon-healing" },
-    { label: "Barrier /s", value: fmtFixedGrouped(perSec(s.maxBarrier)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, glow: "neon-barrier" },
-    { label: "Cleanses /s", value: fmtFixedGrouped(perSec(s.maxCleanses)), icon: <Droplet className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, glow: "neon-barrier" },
-    { label: "Strips /s", value: fmtFixedGrouped(perSec(s.maxStrips)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, glow: "neon-control" },
-    { label: "Stability Gen /s", value: fmtFixedGrouped(perSec(s.maxStab)), icon: <Shield className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxStab.player, count: s.maxStab.count, glow: "neon-control" },
-    { label: "CC /s", value: fmtFixedGrouped(perSec(s.maxCC)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, glow: "neon-control" },
-    { label: "Interrupts /s", value: fmtFixedGrouped(perSec(s.maxInterrupts)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, glow: "neon-control" },
+    { metric: "downContrib", label: "Down Contrib /s", value: fmtFixedGrouped(perSec(s.maxDownContrib)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, glow: "neon-offense" },
+    { metric: "healing", label: "Healing /s", value: fmtFixedGrouped(perSec(s.maxHealing)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, glow: "neon-healing" },
+    { metric: "barrier", label: "Barrier /s", value: fmtFixedGrouped(perSec(s.maxBarrier)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, glow: "neon-barrier" },
+    { metric: "cleanses", label: "Cleanses /s", value: fmtFixedGrouped(perSec(s.maxCleanses)), icon: <Droplet className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, glow: "neon-barrier" },
+    { metric: "strips", label: "Strips /s", value: fmtFixedGrouped(perSec(s.maxStrips)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, glow: "neon-control" },
+    { metric: "stability", label: "Stability Gen /s", value: fmtFixedGrouped(perSec(s.maxStab)), icon: <Shield className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxStab.player, count: s.maxStab.count, glow: "neon-control" },
+    { metric: "cc", label: "CC /s", value: fmtFixedGrouped(perSec(s.maxCC)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, glow: "neon-control" },
+    { metric: "interrupts", label: "Interrupts /s", value: fmtFixedGrouped(perSec(s.maxInterrupts)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, glow: "neon-control" },
   ];
 
   const recap = generateFightRecap(s);
 
   return (
     <div className="space-y-6 animate-view pb-12">
-      {/* AI-style recap */}
       <RecapPanel recap={recap} />
-
-      {/* Automated squad synergy insights */}
       {s.synergyInsights && <SynergyPanel insights={s.synergyInsights} />}
 
-      {/* Top stats banner */}
       <div className="theme-kdr-strip grid grid-cols-2 md:grid-cols-4 gap-px bg-slate-800/60 rounded-2xl overflow-hidden border border-slate-800/80">
         {[
           { label: "Allied Downs", value: s.totalSquadDowns, color: "text-slate-100" },
@@ -201,18 +189,30 @@ export default function OverviewView() {
         ))}
       </div>
 
-      {/* MVP cards */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <MvpBlock mvp={s.offensiveMvp} silver={s.offensiveSilver} bronze={s.offensiveBronze} accent="amber" label="Offensive MVP" onOpen={() => setActiveView("top-players")} />
-        <MvpBlock mvp={s.defensiveMvp} silver={s.defensiveSilver} bronze={s.defensiveBronze} accent="teal" label="Defensive MVP" onOpen={() => setActiveView("top-players")} />
+        <MvpBlock
+          mvp={s.offensiveMvp}
+          silver={s.offensiveSilver}
+          bronze={s.offensiveBronze}
+          accent="amber"
+          label="Offensive MVP"
+          onOpen={() => navigateToView("top-players", { source: "overview", metric: "downContrib", account: s.offensiveMvp.account })}
+        />
+        <MvpBlock
+          mvp={s.defensiveMvp}
+          silver={s.defensiveSilver}
+          bronze={s.defensiveBronze}
+          accent="teal"
+          label="Defensive MVP"
+          onOpen={() => navigateToView("top-players", { source: "overview", metric: "healing", account: s.defensiveMvp.account })}
+        />
       </div>
 
-      {/* Metrics grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {perSecCards.map((c, i) => (
           <motion.button
             type="button"
-            onClick={() => setActiveView("top-players")}
+            onClick={() => navigateToView("top-players", { source: "overview", metric: c.metric, account: c.player })}
             aria-label={`View Top Players for ${c.label}`}
             key={c.label}
             initial={{ opacity: 0, y: 12 }}
