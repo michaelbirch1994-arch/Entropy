@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { Play, Pause, Film, Crosshair, Download } from "lucide-react";
+import { Play, Pause, Film, Crosshair, Download, RotateCcw, X } from "lucide-react";
 import { useReport } from "../store/ReportContext";
+import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
 import { interpolatePosition, interpolateFacing, isInInterval, distanceBetween } from "../lib/parseReplayData";
+import { resolveReplayNavigationTarget, type ResolvedReplayNavigationTarget } from "../lib/replayNavigation";
 
 function fmtClock(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -33,11 +35,14 @@ function facingLineEnd(cx: number, cy: number, length: number, angleDeg: number)
 
 export default function ReplayView() {
   const { report } = useReport();
+  const { navigationTarget, clearNavigationTarget } = useView();
   const fights = report?.stats.replayFights;
   const [fightIdx, setFightIdx] = useState(0);
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(2);
+  const [intelligenceOrigin, setIntelligenceOrigin] = useState<ResolvedReplayNavigationTarget | null>(null);
+  const pendingSeekRef = useRef<ResolvedReplayNavigationTarget | null>(null);
   // Optional overlay layers. Casts default off: a WvW pull produces
   // thousands of them and they bury the squad dots otherwise.
   // Real combat-replay map imagery (WvW keep/tower terrain screenshots from
@@ -75,10 +80,35 @@ export default function ReplayView() {
   const fight = fights?.[fightIdx];
 
   useEffect(() => {
-    setT(0);
+    const pending = pendingSeekRef.current;
+    if (pending && pending.fightIndex === fightIdx) {
+      setT(pending.timestampMs);
+      setIntelligenceOrigin(pending);
+      pendingSeekRef.current = null;
+    } else {
+      setT(0);
+    }
     setPlaying(false);
     setPan({ x: 0, y: 0 });
   }, [fightIdx]);
+
+  useEffect(() => {
+    const resolved = resolveReplayNavigationTarget(fights, navigationTarget);
+    if (!resolved) return;
+
+    setPlaying(false);
+    setPan({ x: 0, y: 0 });
+    setFollowFocus(true);
+    setIntelligenceOrigin(resolved);
+
+    if (resolved.fightIndex === fightIdx) {
+      setT(resolved.timestampMs);
+    } else {
+      pendingSeekRef.current = resolved;
+      setFightIdx(resolved.fightIndex);
+    }
+    clearNavigationTarget();
+  }, [clearNavigationTarget, fightIdx, fights, navigationTarget]);
 
   useEffect(() => {
     if (!playing || !fight) return;
@@ -164,16 +194,16 @@ export default function ReplayView() {
     return `${cx - frame.w / 2} ${cy - frame.h / 2} ${frame.w} ${frame.h}`;
   }, [frame, focusPoint, followFocus, pan, zoom]);
 
-    // Native SVG transform (not a CSS transform on the <svg> root) for the
-    // y-up-to-y-down flip. A CSS transform on an animated SVG root is prone
-    // to a Chromium paint/compositing bug where fast attribute updates leave
-    // stale pixels behind moving shapes (streaking ghosts) - wrapping the
-    // content in a plain SVG <g> instead keeps the flip inside the normal
-    // SVG paint pipeline.
-    const [, vbYStr, , vbHStr] = viewBox.split(" ");
-    const vbY = Number(vbYStr);
-    const vbH = Number(vbHStr);
-    const flipTransform = `translate(0, ${2 * vbY + vbH}) scale(1, -1)`;
+  // Native SVG transform (not a CSS transform on the <svg> root) for the
+  // y-up-to-y-down flip. A CSS transform on an animated SVG root is prone
+  // to a Chromium paint/compositing bug where fast attribute updates leave
+  // stale pixels behind moving shapes (streaking ghosts) - wrapping the
+  // content in a plain SVG <g> instead keeps the flip inside the normal
+  // SVG paint pipeline.
+  const [, vbYStr, , vbHStr] = viewBox.split(" ");
+  const vbY = Number(vbYStr);
+  const vbH = Number(vbHStr);
+  const flipTransform = `translate(0, ${2 * vbY + vbH}) scale(1, -1)`;
 
   // Mouse/touch drag-to-pan on the SVG viewport. Only active once zoomed in
   // (maxPanX/Y are 0 at zoom 1, so drags are effectively no-ops there).
@@ -437,12 +467,50 @@ render(0);
     );
   }
 
+  const atIntelligenceAnchor = intelligenceOrigin?.fightIndex === fightIdx && Math.abs(t - intelligenceOrigin.timestampMs) < 1;
+
   return (
     <div className="space-y-5 animate-view pb-12">
+      {intelligenceOrigin?.fightIndex === fightIdx && (
+        <div className="rounded-2xl border border-sky-400/25 bg-sky-500/[0.06] px-4 py-3 shadow-[0_0_30px_-18px_rgba(56,189,248,0.8)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-sky-300">Intelligence evidence target</div>
+              <div className="mt-1 text-sm font-black text-slate-100">Paused at {fmtClock(intelligenceOrigin.timestampMs)} in Fight {intelligenceOrigin.fightIndex + 1}</div>
+              <div className="mt-1 text-[11px] text-slate-400">
+                {intelligenceOrigin.account ? `Linked player: ${intelligenceOrigin.account}` : "Replay mechanic / event context"}
+                {intelligenceOrigin.eventId ? ` · Event ${intelligenceOrigin.eventId}` : ""}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => { setT(intelligenceOrigin.timestampMs); setPlaying(false); }}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/[0.08] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-sky-200 transition hover:border-sky-300/40 hover:bg-sky-500/[0.12]"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Return to anchor
+              </button>
+              <button
+                type="button"
+                aria-label="Dismiss Intelligence replay target"
+                onClick={() => setIntelligenceOrigin(null)}
+                className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-white/10 bg-black/20 p-2 text-slate-500 transition hover:border-white/20 hover:text-slate-300"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {fights.length > 1 && (
         <select
           value={fightIdx}
-          onChange={(e) => setFightIdx(Number(e.target.value))}
+          onChange={(e) => {
+            pendingSeekRef.current = null;
+            setIntelligenceOrigin(null);
+            setFightIdx(Number(e.target.value));
+          }}
           className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2"
         >
           {fights.map((f, i) => (
@@ -574,178 +642,178 @@ render(0);
               ref={svgRef}
               viewBox={viewBox}
               className="w-full h-[420px] select-none touch-none"
-                      style={{ cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "default" }}
+              style={{ cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "default" }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerLeave={handlePointerUp}
             >
-                      <g transform={flipTransform}>
-              {/* Real combat-replay map imagery from EI. Per-actor positions are
-                  already in this same pixel space, so the image needs no scaling -
-                  but the whole svg is flipped with scaleY(-1) to match EI's y-axis,
-                  so each image is counter-flipped about its own centre to keep it
-                  the right way up. */}
-              {showMap && fight.data.map?.images.map((img, i) => {
-                const visible = img.endMs <= 0 || (t >= img.startMs && t <= img.endMs);
-                if (!visible) return null;
-                const w = fight.data.map!.width;
-                const h = fight.data.map!.height;
-                return (
-                  <image
-                    key={`${img.url}-${i}`}
-                    href={img.url}
-                    x={img.x}
-                    y={img.y}
-                    width={w}
-                    height={h}
-                    opacity={0.85}
-                    preserveAspectRatio="none"
-                    transform={`translate(0 ${2 * img.y + h}) scale(1 -1)`}
-                  />
-                );
-              })}
-
-              {/* Mechanic events near the playhead, pinned to whoever triggered
-                  them. EI exports no AoE geometry, so this marks that something
-                  happened to that player at that spot - not the effect's radius. */}
-              {showMechanics && (fight.data.mechanics ?? [])
-                .filter((m) => Math.abs(m.t - t) <= 1500 && m.account)
-                .map((m, i) => {
-                  const owner = fight.data.players.find((p) => p.account === m.account);
-                  const pt = owner ? interpolatePosition(owner.points, t) : null;
-                  if (!pt) return null;
-                  const age = Math.abs(m.t - t) / 1500;
+              <g transform={flipTransform}>
+                {/* Real combat-replay map imagery from EI. Per-actor positions are
+                    already in this same pixel space, so the image needs no scaling -
+                    but the whole svg is flipped with scaleY(-1) to match EI's y-axis,
+                    so each image is counter-flipped about its own centre to keep it
+                    the right way up. */}
+                {showMap && fight.data.map?.images.map((img, i) => {
+                  const visible = img.endMs <= 0 || (t >= img.startMs && t <= img.endMs);
+                  if (!visible) return null;
+                  const w = fight.data.map!.width;
+                  const h = fight.data.map!.height;
                   return (
-                    <circle
-                      key={`mech-${m.t}-${m.name}-${i}`}
-                      cx={pt.x}
-                      cy={pt.y}
-                      r={(9 + age * 14) * markerUnit}
-                      fill="none"
-                      stroke="#f43f5e"
-                      strokeWidth={2 * markerUnit}
-                      opacity={0.75 * (1 - age)}
-                    />
-                  );
-                })}
-
-              {/* Damage-skill cast pulses at the caster's position. Again: where a
-                  skill was cast, not the area it covered. */}
-              {showCasts &&
-                fight.data.players.map((p) => {
-                  const recent = (p.casts ?? []).filter((c) => Math.abs(c.t - t) <= 600);
-                  if (recent.length === 0) return null;
-                  const pt = interpolatePosition(p.points, t);
-                  if (!pt) return null;
-                  const age = Math.min(...recent.map((c) => Math.abs(c.t - t))) / 600;
-                  return (
-                    <circle
-                      key={`cast-${p.account}`}
-                      cx={pt.x}
-                      cy={pt.y}
-                      r={(5 + age * 8) * markerUnit}
-                      fill="none"
-                      stroke="#fbbf24"
-                      strokeWidth={1.5 * markerUnit}
-                      opacity={0.6 * (1 - age)}
-                    />
-                  );
-                })}
-
-              {showFacing &&
-                fight.data.enemies.map((e) => {
-                  if (isInInterval(e.deadIntervals, t)) return null;
-                  const pt = interpolatePosition(e.points, t);
-                  const angle = interpolateFacing(e.facings ?? [], t);
-                  if (!pt || angle == null) return null;
-                  const r = (isInInterval(e.downIntervals, t) ? 6.5 : 4.5) * markerUnit;
-                  const end = facingLineEnd(pt.x, pt.y, r + 5 * markerUnit, angle);
-                  return (
-                    <line
-                      key={`facing-${e.id}`}
-                      x1={pt.x}
-                      y1={pt.y}
-                      x2={end.x2}
-                      y2={end.y2}
-                      stroke="#f43f5e"
-                      strokeWidth={1.5 * markerUnit}
-                      strokeLinecap="round"
-                      opacity={0.8}
-                    />
-                  );
-                })}
-
-              {fight.data.enemies.map((e) => {
-                const pt = interpolatePosition(e.points, t);
-                if (!pt) return null;
-                const dead = isInInterval(e.deadIntervals, t);
-                const down = isInInterval(e.downIntervals, t);
-                if (dead) return null;
-                return (
-                  <circle
-                    key={e.id}
-                    cx={pt.x}
-                    cy={pt.y}
-                    r={(down ? 6.5 : 4.5) * markerUnit}
-                    fill="#f43f5e"
-                    fillOpacity={down ? 0.25 : 0.75}
-                    stroke={down ? "#f43f5e" : "none"}
-                    strokeWidth={(down ? 2 : 0) * markerUnit}
-                  >
-                    <title>{`${e.name || "Enemy"}${down ? " — downed" : ""}`}</title>
-                  </circle>
-                );
-              })}
-              {showFacing &&
-                fight.data.players.map((p) => {
-                  if (isInInterval(p.deadIntervals, t)) return null;
-                  const pt = interpolatePosition(p.points, t);
-                  const angle = interpolateFacing(p.facings ?? [], t);
-                  if (!pt || angle == null) return null;
-                  const r = (isInInterval(p.downIntervals, t) ? 7.5 : p.isCommander ? 8.5 : 5) * markerUnit;
-                  const end = facingLineEnd(pt.x, pt.y, r + 5 * markerUnit, angle);
-                  return (
-                    <line
-                      key={`facing-${p.account}`}
-                      x1={pt.x}
-                      y1={pt.y}
-                      x2={end.x2}
-                      y2={end.y2}
-                      stroke={p.inSquad ? "#f59e0b" : "#94a3b8"}
-                      strokeWidth={1.5 * markerUnit}
-                      strokeLinecap="round"
+                    <image
+                      key={`${img.url}-${i}`}
+                      href={img.url}
+                      x={img.x}
+                      y={img.y}
+                      width={w}
+                      height={h}
                       opacity={0.85}
+                      preserveAspectRatio="none"
+                      transform={`translate(0 ${2 * img.y + h}) scale(1 -1)`}
                     />
                   );
                 })}
 
-              {fight.data.players.map((p) => {
-                const pt = interpolatePosition(p.points, t);
-                if (!pt) return null;
-                const dead = isInInterval(p.deadIntervals, t);
-                const down = isInInterval(p.downIntervals, t);
-                if (dead) return null;
-                return (
-                  <circle
-                    key={p.account}
-                    cx={pt.x}
-                    cy={pt.y}
-                    r={(down ? 7.5 : p.isCommander ? 8.5 : 5) * markerUnit}
-                    fill={p.inSquad ? "#f59e0b" : "#64748b"}
-                    fillOpacity={down ? 0.3 : 0.9}
-                    stroke={down ? "#f43f5e" : p.isCommander ? "#fbbf24" : "none"}
-                    strokeWidth={(down || p.isCommander ? 2.25 : 0) * markerUnit}
-                  >
-                    <title>{`${shortActorName(p.account)}${p.isCommander ? " — commander" : ""}${down ? " — downed" : ""}`}</title>
-                  </circle>
-                );
-              })}
-                      </g>
+                {/* Mechanic events near the playhead, pinned to whoever triggered
+                    them. EI exports no AoE geometry, so this marks that something
+                    happened to that player at that spot - not the effect's radius. */}
+                {showMechanics && (fight.data.mechanics ?? [])
+                  .filter((m) => Math.abs(m.t - t) <= 1500 && m.account)
+                  .map((m, i) => {
+                    const owner = fight.data.players.find((p) => p.account === m.account);
+                    const pt = owner ? interpolatePosition(owner.points, t) : null;
+                    if (!pt) return null;
+                    const age = Math.abs(m.t - t) / 1500;
+                    return (
+                      <circle
+                        key={`mech-${m.t}-${m.name}-${i}`}
+                        cx={pt.x}
+                        cy={pt.y}
+                        r={(9 + age * 14) * markerUnit}
+                        fill="none"
+                        stroke="#f43f5e"
+                        strokeWidth={2 * markerUnit}
+                        opacity={0.75 * (1 - age)}
+                      />
+                    );
+                  })}
+
+                {/* Damage-skill cast pulses at the caster's position. Again: where a
+                    skill was cast, not the area it covered. */}
+                {showCasts &&
+                  fight.data.players.map((p) => {
+                    const recent = (p.casts ?? []).filter((c) => Math.abs(c.t - t) <= 600);
+                    if (recent.length === 0) return null;
+                    const pt = interpolatePosition(p.points, t);
+                    if (!pt) return null;
+                    const age = Math.min(...recent.map((c) => Math.abs(c.t - t))) / 600;
+                    return (
+                      <circle
+                        key={`cast-${p.account}`}
+                        cx={pt.x}
+                        cy={pt.y}
+                        r={(5 + age * 8) * markerUnit}
+                        fill="none"
+                        stroke="#fbbf24"
+                        strokeWidth={1.5 * markerUnit}
+                        opacity={0.6 * (1 - age)}
+                      />
+                    );
+                  })}
+
+                {showFacing &&
+                  fight.data.enemies.map((e) => {
+                    if (isInInterval(e.deadIntervals, t)) return null;
+                    const pt = interpolatePosition(e.points, t);
+                    const angle = interpolateFacing(e.facings ?? [], t);
+                    if (!pt || angle == null) return null;
+                    const r = (isInInterval(e.downIntervals, t) ? 6.5 : 4.5) * markerUnit;
+                    const end = facingLineEnd(pt.x, pt.y, r + 5 * markerUnit, angle);
+                    return (
+                      <line
+                        key={`facing-${e.id}`}
+                        x1={pt.x}
+                        y1={pt.y}
+                        x2={end.x2}
+                        y2={end.y2}
+                        stroke="#f43f5e"
+                        strokeWidth={1.5 * markerUnit}
+                        strokeLinecap="round"
+                        opacity={0.8}
+                      />
+                    );
+                  })}
+
+                {fight.data.enemies.map((e) => {
+                  const pt = interpolatePosition(e.points, t);
+                  if (!pt) return null;
+                  const dead = isInInterval(e.deadIntervals, t);
+                  const down = isInInterval(e.downIntervals, t);
+                  if (dead) return null;
+                  return (
+                    <circle
+                      key={e.id}
+                      cx={pt.x}
+                      cy={pt.y}
+                      r={(down ? 6.5 : 4.5) * markerUnit}
+                      fill="#f43f5e"
+                      fillOpacity={down ? 0.25 : 0.75}
+                      stroke={down ? "#f43f5e" : "none"}
+                      strokeWidth={(down ? 2 : 0) * markerUnit}
+                    >
+                      <title>{`${e.name || "Enemy"}${down ? " — downed" : ""}`}</title>
+                    </circle>
+                  );
+                })}
+                {showFacing &&
+                  fight.data.players.map((p) => {
+                    if (isInInterval(p.deadIntervals, t)) return null;
+                    const pt = interpolatePosition(p.points, t);
+                    const angle = interpolateFacing(p.facings ?? [], t);
+                    if (!pt || angle == null) return null;
+                    const r = (isInInterval(p.downIntervals, t) ? 7.5 : p.isCommander ? 8.5 : 5) * markerUnit;
+                    const end = facingLineEnd(pt.x, pt.y, r + 5 * markerUnit, angle);
+                    return (
+                      <line
+                        key={`facing-${p.account}`}
+                        x1={pt.x}
+                        y1={pt.y}
+                        x2={end.x2}
+                        y2={end.y2}
+                        stroke={p.inSquad ? "#f59e0b" : "#94a3b8"}
+                        strokeWidth={1.5 * markerUnit}
+                        strokeLinecap="round"
+                        opacity={0.85}
+                      />
+                    );
+                  })}
+
+                {fight.data.players.map((p) => {
+                  const pt = interpolatePosition(p.points, t);
+                  if (!pt) return null;
+                  const dead = isInInterval(p.deadIntervals, t);
+                  const down = isInInterval(p.downIntervals, t);
+                  if (dead) return null;
+                  return (
+                    <circle
+                      key={p.account}
+                      cx={pt.x}
+                      cy={pt.y}
+                      r={(down ? 7.5 : p.isCommander ? 8.5 : 5) * markerUnit}
+                      fill={p.inSquad ? "#f59e0b" : "#64748b"}
+                      fillOpacity={down ? 0.3 : 0.9}
+                      stroke={down ? "#f43f5e" : p.isCommander ? "#fbbf24" : "none"}
+                      strokeWidth={(down || p.isCommander ? 2.25 : 0) * markerUnit}
+                    >
+                      <title>{`${shortActorName(p.account)}${p.isCommander ? " — commander" : ""}${down ? " — downed" : ""}`}</title>
+                    </circle>
+                  );
+                })}
+              </g>
             </svg>
           </div>
 
-          <div className="flex items-center gap-3 mt-4 bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3">
+          <div className={`flex items-center gap-3 mt-4 rounded-xl border px-4 py-3 ${atIntelligenceAnchor ? "border-sky-400/35 bg-sky-500/[0.07]" : "border-slate-800 bg-slate-900/50"}`}>
             <button
               type="button"
               onClick={() => setPlaying((v) => !v)}
@@ -761,6 +829,9 @@ render(0);
               onChange={(e) => setT(Number(e.target.value))}
               className="flex-1 accent-amber-500"
             />
+            {atIntelligenceAnchor && (
+              <span className="rounded-full border border-sky-400/25 bg-sky-500/[0.08] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-sky-200">Intel anchor</span>
+            )}
             <span className="text-[11px] font-mono text-slate-400 w-24 text-right flex-shrink-0">
               {fmtClock(t)} / {fmtClock(fight.data.durationMs)}
             </span>
