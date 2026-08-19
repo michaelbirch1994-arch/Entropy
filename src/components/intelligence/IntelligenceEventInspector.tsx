@@ -3,7 +3,7 @@ import { useReport } from "../../store/ReportContext";
 import { buildEventDeathEvidence } from "../../lib/intelligence/eventDeathEvidence";
 import type { IntelligenceEventInspection } from "../../lib/intelligence/eventInspection";
 import type { CriticalEvent } from "../../lib/intelligence/types";
-import type { DeathRecapHit } from "../../types/report";
+import type { DeathRecapHit, WvWReport } from "../../types/report";
 
 function formatTime(ms: number): string {
   if (!Number.isFinite(ms) || ms < 0) return "unknown";
@@ -21,6 +21,23 @@ function formatOffset(ms: number): string {
 
 function formatDamage(value: number): string {
   return Number.isFinite(value) ? Math.round(value).toLocaleString() : "0";
+}
+
+function resolveFightIndex(report: WvWReport | null, fightId: string): number {
+  if (!report) return -1;
+  const fights = report.stats.fightBreakdown ?? [];
+  return fights.findIndex((fight, index) => {
+    const aliases = [
+      fight.id,
+      fight.label,
+      fight.fullLabel,
+      fight.permalink,
+      `fight-${index + 1}`,
+      `${fight.mapName}-${index}`,
+      `${fight.fullLabel}-${index}`,
+    ];
+    return aliases.some((alias) => typeof alias === "string" && alias === fightId);
+  });
 }
 
 function EventRow({ event, anchorMs }: { event: CriticalEvent; anchorMs: number }) {
@@ -74,8 +91,7 @@ export default function IntelligenceEventInspector({
 }) {
   const { report } = useReport();
   const { event, window, eventsBefore, eventsAfter, relatedFindings, relatedSegments, relatedPlayerKeys, relatedEventIds } = inspection;
-  const fightNumberMatch = /^Fight (\d+)$/.exec(fightLabel);
-  const fightIndex = fightNumberMatch ? Number(fightNumberMatch[1]) - 1 : -1;
+  const fightIndex = resolveFightIndex(report, event.fightId);
   const deathEvidence = report?.stats.deathRecaps
     ? buildEventDeathEvidence({
         deathRecaps: report.stats.deathRecaps,
