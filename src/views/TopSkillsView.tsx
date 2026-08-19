@@ -114,7 +114,41 @@ function buildHealingById(healingSources: TopHealingSource[]) {
   return byId;
 }
 
-type SkillSample = Pick<TopSkill, "fightCount" | "playerCount" | "perFightMin" | "perFightAverage" | "perFightMax">;
+type SkillSample = Pick<TopSkill, "fightCount" | "playerCount" | "activeMs" | "perFightMin" | "perFightAverage" | "perFightMax" | "perFightMaxContext">;
+
+type ExtremeContext = {
+  value: number;
+  account: string;
+  profession: string;
+  fightIndex?: number;
+  fightName?: string;
+  fightLabel?: string;
+};
+
+function fightContextLabel(context: { fightIndex?: number; fightName?: string; fightLabel?: string } | null | undefined): string | null {
+  if (!context) return null;
+  if (context.fightLabel) return context.fightLabel;
+  if (context.fightName && context.fightIndex !== undefined) return `F${context.fightIndex + 1} · ${context.fightName}`;
+  if (context.fightName) return context.fightName;
+  if (context.fightIndex !== undefined) return `Fight ${context.fightIndex + 1}`;
+  return null;
+}
+
+function formatActiveTime(ms: number | undefined): string | null {
+  if (!ms || ms <= 0) return null;
+  const minutes = Math.round(ms / 60000);
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const remainder = minutes % 60;
+    return remainder > 0 ? `${hours}h ${remainder}m active` : `${hours}h active`;
+  }
+  return `${minutes}m active`;
+}
+
+function perActiveMinute(value: number, activeMs: number | undefined): string | null {
+  if (!activeMs || activeMs <= 0) return null;
+  return `${fmtCompact(value / (activeMs / 60000))}/active min`;
+}
 
 function SkillSampleContext({
   sample,
@@ -134,11 +168,18 @@ function SkillSampleContext({
   }
 
   const reliability = getSampleReliability(sample.fightCount, totalFights);
+  const activeTime = formatActiveTime(sample.activeMs);
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] font-mono text-slate-500">
       <span>{sample.fightCount}/{totalFights} fights</span>
       <span>·</span>
       <span>{sample.playerCount ?? 0} {playerLabel}</span>
+      {activeTime && (
+        <>
+          <span>·</span>
+          <span>{activeTime}</span>
+        </>
+      )}
       <span
         className={`rounded-full border px-1.5 py-0.5 font-bold ${sampleReliabilityClasses(reliability.level)}`}
         title={reliability.detail}
@@ -151,8 +192,14 @@ function SkillSampleContext({
 
 function PerFightRange({ sample, label }: { sample: SkillSample; label: string }) {
   if (sample.fightCount === undefined || sample.fightCount <= 0) return null;
+  const maxContext = fightContextLabel(sample.perFightMaxContext);
+  const average = sample.perFightAverage ?? 0;
+  const peak = sample.perFightMax ?? 0;
+  const spikeRatio = average > 0 ? peak / average : 0;
+  const isSpikeHeavy = (sample.fightCount ?? 0) >= 3 && spikeRatio >= 2.5;
   return (
-    <div className="mt-2 grid grid-cols-3 gap-2 rounded-lg border border-slate-800/60 bg-slate-950/30 p-2 text-center">
+    <div className="mt-2 rounded-lg border border-slate-800/60 bg-slate-950/30 p-2">
+      <div className="grid grid-cols-3 gap-2 text-center">
       <div>
         <div className="text-[8px] uppercase tracking-wider text-slate-600">Min {label}</div>
         <div className="mt-0.5 font-bold text-slate-300">{fmtCompact(sample.perFightMin ?? 0)}</div>
@@ -165,6 +212,50 @@ function PerFightRange({ sample, label }: { sample: SkillSample; label: string }
         <div className="text-[8px] uppercase tracking-wider text-slate-600">Max {label}</div>
         <div className="mt-0.5 font-bold text-amber-300">{fmtCompact(sample.perFightMax ?? 0)}</div>
       </div>
+      </div>
+      {maxContext && (
+        <div className="mt-2 border-t border-slate-800/60 pt-2 text-[10px] text-slate-500">
+          Peak fight: <span className="font-bold text-amber-300">{maxContext}</span>
+        </div>
+      )}
+      {isSpikeHeavy && (
+        <div
+          className="mt-2 rounded-md border border-amber-400/20 bg-amber-500/[0.06] px-2 py-1.5 text-[10px] text-amber-200/90"
+          title="The best fight is much higher than this source's average fight, so judge the total with the sample and average beside it."
+        >
+          Spike-heavy source: peak is {spikeRatio.toFixed(1)}× its average fight.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ActiveRateLine({ label, value, activeMs }: { label: string; value: number; activeMs: number | undefined }) {
+  const rate = perActiveMinute(value, activeMs);
+  if (!rate) return null;
+  return (
+    <div className="mt-2 flex items-center justify-between rounded-lg border border-sky-400/10 bg-sky-500/[0.04] px-2 py-1.5">
+      <span className="text-slate-500">{label}</span>
+      <span className="font-bold text-sky-300">{rate}</span>
+    </div>
+  );
+}
+
+function ExtremeHitLine({ label, hit, tone }: { label: string; hit: ExtremeContext; tone: string }) {
+  const context = fightContextLabel(hit);
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-slate-500">{label}</span>
+        <span className={`${tone} text-right font-bold`}>
+          {fmtCompact(hit.value)} - {hit.account} ({hit.profession})
+        </span>
+      </div>
+      {context && (
+        <div className="text-right text-slate-500">
+          Occurred in <span className="font-bold text-slate-300">{context}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -418,13 +509,11 @@ export default function TopSkillsView() {
                 {expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}` && (
                   <div className="mt-3 pt-3 border-t border-slate-800/60 text-[10px] font-mono">
                     {hs.biggestHit ? (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Biggest single heal</span>
-                        <span className="text-emerald-400 font-bold">{fmtCompact(hs.biggestHit.value)} - {hs.biggestHit.account} ({hs.biggestHit.profession})</span>
-                      </div>
+                      <ExtremeHitLine label="Biggest single heal" hit={hs.biggestHit} tone="text-emerald-400" />
                     ) : (
                       <span className="text-slate-600">No single-hit data available</span>
                     )}
+                    <ActiveRateLine label="Healing rate by contributor active time" value={hs.healing} activeMs={hs.activeMs} />
                     <PerFightRange sample={hs} label="healing" />
                   </div>
                 )}
@@ -579,13 +668,19 @@ export default function TopSkillsView() {
                 {expandedKey === `${tab}:${sk.id}` && (
                   <div className="mt-3 pt-3 border-t border-slate-800/60 text-[10px] font-mono">
                     {sk.biggestHit ? (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">{tab === "incoming" ? "Biggest single hit taken" : "Biggest single hit"}</span>
-                        <span className="text-amber-400 font-bold">{fmtCompact(sk.biggestHit.value)} - {sk.biggestHit.account} ({sk.biggestHit.profession})</span>
-                      </div>
+                      <ExtremeHitLine
+                        label={tab === "incoming" ? "Biggest single hit taken" : "Biggest single hit"}
+                        hit={sk.biggestHit}
+                        tone="text-amber-400"
+                      />
                     ) : (
                       <span className="text-slate-600">No single-hit data available</span>
                     )}
+                    <ActiveRateLine
+                      label={tab === "incoming" ? "Damage taken by affected active time" : "Damage by contributor active time"}
+                      value={sk.damage}
+                      activeMs={sk.activeMs}
+                    />
                     <PerFightRange sample={sk} label="damage" />
                   </div>
                 )}

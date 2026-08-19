@@ -70,6 +70,7 @@ import type {
   Gw2Trait,
   SavedBuilderBuild,
 } from "../types/buildEditor";
+import ClassIcon from "../components/ui/ClassIcon";
 
 type WorkbenchTab = "build" | "library" | "squad";
 type Notice = { tone: "success" | "warning" | "error"; message: string };
@@ -746,7 +747,7 @@ export default function AxiForgeLabView() {
               <div className="theme-builder-professions">
                 {professions.map((profession) => (
                   <button key={profession.id} type="button" className={builder.professionId === profession.id ? "is-active" : ""} onClick={() => chooseProfession(profession)} onFocus={() => setSelectedSummary({ kind: "profession", item: profession })} onMouseEnter={() => setSelectedSummary({ kind: "profession", item: profession })}>
-                    <span>{profession.icon_big || profession.icon ? <img src={profession.icon_big ?? profession.icon} alt="" /> : <Shield className="h-5 w-5" />}</span><strong>{profession.name}</strong>
+                    <span><ClassIcon name={profession.name} size="lg" /></span><strong>{profession.name}</strong>
                   </button>
                 ))}
               </div>
