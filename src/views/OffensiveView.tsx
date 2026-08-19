@@ -24,10 +24,9 @@ import {
   Zap,
   Flame,
   ShieldOff,
-  Users,
   ArrowUpDown,
   TrendingUp,
-Building2,
+  Building2,
 } from "lucide-react";
 
 type SortKey =
@@ -79,19 +78,43 @@ const COLUMNS: {
   { key: "killed", label: "Kills", align: "right" },
 ];
 
-function numVal(row: Row, key: SortKey, scope: DamageScope): number {
+const RATE_AWARE_COLUMNS = new Set<SortKey>([
+  "damage",
+  "directDmg",
+  "downContribution",
+  "interrupts",
+  "boonStrips",
+  "killed",
+]);
+
+function rateValue(value: number, totalFightMs: number, perSecond: boolean) {
+  if (!perSecond) return value;
+  const seconds = totalFightMs / 1000;
+  return seconds > 0 ? value / seconds : 0;
+}
+
+function numVal(row: Row, key: SortKey, scope: DamageScope, perSecond: boolean): number {
   if (key === "account") return 0;
   if (key === "sample") return row.sample.fights;
-  if (key === "damage") return pickDamageScopeValue(scope, row.offenseTotals.damage, row.offenseTotals.damageAll);
   if (key === "dps") return row.dps;
   if (key === "critRate") return row.critRate;
   if (key === "flankRate") return row.flankRate;
   if (key === "glanceRate") return row.glanceRate;
+
+  if (key === "damage") {
+    return rateValue(
+      pickDamageScopeValue(scope, row.offenseTotals.damage, row.offenseTotals.damageAll),
+      row.totalFightMs,
+      perSecond,
+    );
+  }
+
   // offenseTotals is a sparse Record<string, number> - a metric that never
   // fired for this player (e.g. 0 boon strips) has no key at all, not a 0.
   // Guard every lookup so one sparse player can't turn a whole column's
   // sort into NaN-driven nonsense.
-  return (row.offenseTotals[key as keyof typeof row.offenseTotals] as number) ?? 0;
+  const raw = (row.offenseTotals[key as keyof typeof row.offenseTotals] as number) ?? 0;
+  return RATE_AWARE_COLUMNS.has(key) ? rateValue(raw, row.totalFightMs, perSecond) : raw;
 }
 
 function ChartTooltip({ active, payload, unit }: { active?: boolean; payload?: { name: string; value: number }[]; unit: string }) {
@@ -168,12 +191,12 @@ export default function OffensiveView() {
           ? a.account.localeCompare(b.account)
           : b.account.localeCompare(a.account);
       }
-      const av = numVal(a, sortKey, scope);
-      const bv = numVal(b, sortKey, scope);
+      const av = numVal(a, sortKey, scope, isPerSecond);
+      const bv = numVal(b, sortKey, scope, isPerSecond);
       return sortDir === "desc" ? bv - av : av - bv;
     });
     return copy;
-  }, [rows, sortKey, sortDir, scope]);
+  }, [rows, sortKey, sortDir, scope, isPerSecond]);
 
   const derived = useMemo(() => {
     // offenseTotals is sparse - see the comment on numVal() above. Every read
@@ -319,23 +342,23 @@ export default function OffensiveView() {
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
-                <th className="p-2.5">
-                  <span className="flex items-center gap-1"><Users className="w-3 h-3" />Group</span>
-                </th>
-                {COLUMNS.map((col) => (
-                  <th
-                    key={col.key}
-                    onClick={() => toggleSort(col.key)}
-                    className={`p-2.5 cursor-pointer select-none hover:text-slate-300 transition-colors ${
-                      col.align === "right" ? "text-right" : ""
-                    } ${sortKey === col.key ? "text-sky-400" : ""}`}
-                  >
-                    <span className={`inline-flex items-center gap-1 ${col.align === "right" ? "flex-row-reverse" : ""}`}>
-                      {col.label}
-                      <ArrowUpDown className={`w-3 h-3 ${sortKey === col.key ? "opacity-100" : "opacity-30"}`} />
-                    </span>
-                  </th>
-                ))}
+                {COLUMNS.map((col) => {
+                  const label = isPerSecond && RATE_AWARE_COLUMNS.has(col.key) ? `${col.label}/s` : col.label;
+                  return (
+                    <th
+                      key={col.key}
+                      onClick={() => toggleSort(col.key)}
+                      className={`p-2.5 cursor-pointer select-none hover:text-slate-300 transition-colors ${
+                        col.align === "right" ? "text-right" : ""
+                      } ${sortKey === col.key ? "text-sky-400" : ""}`}
+                    >
+                      <span className={`inline-flex items-center gap-1 ${col.align === "right" ? "flex-row-reverse" : ""}`}>
+                        {label}
+                        <ArrowUpDown className={`w-3 h-3 ${sortKey === col.key ? "opacity-100" : "opacity-30"}`} />
+                      </span>
+                    </th>
+                  );
+                })}
                 {derived.hasSiegeData && <th className="p-2.5 text-right">Siege/NPC/Gate</th>}
               </tr>
             </thead>
@@ -344,12 +367,6 @@ export default function OffensiveView() {
                 const dmgPct = (pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll) / derived.maxDamage) * 100;
                 return (
                   <tr key={p.account} className={`transition-colors hover:bg-blue-950/20 ${i % 2 === 1 ? "bg-slate-900/20" : ""}`}>
-                    {/* Subgroup - data has no group field, show neutral */}
-                    <td className="p-2.5">
-                      <span className="inline-flex items-center justify-center min-w-6 h-5 px-1.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700/50">
-                        —
-                      </span>
-                    </td>
                     {/* Player */}
                     <td className="p-2.5">
                       <div className="flex items-center gap-2">
@@ -387,12 +404,12 @@ export default function OffensiveView() {
                     <td className="p-2.5 text-right text-amber-400">{perPlayerN(p.offenseTotals.boonStrips ?? 0, p.totalFightMs)}</td>
                     {/* Kills */}
                     <td className="p-2.5 text-right text-emerald-400">{perPlayerN(p.offenseTotals.killed ?? 0, p.totalFightMs)}</td>
-
-                {derived.hasSiegeData && (
-                  <td className="p-2.5 text-right text-slate-500">
-                    {fmtCompact(nonPlayerObjectiveDamage(p))}
-                  </td>
-                )}</tr>
+                    {derived.hasSiegeData && (
+                      <td className="p-2.5 text-right text-slate-500">
+                        {fmtCompact(nonPlayerObjectiveDamage(p))}
+                      </td>
+                    )}
+                  </tr>
                 );
               })}
             </tbody>
