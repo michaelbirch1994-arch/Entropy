@@ -7,9 +7,10 @@ describe("sample reliability", () => {
     expect(getSampleReliability(3, 20).level).toBe("low");
   });
 
-  it("keeps developing samples distinct from broad session coverage", () => {
+  it("keeps moderate samples distinct from broad session coverage", () => {
     expect(getSampleReliability(4, 6).level).toBe("moderate");
     expect(getSampleReliability(8, 20).level).toBe("moderate");
+    expect(getSampleReliability(4, 6).label).toBe("Moderate sample");
   });
 
   it("requires both enough fights and enough session coverage for a strong sample", () => {
@@ -25,9 +26,10 @@ describe("sample reliability", () => {
     expect(sample.detail).toContain("rate metrics may be highly volatile");
   });
 
-  it("keeps a short but usable duration sample in the developing tier", () => {
+  it("keeps a short but usable duration sample in the moderate tier", () => {
     const sample = getSampleReliability(9, 12, 8 * 60_000);
     expect(sample.level).toBe("moderate");
+    expect(sample.label).toBe("Moderate sample");
     expect(sample.detail).toContain("Active combat");
   });
 
