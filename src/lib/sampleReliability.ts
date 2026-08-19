@@ -8,9 +8,9 @@ export interface SampleReliability {
 }
 
 const LOW_ACTIVE_SAMPLE_MS = 3 * 60 * 1000;
-const DEVELOPING_ACTIVE_SAMPLE_MS = 10 * 60 * 1000;
+const MODERATE_ACTIVE_SAMPLE_MS = 10 * 60 * 1000;
 const LOW_AVERAGE_FIGHT_MS = 20 * 1000;
-const DEVELOPING_AVERAGE_FIGHT_MS = 45 * 1000;
+const MODERATE_AVERAGE_FIGHT_MS = 45 * 1000;
 
 function durationSummary(activeMs: number, fights: number): string {
   const totalMinutes = activeMs / 60_000;
@@ -56,11 +56,11 @@ export function getSampleReliability(fights: number, totalFights: number, active
   if (
     safeFights < 6
     || coverage < 0.6
-    || (durationKnown && (safeActiveMs < DEVELOPING_ACTIVE_SAMPLE_MS || averageFightMs < DEVELOPING_AVERAGE_FIGHT_MS))
+    || (durationKnown && (safeActiveMs < MODERATE_ACTIVE_SAMPLE_MS || averageFightMs < MODERATE_AVERAGE_FIGHT_MS))
   ) {
     return {
       level: "moderate",
-      label: "Developing sample",
+      label: "Moderate sample",
       coverage,
       detail: `${safeFights} of ${safeTotal} fights; useful context, but still sensitive to a few fights.${durationDetail}`,
     };
