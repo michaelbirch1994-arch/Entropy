@@ -43,11 +43,13 @@ describe("buildEventMechanicEvidence", () => {
 
     expect(evidence.map((item) => item.name)).toEqual(["Early", "Anchor mechanic", "Nearby"]);
     expect(evidence.map((item) => item.offsetMs)).toEqual([-2_000, 0, 2_500]);
+    expect(evidence.map((item) => item.relation)).toEqual(["before", "anchor", "after"]);
     expect(evidence[1]).toEqual(expect.objectContaining({
       fightId: "fight-a",
       account: "Bravo.1234",
       linkedPlayer: true,
       severity: "Sev3",
+      relation: "anchor",
     }));
   });
 
