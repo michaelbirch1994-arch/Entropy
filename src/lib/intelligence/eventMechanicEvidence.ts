@@ -1,5 +1,5 @@
 import type { ReplayFightEntry } from "../../types/report";
-import type { EventWindow } from "./eventInspection";
+import type { IntelligenceEventWindow } from "./eventInspection";
 
 export interface EventMechanicEvidence {
   fightId: string;
@@ -21,7 +21,7 @@ export function buildEventMechanicEvidence({
 }: {
   replayFights: ReplayFightEntry[];
   fightId: string;
-  window: EventWindow;
+  window: IntelligenceEventWindow;
   relatedPlayerKeys?: string[];
 }): EventMechanicEvidence[] {
   const fight = replayFights.find((candidate) => candidate.fightId === fightId);
