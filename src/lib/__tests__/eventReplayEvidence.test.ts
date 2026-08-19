@@ -19,7 +19,11 @@ function fight(): ReplayFightEntry {
           profession: "Guardian",
           inSquad: true,
           isCommander: true,
-          points: [{ t: 0, x: 0, y: 0 }, { t: 20_000, x: 0, y: 0 }],
+          points: [
+            { t: 0, x: 0, y: 0 },
+            { t: 10_000, x: 0, y: 0 },
+            { t: 20_000, x: 0, y: 0 },
+          ],
           downIntervals: [],
           deadIntervals: [],
           facings: [],
@@ -31,7 +35,11 @@ function fight(): ReplayFightEntry {
           profession: "Warrior",
           inSquad: true,
           isCommander: false,
-          points: [{ t: 0, x: 100, y: 0 }, { t: 20_000, x: 300, y: 0 }],
+          points: [
+            { t: 0, x: 100, y: 0 },
+            { t: 10_000, x: 200, y: 0 },
+            { t: 20_000, x: 300, y: 0 },
+          ],
           downIntervals: [[9_000, 11_000]],
           deadIntervals: [],
           facings: [],
@@ -42,7 +50,11 @@ function fight(): ReplayFightEntry {
         {
           id: "enemy-1",
           name: "Enemy",
-          points: [{ t: 0, x: 50, y: 50 }, { t: 20_000, x: 50, y: 50 }],
+          points: [
+            { t: 0, x: 50, y: 50 },
+            { t: 10_000, x: 50, y: 50 },
+            { t: 20_000, x: 50, y: 50 },
+          ],
           downIntervals: [[9_500, 10_500]],
           deadIntervals: [],
           facings: [],
@@ -98,5 +110,21 @@ describe("buildEventReplaySnapshotEvidence", () => {
 
     expect(snapshot?.timestampMs).toBe(20_000);
     expect(snapshot?.linkedPlayers[0]).toEqual(expect.objectContaining({ x: 300, y: 0 }));
+  });
+
+  it("leaves commander-relative distance unknown when the commander is dead", () => {
+    const input = fight();
+    input.data.players[0].deadIntervals = [[5_000, 20_000]];
+
+    const snapshot = buildEventReplaySnapshotEvidence({
+      replayFights: [input],
+      fightId: "fight-a",
+      timestampMs: 10_000,
+      relatedPlayerKeys: ["Frontline.1234"],
+    });
+
+    expect(snapshot?.commanderAccount).toBeNull();
+    expect(snapshot?.averageSquadDistanceToCommander).toBeNull();
+    expect(snapshot?.linkedPlayers[0].distanceToCommander).toBeNull();
   });
 });
