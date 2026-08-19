@@ -1,4 +1,9 @@
-import { getBoonMetricValue, type BoonCategory, type BoonRow } from './bridge-metrics/boonGeneration';
+import {
+  computeBoonMetrics,
+  getBoonMetricValue,
+  type BoonCategory,
+  type BoonRow,
+} from './bridge-metrics/boonGeneration';
 
 /**
  * Return the actual generated boon-duration represented by a Buff Generation row.
@@ -14,6 +19,22 @@ export const getGeneratedSeconds = (
   category: BoonCategory,
   stacking: boolean,
 ) => getBoonMetricValue(row, category, stacking, 'total');
+
+/**
+ * EI exports `Wasted` as a phase-normalized wasted-generation value. Entropy's
+ * normalization reverses that phase/player normalization into `wastedMs`, so this
+ * is actual wasted/reapplied duration (or stack-time for intensity buffs) expressed
+ * in seconds.
+ *
+ * This is intentionally separate from EI's `Overstack` field. EI's current parser
+ * builds `Overstack` from (raw overstack + generation), so that exported field is
+ * not a pure overcap-duration value and must not be labeled as such here.
+ */
+export const getWastedSeconds = (
+  row: BoonRow,
+  category: BoonCategory,
+  stacking: boolean,
+) => computeBoonMetrics(row, category, stacking).wastedMs / 1000;
 
 /**
  * Compact human-readable duration while keeping the numeric seconds available for
