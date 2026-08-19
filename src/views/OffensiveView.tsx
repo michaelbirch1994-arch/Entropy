@@ -8,6 +8,7 @@ import PlayerSampleCell from "../components/ui/PlayerSampleCell";
 import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped, profChip } from "../utils/format";
 import type { OffensePlayer } from "../types/report";
 import { resolvePlayerSampleContext, type PlayerSampleContextData } from "../lib/playerSampleContext";
+import { rateByActiveMs } from "../lib/playerRate";
 import { hasNonPlayerObjectiveDamage, nonPlayerObjectiveDamage } from "../lib/offenseColumns";
 import {
   BarChart,
@@ -87,12 +88,6 @@ const RATE_AWARE_COLUMNS = new Set<SortKey>([
   "killed",
 ]);
 
-function rateValue(value: number, totalFightMs: number, perSecond: boolean) {
-  if (!perSecond) return value;
-  const seconds = totalFightMs / 1000;
-  return seconds > 0 ? value / seconds : 0;
-}
-
 function numVal(row: Row, key: SortKey, scope: DamageScope, perSecond: boolean): number {
   if (key === "account") return 0;
   if (key === "sample") return row.sample.fights;
@@ -102,7 +97,7 @@ function numVal(row: Row, key: SortKey, scope: DamageScope, perSecond: boolean):
   if (key === "glanceRate") return row.glanceRate;
 
   if (key === "damage") {
-    return rateValue(
+    return rateByActiveMs(
       pickDamageScopeValue(scope, row.offenseTotals.damage, row.offenseTotals.damageAll),
       row.totalFightMs,
       perSecond,
@@ -114,7 +109,7 @@ function numVal(row: Row, key: SortKey, scope: DamageScope, perSecond: boolean):
   // Guard every lookup so one sparse player can't turn a whole column's
   // sort into NaN-driven nonsense.
   const raw = (row.offenseTotals[key as keyof typeof row.offenseTotals] as number) ?? 0;
-  return RATE_AWARE_COLUMNS.has(key) ? rateValue(raw, row.totalFightMs, perSecond) : raw;
+  return RATE_AWARE_COLUMNS.has(key) ? rateByActiveMs(raw, row.totalFightMs, perSecond) : raw;
 }
 
 function ChartTooltip({ active, payload, unit }: { active?: boolean; payload?: { name: string; value: number }[]; unit: string }) {
@@ -138,16 +133,10 @@ export default function OffensiveView() {
   // Per-player cells divide by that player's own tracked fight time, not a
   // squad-wide clock, so a "/s" column rates each player against the time
   // they were actually in the fight.
-  const perPlayer = (v: number, ms: number | undefined) => {
-    if (!isPerSecond) return fmtCompact(v);
-    const secs = (ms ?? 0) / 1000;
-    return secs > 0 ? fmtFixed(v / secs, 2) : "-";
-  };
-  const perPlayerN = (v: number, ms: number | undefined) => {
-    if (!isPerSecond) return fmtNum(v);
-    const secs = (ms ?? 0) / 1000;
-    return secs > 0 ? fmtFixed(v / secs, 2) : "-";
-  };
+  const perPlayer = (v: number, ms: number | undefined) =>
+    isPerSecond ? (ms && ms > 0 ? fmtFixed(rateByActiveMs(v, ms, true), 2) : "-") : fmtCompact(v);
+  const perPlayerN = (v: number, ms: number | undefined) =>
+    isPerSecond ? (ms && ms > 0 ? fmtFixed(rateByActiveMs(v, ms, true), 2) : "-") : fmtNum(v);
   const [sortKey, setSortKey] = useState<SortKey>("damage");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
