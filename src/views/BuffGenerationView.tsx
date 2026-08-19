@@ -4,12 +4,15 @@ import Panel from "../components/ui/Panel";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 import { fmtCompact, profChip } from "../utils/format";
 import {
-  getBoonWastedValue,
   getBoonOverstackValue,
   BUFF_TAB_ORDER,
   type BoonTable,
 } from "../lib/bridge-metrics/boonGeneration";
-import { formatGeneratedDuration, getGeneratedSeconds } from "../lib/buffGenerationDuration";
+import {
+  formatGeneratedDuration,
+  getGeneratedSeconds,
+  getWastedSeconds,
+} from "../lib/buffGenerationDuration";
 import { Sparkles } from "lucide-react";
 import {
   BarChart,
@@ -107,12 +110,7 @@ export default function BuffGenerationView() {
       .map((table) => {
         const value = getTableGeneratedSeconds(table);
         if (value <= 0) return null;
-        return {
-          id: table.id,
-          name: table.name,
-          icon: table.icon,
-          value,
-        };
+        return { id: table.id, name: table.name, icon: table.icon, value };
       })
       .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
       .sort((a, b) => b.value - a.value);
@@ -151,34 +149,26 @@ export default function BuffGenerationView() {
           const direction = sort.direction === "desc" ? -1 : 1;
           if (sort.key === "player") return a.account.localeCompare(b.account) * direction;
           if (sort.key === "class") {
-            return (
-              a.profession.localeCompare(b.profession) * direction ||
-              a.account.localeCompare(b.account)
-            );
+            return a.profession.localeCompare(b.profession) * direction || a.account.localeCompare(b.account);
           }
           if (sort.key === "sample") {
-            return (
-              (a.sample.fights - b.sample.fights) * direction ||
-              a.account.localeCompare(b.account)
-            );
+            return (a.sample.fights - b.sample.fights) * direction || a.account.localeCompare(b.account);
           }
 
           const valueA =
             sort.key === "wasted"
-              ? getBoonWastedValue(a, "squadBuffs", table.stacking)
+              ? getWastedSeconds(a, "squadBuffs", table.stacking)
               : sort.key === "overstack"
                 ? getBoonOverstackValue(a, "squadBuffs", table.stacking)
                 : getGeneratedSeconds(a, sort.key, table.stacking);
           const valueB =
             sort.key === "wasted"
-              ? getBoonWastedValue(b, "squadBuffs", table.stacking)
+              ? getWastedSeconds(b, "squadBuffs", table.stacking)
               : sort.key === "overstack"
                 ? getBoonOverstackValue(b, "squadBuffs", table.stacking)
                 : getGeneratedSeconds(b, sort.key, table.stacking);
 
-          return (
-            (valueA === valueB ? a.account.localeCompare(b.account) : valueA - valueB) * direction
-          );
+          return (valueA === valueB ? a.account.localeCompare(b.account) : valueA - valueB) * direction;
         })
       : defaultRows;
 
@@ -186,8 +176,8 @@ export default function BuffGenerationView() {
       (sum, row) => sum + getGeneratedSeconds(row, "squadBuffs", table.stacking),
       0,
     );
-    const totalWasted = rows.reduce(
-      (sum, row) => sum + getBoonWastedValue(row, "squadBuffs", table.stacking),
+    const totalWastedSeconds = rows.reduce(
+      (sum, row) => sum + getWastedSeconds(row, "squadBuffs", table.stacking),
       0,
     );
     const totalOverstack = rows.reduce(
@@ -195,7 +185,7 @@ export default function BuffGenerationView() {
       0,
     );
 
-    return { table, rows, totalSquadGeneratedSeconds, totalWasted, totalOverstack };
+    return { table, rows, totalSquadGeneratedSeconds, totalWastedSeconds, totalOverstack };
   }, [selectedTable, sort, report]);
 
   const iconsByName = useMemo(
@@ -233,9 +223,7 @@ export default function BuffGenerationView() {
           }`}
         >
           {children}
-          <span className="w-3 text-[9px]">
-            {active ? (sort.direction === "desc" ? "▼" : "▲") : "↕"}
-          </span>
+          <span className="w-3 text-[9px]">{active ? (sort.direction === "desc" ? "▼" : "▲") : "↕"}</span>
         </button>
       </th>
     );
@@ -324,11 +312,7 @@ export default function BuffGenerationView() {
                 {chartData.map((entry, index) => (
                   <Cell
                     key={entry.id}
-                    fill={
-                      selectedTable?.id === entry.id
-                        ? CHART_COLORS.amber
-                        : BAR_COLORS[index % BAR_COLORS.length]
-                    }
+                    fill={selectedTable?.id === entry.id ? CHART_COLORS.amber : BAR_COLORS[index % BAR_COLORS.length]}
                   />
                 ))}
               </Bar>
@@ -354,12 +338,7 @@ export default function BuffGenerationView() {
               >
                 <span className="flex min-w-0 items-center gap-2">
                   {table.icon ? (
-                    <img
-                      src={table.icon}
-                      alt=""
-                      referrerPolicy="no-referrer"
-                      className="h-5 w-5 shrink-0 rounded-sm"
-                    />
+                    <img src={table.icon} alt="" referrerPolicy="no-referrer" className="h-5 w-5 shrink-0 rounded-sm" />
                   ) : (
                     <Sparkles className="h-4 w-4 shrink-0" />
                   )}
@@ -367,9 +346,7 @@ export default function BuffGenerationView() {
                 </span>
                 <span className="shrink-0 text-right font-mono text-[11px]">
                   <span className="block font-bold">{formatGeneratedDuration(seconds)}</span>
-                  <span className="text-[9px] uppercase tracking-wider text-slate-500">
-                    {table.rows.length} players
-                  </span>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-500">{table.rows.length} players</span>
                 </span>
               </button>
             );
@@ -378,11 +355,11 @@ export default function BuffGenerationView() {
       </Panel>
 
       {selectedBreakdown && (() => {
-        const { table, rows, totalSquadGeneratedSeconds, totalWasted, totalOverstack } = selectedBreakdown;
+        const { table, rows, totalSquadGeneratedSeconds, totalWastedSeconds, totalOverstack } = selectedBreakdown;
         return (
           <Panel
             title={`${table.name} Generation`}
-            subtitle="Self, group, and squad columns are total generated duration. Reapplied and Overcapped retain EI's existing normalized representation until their duration semantics are fully validated."
+            subtitle="Self, group, squad, and reapplied values are total duration. EI's exported Overstack field is not presented as seconds because it includes generation and is not a pure overcap-duration measure."
             icon={
               table.icon ? (
                 <img src={table.icon} alt="" referrerPolicy="no-referrer" className="w-4 h-4 rounded-sm" />
@@ -401,16 +378,14 @@ export default function BuffGenerationView() {
                 </div>
               </div>
               <div className="rounded-lg bg-slate-950/50 p-2">
-                <div>Reapplied</div>
+                <div>Reapplied / Wasted</div>
                 <div className="mt-1 font-mono text-sm font-bold text-amber-400">
-                  {fmtCompact(totalWasted)}
+                  {formatGeneratedDuration(totalWastedSeconds)}
                 </div>
               </div>
               <div className="rounded-lg bg-slate-950/50 p-2">
-                <div>Overcapped</div>
-                <div className="mt-1 font-mono text-sm font-bold text-rose-400">
-                  {fmtCompact(totalOverstack)}
-                </div>
+                <div>EI Overstack</div>
+                <div className="mt-1 font-mono text-sm font-bold text-rose-400">{fmtCompact(totalOverstack)}</div>
               </div>
             </div>
 
@@ -421,62 +396,35 @@ export default function BuffGenerationView() {
                     <SortHeader sortKey="player" className="text-left px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">
                       Player
                     </SortHeader>
-                    <SortHeader sortKey="class" className="text-left px-2 py-3">
-                      Class
-                    </SortHeader>
-                    <SortHeader
-                      sortKey="sample"
-                      className="text-right px-2 py-3"
-                      title="Fights joined, session coverage, active combat time, and sample reliability"
-                    >
+                    <SortHeader sortKey="class" className="text-left px-2 py-3">Class</SortHeader>
+                    <SortHeader sortKey="sample" className="text-right px-2 py-3" title="Fights joined, session coverage, active combat time, and sample reliability">
                       Sample
                     </SortHeader>
                     {(Object.keys(CATEGORY_LABELS) as GenerationCategory[]).map((category) => (
-                      <SortHeader
-                        key={category}
-                        sortKey={category}
-                        className="text-center px-3 py-3"
-                        title={`Total ${CATEGORY_LABELS[category].toLowerCase()} generated duration`}
-                      >
+                      <SortHeader key={category} sortKey={category} className="text-center px-3 py-3" title={`Total ${CATEGORY_LABELS[category].toLowerCase()} generated duration`}>
                         {CATEGORY_LABELS[category]}
                       </SortHeader>
                     ))}
-                    <SortHeader
-                      sortKey="wasted"
-                      className="text-center px-3 py-3 text-amber-500/70"
-                      title="Existing EI-normalized reapplied value; duration labeling is intentionally deferred pending validation"
-                    >
+                    <SortHeader sortKey="wasted" className="text-center px-3 py-3 text-amber-500/70" title="Total EI wasted/reapplied generation converted back to duration">
                       Reapplied
                     </SortHeader>
-                    <SortHeader
-                      sortKey="overstack"
-                      className="text-center px-3 py-3 text-rose-500/70"
-                      title="Existing EI-normalized overcap value; duration labeling is intentionally deferred pending validation"
-                    >
-                      Overcapped
+                    <SortHeader sortKey="overstack" className="text-center px-3 py-3 text-rose-500/70" title="Raw EI-normalized Overstack representation; not seconds because EI includes generation in this exported value">
+                      EI Overstack
                     </SortHeader>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row, index) => {
-                    const wasted = getBoonWastedValue(row, "squadBuffs", table.stacking);
+                    const wastedSeconds = getWastedSeconds(row, "squadBuffs", table.stacking);
                     const overstack = getBoonOverstackValue(row, "squadBuffs", table.stacking);
                     return (
                       <tr
                         key={row.account}
-                        className={`border-b border-slate-800/40 hover:bg-white/[0.02] transition-colors ${
-                          index % 2 === 0 ? "bg-white/[0.01]" : ""
-                        }`}
+                        className={`border-b border-slate-800/40 hover:bg-white/[0.02] transition-colors ${index % 2 === 0 ? "bg-white/[0.01]" : ""}`}
                       >
-                        <td className="px-4 py-2.5 font-semibold text-slate-200 sticky left-0 bg-[#0a0e1f]/95 whitespace-nowrap">
-                          {row.account}
-                        </td>
-                        <td className="px-2 py-2.5">
-                          <ClassCell profession={row.profession} />
-                        </td>
-                        <td className="px-2 py-2.5 text-right">
-                          <PlayerSampleCell sample={row.sample} />
-                        </td>
+                        <td className="px-4 py-2.5 font-semibold text-slate-200 sticky left-0 bg-[#0a0e1f]/95 whitespace-nowrap">{row.account}</td>
+                        <td className="px-2 py-2.5"><ClassCell profession={row.profession} /></td>
+                        <td className="px-2 py-2.5 text-right"><PlayerSampleCell sample={row.sample} /></td>
                         {(Object.keys(CATEGORY_LABELS) as GenerationCategory[]).map((category) => {
                           const seconds = getGeneratedSeconds(row, category, table.stacking);
                           return (
@@ -491,8 +439,11 @@ export default function BuffGenerationView() {
                           );
                         })}
                         <td className="text-center px-3 py-2.5 font-mono">
-                          <span className={wasted > 0 ? "text-amber-400/80" : "text-slate-700"}>
-                            {table.stacking ? wasted.toFixed(2) : `${wasted.toFixed(0)}%`}
+                          <span
+                            className={wastedSeconds > 0 ? "text-amber-400/80" : "text-slate-700"}
+                            title={`${wastedSeconds.toLocaleString(undefined, { maximumFractionDigits: 1 })} seconds wasted/reapplied`}
+                          >
+                            {formatGeneratedDuration(wastedSeconds)}
                           </span>
                         </td>
                         <td className="text-center px-3 py-2.5 font-mono">
