@@ -99,4 +99,20 @@ describe("buildEventReplaySnapshotEvidence", () => {
     expect(snapshot?.timestampMs).toBe(20_000);
     expect(snapshot?.linkedPlayers[0]).toEqual(expect.objectContaining({ x: 300, y: 0 }));
   });
+
+  it("leaves commander-relative distance unknown when the commander is dead", () => {
+    const input = fight();
+    input.data.players[0].deadIntervals = [[5_000, 20_000]];
+
+    const snapshot = buildEventReplaySnapshotEvidence({
+      replayFights: [input],
+      fightId: "fight-a",
+      timestampMs: 10_000,
+      relatedPlayerKeys: ["Frontline.1234"],
+    });
+
+    expect(snapshot?.commanderAccount).toBeNull();
+    expect(snapshot?.averageSquadDistanceToCommander).toBeNull();
+    expect(snapshot?.linkedPlayers[0].distanceToCommander).toBeNull();
+  });
 });
