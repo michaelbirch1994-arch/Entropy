@@ -1,6 +1,9 @@
-import { Clock3, Link2, Users, X } from "lucide-react";
+import { Clock3, Link2, Skull, Users, X } from "lucide-react";
+import { useReport } from "../../store/ReportContext";
+import { buildEventDeathEvidence } from "../../lib/intelligence/eventDeathEvidence";
 import type { IntelligenceEventInspection } from "../../lib/intelligence/eventInspection";
 import type { CriticalEvent } from "../../lib/intelligence/types";
+import type { DeathRecapHit, WvWReport } from "../../types/report";
 
 function formatTime(ms: number): string {
   if (!Number.isFinite(ms) || ms < 0) return "unknown";
@@ -8,6 +11,33 @@ function formatTime(ms: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatOffset(ms: number): string {
+  const seconds = Math.abs(ms / 1000).toFixed(1);
+  if (ms === 0) return "at anchor";
+  return ms < 0 ? `-${seconds}s` : `+${seconds}s`;
+}
+
+function formatDamage(value: number): string {
+  return Number.isFinite(value) ? Math.round(value).toLocaleString() : "0";
+}
+
+function resolveFightIndex(report: WvWReport | null, fightId: string): number {
+  if (!report) return -1;
+  const fights = report.stats.fightBreakdown ?? [];
+  return fights.findIndex((fight, index) => {
+    const aliases = [
+      fight.id,
+      fight.label,
+      fight.fullLabel,
+      fight.permalink,
+      `fight-${index + 1}`,
+      `${fight.mapName}-${index}`,
+      `${fight.fullLabel}-${index}`,
+    ];
+    return aliases.some((alias) => typeof alias === "string" && alias === fightId);
+  });
 }
 
 function EventRow({ event, anchorMs }: { event: CriticalEvent; anchorMs: number }) {
@@ -29,6 +59,27 @@ function EventRow({ event, anchorMs }: { event: CriticalEvent; anchorMs: number 
   );
 }
 
+function HitList({ title, hits }: { title: string; hits: DeathRecapHit[] }) {
+  return (
+    <div>
+      <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">{title}</div>
+      {hits.length > 0 ? (
+        <div className="mt-2 grid gap-1.5">
+          {hits.slice(-8).map((hit, index) => (
+            <div key={`${hit.time}-${hit.id}-${index}`} className="grid grid-cols-[64px_1fr_auto] items-center gap-2 rounded-lg border border-white/[0.05] bg-black/20 px-2.5 py-2 text-[11px]">
+              <span className="font-mono text-slate-500">{formatTime(hit.time)}</span>
+              <span className="min-w-0 truncate text-slate-300">{hit.name} <span className="text-slate-600">· {hit.src}</span></span>
+              <span className="font-mono font-bold text-rose-200">{formatDamage(hit.damage)}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-2 text-[11px] leading-5 text-slate-600">No recorded damage events in this recap phase.</div>
+      )}
+    </div>
+  );
+}
+
 export default function IntelligenceEventInspector({
   inspection,
   fightLabel,
@@ -38,7 +89,17 @@ export default function IntelligenceEventInspector({
   fightLabel: string;
   onClose: () => void;
 }) {
+  const { report } = useReport();
   const { event, window, eventsBefore, eventsAfter, relatedFindings, relatedSegments, relatedPlayerKeys, relatedEventIds } = inspection;
+  const fightIndex = resolveFightIndex(report, event.fightId);
+  const deathEvidence = report?.stats.deathRecaps
+    ? buildEventDeathEvidence({
+        deathRecaps: report.stats.deathRecaps,
+        fightIndex,
+        window,
+        relatedPlayerKeys,
+      })
+    : [];
 
   return (
     <section className="theme-intelligence-dossier border border-sky-400/20 bg-sky-500/[0.035] p-5" aria-label="Selected Intelligence event inspector">
@@ -118,6 +179,42 @@ export default function IntelligenceEventInspector({
           </div>
         </div>
       </div>
+
+      {deathEvidence.length > 0 && (
+        <div className="mt-4 rounded-2xl border border-rose-400/15 bg-rose-500/[0.025] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-rose-300">
+              <Skull className="h-4 w-4" /> Death Recap evidence inside this window
+            </div>
+            <span className="text-[10px] font-bold uppercase text-slate-500">{deathEvidence.length} recorded death{deathEvidence.length === 1 ? "" : "s"}</span>
+          </div>
+          <p className="mt-2 text-[11px] leading-5 text-slate-500">
+            These are the original Death Recap packets whose death timestamps fall inside this event window. Linked player means the account was already attached to the selected Intelligence evidence; it does not assert causation.
+          </p>
+          <div className="mt-3 grid gap-3">
+            {deathEvidence.map(({ recap, linkedPlayer, offsetMs }) => (
+              <details key={`${recap.fightIndex}-${recap.account}-${recap.deathTimeMs}`} className="group rounded-xl border border-white/[0.06] bg-black/25 p-3">
+                <summary className="cursor-pointer list-none">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-black text-slate-100">{recap.account}</div>
+                      <div className="mt-1 text-[11px] text-slate-500">{recap.characterName} · {recap.profession}</div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {linkedPlayer && <span className="rounded-full border border-sky-400/20 bg-sky-500/[0.06] px-2 py-1 text-[10px] font-bold uppercase text-sky-200">linked player</span>}
+                      <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 font-mono text-[10px] font-bold text-slate-400">{formatTime(recap.deathTimeMs)} · {formatOffset(offsetMs)}</span>
+                    </div>
+                  </div>
+                </summary>
+                <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                  <HitList title={`To down · ${recap.toDown.length} hits`} hits={recap.toDown} />
+                  <HitList title={`Down to death · ${recap.toKill.length} hits`} hits={recap.toKill} />
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      )}
 
       {relatedFindings.length > 0 && (
         <div className="mt-4 rounded-2xl border border-white/[0.06] bg-black/20 p-4">
