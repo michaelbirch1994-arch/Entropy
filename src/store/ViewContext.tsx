@@ -5,12 +5,13 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 
 export interface ViewNavigationTarget {
-  source: "intelligence" | "archive" | "other";
+  source: "intelligence" | "archive" | "overview" | "other";
   targetView: string;
   fightIndex?: number;
   account?: string;
   timestampMs?: number;
   eventId?: string;
+  metric?: string;
 }
 
 interface ViewContextValue {
