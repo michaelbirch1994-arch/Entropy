@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatGeneratedDuration, getGeneratedSeconds } from '../buffGenerationDuration';
+import { formatGeneratedDuration, getGeneratedSeconds, getWastedSeconds } from '../buffGenerationDuration';
 import type { BoonRow } from '../bridge-metrics/boonGeneration';
 
 const row: BoonRow = {
@@ -10,9 +10,9 @@ const row: BoonRow = {
   groupSupported: 5,
   squadSupported: 10,
   categories: {
-    selfBuffs: { generationMs: 12_500, wastedMs: 0, overstackMs: 0 },
-    groupBuffs: { generationMs: 65_000, wastedMs: 0, overstackMs: 0 },
-    squadBuffs: { generationMs: 154_000, wastedMs: 0, overstackMs: 0 },
+    selfBuffs: { generationMs: 12_500, wastedMs: 2_500, overstackMs: 0 },
+    groupBuffs: { generationMs: 65_000, wastedMs: 8_000, overstackMs: 0 },
+    squadBuffs: { generationMs: 154_000, wastedMs: 23_500, overstackMs: 0 },
   },
 };
 
@@ -21,6 +21,12 @@ describe('Buff Generation duration display', () => {
     expect(getGeneratedSeconds(row, 'selfBuffs', false)).toBe(12.5);
     expect(getGeneratedSeconds(row, 'groupBuffs', false)).toBe(65);
     expect(getGeneratedSeconds(row, 'squadBuffs', false)).toBe(154);
+  });
+
+  it('reads wasted duration directly from normalized wastedMs', () => {
+    expect(getWastedSeconds(row, 'selfBuffs', false)).toBe(2.5);
+    expect(getWastedSeconds(row, 'groupBuffs', false)).toBe(8);
+    expect(getWastedSeconds(row, 'squadBuffs', false)).toBe(23.5);
   });
 
   it('formats seconds compactly', () => {
