@@ -1,5 +1,6 @@
-import { Clock3, Link2, Skull, Users, X } from "lucide-react";
+import { ArrowRight, Clock3, Link2, Skull, Users, X } from "lucide-react";
 import { useReport } from "../../store/ReportContext";
+import { useView } from "../../store/ViewContext";
 import { buildEventDeathEvidence } from "../../lib/intelligence/eventDeathEvidence";
 import type { IntelligenceEventInspection } from "../../lib/intelligence/eventInspection";
 import type { CriticalEvent } from "../../lib/intelligence/types";
@@ -90,6 +91,7 @@ export default function IntelligenceEventInspector({
   onClose: () => void;
 }) {
   const { report } = useReport();
+  const { navigateToView } = useView();
   const { event, window, eventsBefore, eventsAfter, relatedFindings, relatedSegments, relatedPlayerKeys, relatedEventIds } = inspection;
   const fightIndex = resolveFightIndex(report, event.fightId);
   const deathEvidence = report?.stats.deathRecaps
@@ -116,7 +118,7 @@ export default function IntelligenceEventInspector({
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs font-bold uppercase text-slate-400 transition hover:border-white/20 hover:text-slate-200"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs font-bold uppercase text-slate-400 transition hover:border-white/20 hover:text-slate-200"
         >
           <X className="h-4 w-4" /> Close
         </button>
@@ -209,6 +211,21 @@ export default function IntelligenceEventInspector({
                 <div className="mt-4 grid gap-4 xl:grid-cols-2">
                   <HitList title={`To down · ${recap.toDown.length} hits`} hits={recap.toDown} />
                   <HitList title={`Down to death · ${recap.toKill.length} hits`} hits={recap.toKill} />
+                </div>
+                <div className="mt-4 flex justify-end border-t border-white/[0.06] pt-3">
+                  <button
+                    type="button"
+                    onClick={() => navigateToView("death-recap", {
+                      source: "intelligence",
+                      fightIndex: recap.fightIndex,
+                      account: recap.account,
+                      timestampMs: recap.deathTimeMs,
+                      eventId: event.id,
+                    })}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-rose-400/20 bg-rose-500/[0.06] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-rose-200 transition hover:border-rose-300/35 hover:bg-rose-500/[0.1]"
+                  >
+                    Open full Death Recap <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </details>
             ))}
