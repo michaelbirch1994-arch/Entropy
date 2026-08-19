@@ -16,6 +16,27 @@ export interface EventReplayNearbySquadEvidence {
   isDown: boolean;
 }
 
+export interface EventReplayPlayerTrendSample {
+  timestampMs: number;
+  x: number | null;
+  y: number | null;
+  distanceToCommander: number | null;
+  nearbySquadWithin240: number | null;
+  nearbySquadWithin600: number | null;
+  isDown: boolean;
+  isDead: boolean;
+}
+
+export interface EventReplayPlayerTrendEvidence {
+  before: EventReplayPlayerTrendSample;
+  anchor: EventReplayPlayerTrendSample;
+  after: EventReplayPlayerTrendSample;
+  distanceToCommanderDeltaBeforeToAnchor: number | null;
+  distanceToCommanderDeltaAnchorToAfter: number | null;
+  nearbySquadWithin600DeltaBeforeToAnchor: number | null;
+  nearbySquadWithin600DeltaAnchorToAfter: number | null;
+}
+
 export interface EventReplayPlayerEvidence {
   account: string;
   name: string;
@@ -31,6 +52,7 @@ export interface EventReplayPlayerEvidence {
   trackedEnemiesWithin600: number | null;
   nearestSquadmates: EventReplayNearbySquadEvidence[];
   recentCasts: EventReplayRecentCastEvidence[];
+  trend: EventReplayPlayerTrendEvidence;
 }
 
 export interface EventReplaySnapshotEvidence {
@@ -47,6 +69,11 @@ export interface EventReplaySnapshotEvidence {
 }
 
 const RECENT_CAST_WINDOW_MS = 2_500;
+const TREND_SAMPLE_OFFSET_MS = 5_000;
+
+function delta(a: number | null, b: number | null): number | null {
+  return a == null || b == null ? null : b - a;
+}
 
 export function buildEventReplaySnapshotEvidence({
   replayFights,
@@ -78,6 +105,39 @@ export function buildEventReplaySnapshotEvidence({
         .map((player) => distanceBetween(interpolatePosition(player.points, t), commanderPoint))
         .filter((value): value is number => value != null && Number.isFinite(value))
     : [];
+
+  function samplePlayer(player: (typeof fight.data.players)[number], sampleT: number): EventReplayPlayerTrendSample {
+    const clampedT = Math.max(0, Math.min(sampleT, fight.data.durationMs));
+    const point = interpolatePosition(player.points, clampedT);
+    const isDead = isInInterval(player.deadIntervals, clampedT);
+    const isDown = isInInterval(player.downIntervals, clampedT);
+    const sampleAliveSquad = squad.filter((candidate) => !isInInterval(candidate.deadIntervals, clampedT));
+    const sampleCommander = sampleAliveSquad.find((candidate) => candidate.isCommander) ?? null;
+    const sampleCommanderPoint = sampleCommander ? interpolatePosition(sampleCommander.points, clampedT) : null;
+
+    let nearbySquadWithin240: number | null = null;
+    let nearbySquadWithin600: number | null = null;
+    if (point && !isDead) {
+      const distancesToSquad = sampleAliveSquad
+        .filter((candidate) => candidate.account !== player.account)
+        .map((candidate) => distanceBetween(point, interpolatePosition(candidate.points, clampedT)))
+        .filter((value): value is number => value != null && Number.isFinite(value));
+      nearbySquadWithin240 = distancesToSquad.filter((value) => value <= 240).length;
+      nearbySquadWithin600 = distancesToSquad.filter((value) => value <= 600).length;
+    }
+
+    return {
+      timestampMs: clampedT,
+      x: point?.x ?? null,
+      y: point?.y ?? null,
+      distanceToCommander:
+        player.isCommander ? 0 : sampleCommanderPoint && point && !isDead ? distanceBetween(point, sampleCommanderPoint) : null,
+      nearbySquadWithin240,
+      nearbySquadWithin600,
+      isDown,
+      isDead,
+    };
+  }
 
   const linkedKeySet = new Set(relatedPlayerKeys);
   const linkedPlayers = fight.data.players
@@ -121,6 +181,19 @@ export function buildEventReplaySnapshotEvidence({
         }))
         .sort((a, b) => a.timestampMs - b.timestampMs);
 
+      const before = samplePlayer(player, t - TREND_SAMPLE_OFFSET_MS);
+      const anchor = samplePlayer(player, t);
+      const after = samplePlayer(player, t + TREND_SAMPLE_OFFSET_MS);
+      const trend: EventReplayPlayerTrendEvidence = {
+        before,
+        anchor,
+        after,
+        distanceToCommanderDeltaBeforeToAnchor: delta(before.distanceToCommander, anchor.distanceToCommander),
+        distanceToCommanderDeltaAnchorToAfter: delta(anchor.distanceToCommander, after.distanceToCommander),
+        nearbySquadWithin600DeltaBeforeToAnchor: delta(before.nearbySquadWithin600, anchor.nearbySquadWithin600),
+        nearbySquadWithin600DeltaAnchorToAfter: delta(anchor.nearbySquadWithin600, after.nearbySquadWithin600),
+      };
+
       return {
         account: player.account,
         name: player.name,
@@ -137,6 +210,7 @@ export function buildEventReplaySnapshotEvidence({
         trackedEnemiesWithin600: point && !isDead ? trackedEnemyDistances.filter((distance) => distance <= 600).length : null,
         nearestSquadmates: nearbySquad.slice(0, 3),
         recentCasts,
+        trend,
       };
     })
     .sort((a, b) => a.account.localeCompare(b.account));
