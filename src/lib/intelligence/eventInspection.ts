@@ -16,12 +16,20 @@ export interface IntelligenceEventInspection {
   relatedFindings: IntelligenceFinding[];
   relatedEventIds: string[];
   relatedPlayerKeys: string[];
+  /** Other real CriticalEvents in the same fight and inspection window. */
+  nearbyEvents: CriticalEvent[];
+  /** Nearby events strictly before the selected event, chronological. */
+  eventsBefore: CriticalEvent[];
+  /** Nearby events at/after the selected timestamp, chronological. */
+  eventsAfter: CriticalEvent[];
 }
 
 export interface BuildEventInspectionInput {
   event: CriticalEvent;
   segments: readonly EngagementSegment[];
   findings: readonly IntelligenceFinding[];
+  /** Optional complete CriticalEvent set for reconstructing the surrounding moment. */
+  criticalEvents?: readonly CriticalEvent[];
   beforeMs?: number;
   afterMs?: number;
 }
@@ -57,6 +65,20 @@ function findingReferencesEvent(finding: IntelligenceFinding, event: CriticalEve
   );
 }
 
+function eventsInsideWindow(
+  events: readonly CriticalEvent[],
+  selected: CriticalEvent,
+  startTimestampMs: number,
+  endTimestampMs: number,
+): CriticalEvent[] {
+  return events
+    .filter((candidate) => candidate.id !== selected.id)
+    .filter((candidate) => candidate.fightId === selected.fightId)
+    .filter((candidate) => Number.isFinite(candidate.timestampMs))
+    .filter((candidate) => candidate.timestampMs >= startTimestampMs && candidate.timestampMs <= endTimestampMs)
+    .sort((a, b) => a.timestampMs - b.timestampMs || a.id.localeCompare(b.id));
+}
+
 /**
  * Builds the inspectable context for an existing CriticalEvent.
  *
@@ -69,12 +91,15 @@ export function buildEventInspection({
   event,
   segments,
   findings,
+  criticalEvents = [],
   beforeMs,
   afterMs,
 }: BuildEventInspectionInput): IntelligenceEventInspection {
   const before = nonNegativeWindow(beforeMs, DEFAULT_BEFORE_MS);
   const after = nonNegativeWindow(afterMs, DEFAULT_AFTER_MS);
   const anchor = Math.max(0, Math.floor(event.timestampMs));
+  const startTimestampMs = Math.max(0, anchor - before);
+  const endTimestampMs = anchor + after;
 
   const relatedSegments = segments
     .filter((segment) => segment.fightId === event.fightId)
@@ -85,12 +110,16 @@ export function buildEventInspection({
     .filter((finding) => findingReferencesEvent(finding, event))
     .sort((a, b) => a.id.localeCompare(b.id));
 
+  const nearbyEvents = eventsInsideWindow(criticalEvents, event, startTimestampMs, endTimestampMs);
+  const eventsBefore = nearbyEvents.filter((candidate) => candidate.timestampMs < anchor);
+  const eventsAfter = nearbyEvents.filter((candidate) => candidate.timestampMs >= anchor);
+
   return {
     event,
     window: {
       anchorTimestampMs: anchor,
-      startTimestampMs: Math.max(0, anchor - before),
-      endTimestampMs: anchor + after,
+      startTimestampMs,
+      endTimestampMs,
       beforeMs: before,
       afterMs: after,
     },
@@ -102,5 +131,8 @@ export function buildEventInspection({
       ...relatedSegments.flatMap((segment) => segment.participantKeys),
       ...relatedFindings.flatMap((finding) => finding.relatedPlayers ?? []),
     ]),
+    nearbyEvents,
+    eventsBefore,
+    eventsAfter,
   };
 }
