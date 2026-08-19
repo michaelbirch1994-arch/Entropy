@@ -1,7 +1,8 @@
-import { ArrowRight, Clock3, Link2, Skull, Users, X } from "lucide-react";
+import { ArrowRight, Clock3, Link2, MapPin, Skull, Users, X } from "lucide-react";
 import { useReport } from "../../store/ReportContext";
 import { useView } from "../../store/ViewContext";
 import { buildEventDeathEvidence } from "../../lib/intelligence/eventDeathEvidence";
+import { buildEventReplaySnapshotEvidence } from "../../lib/intelligence/eventReplayEvidence";
 import type { IntelligenceEventInspection } from "../../lib/intelligence/eventInspection";
 import type { CriticalEvent } from "../../lib/intelligence/types";
 import type { DeathRecapHit, WvWReport } from "../../types/report";
@@ -22,6 +23,10 @@ function formatOffset(ms: number): string {
 
 function formatDamage(value: number): string {
   return Number.isFinite(value) ? Math.round(value).toLocaleString() : "0";
+}
+
+function formatDistance(value: number | null): string {
+  return value == null || !Number.isFinite(value) ? "unknown" : Math.round(value).toLocaleString();
 }
 
 function resolveFightIndex(report: WvWReport | null, fightId: string): number {
@@ -102,6 +107,14 @@ export default function IntelligenceEventInspector({
         relatedPlayerKeys,
       })
     : [];
+  const replaySnapshot = report?.stats.replayFights
+    ? buildEventReplaySnapshotEvidence({
+        replayFights: report.stats.replayFights,
+        fightId: event.fightId,
+        timestampMs: window.anchorTimestampMs,
+        relatedPlayerKeys,
+      })
+    : null;
 
   return (
     <section className="theme-intelligence-dossier border border-sky-400/20 bg-sky-500/[0.035] p-5" aria-label="Selected Intelligence event inspector">
@@ -181,6 +194,75 @@ export default function IntelligenceEventInspector({
           </div>
         </div>
       </div>
+
+      {replaySnapshot && (
+        <div className="mt-4 rounded-2xl border border-cyan-400/15 bg-cyan-500/[0.025] p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-cyan-300">
+              <MapPin className="h-4 w-4" /> Replay state at {formatTime(replaySnapshot.timestampMs)}
+            </div>
+            <span className="text-[10px] font-bold uppercase text-slate-500">existing Fight Replay evidence</span>
+          </div>
+          <p className="mt-2 text-[11px] leading-5 text-slate-500">
+            This is a frozen read of the same replay tracks used by Fight Replay at the selected Intelligence timestamp. Unknown positioning stays unknown; this panel does not infer movement or causation.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
+              <div className="text-[10px] font-bold uppercase text-slate-500">Squad alive</div>
+              <div className="mt-1 font-mono text-lg font-black text-slate-100">{replaySnapshot.squadAlive}</div>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
+              <div className="text-[10px] font-bold uppercase text-slate-500">Squad down</div>
+              <div className="mt-1 font-mono text-lg font-black text-amber-200">{replaySnapshot.squadDown}</div>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
+              <div className="text-[10px] font-bold uppercase text-slate-500">Enemies alive</div>
+              <div className="mt-1 font-mono text-lg font-black text-slate-100">{replaySnapshot.enemiesAlive}</div>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
+              <div className="text-[10px] font-bold uppercase text-slate-500">Enemies down</div>
+              <div className="mt-1 font-mono text-lg font-black text-rose-200">{replaySnapshot.enemiesDown}</div>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
+              <div className="text-[10px] font-bold uppercase text-slate-500">Avg. dist to tag</div>
+              <div className="mt-1 font-mono text-lg font-black text-cyan-100">{formatDistance(replaySnapshot.averageSquadDistanceToCommander)}</div>
+            </div>
+          </div>
+          <div className="mt-3 rounded-xl border border-white/[0.06] bg-black/20 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">Commander state</div>
+              <div className="font-mono text-[11px] font-bold text-slate-300">{replaySnapshot.commanderAccount ?? "commander unavailable/dead"}</div>
+            </div>
+          </div>
+          {replaySnapshot.linkedPlayers.length > 0 && (
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {replaySnapshot.linkedPlayers.map((player) => (
+                <div key={player.account} className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-black text-slate-100">{player.account}</div>
+                      <div className="mt-0.5 text-[10px] text-slate-500">{player.name} · {player.profession}</div>
+                    </div>
+                    <div className="flex gap-1.5">
+                      {player.isCommander && <span className="rounded-full border border-amber-400/20 bg-amber-500/[0.06] px-2 py-0.5 text-[9px] font-bold uppercase text-amber-200">tag</span>}
+                      {player.isDown && <span className="rounded-full border border-rose-400/20 bg-rose-500/[0.06] px-2 py-0.5 text-[9px] font-bold uppercase text-rose-200">down</span>}
+                      {player.isDead && <span className="rounded-full border border-rose-400/30 bg-rose-500/[0.08] px-2 py-0.5 text-[9px] font-bold uppercase text-rose-100">dead</span>}
+                    </div>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
+                    <div className="rounded-lg border border-white/[0.05] bg-black/20 px-2 py-1.5 text-slate-500">
+                      Position <span className="float-right font-mono text-slate-300">{player.x == null || player.y == null ? "unknown" : `${Math.round(player.x)}, ${Math.round(player.y)}`}</span>
+                    </div>
+                    <div className="rounded-lg border border-white/[0.05] bg-black/20 px-2 py-1.5 text-slate-500">
+                      Dist. to tag <span className="float-right font-mono text-slate-300">{formatDistance(player.distanceToCommander)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {deathEvidence.length > 0 && (
         <div className="mt-4 rounded-2xl border border-rose-400/15 bg-rose-500/[0.025] p-4">
