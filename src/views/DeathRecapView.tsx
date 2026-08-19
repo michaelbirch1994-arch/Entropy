@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useReport } from "../store/ReportContext";
+import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
 import { fmtCompact, profChip } from "../utils/format";
 import type { DeathRecapEntry, DeathRecapHit } from "../types/report";
@@ -18,9 +19,6 @@ function fmtClock(ms: number): string {
 }
 
 function HitRow({ hit, deathTime }: { hit: DeathRecapHit; deathTime: number }) {
-  // Times in the recap are absolute fight-clock ms; show them relative to the
-  // death itself (negative = seconds before dying) since that's what actually
-  // answers "what happened right before I died".
   const relSec = ((hit.time - deathTime) / 1000).toFixed(1);
   return (
     <div className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg hover:bg-white/[0.02]">
@@ -48,14 +46,31 @@ function HitRow({ hit, deathTime }: { hit: DeathRecapHit; deathTime: number }) {
   );
 }
 
-function DeathCard({ entry }: { entry: DeathRecapEntry }) {
-  const [open, setOpen] = useState(false);
+function DeathCard({ entry, focused = false }: { entry: DeathRecapEntry; focused?: boolean }) {
+  const [open, setOpen] = useState(focused);
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const totalToKill = entry.toKill.reduce((a, h) => a + h.damage, 0);
   const totalToDown = entry.toDown.reduce((a, h) => a + h.damage, 0);
   const killingBlow = entry.toKill[entry.toKill.length - 1] ?? entry.toDown[entry.toDown.length - 1];
 
+  useEffect(() => {
+    if (!focused) return;
+    setOpen(true);
+    const frame = requestAnimationFrame(() => {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focused]);
+
   return (
-    <div className="bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl overflow-hidden">
+    <div
+      ref={cardRef}
+      className={`bg-[#0a101f]/90 border rounded-2xl overflow-hidden transition-shadow ${
+        focused
+          ? "border-sky-400/45 shadow-[0_0_28px_-14px_rgba(56,189,248,0.75)]"
+          : "border-slate-800/80"
+      }`}
+    >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -70,6 +85,11 @@ function DeathCard({ entry }: { entry: DeathRecapEntry }) {
             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(entry.profession)}`}>
               {entry.profession}
             </span>
+            {focused && (
+              <span className="rounded-full border border-sky-400/25 bg-sky-500/[0.08] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-sky-200">
+                Intelligence evidence
+              </span>
+            )}
           </div>
           <div className="text-[10px] text-slate-500 mt-0.5">
             {entry.fightName} &middot; died at {fmtClock(entry.deathTimeMs)}
@@ -116,14 +136,6 @@ function DeathCard({ entry }: { entry: DeathRecapEntry }) {
 
 const DEFENSIVE_BOON_NAMES = ["Stability", "Protection", "Resistance", "Aegis"];
 
-// Correlates each player's death count against their aggregate defensive-boon
-// uptime (already computed for the Buffs view) so a squad can spot "this
-// person keeps dying and also runs low stability/protection uptime" at a
-// glance. This is a correlation over averages, not a per-death timeline -
-// arcdps/EI's export doesn't expose exact boon-on/boon-off timestamps, so we
-// deliberately don't claim "this exact boon dropped right before this exact
-// death". squadAvgPct lets each cell be judged against the rest of the squad
-// rather than an arbitrary fixed threshold.
 function useDeathBoonCorrelation(report: ReturnType<typeof useReport>["report"]) {
   return useMemo(() => {
     if (!report) return null;
@@ -138,7 +150,6 @@ function useDeathBoonCorrelation(report: ReturnType<typeof useReport>["report"])
     if (cols.length === 0) return null;
 
     const rows = buildDeathBoonCorrelationRows(boonData.rows, cols, recaps);
-
     return rows.length > 0 ? { rows, cols } : null;
   }, [report]);
 }
@@ -216,8 +227,18 @@ function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<type
 
 export default function DeathRecapView() {
   const { report } = useReport();
+  const { navigationTarget } = useView();
   const recaps = report?.stats.deathRecaps ?? [];
   const [accountFilter, setAccountFilter] = useState<string>("all");
+
+  const intelligenceTarget = navigationTarget?.targetView === "death-recap" && navigationTarget.source === "intelligence"
+    ? navigationTarget
+    : null;
+
+  useEffect(() => {
+    if (!intelligenceTarget?.account) return;
+    setAccountFilter(intelligenceTarget.account);
+  }, [intelligenceTarget?.account, intelligenceTarget?.timestampMs, intelligenceTarget?.fightIndex]);
 
   const accounts = useMemo(() => {
     const set = new Set(recaps.map((r) => r.account));
@@ -226,6 +247,11 @@ export default function DeathRecapView() {
 
   const filtered = accountFilter === "all" ? recaps : recaps.filter((r) => r.account === accountFilter);
   const boonCorrelation = useDeathBoonCorrelation(report);
+
+  const isFocusedDeath = (entry: DeathRecapEntry) => !!intelligenceTarget
+    && entry.account === intelligenceTarget.account
+    && entry.fightIndex === intelligenceTarget.fightIndex
+    && entry.deathTimeMs === intelligenceTarget.timestampMs;
 
   if (!report) return null;
 
@@ -266,13 +292,22 @@ export default function DeathRecapView() {
             </option>
           ))}
         </select>
+        {intelligenceTarget && (
+          <span className="rounded-full border border-sky-400/20 bg-sky-500/[0.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-sky-200">
+            Opened from Intelligence · Fight {(intelligenceTarget.fightIndex ?? 0) + 1} · {fmtClock(intelligenceTarget.timestampMs ?? 0)}
+          </span>
+        )}
       </div>
 
       {boonCorrelation && <DeathBoonCorrelationPanel data={boonCorrelation} />}
 
       <div className="space-y-3">
         {filtered.map((entry, i) => (
-          <DeathCard key={`${entry.account}-${entry.fightIndex}-${entry.deathTimeMs}-${i}`} entry={entry} />
+          <DeathCard
+            key={`${entry.account}-${entry.fightIndex}-${entry.deathTimeMs}-${i}`}
+            entry={entry}
+            focused={isFocusedDeath(entry)}
+          />
         ))}
       </div>
     </div>
