@@ -13,6 +13,7 @@ function replayFight(id: string, durationMs: number): ReplayFightEntry {
       players: [],
       enemies: [],
       map: null,
+      worldSpace: { mapId: null, wvwMapData: null },
       skillMeta: {},
       mechanics: [],
     },
@@ -20,27 +21,14 @@ function replayFight(id: string, durationMs: number): ReplayFightEntry {
 }
 
 function target(overrides: Partial<ViewNavigationTarget> = {}): ViewNavigationTarget {
-  return {
-    source: "intelligence",
-    targetView: "fight-replay",
-    fightIndex: 1,
-    timestampMs: 12_345,
-    account: "Player.1234",
-    eventId: "critical-7",
-    ...overrides,
-  };
+  return { source: "intelligence", targetView: "fight-replay", fightIndex: 1, timestampMs: 12_345, account: "Player.1234", eventId: "critical-7", ...overrides };
 }
 
 describe("resolveReplayNavigationTarget", () => {
   const fights = [replayFight("fight-a", 10_000), replayFight("fight-b", 30_000)];
 
   it("preserves an exact valid Intelligence fight and millisecond target", () => {
-    expect(resolveReplayNavigationTarget(fights, target())).toEqual({
-      fightIndex: 1,
-      timestampMs: 12_345,
-      account: "Player.1234",
-      eventId: "critical-7",
-    });
+    expect(resolveReplayNavigationTarget(fights, target())).toEqual({ fightIndex: 1, timestampMs: 12_345, account: "Player.1234", eventId: "critical-7" });
   });
 
   it("clamps timestamps to the selected replay fight duration", () => {
