@@ -1,0 +1,88 @@
+/* Focused analytics-surface polish.
+   Reuses existing theme-* primitives; no metric or view behavior lives here. */
+
+.theme-table-shell {
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 34%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--theme-surfaceInset) 52%, transparent);
+  outline: none;
+}
+
+.theme-table-shell:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-accent) 48%, var(--theme-border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 12%, transparent);
+}
+
+.theme-data-table .theme-table-head th {
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+  letter-spacing: 0.07em;
+}
+
+.theme-data-table .theme-table-row > td {
+  vertical-align: middle;
+}
+
+.theme-data-table .theme-table-player {
+  min-width: 10rem;
+}
+
+.theme-data-table .theme-table-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-data-table .theme-table-sample {
+  line-height: 1.25;
+}
+
+.theme-filter-strip {
+  gap: 0.25rem;
+}
+
+.theme-filter-button {
+  line-height: 1;
+}
+
+.theme-filter-button.is-active {
+  font-weight: 700;
+}
+
+.theme-analytics-empty {
+  display: flex;
+  min-height: 8rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px dashed color-mix(in srgb, var(--theme-borderStrong) 42%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--theme-surfaceInset) 46%, transparent);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.theme-analytics-empty-label {
+  color: color-mix(in srgb, var(--theme-text) 88%, var(--theme-muted));
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.theme-analytics-empty-copy {
+  max-width: 30rem;
+  color: var(--theme-textMuted);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 900px) {
+  .theme-table-shell {
+    border-radius: 0.625rem;
+  }
+
+  .theme-data-table .theme-table-player {
+    min-width: 8.5rem;
+  }
+}
