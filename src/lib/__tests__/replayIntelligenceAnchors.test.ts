@@ -7,12 +7,22 @@ const replayFights = [
   {
     fightId: "fight-a",
     fightName: "Fight A",
-    data: { durationMs: 10_000 },
+    data: {
+      durationMs: 10_000,
+      players: [
+        { account: "Alpha.1111", name: "Alpha Character" },
+      ],
+    },
   },
   {
     fightId: "fight-b",
     fightName: "Fight B",
-    data: { durationMs: 20_000 },
+    data: {
+      durationMs: 20_000,
+      players: [
+        { account: "Player.1234", name: "Tracked Character" },
+      ],
+    },
   },
 ] as unknown as ReplayFightEntry[];
 
@@ -73,6 +83,42 @@ describe("buildReplayIntelligenceAnchors", () => {
       expect.objectContaining({ id: "event-a", fightIndex: 0, fightName: "Fight A", timestampMs: 7_000 }),
       expect.objectContaining({ id: "event-b", fightIndex: 1, fightName: "Fight B", timestampMs: 4_000, account: "Player.1234" }),
     ]);
+  });
+
+  it("resolves a related character name to the tracked replay account for tactical-state auto-selection", () => {
+    const input = dashboard();
+    input.criticalEvents.push({
+      id: "character-name-event",
+      fightId: "fight-a",
+      timestampMs: 5_000,
+      kind: "separation",
+      category: "positioning",
+      summary: "Alpha separated from tag.",
+      relatedEvents: [],
+      relatedPlayers: ["Alpha Character"],
+      confidence: "high",
+    });
+
+    const anchor = buildReplayIntelligenceAnchors(input, replayFights).find((item) => item.id === "character-name-event");
+    expect(anchor?.account).toBe("Alpha.1111");
+  });
+
+  it("does not invent a tactical-state player when the related identity is not tracked in replay", () => {
+    const input = dashboard();
+    input.criticalEvents.push({
+      id: "untracked-player-event",
+      fightId: "fight-a",
+      timestampMs: 5_500,
+      kind: "separation",
+      category: "positioning",
+      summary: "Untracked player event.",
+      relatedEvents: [],
+      relatedPlayers: ["Missing Character"],
+      confidence: "high",
+    });
+
+    const anchor = buildReplayIntelligenceAnchors(input, replayFights).find((item) => item.id === "untracked-player-event");
+    expect(anchor?.account).toBeUndefined();
   });
 
   it("rejects timestamps outside the replay bounds instead of inventing a seek point", () => {
