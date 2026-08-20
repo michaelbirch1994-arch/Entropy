@@ -7,6 +7,7 @@ import "./Styles/Ultrawide.css";
 import "./Styles/UXPolish.css";
 import "./Styles/AnalyticsSurfaces.css";
 import "./Styles/NavigationShell.css";
+import "./Styles/ReplayWorkspace.css";
 import "./Styles/CrossViewTrail.css";
 import "./Styles/IntelligencePulse.css";
 
