@@ -4,6 +4,7 @@ import App from "./App";
 import { ThemeProvider } from "./theme/ThemeProvider";
 import "./Styles/Global.css";
 import "./Styles/Ultrawide.css";
+import "./Styles/UXPolish.css";
 import "./Styles/IntelligencePulse.css";
 
 createRoot(document.getElementById("root")!).render(

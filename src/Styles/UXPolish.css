@@ -1,0 +1,147 @@
+/* Shared UX polish for the report workspace.
+   This layer intentionally changes presentation/interaction only: no metrics,
+   aggregation, report contracts, or Intelligence semantics live here. */
+
+/* Keep the report title visually anchored while utility actions remain scannable. */
+.theme-topbar-inner {
+  min-width: 0;
+}
+
+.theme-topbar-actions {
+  min-width: 0;
+}
+
+.theme-topbar-actions .theme-quiet-button,
+.theme-topbar-actions .theme-status-pill {
+  min-height: 2.15rem;
+  white-space: nowrap;
+}
+
+/* Dense analytics filters should feel like one control surface rather than a
+   collection of unrelated pills. */
+.theme-filter-strip {
+  position: relative;
+  isolation: isolate;
+  padding: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 58%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--theme-surfaceInset) 88%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent);
+}
+
+.theme-filter-button {
+  min-height: 2.15rem;
+  cursor: pointer;
+}
+
+.theme-filter-button:not(.is-active):hover {
+  border-color: color-mix(in srgb, var(--theme-borderStrong) 48%, transparent) !important;
+  background: color-mix(in srgb, var(--theme-surfaceElevated) 72%, transparent) !important;
+  color: var(--theme-text) !important;
+}
+
+.theme-filter-button.is-active {
+  border-color: color-mix(in srgb, var(--theme-accent) 62%, transparent) !important;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 15%, transparent), transparent 88%),
+    color-mix(in srgb, var(--theme-surfaceElevated) 76%, transparent) !important;
+  color: var(--theme-accentStrong) !important;
+  box-shadow: inset 2px 0 0 var(--theme-accent);
+}
+
+/* Give interactive analytics cards the same physical language everywhere. */
+button.theme-metric-card,
+button.theme-player-card,
+.theme-kdr-stat,
+.theme-podium-card {
+  transition-property: transform, border-color, background-color, box-shadow, filter;
+  transition-duration: 160ms;
+  transition-timing-function: ease-out;
+}
+
+button.theme-metric-card:hover,
+button.theme-player-card:hover,
+.theme-kdr-stat:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.035);
+}
+
+button.theme-metric-card:active,
+button.theme-player-card:active,
+.theme-kdr-stat:active {
+  transform: translateY(0);
+}
+
+/* Long analytical views should maintain a predictable vertical rhythm. */
+.theme-view-layout {
+  min-width: 0;
+}
+
+.theme-view-layout > * {
+  scroll-margin-top: 6rem;
+}
+
+.theme-view-layout > .theme-filter-strip + * {
+  margin-top: 0.25rem;
+}
+
+/* Make horizontal overflow intentional and discoverable instead of allowing
+   controls to collapse into cramped multi-line clusters. */
+@media (max-width: 1280px) {
+  .theme-topbar-actions {
+    width: 100%;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+    scrollbar-width: thin;
+  }
+
+  .theme-topbar-actions > * {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .theme-filter-strip {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .theme-filter-strip > * {
+    flex: 0 0 auto;
+  }
+}
+
+/* Slightly strengthen selected navigation without adding visual noise. */
+.theme-nav-item[aria-current="page"] {
+  color: var(--theme-accentStrong) !important;
+}
+
+.theme-nav-item[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  right: 0.45rem;
+  top: 50%;
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: var(--theme-accentStrong);
+  box-shadow: 0 0 9px var(--theme-glow);
+  transform: translateY(-50%);
+}
+
+/* Respect users who disable animation without removing Entropy's normal motion
+   character for everyone else. */
+@media (prefers-reduced-motion: reduce) {
+  .theme-app-shell *,
+  .theme-app-shell *::before,
+  .theme-app-shell *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
