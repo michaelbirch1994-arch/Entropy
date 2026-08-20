@@ -4,6 +4,7 @@ import ReplayLiveIntelligencePulse from "../components/replay/ReplayLiveIntellig
 import ReplayTacticalStatePanel from "../components/replay/ReplayTacticalStatePanel";
 import Panel from "../components/ui/Panel";
 import { distanceBetween, interpolateFacing, interpolatePosition, isInInterval } from "../lib/parseReplayData";
+import type { ReplayIntelligenceAnchor } from "../lib/replayIntelligenceAnchors";
 import { resolveReplayNavigationTarget, type ResolvedReplayNavigationTarget } from "../lib/replayNavigation";
 import { useReport } from "../store/ReportContext";
 import { useView } from "../store/ViewContext";
@@ -41,6 +42,7 @@ export default function ReplayViewV2() {
   const [speed, setSpeed] = useState(2);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [intelligenceOrigin, setIntelligenceOrigin] = useState<ResolvedReplayNavigationTarget | null>(null);
+  const [alignedIntelligenceEvent, setAlignedIntelligenceEvent] = useState<ReplayIntelligenceAnchor | null>(null);
   const pendingSeekRef = useRef<ResolvedReplayNavigationTarget | null>(null);
   const [showMap, setShowMap] = useState(true);
   const [zoom, setZoom] = useState(1);
@@ -70,6 +72,7 @@ export default function ReplayViewV2() {
       setT(0);
       setSelectedAccount(null);
     }
+    setAlignedIntelligenceEvent(null);
     setPlaying(false);
     setPan({ x: 0, y: 0 });
   }, [fightIdx]);
@@ -367,6 +370,7 @@ export default function ReplayViewV2() {
           <ReplayLiveIntelligencePulse
             fightIndex={fightIdx}
             timestampMs={t}
+            onAlignedEventChange={setAlignedIntelligenceEvent}
             onSeek={(timestampMs, account) => {
               setT(timestampMs);
               setPlaying(false);
@@ -453,13 +457,22 @@ export default function ReplayViewV2() {
                     if (!point || isInInterval(player.deadIntervals, t)) return null;
                     const down = isInInterval(player.downIntervals, t);
                     const selected = selectedAccount === player.account;
+                    const intelligenceParticipant = alignedIntelligenceEvent?.accounts.includes(player.account) ?? false;
                     const baseRadius = player.isCommander ? 8.5 : 6;
                     const fill = player.inSquad ? "#38bdf8" : "#94a3b8";
+                    const intelInnerRadius = (baseRadius + 3.5) * markerUnit;
+                    const intelOuterRadius = (baseRadius + 6.5) * markerUnit;
                     return (
                       <g key={player.account} onClick={(event) => { event.stopPropagation(); selectPlayer(player.account); }} className="cursor-pointer">
-                        {selected && <circle cx={point.x} cy={point.y} r={(baseRadius + 6) * markerUnit} fill="none" stroke="#fbbf24" strokeWidth={2 * markerUnit} opacity={0.9} />}
+                        {intelligenceParticipant && (
+                          <circle cx={point.x} cy={point.y} r={intelInnerRadius} fill="none" stroke="#7dd3fc" strokeWidth={1.4 * markerUnit} opacity={selected ? 0.45 : 0.72} pointerEvents="none">
+                            <animate attributeName="r" values={`${intelInnerRadius};${intelOuterRadius};${intelInnerRadius}`} dur="1.8s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values={selected ? "0.28;0.5;0.28" : "0.48;0.86;0.48"} dur="1.8s" repeatCount="indefinite" />
+                          </circle>
+                        )}
+                        {selected && <circle cx={point.x} cy={point.y} r={(baseRadius + 7) * markerUnit} fill="none" stroke="#fbbf24" strokeWidth={2 * markerUnit} opacity={0.95} />}
                         {player.isCommander && <circle cx={point.x} cy={point.y} r={(baseRadius + 3) * markerUnit} fill="none" stroke="#f59e0b" strokeWidth={2 * markerUnit} opacity={0.95} />}
-                        <circle cx={point.x} cy={point.y} r={(down ? baseRadius + 1.5 : baseRadius) * markerUnit} fill={fill} fillOpacity={down ? 0.35 : 0.95} stroke={down ? "#fb7185" : "#e2e8f0"} strokeWidth={1.4 * markerUnit}><title>{`${player.name} · ${player.profession}${player.isCommander ? " · commander" : ""}${down ? " · downed" : ""}`}</title></circle>
+                        <circle cx={point.x} cy={point.y} r={(down ? baseRadius + 1.5 : baseRadius) * markerUnit} fill={fill} fillOpacity={down ? 0.35 : 0.95} stroke={down ? "#fb7185" : "#e2e8f0"} strokeWidth={1.4 * markerUnit}><title>{`${player.name} · ${player.profession}${player.isCommander ? " · commander" : ""}${down ? " · downed" : ""}${intelligenceParticipant ? " · Intelligence event participant" : ""}`}</title></circle>
                         {(selected || player.isCommander) && (
                           <text x={point.x} y={point.y - (baseRadius + 6) * markerUnit} textAnchor="middle" fontSize={9 * markerUnit} fontWeight="800" fill={selected ? "#fef3c7" : "#e2e8f0"} stroke="#020617" strokeWidth={2.5 * markerUnit} paintOrder="stroke" transform={`translate(0 ${2 * (point.y - (baseRadius + 6) * markerUnit)}) scale(1 -1)`}>{shortName(player.name)}</text>
                         )}
@@ -489,7 +502,7 @@ export default function ReplayViewV2() {
             <button type="button" onClick={exportClip} className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 transition hover:bg-amber-500/20"><Download className="h-3 w-3" /> Download standalone .html</button>
           </div>
 
-          <p className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-slate-500"><span className="inline-block h-2 w-2 rounded-full bg-sky-400" /> Squad <span className="ml-2 inline-block h-2 w-2 rounded-full bg-slate-400" /> Ally / non-squad <span className="ml-2 inline-block h-2 w-2 rounded-full bg-red-500" /> Enemy <span className="ml-2 inline-block h-2 w-2 rounded-full border border-rose-300" /> Downed <span className="ml-auto text-slate-600">Mechanic/cast rings mark event location, not AoE size.</span></p>
+          <p className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-slate-500"><span className="inline-block h-2 w-2 rounded-full bg-sky-400" /> Squad <span className="ml-2 inline-block h-2 w-2 rounded-full bg-slate-400" /> Ally / non-squad <span className="ml-2 inline-block h-2 w-2 rounded-full bg-red-500" /> Enemy <span className="ml-2 inline-block h-2 w-2 rounded-full border border-rose-300" /> Downed <span className="ml-2 inline-block h-2 w-2 rounded-full border border-sky-300" /> Intel participant <span className="ml-auto text-slate-600">Mechanic/cast rings mark event location, not AoE size.</span></p>
         </Panel>
       )}
     </div>

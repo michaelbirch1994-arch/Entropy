@@ -23,3 +23,13 @@ export function nearbyReplayIntelligenceEvents(
     .filter((anchor) => anchor.distanceMs <= windowMs)
     .sort((a, b) => a.distanceMs - b.distanceMs || a.timestampMs - b.timestampMs || a.id.localeCompare(b.id));
 }
+
+export function alignedReplayIntelligenceEvent(
+  anchors: ReplayIntelligenceAnchor[],
+  fightIndex: number,
+  timestampMs: number,
+  thresholdMs = 750,
+): NearbyReplayIntelligenceEvent | null {
+  if (!Number.isFinite(thresholdMs) || thresholdMs < 0) return null;
+  return nearbyReplayIntelligenceEvents(anchors, fightIndex, timestampMs, thresholdMs)[0] ?? null;
+}
