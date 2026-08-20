@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { BrainCircuit, Clock3, SkipBack, SkipForward, Users } from "lucide-react";
 import { buildIntelligenceDashboard } from "../../lib/intelligence/intelligenceDashboard";
-import { nearbyReplayIntelligenceEvents } from "../../lib/replayNearbyIntelligence";
+import { alignedReplayIntelligenceEvent, nearbyReplayIntelligenceEvents } from "../../lib/replayNearbyIntelligence";
 import { buildReplayIntelligenceAnchors, type ReplayIntelligenceAnchor } from "../../lib/replayIntelligenceAnchors";
 import { useReport } from "../../store/ReportContext";
 
@@ -54,6 +54,10 @@ export default function ReplayLiveIntelligencePulse({
     () => nearbyReplayIntelligenceEvents(anchors, fightIndex, timestampMs, 5000).slice(0, 3),
     [anchors, fightIndex, timestampMs],
   );
+  const alignedEvent = useMemo(
+    () => alignedReplayIntelligenceEvent(anchors, fightIndex, timestampMs, 750),
+    [anchors, fightIndex, timestampMs],
+  );
 
   const playerNameByAccount = useMemo(
     () => new Map((fight?.data.players ?? []).map((player) => [player.account, player.name])),
@@ -61,8 +65,7 @@ export default function ReplayLiveIntelligencePulse({
   );
 
   const nearest = nearby[0];
-  const active = !!nearest && nearest.distanceMs <= 750;
-  const alignedEvent = active ? nearest : null;
+  const active = alignedEvent != null;
 
   useEffect(() => {
     onAlignedEventChange?.(alignedEvent);
