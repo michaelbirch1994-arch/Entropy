@@ -27,12 +27,17 @@ describe('interpolatePosition', () => {
     expect(interpolatePosition([], 500)).toBeNull();
   });
 
-  it('clamps to the first point before the track starts', () => {
-    expect(interpolatePosition(points, -500)).toEqual(points[0]);
+  it('does not pin an actor to its first point before EI starts tracking it', () => {
+    expect(interpolatePosition(points, -500)).toBeNull();
   });
 
-  it('clamps to the last point after the track ends', () => {
-    expect(interpolatePosition(points, 5000)).toEqual(points[2]);
+  it('does not leave a stationary ghost after EI stops tracking the actor', () => {
+    expect(interpolatePosition(points, 5000)).toBeNull();
+  });
+
+  it('returns both exact edge samples while the track is valid', () => {
+    expect(interpolatePosition(points, 0)).toEqual(points[0]);
+    expect(interpolatePosition(points, 2000)).toEqual(points[2]);
   });
 
   it('returns the exact sample when t lands on a sample', () => {
@@ -47,10 +52,6 @@ describe('interpolatePosition', () => {
   });
 
   it('does not overshoot or lag behind consecutive scrub steps (no trailing artifact)', () => {
-    // A "trailing line" bug looks like the interpolated point lagging
-    // behind where it should be as t increases monotonically. Walking t
-    // forward in small steps should produce monotonically increasing x
-    // across the first segment, with no backward jumps.
     let prevX = -Infinity;
     for (let t = 0; t <= 1000; t += 50) {
       const p = interpolatePosition(points, t)!;
@@ -106,13 +107,15 @@ describe('interpolateFacing', () => {
     expect(interpolateFacing([], 500)).toBeNull();
   });
 
-  it('clamps to the first/last angle outside the track range', () => {
+  it('does not hold stale facing outside the actor track', () => {
     const facings: ReplayFacingPoint[] = [
       { t: 0, angle: 10 },
       { t: 1000, angle: 20 },
     ];
-    expect(interpolateFacing(facings, -100)).toBe(10);
-    expect(interpolateFacing(facings, 5000)).toBe(20);
+    expect(interpolateFacing(facings, -100)).toBeNull();
+    expect(interpolateFacing(facings, 5000)).toBeNull();
+    expect(interpolateFacing(facings, 0)).toBe(10);
+    expect(interpolateFacing(facings, 1000)).toBe(20);
   });
 
   it('linearly interpolates a normal (non-wrapping) angle change', () => {
@@ -124,16 +127,11 @@ describe('interpolateFacing', () => {
   });
 
   it('takes the short way across the 0/360 wrap instead of the long way', () => {
-    // 350deg -> 10deg is a 20deg turn the short way (through 0/360), not a
-    // 340deg turn the long way through 180. A plain linear lerp gets this
-    // wrong and would produce ~180 at the midpoint instead of ~0.
     const facings: ReplayFacingPoint[] = [
       { t: 0, angle: 350 },
       { t: 1000, angle: 10 },
     ];
     const mid = interpolateFacing(facings, 500)!;
-    // Normalize to 0-360 for comparison since the raw result can be
-    // slightly negative (e.g. -0.0001) depending on rounding.
     const normalized = ((mid % 360) + 360) % 360;
     expect(normalized).toBeCloseTo(0, 0);
     expect(normalized).not.toBeCloseTo(180, 0);

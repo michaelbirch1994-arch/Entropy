@@ -230,7 +230,7 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
   const players: ReplayPlayerTrack[] = [];
   const enemies: ReplayEnemyTrack[] = [];
   const allX: number[] = [];
-    const allY: number[] = [];
+  const allY: number[] = [];
   for (const p of rawPlayers) {
     const crd = p.combatReplayData as Record<string, unknown> | undefined;
     if (!crd) continue;
@@ -241,8 +241,8 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
     const facings = asFacingPoints(crd.orientations, t0, pollingRate);
 
     for (const pt of points) {
-            allX.push(pt.x);
-            allY.push(pt.y);
+      allX.push(pt.x);
+      allY.push(pt.y);
     }
 
     const casts: { t: number; skillId: number }[] = [];
@@ -280,10 +280,10 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
     const facings = asFacingPoints(crd.orientations, t0, pollingRate);
 
     for (const pt of points) {
-            allX.push(pt.x);
-            allY.push(pt.y);
+      allX.push(pt.x);
+      allY.push(pt.y);
     }
-    
+
     enemies.push({
       id: enemyTrackId(t, idx),
       name: typeof t.name === "string" ? t.name : "Enemy",
@@ -306,9 +306,9 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
   // bug. Clipping to the 1st-99th percentile keeps the fitted frame sized to
   // where the fight actually happened.
   function percentile(values: number[], p: number): number {
-        const sorted = [...values].sort((a, b) => a - b);
-        const idx = Math.min(sorted.length - 1, Math.max(0, Math.round(p * (sorted.length - 1))));
-        return sorted[idx];
+    const sorted = [...values].sort((a, b) => a - b);
+    const idx = Math.min(sorted.length - 1, Math.max(0, Math.round(p * (sorted.length - 1))));
+    return sorted[idx];
   }
   const minX = percentile(allX, 0.01);
   const maxX = percentile(allX, 0.99);
@@ -372,8 +372,14 @@ const MAX_INTERP_SPEED_UNITS_PER_MS = 1;
 
 export function interpolatePosition(points: ReplayPoint[], t: number): ReplayPoint | null {
   if (points.length === 0) return null;
-  if (t <= points[0].t) return points[0];
-  if (t >= points[points.length - 1].t) return points[points.length - 1];
+  // Do not pin an actor to its first/last known sample outside the interval EI
+  // actually tracked. WvW targets frequently enter/leave awareness mid-fight;
+  // clamping made those actors look permanently frozen on the map while the
+  // fight clock, mechanics, and casts kept advancing. Unknown position must be
+  // rendered as absent, not as a stationary ghost.
+  if (t < points[0].t || t > points[points.length - 1].t) return null;
+  if (t === points[0].t) return points[0];
+  if (t === points[points.length - 1].t) return points[points.length - 1];
   let lo = 0;
   let hi = points.length - 1;
   while (lo < hi - 1) {
@@ -398,8 +404,9 @@ export function interpolatePosition(points: ReplayPoint[], t: number): ReplayPoi
 // shortest angular delta between the two bracketing samples first.
 export function interpolateFacing(facings: ReplayFacingPoint[], t: number): number | null {
   if (facings.length === 0) return null;
-  if (t <= facings[0].t) return facings[0].angle;
-  if (t >= facings[facings.length - 1].t) return facings[facings.length - 1].angle;
+  if (t < facings[0].t || t > facings[facings.length - 1].t) return null;
+  if (t === facings[0].t) return facings[0].angle;
+  if (t === facings[facings.length - 1].t) return facings[facings.length - 1].angle;
   let lo = 0;
   let hi = facings.length - 1;
   while (lo < hi - 1) {
