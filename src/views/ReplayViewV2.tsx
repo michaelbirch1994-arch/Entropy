@@ -3,7 +3,10 @@ import { Crosshair, Download, Film, Pause, Play, RotateCcw, X } from "lucide-rea
 import ReplayLiveIntelligencePulse from "../components/replay/ReplayLiveIntelligencePulse";
 import ReplayTacticalStatePanel from "../components/replay/ReplayTacticalStatePanel";
 import Panel from "../components/ui/Panel";
+import { buildIntelligenceDashboard } from "../lib/intelligence/intelligenceDashboard";
 import { distanceBetween, interpolateFacing, interpolatePosition, isInInterval } from "../lib/parseReplayData";
+import { alignedReplayIntelligenceEvent } from "../lib/replayNearbyIntelligence";
+import { buildReplayIntelligenceAnchors } from "../lib/replayIntelligenceAnchors";
 import { resolveReplayNavigationTarget, type ResolvedReplayNavigationTarget } from "../lib/replayNavigation";
 import { useReport } from "../store/ReportContext";
 import { useView } from "../store/ViewContext";
@@ -58,6 +61,19 @@ export default function ReplayViewV2() {
   const [clipEnd, setClipEnd] = useState(0);
 
   const fight = fights?.[fightIdx];
+  const intelligenceDashboard = useMemo(() => (report ? buildIntelligenceDashboard(report) : null), [report]);
+  const replayIntelligenceAnchors = useMemo(
+    () => buildReplayIntelligenceAnchors(intelligenceDashboard, fights),
+    [intelligenceDashboard, fights],
+  );
+  const alignedIntelligenceEvent = useMemo(
+    () => alignedReplayIntelligenceEvent(replayIntelligenceAnchors, fightIdx, t),
+    [replayIntelligenceAnchors, fightIdx, t],
+  );
+  const alignedParticipantAccounts = useMemo(
+    () => new Set(alignedIntelligenceEvent?.accounts ?? []),
+    [alignedIntelligenceEvent],
+  );
 
   useEffect(() => {
     const pending = pendingSeekRef.current;
@@ -453,13 +469,26 @@ export default function ReplayViewV2() {
                     if (!point || isInInterval(player.deadIntervals, t)) return null;
                     const down = isInInterval(player.downIntervals, t);
                     const selected = selectedAccount === player.account;
+                    const intelligenceParticipant = alignedParticipantAccounts.has(player.account);
                     const baseRadius = player.isCommander ? 8.5 : 6;
                     const fill = player.inSquad ? "#38bdf8" : "#94a3b8";
                     return (
                       <g key={player.account} onClick={(event) => { event.stopPropagation(); selectPlayer(player.account); }} className="cursor-pointer">
+                        {intelligenceParticipant && (
+                          <circle
+                            cx={point.x}
+                            cy={point.y}
+                            r={(baseRadius + (selected ? 8.5 : 6.5)) * markerUnit}
+                            fill="none"
+                            stroke="#7dd3fc"
+                            strokeWidth={1.6 * markerUnit}
+                            strokeDasharray={`${2.5 * markerUnit} ${2.5 * markerUnit}`}
+                            opacity={selected ? 0.7 : 0.9}
+                          />
+                        )}
                         {selected && <circle cx={point.x} cy={point.y} r={(baseRadius + 6) * markerUnit} fill="none" stroke="#fbbf24" strokeWidth={2 * markerUnit} opacity={0.9} />}
                         {player.isCommander && <circle cx={point.x} cy={point.y} r={(baseRadius + 3) * markerUnit} fill="none" stroke="#f59e0b" strokeWidth={2 * markerUnit} opacity={0.95} />}
-                        <circle cx={point.x} cy={point.y} r={(down ? baseRadius + 1.5 : baseRadius) * markerUnit} fill={fill} fillOpacity={down ? 0.35 : 0.95} stroke={down ? "#fb7185" : "#e2e8f0"} strokeWidth={1.4 * markerUnit}><title>{`${player.name} · ${player.profession}${player.isCommander ? " · commander" : ""}${down ? " · downed" : ""}`}</title></circle>
+                        <circle cx={point.x} cy={point.y} r={(down ? baseRadius + 1.5 : baseRadius) * markerUnit} fill={fill} fillOpacity={down ? 0.35 : 0.95} stroke={down ? "#fb7185" : "#e2e8f0"} strokeWidth={1.4 * markerUnit}><title>{`${player.name} · ${player.profession}${player.isCommander ? " · commander" : ""}${down ? " · downed" : ""}${intelligenceParticipant ? " · Intelligence event participant" : ""}`}</title></circle>
                         {(selected || player.isCommander) && (
                           <text x={point.x} y={point.y - (baseRadius + 6) * markerUnit} textAnchor="middle" fontSize={9 * markerUnit} fontWeight="800" fill={selected ? "#fef3c7" : "#e2e8f0"} stroke="#020617" strokeWidth={2.5 * markerUnit} paintOrder="stroke" transform={`translate(0 ${2 * (point.y - (baseRadius + 6) * markerUnit)}) scale(1 -1)`}>{shortName(player.name)}</text>
                         )}
@@ -489,7 +518,7 @@ export default function ReplayViewV2() {
             <button type="button" onClick={exportClip} className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 transition hover:bg-amber-500/20"><Download className="h-3 w-3" /> Download standalone .html</button>
           </div>
 
-          <p className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-slate-500"><span className="inline-block h-2 w-2 rounded-full bg-sky-400" /> Squad <span className="ml-2 inline-block h-2 w-2 rounded-full bg-slate-400" /> Ally / non-squad <span className="ml-2 inline-block h-2 w-2 rounded-full bg-red-500" /> Enemy <span className="ml-2 inline-block h-2 w-2 rounded-full border border-rose-300" /> Downed <span className="ml-auto text-slate-600">Mechanic/cast rings mark event location, not AoE size.</span></p>
+          <p className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-slate-500"><span className="inline-block h-2 w-2 rounded-full bg-sky-400" /> Squad <span className="ml-2 inline-block h-2 w-2 rounded-full bg-slate-400" /> Ally / non-squad <span className="ml-2 inline-block h-2 w-2 rounded-full bg-red-500" /> Enemy <span className="ml-2 inline-block h-2 w-2 rounded-full border border-rose-300" /> Downed <span className="ml-2 inline-block h-2 w-2 rounded-full border border-dashed border-sky-300" /> Intel participant <span className="ml-auto text-slate-600">Mechanic/cast rings mark event location, not AoE size.</span></p>
         </Panel>
       )}
     </div>
