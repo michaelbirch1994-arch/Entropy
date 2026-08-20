@@ -6,6 +6,8 @@ import { buildReplayIntelligenceAnchors, type ReplayIntelligenceAnchor } from ".
 import { useReport } from "../../store/ReportContext";
 import ReplayEventEvidencePanel from "./ReplayEventEvidencePanel";
 
+const EVIDENCE_PERSIST_MS = 5000;
+
 function fmtOffset(ms: number): string {
   if (Math.abs(ms) < 500) return "now";
   const seconds = Math.abs(ms) / 1000;
@@ -59,6 +61,17 @@ export default function ReplayLiveIntelligencePulse({
     () => alignedReplayIntelligenceEvent(anchors, fightIndex, timestampMs, 750),
     [anchors, fightIndex, timestampMs],
   );
+  const evidenceEvent = useMemo(() => {
+    if (alignedEvent) return alignedEvent;
+    for (let index = fightAnchors.length - 1; index >= 0; index -= 1) {
+      const candidate = fightAnchors[index];
+      const ageMs = timestampMs - candidate.timestampMs;
+      if (ageMs < 0) continue;
+      if (ageMs <= EVIDENCE_PERSIST_MS) return candidate;
+      break;
+    }
+    return null;
+  }, [alignedEvent, fightAnchors, timestampMs]);
 
   const playerNameByAccount = useMemo(
     () => new Map((fight?.data.players ?? []).map((player) => [player.account, player.name])),
@@ -66,7 +79,7 @@ export default function ReplayLiveIntelligencePulse({
   );
 
   const nearest = nearby[0];
-  const active = alignedEvent != null;
+  const active = evidenceEvent != null;
 
   useEffect(() => {
     onAlignedEventChange?.(alignedEvent);
@@ -93,17 +106,19 @@ export default function ReplayLiveIntelligencePulse({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <div className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${active ? "border-sky-300/35 bg-sky-300/10 text-sky-200" : "border-sky-400/20 bg-sky-400/[0.06] text-sky-400"}`}>
-            {active && <span className="absolute inset-0 animate-ping rounded-lg border border-sky-300/25" aria-hidden="true" />}
+            {alignedEvent && <span className="absolute inset-0 animate-ping rounded-lg border border-sky-300/25" aria-hidden="true" />}
             <BrainCircuit className="relative h-3.5 w-3.5" />
           </div>
           <div className="min-w-0">
             <div className="text-[9px] font-black uppercase tracking-[0.18em] text-sky-300">Entropy live intelligence</div>
             <div className="truncate text-[10px] text-slate-500">
-              {active
+              {alignedEvent
                 ? "Critical evidence aligns with the current playhead."
-                : nearest
-                  ? `Critical evidence is ${fmtOffset(nearest.offsetMs)} from the playhead.`
-                  : `${fightAnchors.length} evidence-backed event${fightAnchors.length === 1 ? "" : "s"} mapped across this fight.`}
+                : evidenceEvent
+                  ? `Holding exact evidence from ${fmtOffset(evidenceEvent.timestampMs - timestampMs)} for review.`
+                  : nearest
+                    ? `Critical evidence is ${fmtOffset(nearest.offsetMs)} from the playhead.`
+                    : `${fightAnchors.length} evidence-backed event${fightAnchors.length === 1 ? "" : "s"} mapped across this fight.`}
             </div>
           </div>
         </div>
@@ -112,13 +127,13 @@ export default function ReplayLiveIntelligencePulse({
         </div>
       </div>
 
-      {alignedEvent && (
+      {evidenceEvent && (
         <div className="mt-3">
           <ReplayEventEvidencePanel
             data={fight.data}
-            event={alignedEvent}
-            t={timestampMs}
-            onSelectAccount={(account) => onSeek(alignedEvent.timestampMs, account)}
+            event={evidenceEvent}
+            t={evidenceEvent.timestampMs}
+            onSelectAccount={(account) => onSeek(evidenceEvent.timestampMs, account)}
           />
         </div>
       )}
