@@ -12,28 +12,30 @@ export interface ReplayIntelligenceAnchor {
   summary: string;
   confidence: string;
   account?: string;
+  accounts: string[];
 }
 
 function normalizePlayerKey(value: string | undefined): string {
   return (value ?? "").trim().toLowerCase();
 }
 
-function resolveTrackedAccount(fight: ReplayFightEntry, relatedPlayers: string[] | undefined): string | undefined {
-  if (!relatedPlayers?.length) return undefined;
+function resolveTrackedAccounts(fight: ReplayFightEntry, relatedPlayers: string[] | undefined): string[] {
+  if (!relatedPlayers?.length) return [];
 
   const players = fight.data.players ?? [];
+  const resolved: string[] = [];
+
   for (const relatedPlayer of relatedPlayers) {
     const key = normalizePlayerKey(relatedPlayer);
     if (!key) continue;
 
     const exactAccount = players.find((player) => normalizePlayerKey(player.account) === key);
-    if (exactAccount) return exactAccount.account;
-
-    const exactName = players.find((player) => normalizePlayerKey(player.name) === key);
-    if (exactName) return exactName.account;
+    const exactName = exactAccount ? undefined : players.find((player) => normalizePlayerKey(player.name) === key);
+    const account = exactAccount?.account ?? exactName?.account;
+    if (account && !resolved.includes(account)) resolved.push(account);
   }
 
-  return undefined;
+  return resolved;
 }
 
 export function buildReplayIntelligenceAnchors(
@@ -51,6 +53,8 @@ export function buildReplayIntelligenceAnchors(
       const fight = replayFights[fightIndex];
       if (!Number.isFinite(event.timestampMs) || event.timestampMs < 0 || event.timestampMs > fight.data.durationMs) return null;
 
+      const accounts = resolveTrackedAccounts(fight, event.relatedPlayers);
+
       return {
         id: event.id,
         fightId: String(event.fightId),
@@ -61,7 +65,8 @@ export function buildReplayIntelligenceAnchors(
         category: event.category,
         summary: event.summary,
         confidence: event.confidence,
-        account: resolveTrackedAccount(fight, event.relatedPlayers),
+        account: accounts[0],
+        accounts,
       };
     })
     .filter((anchor): anchor is ReplayIntelligenceAnchor => anchor != null)

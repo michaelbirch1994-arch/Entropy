@@ -11,6 +11,7 @@ const replayFights = [
       durationMs: 10_000,
       players: [
         { account: "Alpha.1111", name: "Alpha Character" },
+        { account: "Bravo.2222", name: "Bravo Character" },
       ],
     },
   },
@@ -80,8 +81,8 @@ function dashboard(): IntelligenceDashboard {
 describe("buildReplayIntelligenceAnchors", () => {
   it("maps only critical events that have exact replay fight coverage", () => {
     expect(buildReplayIntelligenceAnchors(dashboard(), replayFights)).toEqual([
-      expect.objectContaining({ id: "event-a", fightIndex: 0, fightName: "Fight A", timestampMs: 7_000 }),
-      expect.objectContaining({ id: "event-b", fightIndex: 1, fightName: "Fight B", timestampMs: 4_000, account: "Player.1234" }),
+      expect.objectContaining({ id: "event-a", fightIndex: 0, fightName: "Fight A", timestampMs: 7_000, accounts: [] }),
+      expect.objectContaining({ id: "event-b", fightIndex: 1, fightName: "Fight B", timestampMs: 4_000, account: "Player.1234", accounts: ["Player.1234"] }),
     ]);
   });
 
@@ -101,6 +102,26 @@ describe("buildReplayIntelligenceAnchors", () => {
 
     const anchor = buildReplayIntelligenceAnchors(input, replayFights).find((item) => item.id === "character-name-event");
     expect(anchor?.account).toBe("Alpha.1111");
+    expect(anchor?.accounts).toEqual(["Alpha.1111"]);
+  });
+
+  it("preserves every unique related player that is actually tracked in the replay fight", () => {
+    const input = dashboard();
+    input.criticalEvents.push({
+      id: "multi-player-event",
+      fightId: "fight-a",
+      timestampMs: 6_000,
+      kind: "mass-down",
+      category: "coordination",
+      summary: "Multiple tracked players were involved.",
+      relatedEvents: [],
+      relatedPlayers: ["Alpha Character", "Bravo.2222", "Alpha.1111", "Missing Character"],
+      confidence: "high",
+    });
+
+    const anchor = buildReplayIntelligenceAnchors(input, replayFights).find((item) => item.id === "multi-player-event");
+    expect(anchor?.account).toBe("Alpha.1111");
+    expect(anchor?.accounts).toEqual(["Alpha.1111", "Bravo.2222"]);
   });
 
   it("does not invent a tactical-state player when the related identity is not tracked in replay", () => {
@@ -119,6 +140,7 @@ describe("buildReplayIntelligenceAnchors", () => {
 
     const anchor = buildReplayIntelligenceAnchors(input, replayFights).find((item) => item.id === "untracked-player-event");
     expect(anchor?.account).toBeUndefined();
+    expect(anchor?.accounts).toEqual([]);
   });
 
   it("rejects timestamps outside the replay bounds instead of inventing a seek point", () => {

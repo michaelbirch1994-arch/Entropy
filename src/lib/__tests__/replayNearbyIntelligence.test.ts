@@ -13,6 +13,7 @@ function anchor(id: string, fightIndex: number, timestampMs: number): ReplayInte
     category: "defense",
     summary: id,
     confidence: "high",
+    accounts: [],
   };
 }
 
