@@ -114,6 +114,17 @@ aside[class*="border-sky-400/15"][class*="bg-[#080d18]/95"] section:nth-of-type(
   min-height: 8.5rem;
 }
 
+/* Replay labels are counter-flipped so they remain upright inside the
+   world-space Y-flipped map. Flip each label around its own box rather than
+   around an absolute, per-frame coordinate; this keeps the name visually
+   attached to the marker while the camera and playhead move. */
+.theme-app-shell svg text[stroke="#020617"][paint-order="stroke"] {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scaleY(-1) !important;
+  transition: none !important;
+}
+
 /* Do not animate geometry inside the live Replay surfaces. Color/opacity can
    still transition, but height/margin/padding changes should snap in place. */
 section[aria-label="Nearby Intelligence events"],
