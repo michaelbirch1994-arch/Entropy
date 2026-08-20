@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { Crosshair, Download, Film, Pause, Play, RotateCcw, X } from "lucide-react";
+import ReplayLiveIntelligencePulse from "../components/replay/ReplayLiveIntelligencePulse";
 import ReplayTacticalStatePanel from "../components/replay/ReplayTacticalStatePanel";
 import Panel from "../components/ui/Panel";
 import { distanceBetween, interpolateFacing, interpolatePosition, isInInterval } from "../lib/parseReplayData";
@@ -362,6 +363,16 @@ export default function ReplayViewV2() {
               <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2"><div className="text-[9px] font-bold uppercase tracking-wider text-amber-400/70">Avg. dist to tag</div><div className="font-mono text-lg font-black text-amber-300">{liveStats.avgDistToTag == null ? "—" : Math.round(liveStats.avgDistToTag)}</div></div>
             </div>
           )}
+
+          <ReplayLiveIntelligencePulse
+            fightIndex={fightIdx}
+            timestampMs={t}
+            onSeek={(timestampMs, account) => {
+              setT(timestampMs);
+              setPlaying(false);
+              if (account) setSelectedAccount(account);
+            }}
+          />
 
           <div className="mb-3 flex flex-wrap items-center gap-2">
             {([
