@@ -13,10 +13,19 @@ interface LeaderboardTableProps {
 }
 
 export default function LeaderboardTable({ entries, metricLabel, compact = false, unit, totalFights, generalPlayers = [] }: LeaderboardTableProps) {
-  const max = entries.length ? entries[0].value : 1;
+  if (entries.length === 0) {
+    return (
+      <div className="theme-analytics-empty" role="status">
+        <div className="theme-analytics-empty-label">No ranked data</div>
+        <p className="theme-analytics-empty-copy">No players have qualifying {metricLabel.toLowerCase()} data for the current report selection.</p>
+      </div>
+    );
+  }
+
+  const max = entries[0].value;
   const generalByAccount = new Map(generalPlayers.map((player) => [player.account, player]));
   return (
-    <div className="theme-table-shell overflow-x-auto">
+    <div className="theme-table-shell overflow-x-auto" tabIndex={0} aria-label={`${metricLabel} leaderboard`}>
       <table className="theme-data-table w-full text-left border-collapse text-xs">
         <thead>
           <tr className="theme-table-head text-[10px] uppercase font-bold tracking-wider">
