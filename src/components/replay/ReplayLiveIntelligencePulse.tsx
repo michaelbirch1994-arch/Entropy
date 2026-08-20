@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { BrainCircuit, Clock3, SkipBack, SkipForward, Users } from "lucide-react";
 import { buildIntelligenceDashboard } from "../../lib/intelligence/intelligenceDashboard";
 import { nearbyReplayIntelligenceEvents } from "../../lib/replayNearbyIntelligence";
-import { buildReplayIntelligenceAnchors } from "../../lib/replayIntelligenceAnchors";
+import { buildReplayIntelligenceAnchors, type ReplayIntelligenceAnchor } from "../../lib/replayIntelligenceAnchors";
 import { useReport } from "../../store/ReportContext";
 
 function fmtOffset(ms: number): string {
@@ -34,10 +34,12 @@ export default function ReplayLiveIntelligencePulse({
   fightIndex,
   timestampMs,
   onSeek,
+  onAlignedEventChange,
 }: {
   fightIndex: number;
   timestampMs: number;
   onSeek: (timestampMs: number, account?: string) => void;
+  onAlignedEventChange?: (event: ReplayIntelligenceAnchor | null) => void;
 }) {
   const { report } = useReport();
   const replayFights = report?.stats.replayFights;
@@ -58,10 +60,17 @@ export default function ReplayLiveIntelligencePulse({
     [fight],
   );
 
-  if (!fight || fightAnchors.length === 0) return null;
-
   const nearest = nearby[0];
   const active = !!nearest && nearest.distanceMs <= 750;
+  const alignedEvent = active ? nearest : null;
+
+  useEffect(() => {
+    onAlignedEventChange?.(alignedEvent);
+    return () => onAlignedEventChange?.(null);
+  }, [alignedEvent?.id, fightIndex, onAlignedEventChange]);
+
+  if (!fight || fightAnchors.length === 0) return null;
+
   const playheadPct = fight.data.durationMs > 0
     ? Math.max(0, Math.min(100, (timestampMs / fight.data.durationMs) * 100))
     : 0;
