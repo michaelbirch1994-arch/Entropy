@@ -280,6 +280,72 @@ button.theme-metric-card:focus-visible::after {
   height: 100%;
 }
 
+/* Dense tables are evidence surfaces: stronger headers, quieter separators,
+   and stable numeric alignment make them faster to scan without adding chrome. */
+.theme-data-table {
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-data-table .theme-table-head {
+  color: color-mix(in srgb, var(--theme-textMuted) 88%, var(--theme-text));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 6%, transparent), transparent 34%),
+    color-mix(in srgb, var(--theme-surfaceInset) 96%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-borderStrong) 44%, transparent);
+}
+
+.theme-data-table .theme-table-head th {
+  white-space: nowrap;
+}
+
+.theme-data-table .theme-table-row {
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 28%, transparent);
+  background: transparent;
+}
+
+.theme-data-table .theme-table-row:nth-child(even) {
+  background: color-mix(in srgb, var(--theme-surfaceElevated) 12%, transparent);
+}
+
+.theme-data-table .theme-table-row:hover {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 7%, transparent), transparent 58%),
+    color-mix(in srgb, var(--theme-surfaceElevated) 34%, transparent) !important;
+}
+
+.theme-data-table .theme-table-row[data-rank="1"] {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--theme-warning) 78%, transparent);
+}
+
+.theme-data-table .theme-table-row[data-rank="2"] {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--theme-ash) 58%, transparent);
+}
+
+.theme-data-table .theme-table-row[data-rank="3"] {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--theme-accentDim) 78%, transparent);
+}
+
+.theme-data-table .theme-table-player {
+  letter-spacing: -0.01em;
+}
+
+.theme-data-table .theme-table-value {
+  min-width: 7.5rem;
+  color: var(--theme-text);
+}
+
+.theme-data-table .theme-table-sample {
+  min-width: 11.5rem;
+}
+
+.theme-data-table .theme-table-share {
+  min-width: 8rem;
+}
+
+.theme-table-shell {
+  scrollbar-gutter: stable;
+}
+
 /* On very wide displays, retain hierarchy by giving filter controls a bounded
    visual measure even though tables/cards can use the whole workspace. */
 @media (min-width: 2560px) {
@@ -294,6 +360,10 @@ button.theme-metric-card:focus-visible::after {
 
   .theme-mvp-card {
     min-height: 21rem;
+  }
+
+  .theme-data-table .theme-table-value {
+    min-width: 9rem;
   }
 }
 
