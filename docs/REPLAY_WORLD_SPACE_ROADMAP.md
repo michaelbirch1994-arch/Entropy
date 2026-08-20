@@ -45,7 +45,22 @@ Rules:
 - Apply documented coordinate corrections only where a source-backed exception is known.
 - Do not create fight-location narrative until objective/map placement is verified.
 
-## Out of scope until all four phases are stable
+## Phase 5 — Expanded Replay workspace
+
+Goal: let Replay use a dedicated, larger tactical workspace without replacing or duplicating the embedded Replay implementation.
+
+Rules:
+- Keep the existing embedded Replay available.
+- Add an explicit expanded/popout Replay action.
+- On desktop, prefer a real Tauri secondary window rather than maintaining a separate browser-only Replay implementation.
+- Reuse the same Replay components, data model, evidence rules, and world-space rendering path; do not fork Replay logic.
+- Preserve the active fight, playhead timestamp, selected player, and selected Intelligence event when opening the expanded workspace.
+- Design the expanded layout around a large tactical map, Tactical State/evidence rail, and persistent timeline/Intelligence track.
+- Make the workspace multi-monitor friendly.
+- Treat cross-window playback/selection synchronization as optional follow-up behavior; do not make it a prerequisite for the first expanded workspace.
+- Do not start this phase until the world-space/map work is stable enough that the larger canvas displays trustworthy battlefield context.
+
+## Out of scope until the world-space phases are stable
 
 - AI-generated spatial explanations
 - inferred spawn locations
