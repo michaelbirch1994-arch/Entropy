@@ -29,6 +29,14 @@ export interface ReplayFacingPoint {
   angle: number;
 }
 
+export interface ReplayEffectTrack {
+  id: number;
+  name: string;
+  icon?: string;
+  classification: "Boon" | "Condition";
+  states: [number, number][];
+}
+
 export interface ReplayPlayerTrack {
   account: string;
   name: string;
@@ -39,6 +47,13 @@ export interface ReplayPlayerTrack {
   downIntervals: [number, number][];
   deadIntervals: [number, number][];
   facings: ReplayFacingPoint[];
+  /**
+   * Timestamped boon/condition state copied from EI's player buffUptimes.
+   * This is persisted into Entropy's combined report so the first-class
+   * Replay page can inspect the same live state that the raw-log replay popup
+   * already exposes, even after the original upload object is gone.
+   */
+  effects: ReplayEffectTrack[];
   /**
    * Cast times of skills that actually dealt damage in this fight. These
    * mark WHERE AND WHEN a skill was cast - they are not the effect's real
@@ -154,6 +169,43 @@ function asIntervals(v: unknown): [number, number][] {
   return out;
 }
 
+function asEffectStates(v: unknown): [number, number][] {
+  if (!Array.isArray(v)) return [];
+  const out: [number, number][] = [];
+  for (const entry of v) {
+    if (!Array.isArray(entry) || entry.length < 2) continue;
+    const time = Number(entry[0]);
+    const stacks = Number(entry[1]);
+    if (!Number.isFinite(time) || !Number.isFinite(stacks)) continue;
+    out.push([time, stacks]);
+  }
+  return out.sort((a, b) => a[0] - b[0]);
+}
+
+function playerEffectTracks(
+  player: Record<string, unknown>,
+  buffMap: Record<string, { name?: string; icon?: string; classification?: string }>,
+): ReplayEffectTrack[] {
+  if (!Array.isArray(player.buffUptimes)) return [];
+  const effects: ReplayEffectTrack[] = [];
+  for (const rawEntry of player.buffUptimes as Array<Record<string, unknown>>) {
+    const id = Number(rawEntry.id);
+    if (!Number.isFinite(id)) continue;
+    const states = asEffectStates(rawEntry.states);
+    if (states.length === 0) continue;
+    const meta = buffMap[`b${id}`] ?? buffMap[String(id)] ?? {};
+    if (meta.classification !== "Boon" && meta.classification !== "Condition") continue;
+    effects.push({
+      id,
+      name: typeof meta.name === "string" && meta.name ? meta.name : `Effect ${id}`,
+      icon: typeof meta.icon === "string" ? meta.icon : undefined,
+      classification: meta.classification,
+      states,
+    });
+  }
+  return effects.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 // EI's "isFake" flag marks decoy/clone actors it still tracks combat for but
 // that were never a real hostile player (illusions, siege placeholders,
 // etc.) - excluded so the replay doesn't scatter phantom red dots that don't
@@ -182,6 +234,7 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
   const rawTargets = (rawLog.targets ?? []) as unknown as Record<string, unknown>[];
   const replayMeta = (rawLog.combatReplayMetaData ?? {}) as Record<string, unknown>;
   const pollingRate = Number(replayMeta.pollingRate) > 0 ? Number(replayMeta.pollingRate) : 150;
+  const buffMap = (rawLog.buffMap ?? {}) as Record<string, { name?: string; icon?: string; classification?: string }>;
 
   const sizes = Array.isArray(replayMeta.sizes) ? (replayMeta.sizes as unknown[]) : [];
   const mapWidth = Number(sizes[0]) || 0;
@@ -265,6 +318,7 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
       downIntervals: asIntervals(crd.down),
       deadIntervals: asIntervals(crd.dead),
       facings,
+      effects: playerEffectTracks(p, buffMap),
       casts,
     });
   }
