@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { nearbyReplayIntelligenceEvents } from "../replayNearbyIntelligence";
+import { alignedReplayIntelligenceEvent, nearbyReplayIntelligenceEvents } from "../replayNearbyIntelligence";
 import type { ReplayIntelligenceAnchor } from "../replayIntelligenceAnchors";
 
-function anchor(id: string, fightIndex: number, timestampMs: number): ReplayIntelligenceAnchor {
+function anchor(id: string, fightIndex: number, timestampMs: number, accounts: string[] = []): ReplayIntelligenceAnchor {
   return {
     id,
     fightId: `fight-${fightIndex}`,
@@ -13,14 +13,14 @@ function anchor(id: string, fightIndex: number, timestampMs: number): ReplayInte
     category: "defense",
     summary: id,
     confidence: "high",
-    accounts: [],
+    accounts,
   };
 }
 
 describe("nearbyReplayIntelligenceEvents", () => {
   const anchors = [
     anchor("past", 0, 8_000),
-    anchor("nearest", 0, 10_500),
+    anchor("nearest", 0, 10_500, ["Player.1234", "Ally.5678"]),
     anchor("future", 0, 14_000),
     anchor("other-fight", 1, 10_200),
     anchor("outside", 0, 20_000),
@@ -43,8 +43,20 @@ describe("nearbyReplayIntelligenceEvents", () => {
     ]);
   });
 
+  it("returns the nearest exact-fight event only inside the alignment threshold", () => {
+    const aligned = alignedReplayIntelligenceEvent(anchors, 0, 10_000, 750);
+    expect(aligned).toEqual(expect.objectContaining({
+      id: "nearest",
+      distanceMs: 500,
+      accounts: ["Player.1234", "Ally.5678"],
+    }));
+    expect(alignedReplayIntelligenceEvent(anchors, 0, 11_500, 750)).toBeNull();
+    expect(alignedReplayIntelligenceEvent(anchors, 1, 10_000, 750)?.id).toBe("other-fight");
+  });
+
   it("rejects invalid playhead/window input instead of manufacturing context", () => {
     expect(nearbyReplayIntelligenceEvents(anchors, 0, Number.NaN, 5_000)).toEqual([]);
     expect(nearbyReplayIntelligenceEvents(anchors, 0, 10_000, -1)).toEqual([]);
+    expect(alignedReplayIntelligenceEvent(anchors, 0, 10_000, -1)).toBeNull();
   });
 });
