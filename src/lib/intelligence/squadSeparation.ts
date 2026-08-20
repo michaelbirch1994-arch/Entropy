@@ -1,5 +1,5 @@
 import { classifyDegree, OUT_OF_POSITION, type ParsedReport } from '../bridge-metrics/positioning';
-import { eventIdentity, type CombatAgent, type CombatEvent, type CombatEventSet } from '../combat/CombatEvent';
+import { eventIdentity, type CombatAgent, type CombatEventSet } from '../combat/CombatEvent';
 import { resolveAgentIdentityKey, describeAgent } from '../combat/agentIdentity';
 import type { CriticalEvent } from './types';
 
@@ -12,6 +12,7 @@ interface ReplayPlayer {
   combatReplayData?: {
     positions?: Array<[number, number]>;
     start?: number;
+    dead?: Array<[number, number]>;
   };
 }
 
@@ -50,6 +51,11 @@ function agentOf(player: ReplayPlayer, playerIndex?: number): CombatAgent {
   };
 }
 
+function isDeadAt(intervals: Array<[number, number]> | undefined, timestampMs: number): boolean {
+  if (!Array.isArray(intervals)) return false;
+  return intervals.some(([startMs, endMs]) => timestampMs >= startMs && (endMs <= 0 || timestampMs <= endMs));
+}
+
 interface SeparationSample {
   timestampMs: number;
   distance: number;
@@ -62,8 +68,14 @@ interface SeparationSample {
  * the commander. This suppresses replay-start/setup noise where a player begins far
  * from tag before the fight has actually formed, without imposing an arbitrary global
  * "ignore the first N seconds" window that could hide a legitimate early separation.
- * Formation is established independently per player and remains established for the
- * rest of the fight once proven.
+ * Formation is established independently per player.
+ *
+ * Death/release is a separate lifecycle state, not a positioning mistake. A death closes
+ * any active separation run, disables separation detection while the player is dead, and
+ * clears formation eligibility. After the player is alive again they must establish
+ * formation near commander again before a later separation can be emitted. This prevents
+ * released players sitting at spawn from polluting Intelligence with squad-separation
+ * events while preserving a valid pre-death separation that met the normal threshold.
  *
  * This deliberately does NOT normalize positioning into CombatEvents. Positioning is
  * continuous replay data, not discrete combat events, and CombatEvent.ts explicitly
@@ -113,6 +125,7 @@ export function detectSquadSeparations(
     const playerKey = resolveAgentIdentityKey(agent);
     const playerStart = Number(player?.combatReplayData?.start ?? 0);
     const playerOffset = Math.floor(playerStart / pollingRate);
+    const deadIntervals = player?.combatReplayData?.dead;
     let run: SeparationSample[] = [];
     let formationRunStartMs: number | null = null;
     let hasEstablishedFormation = false;
@@ -165,6 +178,15 @@ export function detectSquadSeparations(
       const distance = Math.hypot(px - tx, py - ty) / inchToPixel;
       const timestampMs = (i + playerOffset) * pollingRate;
 
+      if (isDeadAt(deadIntervals, timestampMs)) {
+        // A valid separation before death may still be meaningful, but death/release
+        // ends that positioning state immediately. Respawn must re-establish formation.
+        flushRun();
+        formationRunStartMs = null;
+        hasEstablishedFormation = false;
+        continue;
+      }
+
       if (!hasEstablishedFormation) {
         if (distance <= formationDistanceThreshold) {
           formationRunStartMs ??= timestampMs;
@@ -176,8 +198,8 @@ export function detectSquadSeparations(
           formationRunStartMs = null;
         }
 
-        // Never let pre-formation distance become a separation run. Once formation is
-        // established on this sample, separation can only begin on a later sample.
+        // Never let pre-formation or post-respawn distance become a separation run.
+        // Once formation is established on this sample, separation can only begin later.
         run = [];
         continue;
       }
