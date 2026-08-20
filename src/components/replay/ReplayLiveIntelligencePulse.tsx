@@ -11,8 +11,23 @@ function fmtOffset(ms: number): string {
   return `${ms < 0 ? "-" : "+"}${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;
 }
 
+function fmtClock(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}`;
+}
+
 function titleForKind(kind: string): string {
   return kind.replace(/[-_]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function markerClass(category: string, aligned: boolean): string {
+  if (aligned) return "bg-sky-200 ring-2 ring-sky-300/35";
+  if (category === "defense") return "bg-rose-400";
+  if (category === "positioning") return "bg-amber-300";
+  if (category === "support") return "bg-emerald-400";
+  if (category === "offense") return "bg-orange-400";
+  if (category === "coordination") return "bg-violet-400";
+  return "bg-sky-400";
 }
 
 export default function ReplayLiveIntelligencePulse({
@@ -28,15 +43,23 @@ export default function ReplayLiveIntelligencePulse({
   const replayFights = report?.stats.replayFights;
   const dashboard = useMemo(() => (report ? buildIntelligenceDashboard(report) : null), [report]);
   const anchors = useMemo(() => buildReplayIntelligenceAnchors(dashboard, replayFights), [dashboard, replayFights]);
+  const fight = replayFights?.[fightIndex];
+  const fightAnchors = useMemo(
+    () => anchors.filter((anchor) => anchor.fightIndex === fightIndex),
+    [anchors, fightIndex],
+  );
   const nearby = useMemo(
     () => nearbyReplayIntelligenceEvents(anchors, fightIndex, timestampMs, 5000).slice(0, 3),
     [anchors, fightIndex, timestampMs],
   );
 
-  if (nearby.length === 0) return null;
+  if (!fight || fightAnchors.length === 0) return null;
 
   const nearest = nearby[0];
-  const active = nearest.distanceMs <= 750;
+  const active = !!nearest && nearest.distanceMs <= 750;
+  const playheadPct = fight.data.durationMs > 0
+    ? Math.max(0, Math.min(100, (timestampMs / fight.data.durationMs) * 100))
+    : 0;
 
   return (
     <section
@@ -56,36 +79,78 @@ export default function ReplayLiveIntelligencePulse({
           <div className="min-w-0">
             <div className="text-[9px] font-black uppercase tracking-[0.18em] text-sky-300">Entropy live intelligence</div>
             <div className="truncate text-[10px] text-slate-500">
-              {active ? "Critical evidence aligns with the current playhead." : `Critical evidence is ${fmtOffset(nearest.offsetMs)} from the playhead.`}
+              {active
+                ? "Critical evidence aligns with the current playhead."
+                : nearest
+                  ? `Critical evidence is ${fmtOffset(nearest.offsetMs)} from the playhead.`
+                  : `${fightAnchors.length} evidence-backed event${fightAnchors.length === 1 ? "" : "s"} mapped across this fight.`}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1 font-mono text-[9px] text-slate-500">
-          <Clock3 className="h-3 w-3" /> ±5s window
+          <Clock3 className="h-3 w-3" /> {nearby.length > 0 ? "±5s live window" : `${fightAnchors.length} fight events`}
         </div>
       </div>
 
-      <div className="mt-2 flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
-        {nearby.map((event) => (
-          <button
-            key={event.id}
-            type="button"
-            title={event.summary}
-            onClick={() => onSeek(event.timestampMs, event.account)}
-            className={`min-w-[190px] max-w-[260px] shrink-0 cursor-pointer rounded-lg border px-2.5 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50 ${
-              event.distanceMs <= 750
-                ? "border-sky-300/30 bg-sky-300/[0.07]"
-                : "border-white/[0.07] bg-black/20 hover:border-sky-400/25 hover:bg-sky-400/[0.04]"
-            }`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-[9px] font-black uppercase tracking-[0.12em] text-slate-300">{titleForKind(event.kind)}</span>
-              <span className={`shrink-0 font-mono text-[9px] font-bold ${event.distanceMs <= 750 ? "text-sky-200" : "text-sky-400/70"}`}>{fmtOffset(event.offsetMs)}</span>
-            </div>
-            <p className="mt-1 line-clamp-2 text-[9px] leading-relaxed text-slate-500">{event.summary}</p>
-          </button>
-        ))}
+      <div className="mt-3 rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2">
+        <div className="mb-1.5 flex items-center justify-between gap-2 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-600">
+          <span>Intelligence event track</span>
+          <span className="font-mono normal-case tracking-normal text-slate-500">{fmtClock(timestampMs)} / {fmtClock(fight.data.durationMs)}</span>
+        </div>
+        <div className="relative h-6" aria-label={`${fightAnchors.length} Intelligence events across this fight`}>
+          <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-slate-700/70" />
+          <div className="absolute bottom-0 top-0 w-px bg-sky-200/70 shadow-[0_0_8px_rgba(125,211,252,0.65)]" style={{ left: `${playheadPct}%` }} aria-hidden="true" />
+          {fightAnchors.map((anchor) => {
+            const pct = fight.data.durationMs > 0
+              ? Math.max(0, Math.min(100, (anchor.timestampMs / fight.data.durationMs) * 100))
+              : 0;
+            const aligned = Math.abs(anchor.timestampMs - timestampMs) <= 750;
+            return (
+              <button
+                key={anchor.id}
+                type="button"
+                onClick={() => onSeek(anchor.timestampMs, anchor.account)}
+                title={`${titleForKind(anchor.kind)} · ${fmtClock(anchor.timestampMs)} · ${anchor.summary}`}
+                aria-label={`Seek to ${titleForKind(anchor.kind)} at ${fmtClock(anchor.timestampMs)}`}
+                className={`absolute top-1/2 h-3 w-1.5 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full transition hover:h-4 hover:w-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 ${markerClass(anchor.category, aligned)}`}
+                style={{ left: `${pct}%` }}
+              />
+            );
+          })}
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[8px] text-slate-600">
+          <span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-rose-400" />Defense</span>
+          <span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-amber-300" />Positioning</span>
+          <span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />Support</span>
+          <span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-orange-400" />Offense</span>
+          <span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-400" />Coordination</span>
+          <span className="ml-auto text-slate-500">Click any marker to seek to exact evidence.</span>
+        </div>
       </div>
+
+      {nearby.length > 0 && (
+        <div className="mt-2 flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
+          {nearby.map((event) => (
+            <button
+              key={event.id}
+              type="button"
+              title={event.summary}
+              onClick={() => onSeek(event.timestampMs, event.account)}
+              className={`min-w-[190px] max-w-[260px] shrink-0 cursor-pointer rounded-lg border px-2.5 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50 ${
+                event.distanceMs <= 750
+                  ? "border-sky-300/30 bg-sky-300/[0.07]"
+                  : "border-white/[0.07] bg-black/20 hover:border-sky-400/25 hover:bg-sky-400/[0.04]"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-[9px] font-black uppercase tracking-[0.12em] text-slate-300">{titleForKind(event.kind)}</span>
+                <span className={`shrink-0 font-mono text-[9px] font-bold ${event.distanceMs <= 750 ? "text-sky-200" : "text-sky-400/70"}`}>{fmtOffset(event.offsetMs)}</span>
+              </div>
+              <p className="mt-1 line-clamp-2 text-[9px] leading-relaxed text-slate-500">{event.summary}</p>
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
