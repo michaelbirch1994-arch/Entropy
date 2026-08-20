@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nearbyReplayIntelligenceEvents } from "../replayNearbyIntelligence";
+import { alignedReplayIntelligenceEvent, nearbyReplayIntelligenceEvents } from "../replayNearbyIntelligence";
 import type { ReplayIntelligenceAnchor } from "../replayIntelligenceAnchors";
 
 function anchor(id: string, fightIndex: number, timestampMs: number): ReplayIntelligenceAnchor {
@@ -43,8 +43,16 @@ describe("nearbyReplayIntelligenceEvents", () => {
     ]);
   });
 
+  it("returns the nearest aligned event only inside the exact tolerance", () => {
+    expect(alignedReplayIntelligenceEvent(anchors, 0, 10_000)?.id).toBe("nearest");
+    expect(alignedReplayIntelligenceEvent(anchors, 0, 9_000)).toBeNull();
+    expect(alignedReplayIntelligenceEvent(anchors, 1, 10_000)?.id).toBe("other-fight");
+  });
+
   it("rejects invalid playhead/window input instead of manufacturing context", () => {
     expect(nearbyReplayIntelligenceEvents(anchors, 0, Number.NaN, 5_000)).toEqual([]);
     expect(nearbyReplayIntelligenceEvents(anchors, 0, 10_000, -1)).toEqual([]);
+    expect(alignedReplayIntelligenceEvent(anchors, 0, 10_000, Number.NaN)).toBeNull();
+    expect(alignedReplayIntelligenceEvent(anchors, 0, 10_000, -1)).toBeNull();
   });
 });
