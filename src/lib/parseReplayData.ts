@@ -119,7 +119,8 @@ export interface ReplayData {
   players: ReplayPlayerTrack[];
   enemies: ReplayEnemyTrack[];
   map: ReplayMapInfo | null;
-  worldSpace: ReplayWorldSpaceMetadata;
+  /** Present on reports parsed after the Phase 3 world-space foundation landed. */
+  worldSpace?: ReplayWorldSpaceMetadata;
   mechanics: ReplayMechanicMarker[];
   skillMeta: Record<number, { name: string; icon?: string }>;
 }
