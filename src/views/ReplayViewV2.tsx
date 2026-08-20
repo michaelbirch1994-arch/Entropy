@@ -150,7 +150,7 @@ export default function ReplayViewV2() {
     if (!fight) return null;
     if (selectedAccount) {
       const selected = fight.data.players.find((player) => player.account === selectedAccount);
-      const selectedPoint = selected ? interpolatePosition(selected.points, t) : null;
+      const selectedPoint = selected && !isInInterval(selected.deadIntervals, t) ? interpolatePosition(selected.points, t) : null;
       if (selectedPoint) return selectedPoint;
     }
     const squadAlive = fight.data.players.filter((player) => player.inSquad && !isInInterval(player.deadIntervals, t));
