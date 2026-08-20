@@ -13,6 +13,7 @@ function replayFight(fightId: string): ReplayFightEntry {
       players: [],
       enemies: [],
       map: null,
+      worldSpace: { mapId: null, wvwMapData: null },
       skillMeta: {},
       mechanics: [
         { t: 8_000, name: "Early", severity: "Sev1", actor: "Alpha", account: "Alpha.1234" },
