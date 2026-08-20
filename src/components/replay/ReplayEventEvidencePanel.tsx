@@ -1,10 +1,21 @@
-import { BrainCircuit, Crosshair, ShieldCheck, Skull, Users } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, BrainCircuit, Crosshair, ShieldCheck, Skull, Users } from "lucide-react";
 import type { ReplayData } from "../../lib/parseReplayData";
 import { buildReplayEventEvidenceState } from "../../lib/replayEventEvidenceState";
 import type { ReplayIntelligenceAnchor } from "../../lib/replayIntelligenceAnchors";
+import { buildReplayPreEventChanges, type ReplayPreEventMetric } from "../../lib/replayPreEventChanges";
 
 function titleForKind(kind: string): string {
   return kind.replace(/[-_]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatMetric(metric: ReplayPreEventMetric, value: number): string {
+  return metric.format === "average" ? value.toFixed(1) : String(Math.round(value));
+}
+
+function DeltaIcon({ delta }: { delta: number }) {
+  if (delta > 0.05) return <ArrowUpRight className="h-3 w-3" />;
+  if (delta < -0.05) return <ArrowDownRight className="h-3 w-3" />;
+  return <ArrowRight className="h-3 w-3" />;
 }
 
 export default function ReplayEventEvidencePanel({
@@ -20,6 +31,8 @@ export default function ReplayEventEvidencePanel({
 }) {
   const state = buildReplayEventEvidenceState(data, event, t);
   if (!state) return null;
+  const preEvent = buildReplayPreEventChanges(data, event, 5000);
+  const changedMetrics = (preEvent?.metrics ?? []).filter((metric) => Math.abs(metric.delta) >= (metric.format === "average" ? 0.5 : 1));
 
   const names = new Map(data.players.map((player) => [player.account, player.name]));
 
@@ -62,6 +75,39 @@ export default function ReplayEventEvidencePanel({
       {state.untrackedParticipants > 0 && (
         <div className="mt-2 text-[8px] leading-relaxed text-slate-600">
           {state.untrackedParticipants} participant{state.untrackedParticipants === 1 ? "" : "s"} lack position coverage at this exact timestamp.
+        </div>
+      )}
+
+      {preEvent && (
+        <div className="mt-3 border-t border-white/[0.06] pt-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[8px] font-black uppercase tracking-[0.16em] text-violet-300/80">Previous 5 seconds</div>
+              <div className="mt-0.5 text-[8px] text-slate-600">Tracked state change before this event — descriptive, not causal.</div>
+            </div>
+            <span className="shrink-0 font-mono text-[8px] text-slate-600">-5.0s → event</span>
+          </div>
+
+          {changedMetrics.length > 0 ? (
+            <div className="mt-2 space-y-1.5">
+              {changedMetrics.map((metric) => (
+                <div key={metric.key} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 rounded-md border border-white/[0.055] bg-black/15 px-2 py-1.5">
+                  <div className="min-w-0">
+                    <div className="truncate text-[8px] font-semibold text-slate-400">{metric.label}</div>
+                    <div className="mt-0.5 text-[7px] text-slate-600">coverage {metric.coverageBefore} → {metric.coverageAtEvent}</div>
+                  </div>
+                  <div className="font-mono text-[9px] text-slate-500">{formatMetric(metric, metric.before)} → <span className="text-slate-200">{formatMetric(metric, metric.atEvent)}</span></div>
+                  <div className={`inline-flex min-w-9 items-center justify-end gap-0.5 font-mono text-[8px] ${metric.delta > 0 ? "text-amber-300" : metric.delta < 0 ? "text-sky-300" : "text-slate-600"}`}>
+                    <DeltaIcon delta={metric.delta} />{metric.delta > 0 ? "+" : ""}{metric.format === "average" ? metric.delta.toFixed(1) : Math.round(metric.delta)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-2 rounded-md border border-white/[0.05] bg-black/15 px-2 py-2 text-[8px] text-slate-600">
+              No material tracked change crossed the display threshold in this 5-second window.
+            </div>
+          )}
         </div>
       )}
 
