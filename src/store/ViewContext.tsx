@@ -17,26 +17,53 @@ export interface ViewNavigationTarget {
 interface ViewContextValue {
   activeView: string;
   setActiveView: (view: string) => void;
+  previousView: string | null;
   navigationTarget: ViewNavigationTarget | null;
   navigateToView: (view: string, target?: Omit<ViewNavigationTarget, "targetView">) => void;
+  goBackToPreviousView: () => void;
   clearNavigationTarget: () => void;
 }
 
 const ViewContext = createContext<ViewContextValue>({
   activeView: "overview",
   setActiveView: () => {},
+  previousView: null,
   navigationTarget: null,
   navigateToView: () => {},
+  goBackToPreviousView: () => {},
   clearNavigationTarget: () => {},
 });
 
 export function ViewProvider({ children }: { children: ReactNode }) {
-  const [activeView, setActiveView] = useState("overview");
+  const [activeView, setActiveViewState] = useState("overview");
+  const [previousView, setPreviousView] = useState<string | null>(null);
   const [navigationTarget, setNavigationTarget] = useState<ViewNavigationTarget | null>(null);
 
+  function moveToView(view: string, target: ViewNavigationTarget | null) {
+    if (view === activeView) {
+      setNavigationTarget(target);
+      return;
+    }
+
+    setPreviousView(activeView);
+    setNavigationTarget(target);
+    setActiveViewState(view);
+  }
+
+  function setActiveView(view: string) {
+    moveToView(view, null);
+  }
+
   function navigateToView(view: string, target?: Omit<ViewNavigationTarget, "targetView">) {
-    setNavigationTarget(target ? { ...target, targetView: view } : null);
-    setActiveView(view);
+    moveToView(view, target ? { ...target, targetView: view } : null);
+  }
+
+  function goBackToPreviousView() {
+    if (!previousView || previousView === activeView) return;
+    const destination = previousView;
+    setPreviousView(activeView);
+    setNavigationTarget(null);
+    setActiveViewState(destination);
   }
 
   function clearNavigationTarget() {
@@ -45,7 +72,15 @@ export function ViewProvider({ children }: { children: ReactNode }) {
 
   return (
     <ViewContext.Provider
-      value={{ activeView, setActiveView, navigationTarget, navigateToView, clearNavigationTarget }}
+      value={{
+        activeView,
+        setActiveView,
+        previousView,
+        navigationTarget,
+        navigateToView,
+        goBackToPreviousView,
+        clearNavigationTarget,
+      }}
     >
       {children}
     </ViewContext.Provider>
