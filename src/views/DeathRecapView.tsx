@@ -4,7 +4,7 @@ import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
 import { fmtCompact, profChip } from "../utils/format";
 import type { DeathRecapEntry, DeathRecapHit } from "../types/report";
-import { Skull, ArrowDown, Swords, ShieldAlert } from "lucide-react";
+import { Skull, ArrowDown, Swords, ShieldAlert, Film } from "lucide-react";
 import {
   buildDeathBoonCorrelationRows,
   nextDeathBoonSort,
@@ -46,7 +46,17 @@ function HitRow({ hit, deathTime }: { hit: DeathRecapHit; deathTime: number }) {
   );
 }
 
-function DeathCard({ entry, focused = false }: { entry: DeathRecapEntry; focused?: boolean }) {
+function DeathCard({
+  entry,
+  focused = false,
+  onViewReplay,
+  replayUnavailableReason,
+}: {
+  entry: DeathRecapEntry;
+  focused?: boolean;
+  onViewReplay?: () => void;
+  replayUnavailableReason?: string;
+}) {
   const [open, setOpen] = useState(focused);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const totalToKill = entry.toKill.reduce((a, h) => a + h.damage, 0);
@@ -104,6 +114,25 @@ function DeathCard({ entry, focused = false }: { entry: DeathRecapEntry; focused
 
       {open && (
         <div className="px-4 pb-4 space-y-3">
+          <div className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 ${onViewReplay ? "border-sky-400/20 bg-sky-500/[0.05]" : "border-slate-700/60 bg-slate-900/40"}`}>
+            <div>
+              <div className={`text-[10px] font-black uppercase tracking-wider ${onViewReplay ? "text-sky-200" : "text-slate-500"}`}>Replay evidence</div>
+              <div className="mt-0.5 text-[10px] leading-4 text-slate-500">
+                {onViewReplay
+                  ? `Open the exact ${fmtClock(entry.deathTimeMs)} death timestamp with ${entry.account} selected.`
+                  : replayUnavailableReason ?? "Exact Replay coverage is unavailable for this death."}
+              </div>
+            </div>
+            {onViewReplay && (
+              <button
+                type="button"
+                onClick={onViewReplay}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/[0.08] px-3 py-2 text-[9px] font-black uppercase tracking-wider text-sky-200 transition-colors hover:border-sky-300/40 hover:bg-sky-500/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
+              >
+                <Film className="h-3.5 w-3.5" /> View in Replay
+              </button>
+            )}
+          </div>
           {entry.toDown.length > 0 && (
             <div>
               <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 mb-1 px-2">
@@ -227,9 +256,13 @@ function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<type
 
 export default function DeathRecapView() {
   const { report } = useReport();
-  const { navigationTarget } = useView();
+  const { navigationTarget, navigateToView } = useView();
   const recaps = report?.stats.deathRecaps ?? [];
   const [accountFilter, setAccountFilter] = useState<string>("all");
+  const replayFightIds = useMemo(
+    () => new Set((report?.stats.replayFights ?? []).map((entry) => entry.fightId)),
+    [report],
+  );
 
   const intelligenceTarget = navigationTarget?.targetView === "death-recap" && navigationTarget.source === "intelligence"
     ? navigationTarget
@@ -302,13 +335,28 @@ export default function DeathRecapView() {
       {boonCorrelation && <DeathBoonCorrelationPanel data={boonCorrelation} />}
 
       <div className="space-y-3">
-        {filtered.map((entry, i) => (
-          <DeathCard
-            key={`${entry.account}-${entry.fightIndex}-${entry.deathTimeMs}-${i}`}
-            entry={entry}
-            focused={isFocusedDeath(entry)}
-          />
-        ))}
+        {filtered.map((entry, i) => {
+          const fightId = report.stats.fightBreakdown[entry.fightIndex]?.id;
+          const replayAvailable = !!fightId && replayFightIds.has(fightId) && Number.isFinite(entry.deathTimeMs);
+          return (
+            <DeathCard
+              key={`${entry.account}-${entry.fightIndex}-${entry.deathTimeMs}-${i}`}
+              entry={entry}
+              focused={isFocusedDeath(entry)}
+              onViewReplay={replayAvailable ? () => navigateToView("fight-replay", {
+                source: "other",
+                fightId,
+                fightIndex: entry.fightIndex,
+                timestampMs: entry.deathTimeMs,
+                account: entry.account,
+                metric: "Death Recap",
+              }) : undefined}
+              replayUnavailableReason={fightId
+                ? "This fight has no persisted Replay position data; the hit breakdown remains authoritative."
+                : "This report does not retain a stable fight identity for Replay navigation; the hit breakdown remains authoritative."}
+            />
+          );
+        })}
       </div>
     </div>
   );

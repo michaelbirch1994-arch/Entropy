@@ -7,6 +7,8 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 export interface ViewNavigationTarget {
   source: "intelligence" | "archive" | "overview" | "other";
   targetView: string;
+  /** Stable report fight identity. Prefer this over an array index when available. */
+  fightId?: string;
   fightIndex?: number;
   account?: string;
   timestampMs?: number;
@@ -58,15 +60,18 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   const [activeView, setActiveViewState] = useState("overview");
   const [previousView, setPreviousView] = useState<string | null>(null);
   const [navigationTarget, setNavigationTarget] = useState<ViewNavigationTarget | null>(null);
+  const [navigationTrailTarget, setNavigationTrailTarget] = useState<ViewNavigationTarget | null>(null);
 
   function moveToView(view: string, target: ViewNavigationTarget | null) {
     if (view === activeView) {
       setNavigationTarget(target);
+      setNavigationTrailTarget(target);
       return;
     }
 
     setPreviousView(activeView);
     setNavigationTarget(target);
+    setNavigationTrailTarget(target);
     setActiveViewState(view);
   }
 
@@ -83,6 +88,7 @@ export function ViewProvider({ children }: { children: ReactNode }) {
     const destination = previousView;
     setPreviousView(activeView);
     setNavigationTarget(null);
+    setNavigationTrailTarget(null);
     setActiveViewState(destination);
   }
 
@@ -90,12 +96,14 @@ export function ViewProvider({ children }: { children: ReactNode }) {
     setNavigationTarget(null);
   }
 
-  const showTrail = !!previousView && !!navigationTarget && navigationTarget.targetView === activeView;
+  // A destination may consume its one-shot navigation request immediately, but
+  // the return trail must remain available until the user leaves or returns.
+  const showTrail = !!previousView && !!navigationTrailTarget && navigationTrailTarget.targetView === activeView;
   const contextBits = showTrail
     ? [
-        navigationTarget.metric,
-        navigationTarget.account,
-        typeof navigationTarget.fightIndex === "number" ? `Fight ${navigationTarget.fightIndex + 1}` : undefined,
+        navigationTrailTarget.metric,
+        navigationTrailTarget.account,
+        typeof navigationTrailTarget.fightIndex === "number" ? `Fight ${navigationTrailTarget.fightIndex + 1}` : undefined,
       ].filter((value): value is string => !!value)
     : [];
 

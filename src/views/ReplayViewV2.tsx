@@ -41,7 +41,7 @@ export default function ReplayViewV2() {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(2);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
-  const [intelligenceOrigin, setIntelligenceOrigin] = useState<ResolvedReplayNavigationTarget | null>(null);
+  const [evidenceOrigin, setEvidenceOrigin] = useState<ResolvedReplayNavigationTarget | null>(null);
   const [alignedIntelligenceEvent, setAlignedIntelligenceEvent] = useState<ReplayIntelligenceAnchor | null>(null);
   const pendingSeekRef = useRef<ResolvedReplayNavigationTarget | null>(null);
   const [showMap, setShowMap] = useState(true);
@@ -65,7 +65,7 @@ export default function ReplayViewV2() {
     const pending = pendingSeekRef.current;
     if (pending && pending.fightIndex === fightIdx) {
       setT(pending.timestampMs);
-      setIntelligenceOrigin(pending);
+      setEvidenceOrigin(pending);
       setSelectedAccount(pending.account ?? null);
       pendingSeekRef.current = null;
     } else {
@@ -83,7 +83,7 @@ export default function ReplayViewV2() {
     setPlaying(false);
     setPan({ x: 0, y: 0 });
     setFollowFocus(true);
-    setIntelligenceOrigin(resolved);
+    setEvidenceOrigin(resolved);
     setSelectedAccount(resolved.account ?? null);
     if (resolved.fightIndex === fightIdx) {
       setT(resolved.timestampMs);
@@ -316,21 +316,21 @@ export default function ReplayViewV2() {
     );
   }
 
-  const atIntelligenceAnchor = intelligenceOrigin?.fightIndex === fightIdx && Math.abs(t - intelligenceOrigin.timestampMs) < 1;
+  const atEvidenceAnchor = evidenceOrigin?.fightIndex === fightIdx && Math.abs(t - evidenceOrigin.timestampMs) < 1;
 
   return (
     <div className="space-y-5 animate-view pb-12">
-      {intelligenceOrigin?.fightIndex === fightIdx && (
+      {evidenceOrigin?.fightIndex === fightIdx && (
         <div className="rounded-2xl border border-sky-400/25 bg-sky-500/[0.06] px-4 py-3 shadow-[0_0_30px_-18px_rgba(56,189,248,0.8)]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-sky-300">Intelligence evidence target</div>
-              <div className="mt-1 text-sm font-black text-slate-100">Paused at {fmtClock(intelligenceOrigin.timestampMs)} in Fight {intelligenceOrigin.fightIndex + 1}</div>
-              <div className="mt-1 text-[11px] text-slate-400">{intelligenceOrigin.account ? `Linked player: ${intelligenceOrigin.account}` : "Replay mechanic / event context"}{intelligenceOrigin.eventId ? ` · Event ${intelligenceOrigin.eventId}` : ""}</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-sky-300">Evidence target</div>
+              <div className="mt-1 text-sm font-black text-slate-100">Paused at {fmtClock(evidenceOrigin.timestampMs)} in Fight {evidenceOrigin.fightIndex + 1}</div>
+              <div className="mt-1 text-[11px] text-slate-400">{evidenceOrigin.metric ? `${evidenceOrigin.metric} · ` : ""}{evidenceOrigin.account ? `Linked player: ${evidenceOrigin.account}` : "Replay mechanic / event context"}{evidenceOrigin.eventId ? ` · Event ${evidenceOrigin.eventId}` : ""}</div>
             </div>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => { setT(intelligenceOrigin.timestampMs); setPlaying(false); if (intelligenceOrigin.account) setSelectedAccount(intelligenceOrigin.account); }} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/[0.08] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-sky-200 transition hover:border-sky-300/40 hover:bg-sky-500/[0.12]"><RotateCcw className="h-3.5 w-3.5" /> Return to anchor</button>
-              <button type="button" aria-label="Dismiss Intelligence replay target" onClick={() => setIntelligenceOrigin(null)} className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-white/10 bg-black/20 p-2 text-slate-500 transition hover:border-white/20 hover:text-slate-300"><X className="h-3.5 w-3.5" /></button>
+              <button type="button" onClick={() => { setT(evidenceOrigin.timestampMs); setPlaying(false); if (evidenceOrigin.account) setSelectedAccount(evidenceOrigin.account); }} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/[0.08] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-sky-200 transition hover:border-sky-300/40 hover:bg-sky-500/[0.12]"><RotateCcw className="h-3.5 w-3.5" /> Return to anchor</button>
+              <button type="button" aria-label="Dismiss Replay evidence target" onClick={() => setEvidenceOrigin(null)} className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-white/10 bg-black/20 p-2 text-slate-500 transition hover:border-white/20 hover:text-slate-300"><X className="h-3.5 w-3.5" /></button>
             </div>
           </div>
         </div>
@@ -338,7 +338,7 @@ export default function ReplayViewV2() {
 
       <div className="flex flex-wrap items-center gap-3">
         {fights.length > 1 && (
-          <select value={fightIdx} onChange={(event) => { pendingSeekRef.current = null; setIntelligenceOrigin(null); setFightIdx(Number(event.target.value)); }} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300">
+          <select value={fightIdx} onChange={(event) => { pendingSeekRef.current = null; setEvidenceOrigin(null); setFightIdx(Number(event.target.value)); }} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300">
             {fights.map((entry, index) => <option key={entry.fightId} value={index}>#{index + 1} · {entry.fightName}</option>)}
           </select>
         )}
@@ -485,10 +485,10 @@ export default function ReplayViewV2() {
             <ReplayTacticalStatePanel data={fight.data} player={selectedPlayer} t={t} />
           </div>
 
-          <div className={`mt-4 flex items-center gap-3 rounded-xl border px-4 py-3 ${atIntelligenceAnchor ? "border-sky-400/35 bg-sky-500/[0.07]" : "border-slate-800 bg-slate-900/50"}`}>
+          <div className={`mt-4 flex items-center gap-3 rounded-xl border px-4 py-3 ${atEvidenceAnchor ? "border-sky-400/35 bg-sky-500/[0.07]" : "border-slate-800 bg-slate-900/50"}`}>
             <button type="button" onClick={() => setPlaying((value) => !value)} className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sky-400/35 bg-sky-500/10 text-sky-300 transition hover:bg-sky-500/20">{playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button>
             <input type="range" min={0} max={fight.data.durationMs} value={t} onChange={(event) => { setT(Number(event.target.value)); setPlaying(false); }} className="flex-1 accent-sky-400" />
-            {atIntelligenceAnchor && <span className="rounded-full border border-sky-400/25 bg-sky-500/[0.08] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-sky-200">Intel anchor</span>}
+            {atEvidenceAnchor && <span className="rounded-full border border-sky-400/25 bg-sky-500/[0.08] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-sky-200">Evidence anchor</span>}
             <span className="w-24 shrink-0 text-right font-mono text-[11px] text-slate-400">{fmtClock(t)} / {fmtClock(fight.data.durationMs)}</span>
             <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} className="shrink-0 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-[11px] text-slate-300"><option value={1}>1x</option><option value={2}>2x</option><option value={4}>4x</option><option value={8}>8x</option></select>
           </div>

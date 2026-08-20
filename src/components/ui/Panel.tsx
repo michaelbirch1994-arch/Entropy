@@ -34,12 +34,12 @@ export default function Panel({
       {title && (
         <header className="theme-panel-header flex min-h-[3.75rem] items-center justify-between gap-4 border-b border-theme-border/50 px-5 py-3.5">
           <div className="min-w-0 flex flex-col gap-1">
-            <div className="theme-panel-title flex min-w-0 items-center gap-2 text-[11px] font-bold uppercase leading-tight tracking-[0.055em] text-theme-text">
+            <div className="theme-panel-title flex min-w-0 items-center gap-2 text-[11px] font-bold uppercase leading-[1.35] tracking-[0.045em] text-theme-text">
               {icon && <span className={`shrink-0 ${accent ?? "text-theme-accent"}`}>{icon}</span>}
               <span className="min-w-0">{title}</span>
             </div>
             {subtitle && (
-              <p className="theme-panel-subtitle max-w-[72ch] text-[11px] font-medium leading-relaxed text-theme-muted">{subtitle}</p>
+              <p className="theme-panel-subtitle max-w-[68ch] text-[12px] font-normal leading-[1.55] text-theme-muted">{subtitle}</p>
             )}
           </div>
           {action && <div className="shrink-0 text-[11px] font-mono text-theme-muted">{action}</div>}
