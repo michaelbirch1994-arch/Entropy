@@ -5,6 +5,7 @@ import { ThemeProvider } from "./theme/ThemeProvider";
 import "./Styles/Global.css";
 import "./Styles/Ultrawide.css";
 import "./Styles/UXPolish.css";
+import "./Styles/AnalyticsSurfaces.css";
 import "./Styles/NavigationShell.css";
 import "./Styles/CrossViewTrail.css";
 import "./Styles/IntelligencePulse.css";
