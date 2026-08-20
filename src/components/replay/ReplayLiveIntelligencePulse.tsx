@@ -4,6 +4,7 @@ import { buildIntelligenceDashboard } from "../../lib/intelligence/intelligenceD
 import { alignedReplayIntelligenceEvent, nearbyReplayIntelligenceEvents } from "../../lib/replayNearbyIntelligence";
 import { buildReplayIntelligenceAnchors, type ReplayIntelligenceAnchor } from "../../lib/replayIntelligenceAnchors";
 import { useReport } from "../../store/ReportContext";
+import ReplayEventEvidencePanel from "./ReplayEventEvidencePanel";
 
 function fmtOffset(ms: number): string {
   if (Math.abs(ms) < 500) return "now";
@@ -110,6 +111,17 @@ export default function ReplayLiveIntelligencePulse({
           <Clock3 className="h-3 w-3" /> {nearby.length > 0 ? "±5s live window" : `${fightAnchors.length} fight events`}
         </div>
       </div>
+
+      {alignedEvent && (
+        <div className="mt-3">
+          <ReplayEventEvidencePanel
+            data={fight.data}
+            event={alignedEvent}
+            t={timestampMs}
+            onSelectAccount={(account) => onSeek(alignedEvent.timestampMs, account)}
+          />
+        </div>
+      )}
 
       <div className="mt-3 rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2">
         <div className="mb-1.5 flex items-center justify-between gap-2 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-600">
