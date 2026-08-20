@@ -14,10 +14,7 @@ function player(
     profession: "Guardian",
     inSquad: true,
     isCommander: false,
-    points: [
-      { t: 0, x, y: 0 },
-      { t: 20_000, x, y: 0 },
-    ],
+    points: Array.from({ length: 21 }, (_, index) => ({ t: index * 1_000, x, y: 0 })),
     downIntervals: [],
     deadIntervals: [],
     facings: [],
