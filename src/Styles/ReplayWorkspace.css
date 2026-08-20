@@ -77,11 +77,65 @@ aside[class*="border-slate-800"][class*="bg-[#080d18]/90"] {
   background: color-mix(in srgb, var(--theme-surfaceInset) 82%, transparent);
 }
 
+/* Replay stability pass: live data may change every frame, but panel geometry
+   must not. These surfaces keep a constant footprint and scroll internally
+   instead of pushing the map/timeline around as effects and evidence appear. */
+section[aria-label="Nearby Intelligence events"] {
+  height: clamp(31rem, 48vh, 38rem);
+  min-height: clamp(31rem, 48vh, 38rem);
+  max-height: clamp(31rem, 48vh, 38rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+aside[class*="border-sky-400/15"][class*="bg-[#080d18]/95"],
+aside[class*="border-slate-800"][class*="bg-[#080d18]/90"] {
+  height: clamp(31rem, 48vh, 38rem);
+  min-height: clamp(31rem, 48vh, 38rem);
+  max-height: clamp(31rem, 48vh, 38rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+/* Effect rows keep their own local breathing room so a burst of boons or
+   conditions does not make adjacent Tactical State sections jump. */
+aside[class*="border-sky-400/15"][class*="bg-[#080d18]/95"] section:nth-of-type(1),
+aside[class*="border-sky-400/15"][class*="bg-[#080d18]/95"] section:nth-of-type(2) {
+  min-height: 4.5rem;
+}
+
+/* The recent-casts area is also reserved because it can swing between zero
+   and four rows several times per second in an active fight. */
+aside[class*="border-sky-400/15"][class*="bg-[#080d18]/95"] section:nth-of-type(3) {
+  min-height: 8.5rem;
+}
+
+/* Do not animate geometry inside the live Replay surfaces. Color/opacity can
+   still transition, but height/margin/padding changes should snap in place. */
+section[aria-label="Nearby Intelligence events"],
+section[aria-label="Nearby Intelligence events"] *,
+aside[class*="border-sky-400/15"][class*="bg-[#080d18]/95"],
+aside[class*="border-sky-400/15"][class*="bg-[#080d18]/95"] * {
+  transition-property: color, background-color, border-color, box-shadow, opacity, filter, transform;
+}
+
 /* Preserve readable density on the evidence rail at narrower Chromium widths. */
 @media (max-width: 1100px) {
   section[class*="border-sky-300/25"][class*="bg-sky-400/[0.055]"],
   aside[class*="border-sky-400/15"][class*="bg-[#080d18]/95"] {
     box-shadow: inset 2px 0 0 color-mix(in srgb, var(--theme-accentStrong) 54%, transparent);
+  }
+
+  section[aria-label="Nearby Intelligence events"],
+  aside[class*="border-sky-400/15"][class*="bg-[#080d18]/95"],
+  aside[class*="border-slate-800"][class*="bg-[#080d18]/90"] {
+    height: 32rem;
+    min-height: 32rem;
+    max-height: 32rem;
   }
 }
 
