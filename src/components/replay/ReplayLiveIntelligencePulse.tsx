@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { BrainCircuit, Clock3 } from "lucide-react";
+import { BrainCircuit, Clock3, SkipBack, SkipForward } from "lucide-react";
 import { buildIntelligenceDashboard } from "../../lib/intelligence/intelligenceDashboard";
 import { nearbyReplayIntelligenceEvents } from "../../lib/replayNearbyIntelligence";
 import { buildReplayIntelligenceAnchors } from "../../lib/replayIntelligenceAnchors";
@@ -60,6 +60,8 @@ export default function ReplayLiveIntelligencePulse({
   const playheadPct = fight.data.durationMs > 0
     ? Math.max(0, Math.min(100, (timestampMs / fight.data.durationMs) * 100))
     : 0;
+  const previousAnchor = [...fightAnchors].reverse().find((anchor) => anchor.timestampMs < timestampMs - 750);
+  const nextAnchor = fightAnchors.find((anchor) => anchor.timestampMs > timestampMs + 750);
 
   return (
     <section
@@ -125,6 +127,30 @@ export default function ReplayLiveIntelligencePulse({
           <span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-orange-400" />Offense</span>
           <span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-400" />Coordination</span>
           <span className="ml-auto text-slate-500">Click any marker to seek to exact evidence.</span>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-2 border-t border-white/[0.05] pt-2">
+          <button
+            type="button"
+            disabled={!previousAnchor}
+            onClick={() => previousAnchor && onSeek(previousAnchor.timestampMs, previousAnchor.account)}
+            title={previousAnchor ? `Previous: ${titleForKind(previousAnchor.kind)} at ${fmtClock(previousAnchor.timestampMs)}` : "No previous Intelligence event"}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-white/[0.07] bg-white/[0.025] px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-slate-500 transition hover:border-sky-400/20 hover:text-sky-300 disabled:cursor-not-allowed disabled:opacity-25"
+          >
+            <SkipBack className="h-3 w-3" /> Previous event
+          </button>
+          <span className="truncate text-center font-mono text-[8px] text-slate-600">
+            {nextAnchor ? `Next ${fmtOffset(nextAnchor.timestampMs - timestampMs)} · ${titleForKind(nextAnchor.kind)}` : "End of Intelligence track"}
+          </span>
+          <button
+            type="button"
+            disabled={!nextAnchor}
+            onClick={() => nextAnchor && onSeek(nextAnchor.timestampMs, nextAnchor.account)}
+            title={nextAnchor ? `Next: ${titleForKind(nextAnchor.kind)} at ${fmtClock(nextAnchor.timestampMs)}` : "No next Intelligence event"}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-white/[0.07] bg-white/[0.025] px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-slate-500 transition hover:border-sky-400/20 hover:text-sky-300 disabled:cursor-not-allowed disabled:opacity-25"
+          >
+            Next event <SkipForward className="h-3 w-3" />
+          </button>
         </div>
       </div>
 
