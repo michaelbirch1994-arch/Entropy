@@ -74,9 +74,14 @@ jobs:
         run: |
           set -euo pipefail
           VERSION='${{ inputs.version }}'
-          node - <<'NODE'
+          echo "Verifying release version: $VERSION"
+          node - "$VERSION" <<'NODE'
           const fs = require('fs');
-          const expected = process.env.VERSION;
+          const expected = process.argv[2];
+          if (!expected) {
+            console.error('Release version argument was not provided to verifier.');
+            process.exit(1);
+          }
           const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
           const tauri = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
           const cargo = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
@@ -97,8 +102,6 @@ jobs:
           }
           if (bad) process.exit(1);
           NODE
-        env:
-          VERSION: ${{ inputs.version }}
 
       - name: Refuse duplicate tag or release
         shell: bash
