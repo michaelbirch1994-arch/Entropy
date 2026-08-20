@@ -1,0 +1,101 @@
+/* Cross-view continuity for deliberate drill-down navigation.
+   This appears only when a view was opened with a navigation target. */
+.theme-cross-view-trail {
+  position: fixed;
+  left: max(6rem, env(safe-area-inset-left));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: min(calc(100vw - 2rem), 52rem);
+  padding: 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--theme-borderStrong) 48%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--theme-surfaceInset) 92%, transparent);
+  box-shadow: 0 18px 50px -28px rgba(0, 0, 0, 0.92), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent);
+  backdrop-filter: blur(18px) saturate(0.9);
+}
+
+.theme-cross-view-return {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2rem;
+  padding: 0 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 34%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--theme-accent) 8%, transparent);
+  color: var(--theme-accentStrong);
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.theme-cross-view-return:hover,
+.theme-cross-view-return:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-accent) 62%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 14%, transparent);
+  outline: none;
+}
+
+.theme-cross-view-context {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.4rem;
+  overflow: hidden;
+  color: var(--theme-textMuted);
+  font-size: 0.64rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.theme-cross-view-origin {
+  color: color-mix(in srgb, var(--theme-text) 78%, var(--theme-textMuted));
+  font-weight: 700;
+}
+
+.theme-cross-view-bit {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.theme-cross-view-bit + .theme-cross-view-bit::before {
+  content: "/";
+  margin-right: 0.4rem;
+  color: color-mix(in srgb, var(--theme-textMuted) 56%, transparent);
+}
+
+@media (min-width: 901px) {
+  .theme-cross-view-trail {
+    left: 17rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .theme-cross-view-trail {
+    right: 0.75rem;
+    left: 0.75rem;
+    bottom: 0.75rem;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .theme-cross-view-return {
+    justify-content: center;
+  }
+
+  .theme-cross-view-context {
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-cross-view-trail,
+  .theme-cross-view-return {
+    transition: none !important;
+  }
+}
