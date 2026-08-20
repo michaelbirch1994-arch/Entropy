@@ -1,0 +1,77 @@
+/* Focused shell/navigation polish.
+   This file only adjusts navigation and topbar interaction hierarchy. */
+
+.theme-sidebar {
+  border-right-color: color-mix(in srgb, var(--theme-borderStrong) 34%, var(--theme-border));
+}
+
+.theme-sidebar-header {
+  background: color-mix(in srgb, var(--theme-surface) 94%, transparent);
+  box-shadow: 0 10px 26px -24px rgba(0, 0, 0, 0.95);
+}
+
+.theme-search-shell:focus-within {
+  border-color: color-mix(in srgb, var(--theme-accent) 52%, var(--theme-border));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--theme-accent) 12%, transparent),
+    0 12px 28px -24px rgba(0, 0, 0, 0.95);
+}
+
+.theme-nav-section {
+  box-shadow: none;
+}
+
+.theme-nav-section[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--theme-surfaceElevated) 48%, transparent) !important;
+  border-color: color-mix(in srgb, var(--theme-borderStrong) 34%, transparent) !important;
+  color: color-mix(in srgb, var(--theme-text) 82%, var(--theme-accent)) !important;
+}
+
+.theme-nav-item {
+  outline: none;
+}
+
+.theme-nav-item[aria-current="page"] {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 16%, transparent), transparent 78%),
+    color-mix(in srgb, var(--theme-surfaceElevated) 58%, transparent) !important;
+  color: var(--theme-accentStrong) !important;
+  box-shadow:
+    inset 2px 0 0 var(--theme-accent),
+    inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 12%, transparent);
+}
+
+.theme-nav-item:not([aria-current="page"]):hover {
+  background: color-mix(in srgb, var(--theme-surfaceElevated) 44%, transparent) !important;
+}
+
+.theme-nav-item:focus-visible,
+.theme-nav-section:focus-visible,
+.theme-quiet-button:focus-visible,
+.theme-status-pill:focus-visible,
+.theme-filter-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--theme-accentStrong) 72%, white 8%);
+  outline-offset: 2px;
+}
+
+.theme-topbar-actions {
+  gap: 0.2rem;
+}
+
+.theme-topbar-actions .theme-quiet-button {
+  color: color-mix(in srgb, var(--theme-textMuted) 92%, var(--theme-text));
+}
+
+.theme-topbar-actions .theme-quiet-button:hover {
+  color: var(--theme-text) !important;
+}
+
+.theme-topbar-actions .theme-status-pill {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 720px) {
+  .theme-nav-item[aria-current="page"]::after {
+    right: 0.35rem;
+  }
+}
