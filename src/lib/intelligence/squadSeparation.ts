@@ -22,11 +22,17 @@ export interface SquadSeparationOptions {
   minDurationMs?: number;
   /** Attach same-player down/death events that happen this close to the separation window. */
   downDeathLookaroundMs?: number;
+  /** Distance within which this player is considered to have joined formation. */
+  formationDistanceThreshold?: number;
+  /** Continuous time near tag required before this player can be judged as separated. */
+  formationMinDurationMs?: number;
 }
 
 const DEFAULT_DISTANCE_THRESHOLD = OUT_OF_POSITION;
 const DEFAULT_MIN_DURATION_MS = 3000;
 const DEFAULT_DOWN_DEATH_LOOKAROUND_MS = 3000;
+const DEFAULT_FORMATION_DISTANCE_THRESHOLD = 600;
+const DEFAULT_FORMATION_MIN_DURATION_MS = 1000;
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 
@@ -52,6 +58,13 @@ interface SeparationSample {
 /**
  * Detects squad members separated from commander/tag for a sustained window.
  *
+ * Separation is only meaningful after the player has first established formation near
+ * the commander. This suppresses replay-start/setup noise where a player begins far
+ * from tag before the fight has actually formed, without imposing an arbitrary global
+ * "ignore the first N seconds" window that could hide a legitimate early separation.
+ * Formation is established independently per player and remains established for the
+ * rest of the fight once proven.
+ *
  * This deliberately does NOT normalize positioning into CombatEvents. Positioning is
  * continuous replay data, not discrete combat events, and CombatEvent.ts explicitly
  * keeps it in positioning.ts as the source of truth. This detector reads that source
@@ -71,6 +84,8 @@ export function detectSquadSeparations(
   const distanceThreshold = options.distanceThreshold ?? DEFAULT_DISTANCE_THRESHOLD;
   const minDurationMs = options.minDurationMs ?? DEFAULT_MIN_DURATION_MS;
   const downDeathLookaroundMs = options.downDeathLookaroundMs ?? DEFAULT_DOWN_DEATH_LOOKAROUND_MS;
+  const formationDistanceThreshold = options.formationDistanceThreshold ?? DEFAULT_FORMATION_DISTANCE_THRESHOLD;
+  const formationMinDurationMs = options.formationMinDurationMs ?? DEFAULT_FORMATION_MIN_DURATION_MS;
 
   const meta = report.details?.combatReplayMetaData ?? {};
   const pollingRate = Number(meta.pollingRate ?? 0);
@@ -99,6 +114,8 @@ export function detectSquadSeparations(
     const playerStart = Number(player?.combatReplayData?.start ?? 0);
     const playerOffset = Math.floor(playerStart / pollingRate);
     let run: SeparationSample[] = [];
+    let formationRunStartMs: number | null = null;
+    let hasEstablishedFormation = false;
 
     const flushRun = () => {
       if (run.length === 0) return;
@@ -147,6 +164,23 @@ export function detectSquadSeparations(
       const [tx, ty] = tagPositions[tagIndex];
       const distance = Math.hypot(px - tx, py - ty) / inchToPixel;
       const timestampMs = (i + playerOffset) * pollingRate;
+
+      if (!hasEstablishedFormation) {
+        if (distance <= formationDistanceThreshold) {
+          formationRunStartMs ??= timestampMs;
+          const formationDurationMs = timestampMs - formationRunStartMs + pollingRate;
+          if (formationDurationMs >= formationMinDurationMs) {
+            hasEstablishedFormation = true;
+          }
+        } else {
+          formationRunStartMs = null;
+        }
+
+        // Never let pre-formation distance become a separation run. Once formation is
+        // established on this sample, separation can only begin on a later sample.
+        run = [];
+        continue;
+      }
 
       if (distance >= distanceThreshold) {
         run.push({ timestampMs, distance });
