@@ -1,0 +1,69 @@
+/* Focused micro-interaction polish.
+   Presentation only: no routing, replay, metric, or intelligence semantics. */
+
+.theme-quiet-button,
+.theme-filter-button,
+.theme-command-button,
+.theme-nav-item,
+.theme-nav-section,
+.theme-status-pill,
+.theme-table-row,
+button.theme-metric-card,
+button.theme-player-card {
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.theme-quiet-button:active,
+.theme-filter-button:active,
+.theme-command-button:active,
+.theme-nav-item:active,
+button.theme-metric-card:active,
+button.theme-player-card:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}
+
+.theme-command-button:hover,
+.theme-quiet-button:hover,
+.theme-filter-button:hover {
+  filter: brightness(1.035);
+}
+
+.theme-table-row {
+  transition-property: background-color, border-color, box-shadow;
+}
+
+.theme-nav-item,
+.theme-nav-section {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+}
+
+.theme-filter-button,
+.theme-quiet-button,
+.theme-command-button {
+  transition-property: color, background-color, border-color, box-shadow, transform, filter;
+}
+
+.theme-nav-item:focus-visible,
+.theme-nav-section:focus-visible,
+.theme-filter-button:focus-visible,
+.theme-quiet-button:focus-visible,
+.theme-command-button:focus-visible {
+  transition-duration: 80ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-quiet-button,
+  .theme-filter-button,
+  .theme-command-button,
+  .theme-nav-item,
+  .theme-nav-section,
+  .theme-status-pill,
+  .theme-table-row,
+  button.theme-metric-card,
+  button.theme-player-card {
+    transition: none !important;
+    transform: none !important;
+  }
+}
