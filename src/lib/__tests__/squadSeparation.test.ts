@@ -21,7 +21,7 @@ const commander = {
   name: 'Tag',
   account: 'Tag.1234',
   hasCommanderTag: true,
-  combatReplayData: { positions: [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]], start: 0 },
+  combatReplayData: { positions: [[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]], start: 0 },
 };
 
 function player(
@@ -105,6 +105,73 @@ describe('detectSquadSeparations', () => {
     });
 
     expect(events).toHaveLength(0);
+  });
+
+  it('suppresses startup separation until that player has actually joined formation', () => {
+    const report = fullReplayReport([
+      commander,
+      player('Alice', [[1500, 0], [1500, 0], [1500, 0], [0, 0], [0, 0], [1500, 0], [1500, 0], [1500, 0]]),
+    ]);
+
+    const events = detectSquadSeparations(report, 'fight-1', undefined, {
+      distanceThreshold: 1200,
+      minDurationMs: 3000,
+      formationDistanceThreshold: 600,
+      formationMinDurationMs: 1000,
+    });
+
+    expect(events).toHaveLength(1);
+    expect(events[0].timestampMs).toBe(5000);
+  });
+
+  it('never reports separation for a player who never establishes formation', () => {
+    const report = fullReplayReport([
+      commander,
+      player('Alice', [[1500, 0], [1500, 0], [1500, 0], [1500, 0], [1500, 0], [1500, 0]]),
+    ]);
+
+    const events = detectSquadSeparations(report, 'fight-1', undefined, {
+      distanceThreshold: 1200,
+      minDurationMs: 3000,
+      formationDistanceThreshold: 600,
+      formationMinDurationMs: 1000,
+    });
+
+    expect(events).toHaveLength(0);
+  });
+
+  it('still catches a legitimate early separation after formation is established', () => {
+    const report = fullReplayReport([
+      commander,
+      player('Alice', [[0, 0], [1300, 0], [1300, 0], [1300, 0], [0, 0], [0, 0]]),
+    ]);
+
+    const events = detectSquadSeparations(report, 'fight-1', undefined, {
+      distanceThreshold: 1200,
+      minDurationMs: 3000,
+      formationDistanceThreshold: 600,
+      formationMinDurationMs: 1000,
+    });
+
+    expect(events).toHaveLength(1);
+    expect(events[0].timestampMs).toBe(1000);
+  });
+
+  it('requires sustained formation when configured before enabling separation detection', () => {
+    const report = fullReplayReport([
+      commander,
+      player('Alice', [[0, 0], [1500, 0], [0, 0], [0, 0], [1500, 0], [1500, 0], [1500, 0]]),
+    ]);
+
+    const events = detectSquadSeparations(report, 'fight-1', undefined, {
+      distanceThreshold: 1200,
+      minDurationMs: 3000,
+      formationDistanceThreshold: 600,
+      formationMinDurationMs: 2000,
+    });
+
+    expect(events).toHaveLength(1);
+    expect(events[0].timestampMs).toBe(4000);
   });
 
   it('links same-player down/death events near the separation window', () => {
