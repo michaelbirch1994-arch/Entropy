@@ -17,7 +17,7 @@ export const WvW_REPLAY_GEOMETRIES: Readonly<Record<number, WvWReplayGeometry>> 
   38: {
     mapId: 38,
     name: 'Eternal Battlegrounds',
-    replayMapRect: [-35914, -34614, 377?0, 39114],
+    replayMapRect: [-35914, -34614, 37814, 39114],
     replayPixelSize: [716, 750],
     mapRect: [[-36864, -36864], [36864, 36864]],
     continentRect: [[8958, 12798], [12030, 15870]],
