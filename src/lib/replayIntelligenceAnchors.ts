@@ -14,6 +14,28 @@ export interface ReplayIntelligenceAnchor {
   account?: string;
 }
 
+function normalizePlayerKey(value: string | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function resolveTrackedAccount(fight: ReplayFightEntry, relatedPlayers: string[] | undefined): string | undefined {
+  if (!relatedPlayers?.length) return undefined;
+
+  const players = fight.data.players ?? [];
+  for (const relatedPlayer of relatedPlayers) {
+    const key = normalizePlayerKey(relatedPlayer);
+    if (!key) continue;
+
+    const exactAccount = players.find((player) => normalizePlayerKey(player.account) === key);
+    if (exactAccount) return exactAccount.account;
+
+    const exactName = players.find((player) => normalizePlayerKey(player.name) === key);
+    if (exactName) return exactName.account;
+  }
+
+  return undefined;
+}
+
 export function buildReplayIntelligenceAnchors(
   dashboard: IntelligenceDashboard | null | undefined,
   replayFights: ReplayFightEntry[] | null | undefined,
@@ -39,7 +61,7 @@ export function buildReplayIntelligenceAnchors(
         category: event.category,
         summary: event.summary,
         confidence: event.confidence,
-        account: event.relatedPlayers?.[0],
+        account: resolveTrackedAccount(fight, event.relatedPlayers),
       };
     })
     .filter((anchor): anchor is ReplayIntelligenceAnchor => anchor != null)
