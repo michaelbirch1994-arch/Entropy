@@ -52,10 +52,12 @@ export default function ReplayIntelligenceAnchorRail() {
             onClick={() =>
               navigateToView("fight-replay", {
                 source: "intelligence",
+                fightId: anchor.fightId,
                 fightIndex: anchor.fightIndex,
                 timestampMs: anchor.timestampMs,
                 eventId: anchor.id,
                 account: anchor.account,
+                metric: titleForKind(anchor.kind),
               })
             }
             className="group min-w-[210px] max-w-[270px] shrink-0 cursor-pointer rounded-xl border border-white/[0.08] bg-black/20 px-3 py-2.5 text-left transition hover:border-sky-400/30 hover:bg-sky-400/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50"

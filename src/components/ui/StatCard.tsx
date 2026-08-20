@@ -25,12 +25,12 @@ export default function StatCard({
       className={`theme-stat-card rounded-2xl p-5 flex flex-col gap-2.5 ${className}`}
       data-tone={tone ?? inferSurfaceTone(accent)}
     >
-      <div className="theme-stat-label flex items-center gap-2 text-[11px] font-bold uppercase text-theme-muted">
+      <div className="theme-stat-label flex items-center gap-2 text-[11px] font-semibold uppercase leading-[1.35] tracking-[0.045em] text-theme-muted">
         {icon}
         {label}
       </div>
       <div className={`theme-stat-value text-2xl font-black font-mono ${accent}`}>{value}</div>
-      {sub && <div className="theme-stat-sub text-[11px] font-mono text-theme-muted">{sub}</div>}
+      {sub && <div className="theme-stat-sub text-[11px] font-mono leading-[1.5] text-theme-muted">{sub}</div>}
     </div>
   );
 }

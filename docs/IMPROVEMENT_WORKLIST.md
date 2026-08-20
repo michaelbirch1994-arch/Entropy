@@ -2,6 +2,27 @@
 
 This worklist tracks correctness, performance, readability, interaction, and longer-term raid intelligence work. Correctness and reproducible evidence take priority over presentation.
 
+## Active delivery sequence — reconciled after v0.2.65
+
+This sequence incorporates the current full-app screenshot audit, the Intelligence nervous-system direction, the Replay world-space handoff, and the existing correctness/performance backlog. It is the authoritative order for upcoming cuts.
+
+1. **Readability foundation** — calm the shared palette and visual hierarchy without changing any metric or report contract.
+2. **Evidence navigation** — make Mechanics Timeline and Death Recap exact-time entry points into Fight Replay.
+3. **Density and overflow** — replace unbounded walls of rows/text with professional summaries and accessible drill-down regions.
+4. **Intelligence integration** — carry the same selected fight, player, timestamp, and evidence across Intelligence, Mechanics, Death Recap, and Replay.
+5. **Replay geography** — finish the verified WvW objective-coordinate pipeline before adding objective visuals or spatial narrative.
+6. **Cross-raid signal** — build role-aware, sample-aware trends and pad-resistant outcome analysis.
+7. **Desktop/web parity** — verify shared viewer behavior while keeping native-only features explicit and gracefully unavailable on the web.
+
+### Non-negotiable guardrails
+
+- Presentation changes must not alter parsing, normalization, aggregation, scoring, or metric methodology.
+- A verbal finding must identify the exact persisted evidence that supports it; unknown context remains unknown.
+- No spatial relationship, objective position/ownership, boon state, causal explanation, or player judgment is inferred merely to make a view feel complete.
+- Older archived reports must continue to load and must disclose when timestamp-level or source-specific evidence is unavailable.
+- Motion must help users follow selection or navigation; it must not shift layout, delay input, or keep decorative effects running over dense data.
+- Profession identity remains available through profession icons/chips, but page/workspace colors must not compete with semantic metric colors.
+
 ## P0 — Data correctness
 
 - [x] Use stable account identity across combined fights, professions, characters, roles, and subgroup changes.
@@ -82,6 +103,72 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 - [x] Keep metric content aligned while decorative asymmetry remains clearly intentional. Table cells now share vertical alignment and tabular figures, while Builder spec, library, party, and landing readout rows no longer carry staggered content offsets.
 - [x] Add a brighter futuristic command polish layer with multi-color workspace signals, stronger neon player-card underglows, mechanical panel trims, and reduced hover movement so shared report surfaces feel less monotone without changing analytics behavior.
 - [x] Smooth sidebar tab swaps by removing max-height accordion animation from navigation groups and using a short opacity transition instead.
+
+## P1 — Readability, density, and cinematic restraint
+
+- [~] Establish a calmer shared visual foundation with neutral graphite surfaces, restrained workspace accents, clearer text contrast, quieter borders, and softer player-card underglows.
+  - [x] Implement the presentation-only token and shared primitive changes on `feature/readability-foundation`.
+  - [x] Verify the production build, all tests, changed-file lint, and a presentation-only diff boundary.
+  - [ ] Complete desktop and hosted-web visual review before marking the foundation merged/released.
+- [ ] Run a view-by-view color-role audit so each screen has one structural accent while success, warning, danger, healing, barrier, damage, profession, and evidence colors retain distinct meanings.
+- [ ] Replace unbounded walls of text/rows with professional progressive disclosure without hiding data.
+  - Keep the selected/summary context visible above the scroll region.
+  - Use bounded, keyboard-accessible drill-down regions for long event feeds, skill lists, rotations, recap hits, and evidence collections.
+  - Avoid nested scroll traps; full analytics tables may retain page scrolling when comparison across many rows is the primary task.
+  - Add explicit counts, filters, and expand/show-all controls so containment never implies truncation or missing evidence.
+- [ ] Standardize dense table readability across 1080p desktop and hosted web: sticky context where useful, stable row height, tabular figures, honest horizontal overflow, and readable selected/hover states.
+- [ ] Add cinematic but useful transitions only at meaningful moments: evidence selection, Replay seek, inspector reveal, and workspace entry.
+  - Respect reduced-motion preferences.
+  - Never animate chart values or report rows in a way that implies changing data.
+  - Prevent content height changes from jerking the page or Replay playhead.
+- [ ] Complete a visual acceptance matrix for Overview, Squad/Roster, Performance, Combat Log, Intelligence, Archive/Compare, and Entropy Builder in desktop and hosted-web builds.
+
+## P1 — Intelligence nervous system across evidence views
+
+- [x] Make Intelligence critical events selectable and preserve exact fight, timestamp, player, and event identity in its event inspector.
+- [x] Link supported Intelligence evidence into Fight Replay and Death Recap without duplicating metric calculations.
+- [x] Add a compact Intelligence evidence layer to Mechanics Timeline.
+  - [x] Each timestamped mechanic occurrence can seek to that exact fight/time in Replay.
+  - [x] Carry the affected player when the mechanic resolves to a squad account.
+  - [x] Keep severity and occurrence counts descriptive; do not equate EI severity with causal impact.
+- [x] Add a compact Intelligence evidence layer to Death Recap.
+  - [x] Each death can seek to the exact death timestamp in Replay with that player selected.
+  - [x] Preserve the existing hit breakdown as the authoritative damage evidence.
+  - [x] Make unavailable Replay coverage explicit instead of disabling a control without explanation.
+- [x] Keep cross-view navigation reversible and stable: users can return to their source view with fight/player/time context intact.
+- [ ] Add synchronized before/event/after evidence presentation using only persisted timestamp-level state.
+- [ ] Enrich per-fight Intelligence with concise commander-readable narration.
+  - State what happened, what changed before the event, and which response could be reviewed.
+  - Phrase improvement opportunities as evidence-backed review prompts, not fabricated coaching conclusions.
+  - Expose supporting fights/events, sample count, confidence, and counter-evidence.
+- [ ] Group related critical events into inspectable combat episodes without hiding the underlying event stream.
+
+## P1 — Replay world-space and tactical workspace
+
+- [x] Complete Replay death/release separation correctness and prevent post-death separation findings.
+- [x] Prevent teleport/respawn discontinuities and implausible movement interpolation.
+- [x] Persist optional Replay world-space metadata while preserving legacy-report compatibility.
+- [~] Prove the EI Replay-pixel ↔ GW2 map ↔ continent coordinate bridge for the four supported WvW maps.
+  - Draft PR #160 changes only the coordinate module/tests and CI is green.
+  - [ ] Audit and merge the coordinate slice before any objective rendering.
+- [ ] Ingest authoritative WvW objective data and prove objective projection with tests before UI work.
+- [ ] Render a restrained objective overlay only after projection is proven across Eternal Battlegrounds, both Alpine Borderlands, and Desert Borderlands.
+- [ ] Investigate higher-resolution official map imagery/tiles after objective alignment is correct.
+- [ ] Add spatial Intelligence only when map/objective evidence is trustworthy; never infer geography from fight names or approximate pixels.
+- [ ] Build the expanded/pop-out Replay workspace after the world-space layer is stable.
+  - Reuse the same Replay components and evidence model.
+  - Preserve fight, playhead, player, and Intelligence selection.
+  - Prefer a Tauri secondary window on desktop and an expanded in-page workspace on web.
+
+## P2 — Entropy Builder and desktop/web product boundaries
+
+- [~] Preserve the current Entropy Builder build/library/squad workspaces while auditing usability separately from combat analytics.
+- [ ] Finish a dedicated Builder visual and workflow audit: profession/spec selection, trait/skill discovery, equipment density, validation, library actions, squad assignment, and code round trips.
+- [ ] Keep Builder and combat analytics navigation visually separated while sharing the same readable theme primitives.
+- [ ] Document and test the capability boundary between desktop and hosted web.
+  - Shared: report viewing, direct uploads/links, analytics, Intelligence, Builder, static/shared artifacts where supported.
+  - Desktop-only when required: folder watching, native file-system workflows, native updater, and secondary Replay windows.
+- [ ] Verify Vercel/static-host routing, asset paths, refresh behavior, report-size limits, browser storage limits, and graceful handling of native-only controls before treating web as release-parity.
 
 ## P2 — Top Skills context
 

@@ -80,15 +80,19 @@ export default function IntelligenceMechanicEvidencePanel({ fightId, window, rel
   const after = mechanics.filter((mechanic) => mechanic.relation === "after");
   const openReplay = (mechanic: EventMechanicEvidence) => navigateToView("fight-replay", {
     source: "intelligence",
+    fightId,
     fightIndex,
     timestampMs: mechanic.timestampMs,
     account: mechanic.account,
+    metric: mechanic.name,
   });
   const openPlayerReplay = (account: string) => navigateToView("fight-replay", {
     source: "intelligence",
+    fightId,
     fightIndex,
     timestampMs: window.anchorTimestampMs,
     account,
+    metric: "Player event context",
   });
 
   return (

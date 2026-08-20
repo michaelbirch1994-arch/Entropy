@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
+import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
-import { Crosshair } from "lucide-react";
+import { Crosshair, Film } from "lucide-react";
 
 function fmtClock(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -23,9 +24,14 @@ const SEVERITY_STYLE: Record<number, { label: string; dot: string; text: string;
 
 export default function MechanicsView() {
   const { report } = useReport();
+  const { navigateToView } = useView();
   const data = report?.stats.mechanics;
   const [fightIdx, setFightIdx] = useState(0);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const replayFightIds = useMemo(
+    () => new Set((report?.stats.replayFights ?? []).map((entry) => entry.fightId)),
+    [report],
+  );
 
   const fight = data?.fights[fightIdx];
   const mechanics = fight?.mechanics ?? [];
@@ -60,6 +66,9 @@ export default function MechanicsView() {
   }
 
   const totalEvents = mechanics.reduce((n, m) => n + m.events.length, 0);
+  const reportFightIndex = fight
+    ? report.stats.fightBreakdown.findIndex((entry) => entry.id === fight.fightId)
+    : -1;
 
   return (
     <div className="space-y-5 animate-view pb-12">
@@ -101,6 +110,7 @@ export default function MechanicsView() {
                 perPlayerCount.set(e.account!, (perPlayerCount.get(e.account!) ?? 0) + 1);
               }
               const topPlayers = [...perPlayerCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+              const replayAvailable = replayFightIds.has(fight.fightId);
 
               return (
                 <div key={m.key}>
@@ -128,6 +138,14 @@ export default function MechanicsView() {
 
                   {isOpen && (
                     <div className="px-4 pb-4">
+                      <div className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-[10px] ${replayAvailable ? "border-sky-400/20 bg-sky-500/[0.05] text-sky-200" : "border-slate-700/60 bg-slate-900/40 text-slate-500"}`}>
+                        <Film className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>
+                          {replayAvailable
+                            ? "Exact-time Replay evidence is available for every timestamped occurrence below."
+                            : "Replay coverage is unavailable for this fight; mechanic timestamps remain visible here."}
+                        </span>
+                      </div>
                       <div className="relative bg-black/30 rounded-xl border border-slate-800 h-10 overflow-hidden mb-2">
                         {m.events.map((e, i) => {
                           const left = (e.time / fight.durationMs) * 100;
@@ -165,6 +183,7 @@ export default function MechanicsView() {
                             <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500 sticky top-0 bg-[#0a0e1f]">
                               <th className="text-left font-bold px-3 py-2">Time</th>
                               <th className="text-left font-bold px-3 py-2">Who</th>
+                              <th className="text-right font-bold px-3 py-2">Evidence</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -174,6 +193,27 @@ export default function MechanicsView() {
                                 <td className="px-3 py-1.5 text-slate-300 font-medium">
                                   {e.account ?? e.actor}
                                   {!e.isPlayer && <span className="text-slate-500 ml-1 text-[10px]">(NPC)</span>}
+                                </td>
+                                <td className="px-3 py-1.5 text-right">
+                                  {replayAvailable ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => navigateToView("fight-replay", {
+                                        source: "other",
+                                        fightId: fight.fightId,
+                                        fightIndex: reportFightIndex >= 0 ? reportFightIndex : undefined,
+                                        timestampMs: e.time,
+                                        account: e.account,
+                                        metric: m.def.fullName,
+                                      })}
+                                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-sky-400/20 bg-sky-500/[0.06] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-sky-200 transition-colors hover:border-sky-300/40 hover:bg-sky-500/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
+                                      aria-label={`View ${m.def.fullName} for ${e.account ?? e.actor} at ${fmtClock(e.time)} in Fight Replay`}
+                                    >
+                                      <Film className="h-3 w-3" /> Replay
+                                    </button>
+                                  ) : (
+                                    <span className="text-[9px] uppercase tracking-wider text-slate-600" title="This fight has no persisted Replay position data.">Unavailable</span>
+                                  )}
                                 </td>
                               </tr>
                             ))}
