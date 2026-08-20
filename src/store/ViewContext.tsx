@@ -34,6 +34,26 @@ const ViewContext = createContext<ViewContextValue>({
   clearNavigationTarget: () => {},
 });
 
+const VIEW_LABELS: Record<string, string> = {
+  overview: "Overview",
+  kdr: "KDR",
+  "fight-breakdown": "Fight Breakdown",
+  "top-players": "Top Players",
+  "top-skills": "Top Skills",
+  offensive: "Offensive Stats",
+  defensive: "Defensive Stats",
+  "squad-stats": "Squad Stats",
+  "player-profiles": "Player Profiles",
+  "fight-replay": "Fight Replay",
+  mechanics: "Mechanics Timeline",
+  "death-recap": "Death Recap",
+  intelligence: "Intelligence",
+};
+
+function viewLabel(view: string) {
+  return VIEW_LABELS[view] ?? view.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export function ViewProvider({ children }: { children: ReactNode }) {
   const [activeView, setActiveViewState] = useState("overview");
   const [previousView, setPreviousView] = useState<string | null>(null);
@@ -70,6 +90,15 @@ export function ViewProvider({ children }: { children: ReactNode }) {
     setNavigationTarget(null);
   }
 
+  const showTrail = !!previousView && !!navigationTarget && navigationTarget.targetView === activeView;
+  const contextBits = showTrail
+    ? [
+        navigationTarget.metric,
+        navigationTarget.account,
+        typeof navigationTarget.fightIndex === "number" ? `Fight ${navigationTarget.fightIndex + 1}` : undefined,
+      ].filter((value): value is string => !!value)
+    : [];
+
   return (
     <ViewContext.Provider
       value={{
@@ -83,6 +112,21 @@ export function ViewProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      {showTrail && (
+        <div className="theme-cross-view-trail" role="status" aria-live="polite">
+          <button type="button" className="theme-cross-view-return" onClick={goBackToPreviousView}>
+            <span aria-hidden="true">←</span>
+            <span>Return to {viewLabel(previousView)}</span>
+          </button>
+          <div className="theme-cross-view-context">
+            <span className="theme-cross-view-origin">From {viewLabel(previousView)}</span>
+            {contextBits.length > 0 && <span className="theme-cross-view-separator" aria-hidden="true">·</span>}
+            {contextBits.map((bit) => (
+              <span key={bit} className="theme-cross-view-bit">{bit}</span>
+            ))}
+          </div>
+        </div>
+      )}
     </ViewContext.Provider>
   );
 }
