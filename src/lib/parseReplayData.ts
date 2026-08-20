@@ -17,6 +17,7 @@
 // missing for some reason).
 
 import type { RawFightLog } from "../types/rawFight";
+import { extractReplayWorldSpaceMetadata, type ReplayWorldSpaceMetadata } from "./replayWorldSpace";
 
 export interface ReplayPoint {
   t: number;
@@ -118,6 +119,8 @@ export interface ReplayData {
   players: ReplayPlayerTrack[];
   enemies: ReplayEnemyTrack[];
   map: ReplayMapInfo | null;
+  /** Present on reports parsed after the Phase 3 world-space foundation landed. */
+  worldSpace?: ReplayWorldSpaceMetadata;
   mechanics: ReplayMechanicMarker[];
   skillMeta: Record<number, { name: string; icon?: string }>;
 }
@@ -230,6 +233,7 @@ function enemyTrackId(t: Record<string, unknown>, index: number): string {
 
 export function parseReplayData(log: RawFightLog): ReplayData | null {
   const rawLog = log as unknown as Record<string, unknown>;
+  const worldSpace = extractReplayWorldSpaceMetadata(log);
   const rawPlayers = (log.players ?? []) as unknown as Record<string, unknown>[];
   const rawTargets = (rawLog.targets ?? []) as unknown as Record<string, unknown>[];
   const replayMeta = (rawLog.combatReplayMetaData ?? {}) as Record<string, unknown>;
@@ -402,7 +406,7 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
   }
   mechanics.sort((a, b) => a.t - b.t);
 
-  return { durationMs, bounds: { minX, maxX, minY, maxY }, players, enemies, map, mechanics, skillMeta };
+  return { durationMs, bounds: { minX, maxX, minY, maxY }, players, enemies, map, worldSpace, mechanics, skillMeta };
 }
 
 // Reasonable data gaps happen: samples land at a fixed cadence (150ms by

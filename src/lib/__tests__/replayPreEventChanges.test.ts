@@ -4,40 +4,12 @@ import { buildReplayPreEventChanges } from "../replayPreEventChanges";
 import type { ReplayIntelligenceAnchor } from "../replayIntelligenceAnchors";
 
 function track(account: string, xBefore: number, xAt: number, options: Partial<ReplayPlayerTrack> = {}): ReplayPlayerTrack {
-  const points = Array.from({ length: 21 }, (_, index) => ({
-    t: index * 1_000,
-    x: index < 10 ? xBefore : xAt,
-    y: 0,
-  }));
-  return {
-    account,
-    name: account,
-    profession: "Guardian",
-    inSquad: true,
-    isCommander: false,
-    points,
-    downIntervals: [],
-    deadIntervals: [],
-    facings: [],
-    effects: [],
-    casts: [],
-    ...options,
-  };
+  const points = Array.from({ length: 21 }, (_, index) => ({ t: index * 1_000, x: index < 10 ? xBefore : xAt, y: 0 }));
+  return { account, name: account, profession: "Guardian", inSquad: true, isCommander: false, points, downIntervals: [], deadIntervals: [], facings: [], effects: [], casts: [], ...options };
 }
 
 function anchor(accounts: string[], timestampMs = 10_000): ReplayIntelligenceAnchor {
-  return {
-    id: "event-1",
-    fightId: "fight-1",
-    fightIndex: 0,
-    fightName: "Fight 1",
-    timestampMs,
-    kind: "mass-down",
-    category: "defense",
-    summary: "event",
-    confidence: "high",
-    accounts,
-  };
+  return { id: "event-1", fightId: "fight-1", fightIndex: 0, fightName: "Fight 1", timestampMs, kind: "mass-down", category: "defense", summary: "event", confidence: "high", accounts };
 }
 
 function replay(players: ReplayPlayerTrack[]): ReplayData {
@@ -50,6 +22,7 @@ function replay(players: ReplayPlayerTrack[]): ReplayData {
       { id: "enemy-2", name: "Enemy 2", points: Array.from({ length: 21 }, (_, i) => ({ t: i * 1_000, x: i < 10 ? 1000 : 320, y: 0 })), downIntervals: [], deadIntervals: [], facings: [] },
     ],
     map: null,
+    worldSpace: { mapId: null, wvwMapData: null },
     mechanics: [],
     skillMeta: {},
   };
@@ -58,18 +31,11 @@ function replay(players: ReplayPlayerTrack[]): ReplayData {
 describe("buildReplayPreEventChanges", () => {
   it("compares exact event state to the fixed 5 second lookback", () => {
     const commander = track("Commander.1", 0, 0, { isCommander: true });
-    const first = track("Player.2", 150, 700, {
-      effects: [{ id: 1122, name: "Stability", classification: "Boon", states: [[0, 1], [9_000, 0]] }],
-      downIntervals: [[9_800, 12_000]],
-    });
-    const second = track("Player.3", 180, 720, {
-      effects: [{ id: 1122, name: "Stability", classification: "Boon", states: [[0, 1], [9_500, 0]] }],
-    });
+    const first = track("Player.2", 150, 700, { effects: [{ id: 1122, name: "Stability", classification: "Boon", states: [[0, 1], [9_000, 0]] }], downIntervals: [[9_800, 12_000]] });
+    const second = track("Player.3", 180, 720, { effects: [{ id: 1122, name: "Stability", classification: "Boon", states: [[0, 1], [9_500, 0]] }] });
     const nearby = track("Ally.4", 160, 1000);
-
     const result = buildReplayPreEventChanges(replay([commander, first, second, nearby]), anchor(["Player.2", "Player.3"]));
     expect(result?.beforeTimestampMs).toBe(5_000);
-
     const byKey = new Map(result?.metrics.map((metric) => [metric.key, metric]));
     expect(byKey.get("downOrDead")).toEqual(expect.objectContaining({ before: 0, atEvent: 1, delta: 1 }));
     expect(byKey.get("beyond600FromTag")).toEqual(expect.objectContaining({ before: 0, atEvent: 2, delta: 2 }));
