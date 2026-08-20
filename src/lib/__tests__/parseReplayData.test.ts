@@ -102,6 +102,46 @@ describe('parseReplayData enemy identity', () => {
   });
 });
 
+describe('parseReplayData tactical state persistence', () => {
+  it('persists only timestamped boon/condition state needed by combined replay inspection', () => {
+    const log = {
+      durationMS: 1000,
+      combatReplayMetaData: { pollingRate: 150 },
+      buffMap: {
+        b1122: { name: 'Stability', icon: 'stab.png', classification: 'Boon' },
+        b736: { name: 'Blind', icon: 'blind.png', classification: 'Condition' },
+        b9999: { name: 'Other', classification: 'Other' },
+      },
+      players: [{
+        account: 'Squad.1234',
+        name: 'Squad Player',
+        profession: 'Guardian',
+        combatReplayData: {
+          start: 0,
+          positions: [[0, 0], [1, 1]],
+          orientations: [],
+          down: [],
+          dead: [],
+        },
+        buffUptimes: [
+          { id: 1122, states: [[0, 0], [150, 2], [600, 0]] },
+          { id: 736, states: [[0, 1], [300, 0]] },
+          { id: 9999, states: [[0, 1]] },
+          { id: 12345, states: [] },
+        ],
+        totalDamageDist: [[]],
+        rotation: [],
+      }],
+      targets: [],
+    } as unknown as RawFightLog;
+
+    expect(parseReplayData(log)?.players[0].effects).toEqual([
+      { id: 736, name: 'Blind', icon: 'blind.png', classification: 'Condition', states: [[0, 1], [300, 0]] },
+      { id: 1122, name: 'Stability', icon: 'stab.png', classification: 'Boon', states: [[0, 0], [150, 2], [600, 0]] },
+    ]);
+  });
+});
+
 describe('interpolateFacing', () => {
   it('returns null for an empty track', () => {
     expect(interpolateFacing([], 500)).toBeNull();

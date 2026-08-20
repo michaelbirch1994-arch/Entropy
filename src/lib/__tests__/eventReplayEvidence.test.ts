@@ -30,6 +30,7 @@ function fight(): ReplayFightEntry {
           downIntervals: [],
           deadIntervals: [],
           facings: [],
+          effects: [],
           casts: [],
         },
         {
@@ -46,6 +47,7 @@ function fight(): ReplayFightEntry {
           downIntervals: [[9_000, 11_000]],
           deadIntervals: [],
           facings: [],
+          effects: [],
           casts: [
             { t: 7_499, skillId: 999 },
             { t: 7_500, skillId: 1001 },
@@ -67,6 +69,7 @@ function fight(): ReplayFightEntry {
           downIntervals: [],
           deadIntervals: [],
           facings: [],
+          effects: [],
           casts: [],
         },
         {
@@ -83,6 +86,7 @@ function fight(): ReplayFightEntry {
           downIntervals: [],
           deadIntervals: [],
           facings: [],
+          effects: [],
           casts: [],
         },
       ],
