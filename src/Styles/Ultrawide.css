@@ -1,0 +1,81 @@
+/*
+ * Large-display workspace rules.
+ *
+ * Entropy's normal desktop layout stays dense and familiar. Once the report
+ * workspace becomes wider than a conventional desktop, analytical views are
+ * allowed to use that space instead of remaining capped at the legacy 112rem
+ * content width. This file deliberately uses layout/grid changes rather than
+ * transform scaling so text and icons remain crisp at native 4K resolutions.
+ */
+
+@media (min-width: 1920px) {
+  .theme-content {
+    width: calc(100% - 2rem);
+    max-width: none;
+    padding-inline: clamp(1.5rem, 1.6vw, 3rem) !important;
+  }
+
+  .theme-topbar {
+    padding-inline: clamp(1.5rem, 1.6vw, 3rem) !important;
+  }
+
+  .theme-player-card-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 2560px) {
+  .theme-content {
+    width: calc(100% - 3rem);
+    padding-inline: clamp(2rem, 1.7vw, 4rem) !important;
+  }
+
+  .theme-topbar {
+    padding-inline: clamp(2rem, 1.7vw, 4rem) !important;
+  }
+
+  .theme-player-card-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .theme-table-shell,
+  .theme-chart-stage {
+    width: 100%;
+  }
+}
+
+@media (min-width: 3440px) {
+  .theme-content {
+    width: calc(100% - 4rem);
+    padding-inline: clamp(2.5rem, 1.8vw, 5rem) !important;
+  }
+
+  .theme-topbar {
+    padding-inline: clamp(2.5rem, 1.8vw, 5rem) !important;
+  }
+
+  .theme-player-card-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  /* Keep small controls from looking lost in a very wide workspace without
+     inflating the application's typography or changing data density. */
+  .theme-filter-strip {
+    gap: 0.625rem;
+  }
+}
+
+@media (min-width: 4480px) {
+  .theme-content {
+    width: calc(100% - 5rem);
+    padding-inline: clamp(3rem, 2vw, 6rem) !important;
+  }
+
+  .theme-topbar {
+    padding-inline: clamp(3rem, 2vw, 6rem) !important;
+  }
+
+  .theme-player-card-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}
