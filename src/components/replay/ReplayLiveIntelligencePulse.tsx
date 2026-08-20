@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { BrainCircuit, Clock3, SkipBack, SkipForward } from "lucide-react";
+import { BrainCircuit, Clock3, SkipBack, SkipForward, Users } from "lucide-react";
 import { buildIntelligenceDashboard } from "../../lib/intelligence/intelligenceDashboard";
 import { nearbyReplayIntelligenceEvents } from "../../lib/replayNearbyIntelligence";
 import { buildReplayIntelligenceAnchors } from "../../lib/replayIntelligenceAnchors";
@@ -51,6 +51,11 @@ export default function ReplayLiveIntelligencePulse({
   const nearby = useMemo(
     () => nearbyReplayIntelligenceEvents(anchors, fightIndex, timestampMs, 5000).slice(0, 3),
     [anchors, fightIndex, timestampMs],
+  );
+
+  const playerNameByAccount = useMemo(
+    () => new Map((fight?.data.players ?? []).map((player) => [player.account, player.name])),
+    [fight],
   );
 
   if (!fight || fightAnchors.length === 0) return null;
@@ -107,12 +112,13 @@ export default function ReplayLiveIntelligencePulse({
               ? Math.max(0, Math.min(100, (anchor.timestampMs / fight.data.durationMs) * 100))
               : 0;
             const aligned = Math.abs(anchor.timestampMs - timestampMs) <= 750;
+            const participantLabel = anchor.accounts.length > 0 ? ` · ${anchor.accounts.length} tracked player${anchor.accounts.length === 1 ? "" : "s"}` : "";
             return (
               <button
                 key={anchor.id}
                 type="button"
                 onClick={() => onSeek(anchor.timestampMs, anchor.account)}
-                title={`${titleForKind(anchor.kind)} · ${fmtClock(anchor.timestampMs)} · ${anchor.summary}`}
+                title={`${titleForKind(anchor.kind)} · ${fmtClock(anchor.timestampMs)}${participantLabel} · ${anchor.summary}`}
                 aria-label={`Seek to ${titleForKind(anchor.kind)} at ${fmtClock(anchor.timestampMs)}`}
                 className={`absolute top-1/2 h-3 w-1.5 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full transition hover:h-4 hover:w-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 ${markerClass(anchor.category, aligned)}`}
                 style={{ left: `${pct}%` }}
@@ -157,23 +163,55 @@ export default function ReplayLiveIntelligencePulse({
       {nearby.length > 0 && (
         <div className="mt-2 flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
           {nearby.map((event) => (
-            <button
+            <div
               key={event.id}
-              type="button"
-              title={event.summary}
-              onClick={() => onSeek(event.timestampMs, event.account)}
-              className={`min-w-[190px] max-w-[260px] shrink-0 cursor-pointer rounded-lg border px-2.5 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50 ${
+              className={`min-w-[220px] max-w-[310px] shrink-0 overflow-hidden rounded-lg border transition ${
                 event.distanceMs <= 750
                   ? "border-sky-300/30 bg-sky-300/[0.07]"
-                  : "border-white/[0.07] bg-black/20 hover:border-sky-400/25 hover:bg-sky-400/[0.04]"
+                  : "border-white/[0.07] bg-black/20 hover:border-sky-400/20"
               }`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-[9px] font-black uppercase tracking-[0.12em] text-slate-300">{titleForKind(event.kind)}</span>
-                <span className={`shrink-0 font-mono text-[9px] font-bold ${event.distanceMs <= 750 ? "text-sky-200" : "text-sky-400/70"}`}>{fmtOffset(event.offsetMs)}</span>
-              </div>
-              <p className="mt-1 line-clamp-2 text-[9px] leading-relaxed text-slate-500">{event.summary}</p>
-            </button>
+              <button
+                type="button"
+                title={event.summary}
+                onClick={() => onSeek(event.timestampMs, event.account)}
+                className="block w-full cursor-pointer px-2.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/50"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-[9px] font-black uppercase tracking-[0.12em] text-slate-300">{titleForKind(event.kind)}</span>
+                  <span className={`shrink-0 font-mono text-[9px] font-bold ${event.distanceMs <= 750 ? "text-sky-200" : "text-sky-400/70"}`}>{fmtOffset(event.offsetMs)}</span>
+                </div>
+                <p className="mt-1 line-clamp-2 text-[9px] leading-relaxed text-slate-500">{event.summary}</p>
+                <div className="mt-1.5 flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-wider text-slate-600">
+                  <span>{event.confidence} evidence</span>
+                  {event.accounts.length > 0 && (
+                    <>
+                      <span>·</span>
+                      <span className="inline-flex items-center gap-1 text-sky-400/70"><Users className="h-2.5 w-2.5" /> {event.accounts.length} tracked</span>
+                    </>
+                  )}
+                </div>
+              </button>
+
+              {event.accounts.length > 0 && (
+                <div className="flex flex-wrap gap-1 border-t border-white/[0.05] px-2.5 py-2">
+                  {event.accounts.slice(0, 5).map((account) => (
+                    <button
+                      key={account}
+                      type="button"
+                      onClick={() => onSeek(event.timestampMs, account)}
+                      title={`Open Tactical State for ${playerNameByAccount.get(account) ?? account}`}
+                      className="max-w-[132px] cursor-pointer truncate rounded-md border border-sky-400/15 bg-sky-400/[0.045] px-1.5 py-1 text-[8px] font-semibold text-sky-300/80 transition hover:border-sky-300/30 hover:bg-sky-400/[0.08] hover:text-sky-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/45"
+                    >
+                      {playerNameByAccount.get(account) ?? account}
+                    </button>
+                  ))}
+                  {event.accounts.length > 5 && (
+                    <span className="px-1 py-1 font-mono text-[8px] text-slate-600">+{event.accounts.length - 5} more</span>
+                  )}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
