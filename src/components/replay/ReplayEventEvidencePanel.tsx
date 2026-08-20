@@ -1,6 +1,7 @@
 import { ArrowDownRight, ArrowRight, ArrowUpRight, BrainCircuit, Crosshair, ShieldCheck, Skull, Users } from "lucide-react";
 import type { ReplayData } from "../../lib/parseReplayData";
 import { buildReplayEventEvidenceState } from "../../lib/replayEventEvidenceState";
+import { buildReplayEventNarrative } from "../../lib/replayEventNarrative";
 import type { ReplayIntelligenceAnchor } from "../../lib/replayIntelligenceAnchors";
 import { buildReplayPreEventChanges, type ReplayPreEventMetric } from "../../lib/replayPreEventChanges";
 
@@ -32,6 +33,7 @@ export default function ReplayEventEvidencePanel({
   const state = buildReplayEventEvidenceState(data, event, t);
   if (!state) return null;
   const preEvent = buildReplayPreEventChanges(data, event, 5000);
+  const narrative = buildReplayEventNarrative(preEvent);
   const changedMetrics = (preEvent?.metrics ?? []).filter((metric) => Math.abs(metric.delta) >= (metric.format === "average" ? 0.5 : 1));
 
   const names = new Map(data.players.map((player) => [player.account, player.name]));
@@ -75,6 +77,26 @@ export default function ReplayEventEvidencePanel({
       {state.untrackedParticipants > 0 && (
         <div className="mt-2 text-[8px] leading-relaxed text-slate-600">
           {state.untrackedParticipants} participant{state.untrackedParticipants === 1 ? "" : "s"} lack position coverage at this exact timestamp.
+        </div>
+      )}
+
+      {narrative && (
+        <div className="mt-3 rounded-lg border border-violet-300/15 bg-violet-300/[0.035] px-2.5 py-2.5">
+          <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[0.16em] text-violet-300/85">
+            <BrainCircuit className="h-3 w-3" /> {narrative.headline}
+          </div>
+          {narrative.statements.length > 0 ? (
+            <div className="mt-1.5 space-y-1">
+              {narrative.statements.map((statement) => (
+                <p key={statement.key} className="text-[9px] leading-relaxed text-slate-300">
+                  {statement.text}
+                </p>
+              ))}
+            </div>
+          ) : narrative.fallback ? (
+            <p className="mt-1.5 text-[9px] leading-relaxed text-slate-500">{narrative.fallback}</p>
+          ) : null}
+          <div className="mt-1.5 text-[7px] text-slate-600">Verified change summary only — no causal interpretation.</div>
         </div>
       )}
 
