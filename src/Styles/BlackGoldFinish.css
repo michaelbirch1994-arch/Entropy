@@ -1,0 +1,259 @@
+/* Black + Gold product finish.
+   Imported after ObsidianGold.css. This layer is intentionally presentation-only:
+   neutral application chrome becomes true black/obsidian, gold carries product
+   identity and interaction, and semantic combat/data colors remain available to
+   the components that actually communicate meaning.
+
+   Intelligence and Fight Replay workspaces are deliberately not targeted here.
+*/
+
+/* -------------------------------------------------------------------------- */
+/* Canvas and permanent shell                                                  */
+/* -------------------------------------------------------------------------- */
+
+.theme-app-shell {
+  --black-gold-0: #030303;
+  --black-gold-1: #070707;
+  --black-gold-2: #0b0b0b;
+  --black-gold-3: #101010;
+  --black-gold-4: #151515;
+  --black-gold-border: rgba(255, 255, 255, 0.075);
+  --black-gold-border-strong: rgba(214, 168, 75, 0.18);
+}
+
+/* Keep the scorched-earth texture, but remove the colored cast from the
+   underlying artwork. Gold atmosphere comes from UI accents, not a green/teal
+   canvas wash. */
+.entropy-bg {
+  background-color: #030303 !important;
+  filter: grayscale(1) saturate(0) contrast(1.18) brightness(0.58) !important;
+}
+
+.entropy-bg::before {
+  opacity: 0.22 !important;
+  filter: sepia(0.35) saturate(0.8);
+}
+
+.entropy-bg::after {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.68), transparent 30%, transparent 72%, rgba(0, 0, 0, 0.52)),
+    radial-gradient(ellipse 52% 44% at 72% 58%, rgba(214, 168, 75, 0.045), transparent 72%) !important;
+  opacity: 1 !important;
+}
+
+.theme-sidebar,
+.theme-topbar,
+.theme-page-toolbar,
+.theme-command-bar {
+  background: rgba(5, 5, 5, 0.97) !important;
+  border-color: var(--black-gold-border) !important;
+  box-shadow: none !important;
+}
+
+.theme-sidebar {
+  border-right-color: rgba(214, 168, 75, 0.14) !important;
+}
+
+.theme-sidebar::after {
+  background: linear-gradient(180deg, var(--entropy-gold), rgba(214, 168, 75, 0.22) 26%, transparent 74%) !important;
+  opacity: 0.56 !important;
+}
+
+.theme-sidebar-header,
+.theme-search-shell {
+  background: rgba(9, 9, 9, 0.98) !important;
+  border-color: var(--black-gold-border) !important;
+  box-shadow: none !important;
+}
+
+.theme-search-shell:focus-within {
+  border-color: color-mix(in srgb, var(--entropy-gold) 42%, transparent) !important;
+  box-shadow: 0 0 0 2px rgba(214, 168, 75, 0.06) !important;
+}
+
+.theme-quiet-button,
+.theme-status-pill {
+  background: #0a0a0a !important;
+  border-color: var(--black-gold-border) !important;
+}
+
+.theme-quiet-button:hover,
+.theme-status-pill:hover {
+  background: #10100e !important;
+  border-color: color-mix(in srgb, var(--entropy-gold) 24%, transparent) !important;
+}
+
+/* Navigation stays black at rest. Gold means location, expansion, hover, or
+   focus instead of tinting every navigation plate. */
+.theme-nav-section,
+.theme-nav-item {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.theme-nav-section:hover,
+.theme-nav-item:hover {
+  background: linear-gradient(90deg, rgba(214, 168, 75, 0.045), rgba(10, 10, 10, 0.9)) !important;
+  border-color: rgba(214, 168, 75, 0.12) !important;
+}
+
+.theme-nav-section[aria-expanded="true"] {
+  background: #0c0b09 !important;
+  border-color: rgba(214, 168, 75, 0.16) !important;
+}
+
+.theme-nav-item[aria-current="page"],
+.theme-nav-item.is-active,
+.theme-nav-item[data-active="true"] {
+  background:
+    linear-gradient(90deg, rgba(214, 168, 75, 0.12), rgba(214, 168, 75, 0.025) 55%, transparent),
+    #0a0a09 !important;
+  border-color: rgba(214, 168, 75, 0.22) !important;
+  box-shadow: inset 2px 0 0 var(--entropy-gold) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Non-Intelligence / non-Replay workspace chrome                              */
+/* -------------------------------------------------------------------------- */
+
+.theme-main[data-workspace-tone="overview"],
+.theme-main[data-workspace-tone="squad"],
+.theme-main[data-workspace-tone="performance"],
+.theme-main[data-workspace-tone="extras"] {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.009), transparent 18rem),
+    #050505 !important;
+}
+
+.theme-main[data-workspace-tone="overview"] :is(.theme-panel, .theme-stat-card, .theme-analytics-surface, .theme-data-region, .theme-table-shell),
+.theme-main[data-workspace-tone="squad"] :is(.theme-panel, .theme-stat-card, .theme-analytics-surface, .theme-data-region, .theme-table-shell),
+.theme-main[data-workspace-tone="performance"] :is(.theme-panel, .theme-stat-card, .theme-analytics-surface, .theme-data-region, .theme-table-shell),
+.theme-main[data-workspace-tone="extras"] :is(.theme-panel, .theme-stat-card, .theme-analytics-surface, .theme-data-region, .theme-table-shell) {
+  background: #0a0a0a !important;
+  border-color: var(--black-gold-border) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.016),
+    0 18px 42px -40px rgba(0, 0, 0, 1) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] :is(.theme-panel, .theme-stat-card, .theme-analytics-surface)::before,
+.theme-main[data-workspace-tone="squad"] :is(.theme-panel, .theme-stat-card, .theme-analytics-surface)::before,
+.theme-main[data-workspace-tone="performance"] :is(.theme-panel, .theme-stat-card, .theme-analytics-surface)::before,
+.theme-main[data-workspace-tone="extras"] :is(.theme-panel, .theme-stat-card, .theme-analytics-surface)::before {
+  background: linear-gradient(90deg, rgba(214, 168, 75, 0.24), transparent 34%) !important;
+  opacity: 0.34 !important;
+}
+
+.theme-main[data-workspace-tone="overview"] :is(.theme-chart-stage, .theme-chart-frame, .theme-chart-tooltip),
+.theme-main[data-workspace-tone="squad"] :is(.theme-chart-stage, .theme-chart-frame, .theme-chart-tooltip),
+.theme-main[data-workspace-tone="performance"] :is(.theme-chart-stage, .theme-chart-frame, .theme-chart-tooltip),
+.theme-main[data-workspace-tone="extras"] :is(.theme-chart-stage, .theme-chart-frame, .theme-chart-tooltip) {
+  background-color: #080808 !important;
+  border-color: var(--black-gold-border) !important;
+  box-shadow: none !important;
+}
+
+.theme-main[data-workspace-tone="overview"] table,
+.theme-main[data-workspace-tone="squad"] table,
+.theme-main[data-workspace-tone="performance"] table,
+.theme-main[data-workspace-tone="extras"] table {
+  background: #090909 !important;
+}
+
+.theme-main[data-workspace-tone="overview"] :is(thead, th),
+.theme-main[data-workspace-tone="squad"] :is(thead, th),
+.theme-main[data-workspace-tone="performance"] :is(thead, th),
+.theme-main[data-workspace-tone="extras"] :is(thead, th) {
+  background: #060606 !important;
+  border-color: var(--black-gold-border) !important;
+}
+
+/* Old hard-coded dark-blue plates are neutral chrome in the black/gold product
+   system. These selectors are scoped away from Combat so Fight Replay is not
+   changed by this pass. */
+.theme-main[data-workspace-tone="overview"] :is([class*="bg-[#0a101f]"], [class*="bg-[#0a0e1f]"], [class*="bg-[#080d19]"]),
+.theme-main[data-workspace-tone="squad"] :is([class*="bg-[#0a101f]"], [class*="bg-[#0a0e1f]"], [class*="bg-[#080d19]"]),
+.theme-main[data-workspace-tone="performance"] :is([class*="bg-[#0a101f]"], [class*="bg-[#0a0e1f]"], [class*="bg-[#080d19]"]),
+.theme-main[data-workspace-tone="extras"] :is([class*="bg-[#0a101f]"], [class*="bg-[#0a0e1f]"], [class*="bg-[#080d19]"]) {
+  background-color: #090909 !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Overview: remove colored chrome/glow while preserving semantic values       */
+/* -------------------------------------------------------------------------- */
+
+.theme-main[data-workspace-tone="overview"] .theme-recap-panel,
+.theme-main[data-workspace-tone="overview"] .theme-kdr-strip {
+  background: #080808 !important;
+  border-color: var(--black-gold-border) !important;
+  box-shadow:
+    inset 2px 0 0 rgba(214, 168, 75, 0.38),
+    0 18px 40px -38px rgba(0, 0, 0, 1) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-kdr-stat {
+  background: #090909 !important;
+  border-color: var(--black-gold-border) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-kdr-stat:hover {
+  background: #0f0e0b !important;
+}
+
+/* MVP identity text may stay semantic; the card itself does not glow teal,
+   green, cyan, or orange. */
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card,
+.theme-main[data-workspace-tone="overview"] .theme-player-card {
+  background: #090909 !important;
+  border-color: var(--black-gold-border) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    0 20px 46px -42px rgba(0, 0, 0, 1) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card:hover,
+.theme-main[data-workspace-tone="overview"] .theme-player-card:hover {
+  background: #0d0c0a !important;
+  border-color: rgba(214, 168, 75, 0.20) !important;
+  box-shadow:
+    inset 2px 0 0 rgba(214, 168, 75, 0.38),
+    0 20px 46px -42px rgba(0, 0, 0, 1) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-metric-card {
+  background: #090909 !important;
+  border-color: var(--black-gold-border) !important;
+  box-shadow: none !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-metric-card:hover {
+  background: #0d0c0a !important;
+  border-color: rgba(214, 168, 75, 0.20) !important;
+  box-shadow: inset 2px 0 0 rgba(214, 168, 75, 0.30) !important;
+}
+
+/* Suppress legacy neon atmosphere on Overview plates only. The inner icon and
+   value colors remain untouched, so healing/damage/barrier/etc. can still be
+   read semantically. */
+.theme-main[data-workspace-tone="overview"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival) {
+  --player-glow: var(--entropy-gold);
+  filter: none !important;
+}
+
+/* Neutral separators should never inherit old teal borders. */
+.theme-main[data-workspace-tone="overview"] :is(.border-slate-700\/50, .border-slate-800, .border-slate-800\/60, .border-slate-800\/80),
+.theme-main[data-workspace-tone="squad"] :is(.border-slate-700\/50, .border-slate-800, .border-slate-800\/60, .border-slate-800\/80),
+.theme-main[data-workspace-tone="performance"] :is(.border-slate-700\/50, .border-slate-800, .border-slate-800\/60, .border-slate-800\/80),
+.theme-main[data-workspace-tone="extras"] :is(.border-slate-700\/50, .border-slate-800, .border-slate-800\/60, .border-slate-800\/80) {
+  border-color: var(--black-gold-border) !important;
+}
+
+/* Product interaction is gold. Semantic colored text/icons are intentionally
+   not globally remapped here. */
+.theme-main[data-workspace-tone="overview"] :is(button, a):focus-visible,
+.theme-main[data-workspace-tone="squad"] :is(button, a):focus-visible,
+.theme-main[data-workspace-tone="performance"] :is(button, a):focus-visible,
+.theme-main[data-workspace-tone="extras"] :is(button, a):focus-visible {
+  outline-color: var(--entropy-gold-bright) !important;
+  --tw-ring-color: rgba(214, 168, 75, 0.38) !important;
+}
