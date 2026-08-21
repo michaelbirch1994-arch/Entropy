@@ -4,6 +4,7 @@ import type { DistanceToTagResult, DistanceToTagRow, GeneralPlayer } from '../..
 import { fmtNum } from '../../utils/format';
 import Panel from '../ui/Panel';
 import ProfessionIcon from '../ui/ProfessionIcon';
+import BoundedDataRegion from '../ui/BoundedDataRegion';
 
 type DistanceMetric = 'avg' | 'p25' | 'median' | 'p75' | 'p95';
 type SortKey = 'account' | 'fightCount' | 'sampleCount' | DistanceMetric;
@@ -263,7 +264,13 @@ export default function DistanceToTagPanel({ result }: { result: DistanceToTagRe
                             </p>
                         </div>
 
-                        <div className="theme-table-shell max-h-[32rem] overflow-auto custom-scrollbar">
+                        <BoundedDataRegion
+                            label={`Distance to tag player table, ${visibleRows.length} players`}
+                            itemCount={visibleRows.length}
+                            maxHeightClass="max-h-[32rem]"
+                            scrollAxes="both"
+                            className="theme-table-shell"
+                        >
                             <table className="w-full min-w-[720px] text-left text-xs">
                                 <thead className="sticky top-0 z-10 bg-theme-surface-elevated text-[9px] font-black uppercase text-theme-muted">
                                     <tr className="border-b border-theme-border">
@@ -307,7 +314,7 @@ export default function DistanceToTagPanel({ result }: { result: DistanceToTagRe
                                     })}
                                 </tbody>
                             </table>
-                        </div>
+                        </BoundedDataRegion>
                     </div>
                 </div>
             )}

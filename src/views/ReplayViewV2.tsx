@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import { Crosshair, Download, Film, Pause, Play, RotateCcw, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { Crosshair, Download, Film, Maximize2, Minimize2, Pause, Play, RotateCcw, X } from "lucide-react";
+import ReplayInspectorDrawer, { type ReplayInspectorMode } from "../components/replay/ReplayInspectorDrawer";
 import ReplayLiveIntelligencePulse from "../components/replay/ReplayLiveIntelligencePulse";
-import ReplayTacticalStatePanel from "../components/replay/ReplayTacticalStatePanel";
+import ReplayMapStage from "../components/replay/ReplayMapStage";
 import Panel from "../components/ui/Panel";
-import { distanceBetween, interpolateFacing, interpolatePosition, isInInterval } from "../lib/parseReplayData";
+import { distanceBetween, interpolatePosition, isInInterval } from "../lib/parseReplayData";
 import type { ReplayIntelligenceAnchor } from "../lib/replayIntelligenceAnchors";
 import { resolveReplayNavigationTarget, type ResolvedReplayNavigationTarget } from "../lib/replayNavigation";
+import { quantizeReplayAnalysisTime, REPLAY_RENDER_INTERVAL_MS, resolveReplayPlaybackTime } from "../lib/replayPlaybackClock";
 import { useReport } from "../store/ReportContext";
 import { useView } from "../store/ViewContext";
 
@@ -18,20 +20,6 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function shortName(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) return "Unknown";
-  return trimmed.length > 16 ? `${trimmed.slice(0, 15)}…` : trimmed;
-}
-
-const FACING_ANGLE_SIGN = 1;
-const FACING_ANGLE_OFFSET_DEG = 0;
-
-function facingLineEnd(cx: number, cy: number, length: number, angleDeg: number) {
-  const rad = ((FACING_ANGLE_SIGN * angleDeg + FACING_ANGLE_OFFSET_DEG) * Math.PI) / 180;
-  return { x2: cx + Math.cos(rad) * length, y2: cy + Math.sin(rad) * length };
-}
-
 export default function ReplayViewV2() {
   const { report } = useReport();
   const { navigationTarget, clearNavigationTarget } = useView();
@@ -39,10 +27,13 @@ export default function ReplayViewV2() {
   const [fightIdx, setFightIdx] = useState(0);
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [speed, setSpeed] = useState(2);
+  const [speed, setSpeed] = useState(1);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [evidenceOrigin, setEvidenceOrigin] = useState<ResolvedReplayNavigationTarget | null>(null);
   const [alignedIntelligenceEvent, setAlignedIntelligenceEvent] = useState<ReplayIntelligenceAnchor | null>(null);
+  const [evidenceEvent, setEvidenceEvent] = useState<ReplayIntelligenceAnchor | null>(null);
+  const [inspectorMode, setInspectorMode] = useState<ReplayInspectorMode>("intelligence");
+  const [focusMode, setFocusMode] = useState(false);
   const pendingSeekRef = useRef<ResolvedReplayNavigationTarget | null>(null);
   const [showMap, setShowMap] = useState(true);
   const [zoom, setZoom] = useState(1);
@@ -51,7 +42,8 @@ export default function ReplayViewV2() {
   const [showCasts, setShowCasts] = useState(false);
   const [showFacing, setShowFacing] = useState(false);
   const rafRef = useRef<number | null>(null);
-  const lastTsRef = useRef<number | null>(null);
+  const playbackTimeRef = useRef(0);
+  const lastRenderTsRef = useRef(0);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
@@ -73,6 +65,8 @@ export default function ReplayViewV2() {
       setSelectedAccount(null);
     }
     setAlignedIntelligenceEvent(null);
+    setEvidenceEvent(null);
+    setInspectorMode("intelligence");
     setPlaying(false);
     setPan({ x: 0, y: 0 });
   }, [fightIdx]);
@@ -95,24 +89,45 @@ export default function ReplayViewV2() {
   }, [clearNavigationTarget, fightIdx, fights, navigationTarget]);
 
   useEffect(() => {
+    playbackTimeRef.current = t;
+  }, [t]);
+
+  useEffect(() => {
     if (!playing || !fight) return;
+    const anchor = {
+      timelineMs: playbackTimeRef.current,
+      wallClockMs: performance.now(),
+    };
+    lastRenderTsRef.current = anchor.wallClockMs - REPLAY_RENDER_INTERVAL_MS;
     function tick(now: number) {
-      if (lastTsRef.current != null) {
-        const dt = (now - lastTsRef.current) * speed;
-        setT((prev) => {
-          const next = prev + dt;
-          return next >= fight!.data.durationMs ? 0 : next;
-        });
+      if (now - lastRenderTsRef.current >= REPLAY_RENDER_INTERVAL_MS) {
+        const next = resolveReplayPlaybackTime(anchor, now, speed, fight!.data.durationMs);
+        playbackTimeRef.current = next;
+        setT(next);
+        lastRenderTsRef.current = now;
       }
-      lastTsRef.current = now;
       rafRef.current = requestAnimationFrame(tick);
     }
     rafRef.current = requestAnimationFrame(tick);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      lastTsRef.current = null;
+      rafRef.current = null;
     };
   }, [playing, speed, fight]);
+
+  useEffect(() => {
+    if (!focusMode) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFocusMode(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [focusMode]);
 
   useEffect(() => {
     if (!fight) return;
@@ -145,6 +160,7 @@ export default function ReplayViewV2() {
   }, [fight, zoom]);
 
   const markerUnit = frame ? Math.max(frame.w / 1000, frame.h / 560, 0.001) : 1;
+  const analysisT = useMemo(() => quantizeReplayAnalysisTime(t), [t]);
 
   const focusPoint = useMemo(() => {
     if (!fight) return null;
@@ -194,15 +210,15 @@ export default function ReplayViewV2() {
   const vbH = Number(vbHStr);
   const flipTransform = `translate(0, ${2 * vbY + vbH}) scale(1, -1)`;
 
-  function handlePointerDown(event: PointerEvent<SVGSVGElement>) {
+  const handlePointerDown = useCallback((event: PointerEvent<SVGSVGElement>) => {
     if (zoom <= 1) return;
     (event.target as Element).setPointerCapture(event.pointerId);
     setFollowFocus(false);
     dragRef.current = { x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y };
     setDragging(true);
-  }
+  }, [pan.x, pan.y, zoom]);
 
-  function handlePointerMove(event: PointerEvent<SVGSVGElement>) {
+  const handlePointerMove = useCallback((event: PointerEvent<SVGSVGElement>) => {
     if (!dragRef.current || !svgRef.current || !frame) return;
     const rect = svgRef.current.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
@@ -212,9 +228,9 @@ export default function ReplayViewV2() {
       x: clamp(dragRef.current.panX - dx * (frame.w / rect.width), -frame.maxPanX, frame.maxPanX),
       y: clamp(dragRef.current.panY + dy * (frame.h / rect.height), -frame.maxPanY, frame.maxPanY),
     });
-  }
+  }, [frame]);
 
-  function handlePointerUp(event: PointerEvent<SVGSVGElement>) {
+  const handlePointerUp = useCallback((event: PointerEvent<SVGSVGElement>) => {
     if (dragRef.current) {
       try {
         (event.target as Element).releasePointerCapture(event.pointerId);
@@ -224,18 +240,18 @@ export default function ReplayViewV2() {
     }
     dragRef.current = null;
     setDragging(false);
-  }
+  }, []);
 
   const liveStats = useMemo(() => {
     if (!fight) return null;
-    const squadAlive = fight.data.players.filter((player) => player.inSquad && !isInInterval(player.deadIntervals, t) && interpolatePosition(player.points, t));
-    const enemiesAlive = fight.data.enemies.filter((enemy) => !isInInterval(enemy.deadIntervals, t) && interpolatePosition(enemy.points, t));
+    const squadAlive = fight.data.players.filter((player) => player.inSquad && !isInInterval(player.deadIntervals, analysisT) && interpolatePosition(player.points, analysisT));
+    const enemiesAlive = fight.data.enemies.filter((enemy) => !isInInterval(enemy.deadIntervals, analysisT) && interpolatePosition(enemy.points, analysisT));
     const commander = squadAlive.find((player) => player.isCommander);
-    const commanderPoint = commander ? interpolatePosition(commander.points, t) : null;
+    const commanderPoint = commander ? interpolatePosition(commander.points, analysisT) : null;
     const distances = commanderPoint
       ? squadAlive
           .filter((player) => !player.isCommander)
-          .map((player) => distanceBetween(interpolatePosition(player.points, t), commanderPoint))
+          .map((player) => distanceBetween(interpolatePosition(player.points, analysisT), commanderPoint))
           .filter((value): value is number => value != null)
       : [];
     return {
@@ -243,7 +259,7 @@ export default function ReplayViewV2() {
       enemyCount: enemiesAlive.length,
       avgDistToTag: distances.length > 0 ? distances.reduce((sum, value) => sum + value, 0) / distances.length : null,
     };
-  }, [fight, t]);
+  }, [analysisT, fight]);
 
   const bombEvents = useMemo(() => {
     if (!fight) return [];
@@ -270,14 +286,29 @@ export default function ReplayViewV2() {
     return fight.data.players.find((player) => player.account === selectedAccount) ?? null;
   }, [fight, selectedAccount]);
 
-  function selectPlayer(account: string) {
+  const selectPlayer = useCallback((account: string) => {
     setPlaying(false);
     setSelectedAccount(account);
+    setInspectorMode("player");
     if (zoom > 1) {
       setFollowFocus(true);
       setPan({ x: 0, y: 0 });
     }
-  }
+  }, [zoom]);
+
+  const seekReplay = useCallback((timestampMs: number, account?: string) => {
+    playbackTimeRef.current = timestampMs;
+    setT(timestampMs);
+    setPlaying(false);
+    if (account) {
+      setSelectedAccount(account);
+      setInspectorMode("player");
+    }
+  }, []);
+
+  const inspectEvidenceAccount = useCallback((account: string) => {
+    seekReplay(evidenceEvent?.timestampMs ?? playbackTimeRef.current, account);
+  }, [evidenceEvent?.timestampMs, seekReplay]);
 
   function exportClip() {
     if (!fight) return;
@@ -319,8 +350,17 @@ export default function ReplayViewV2() {
   const atEvidenceAnchor = evidenceOrigin?.fightIndex === fightIdx && Math.abs(t - evidenceOrigin.timestampMs) < 1;
 
   return (
-    <div className="space-y-5 animate-view pb-12">
-      {evidenceOrigin?.fightIndex === fightIdx && (
+    <div className={focusMode ? "fixed inset-0 z-[120] space-y-3 overflow-y-auto bg-[#02070b] p-3 sm:p-4" : "space-y-5 animate-view pb-12"}>
+      {focusMode && (
+        <div className="sticky top-0 z-20 flex items-center justify-between gap-4 rounded-xl border border-sky-400/20 bg-[#050b12]/95 px-4 py-3 shadow-2xl backdrop-blur-xl">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-sky-300">Replay Focus Mode</div>
+            <div className="truncate text-sm font-black text-slate-100">{fight?.fightName}</div>
+          </div>
+          <button type="button" onClick={() => setFocusMode(false)} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-sky-300/25 bg-sky-300/[0.08] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-sky-200 transition hover:bg-sky-300/[0.14]"><Minimize2 className="h-3.5 w-3.5" /> Exit Focus <span className="font-mono text-slate-500">Esc</span></button>
+        </div>
+      )}
+      {!focusMode && evidenceOrigin?.fightIndex === fightIdx && (
         <div className="rounded-2xl border border-sky-400/25 bg-sky-500/[0.06] px-4 py-3 shadow-[0_0_30px_-18px_rgba(56,189,248,0.8)]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -345,7 +385,7 @@ export default function ReplayViewV2() {
         <span className="text-[10px] text-slate-500">Select a player marker to pin exact-time tactical state.</span>
       </div>
 
-      {fight && bombEvents.length > 0 && (
+      {!focusMode && fight && bombEvents.length > 0 && (
         <Panel title="Detected Bombs" subtitle="Multiple tracked enemies downed within 3 seconds; a focus-fire proxy, not damage attribution" icon={<Crosshair className="h-3.5 w-3.5" />} action={`${bombEvents.length} detected`}>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {bombEvents.map((bomb, index) => (
@@ -358,7 +398,7 @@ export default function ReplayViewV2() {
       )}
 
       {fight && (
-        <Panel title="Fight Replay" subtitle={`${fight.fightName} · tactical movement + exact-time player state`} icon={<Film className="h-3.5 w-3.5" />} action={`${fight.data.players.length} players tracked`}>
+        <Panel title="Fight Replay" subtitle={`${fight.fightName} · tactical movement + exact-time player state`} icon={<Film className="h-3.5 w-3.5" />} action={`${fight.data.players.length} players tracked`} className={focusMode ? "rounded-xl" : ""} bodyClassName={focusMode ? "p-3" : "p-5"}>
           {liveStats && (
             <div className="mb-3 grid grid-cols-3 gap-3">
               <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2"><div className="text-[9px] font-bold uppercase tracking-wider text-sky-400/70">Squad tracked now</div><div className="font-mono text-lg font-black text-sky-300">{liveStats.squadCount}</div></div>
@@ -369,13 +409,10 @@ export default function ReplayViewV2() {
 
           <ReplayLiveIntelligencePulse
             fightIndex={fightIdx}
-            timestampMs={t}
+            timestampMs={analysisT}
             onAlignedEventChange={setAlignedIntelligenceEvent}
-            onSeek={(timestampMs, account) => {
-              setT(timestampMs);
-              setPlaying(false);
-              if (account) setSelectedAccount(account);
-            }}
+            onEvidenceEventChange={setEvidenceEvent}
+            onSeek={seekReplay}
           />
 
           <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -392,97 +429,41 @@ export default function ReplayViewV2() {
             <span className="w-9 font-mono text-[10px] text-slate-400">{zoom.toFixed(1)}x</span>
             {zoom > 1 && <button type="button" onClick={() => { setFollowFocus((value) => !value); setPan({ x: 0, y: 0 }); }} className={`rounded border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${followFocus ? "border-sky-500/30 bg-sky-500/10 text-sky-300" : "border-slate-800 text-slate-500"}`}>Follow focus</button>}
             {zoom !== 1 && <button type="button" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); setFollowFocus(true); }} className="rounded border border-slate-800 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300">Reset</button>}
+            <button type="button" onClick={() => setFocusMode((value) => !value)} className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-sky-400/20 bg-sky-400/[0.055] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-sky-300 transition hover:border-sky-300/35 hover:bg-sky-400/[0.09]"><Maximize2 className="h-3 w-3" /> {focusMode ? "Exit focus" : "Focus mode"}</button>
           </div>
 
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_330px] 2xl:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="overflow-hidden rounded-xl border border-slate-700/80 bg-black/70 shadow-[inset_0_0_50px_rgba(0,0,0,0.55)]">
-              <svg ref={svgRef} viewBox={viewBox} className="h-[420px] w-full select-none touch-none xl:h-[520px] 2xl:h-[600px]" style={{ cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "default" }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}>
-                <g transform={flipTransform}>
-                  {showMap && fight.data.map?.images.map((image, index) => {
-                    const visible = image.endMs <= 0 || (t >= image.startMs && t <= image.endMs);
-                    if (!visible) return null;
-                    const width = fight.data.map!.width;
-                    const height = fight.data.map!.height;
-                    return <image key={`${image.url}-${index}`} href={image.url} x={image.x} y={image.y} width={width} height={height} opacity={0.9} preserveAspectRatio="none" transform={`translate(0 ${2 * image.y + height}) scale(1 -1)`} />;
-                  })}
-
-                  {showMechanics && (fight.data.mechanics ?? []).filter((mechanic) => Math.abs(mechanic.t - t) <= 1500 && mechanic.account).map((mechanic, index) => {
-                    const owner = fight.data.players.find((player) => player.account === mechanic.account);
-                    const point = owner ? interpolatePosition(owner.points, t) : null;
-                    if (!point) return null;
-                    const age = Math.abs(mechanic.t - t) / 1500;
-                    return <circle key={`mechanic-${mechanic.t}-${index}`} cx={point.x} cy={point.y} r={(10 + age * 14) * markerUnit} fill="none" stroke="#fb7185" strokeWidth={2 * markerUnit} opacity={0.7 * (1 - age)} />;
-                  })}
-
-                  {showCasts && fight.data.players.map((player) => {
-                    const recent = (player.casts ?? []).filter((cast) => Math.abs(cast.t - t) <= 600);
-                    if (recent.length === 0) return null;
-                    const point = interpolatePosition(player.points, t);
-                    if (!point) return null;
-                    const age = Math.min(...recent.map((cast) => Math.abs(cast.t - t))) / 600;
-                    return <circle key={`cast-${player.account}`} cx={point.x} cy={point.y} r={(5 + age * 8) * markerUnit} fill="none" stroke="#fbbf24" strokeWidth={1.5 * markerUnit} opacity={0.6 * (1 - age)} />;
-                  })}
-
-                  {showFacing && fight.data.enemies.map((enemy) => {
-                    if (isInInterval(enemy.deadIntervals, t)) return null;
-                    const point = interpolatePosition(enemy.points, t);
-                    const angle = interpolateFacing(enemy.facings ?? [], t);
-                    if (!point || angle == null) return null;
-                    const end = facingLineEnd(point.x, point.y, 10 * markerUnit, angle);
-                    return <line key={`enemy-facing-${enemy.id}`} x1={point.x} y1={point.y} x2={end.x2} y2={end.y2} stroke="#fb7185" strokeWidth={1.2 * markerUnit} opacity={0.7} />;
-                  })}
-
-                  {fight.data.enemies.map((enemy) => {
-                    const point = interpolatePosition(enemy.points, t);
-                    if (!point || isInInterval(enemy.deadIntervals, t)) return null;
-                    const down = isInInterval(enemy.downIntervals, t);
-                    return (
-                      <g key={enemy.id}>
-                        <circle cx={point.x} cy={point.y} r={(down ? 7.5 : 5.4) * markerUnit} fill="#ef4444" fillOpacity={down ? 0.28 : 0.88} stroke={down ? "#fecdd3" : "#7f1d1d"} strokeWidth={1.7 * markerUnit}><title>{`${enemy.name}${down ? " — downed" : ""}`}</title></circle>
-                      </g>
-                    );
-                  })}
-
-                  {showFacing && fight.data.players.map((player) => {
-                    if (isInInterval(player.deadIntervals, t)) return null;
-                    const point = interpolatePosition(player.points, t);
-                    const angle = interpolateFacing(player.facings ?? [], t);
-                    if (!point || angle == null) return null;
-                    const end = facingLineEnd(point.x, point.y, 11 * markerUnit, angle);
-                    return <line key={`player-facing-${player.account}`} x1={point.x} y1={point.y} x2={end.x2} y2={end.y2} stroke={player.inSquad ? "#38bdf8" : "#94a3b8"} strokeWidth={1.2 * markerUnit} opacity={0.75} />;
-                  })}
-
-                  {fight.data.players.map((player) => {
-                    const point = interpolatePosition(player.points, t);
-                    if (!point || isInInterval(player.deadIntervals, t)) return null;
-                    const down = isInInterval(player.downIntervals, t);
-                    const selected = selectedAccount === player.account;
-                    const intelligenceParticipant = alignedIntelligenceEvent?.accounts.includes(player.account) ?? false;
-                    const baseRadius = player.isCommander ? 8.5 : 6;
-                    const fill = player.inSquad ? "#38bdf8" : "#94a3b8";
-                    const intelInnerRadius = (baseRadius + 3.5) * markerUnit;
-                    const intelOuterRadius = (baseRadius + 6.5) * markerUnit;
-                    return (
-                      <g key={player.account} onClick={(event) => { event.stopPropagation(); selectPlayer(player.account); }} className="cursor-pointer">
-                        {intelligenceParticipant && (
-                          <circle cx={point.x} cy={point.y} r={intelInnerRadius} fill="none" stroke="#7dd3fc" strokeWidth={1.4 * markerUnit} opacity={selected ? 0.45 : 0.72} pointerEvents="none">
-                            <animate attributeName="r" values={`${intelInnerRadius};${intelOuterRadius};${intelInnerRadius}`} dur="1.8s" repeatCount="indefinite" />
-                            <animate attributeName="opacity" values={selected ? "0.28;0.5;0.28" : "0.48;0.86;0.48"} dur="1.8s" repeatCount="indefinite" />
-                          </circle>
-                        )}
-                        {selected && <circle cx={point.x} cy={point.y} r={(baseRadius + 7) * markerUnit} fill="none" stroke="#fbbf24" strokeWidth={2 * markerUnit} opacity={0.95} />}
-                        {player.isCommander && <circle cx={point.x} cy={point.y} r={(baseRadius + 3) * markerUnit} fill="none" stroke="#f59e0b" strokeWidth={2 * markerUnit} opacity={0.95} />}
-                        <circle cx={point.x} cy={point.y} r={(down ? baseRadius + 1.5 : baseRadius) * markerUnit} fill={fill} fillOpacity={down ? 0.35 : 0.95} stroke={down ? "#fb7185" : "#e2e8f0"} strokeWidth={1.4 * markerUnit}><title>{`${player.name} · ${player.profession}${player.isCommander ? " · commander" : ""}${down ? " · downed" : ""}${intelligenceParticipant ? " · Intelligence event participant" : ""}`}</title></circle>
-                        {(selected || player.isCommander) && (
-                          <text x={point.x} y={point.y - (baseRadius + 6) * markerUnit} textAnchor="middle" fontSize={9 * markerUnit} fontWeight="800" fill={selected ? "#fef3c7" : "#e2e8f0"} stroke="#020617" strokeWidth={2.5 * markerUnit} paintOrder="stroke" transform={`translate(0 ${2 * (point.y - (baseRadius + 6) * markerUnit)}) scale(1 -1)`}>{shortName(player.name)}</text>
-                        )}
-                      </g>
-                    );
-                  })}
-                </g>
-              </svg>
-            </div>
-            <ReplayTacticalStatePanel data={fight.data} player={selectedPlayer} t={t} />
+            <ReplayMapStage
+              data={fight.data}
+              timestampMs={t}
+              viewBox={viewBox}
+              flipTransform={flipTransform}
+              markerUnit={markerUnit}
+              selectedAccount={selectedAccount}
+              alignedIntelligenceEvent={alignedIntelligenceEvent}
+              showMap={showMap}
+              showMechanics={showMechanics}
+              showCasts={showCasts}
+              showFacing={showFacing}
+              zoom={zoom}
+              dragging={dragging}
+              focusMode={focusMode}
+              svgRef={svgRef}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onSelectPlayer={selectPlayer}
+            />
+            <ReplayInspectorDrawer
+              data={fight.data}
+              player={selectedPlayer}
+              timestampMs={analysisT}
+              evidenceEvent={evidenceEvent}
+              mode={inspectorMode}
+              focusMode={focusMode}
+              onModeChange={setInspectorMode}
+              onSelectAccount={inspectEvidenceAccount}
+            />
           </div>
 
           <div className={`mt-4 flex items-center gap-3 rounded-xl border px-4 py-3 ${atEvidenceAnchor ? "border-sky-400/35 bg-sky-500/[0.07]" : "border-slate-800 bg-slate-900/50"}`}>

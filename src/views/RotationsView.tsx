@@ -5,6 +5,7 @@ import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
 import { Activity, Clock, Repeat2, Search } from "lucide-react";
 import PlayerSampleCell from "../components/ui/PlayerSampleCell";
+import BoundedDataRegion from "../components/ui/BoundedDataRegion";
 import { getSampleReliability, sampleReliabilityClasses } from "../lib/sampleReliability";
 import type { PlayerSampleContextData } from "../lib/playerSampleContext";
 
@@ -150,7 +151,12 @@ export default function RotationsView() {
           icon={<Clock className="w-3.5 h-3.5" />}
           bodyClassName="p-0"
         >
-          <div className="max-h-[520px] overflow-y-auto custom-scrollbar">
+          <BoundedDataRegion
+            label={`Squad rotation roster, ${rows.length} players`}
+            itemCount={rows.length}
+            maxHeightClass="max-h-[520px]"
+            className="rounded-none"
+          >
             {rows.map((p) => {
               const isActive = p.account === activeAccount;
               const sample = buildSamples.get(`${p.account}||${p.profession}`);
@@ -198,7 +204,7 @@ export default function RotationsView() {
                 </button>
               );
             })}
-          </div>
+          </BoundedDataRegion>
           <div className="flex justify-between text-[10px] text-slate-500 font-mono px-3 py-2 border-t border-slate-800/40">
             <span>0:00</span>
             <span>{fmtClock(fight.durationMs)}</span>
@@ -248,7 +254,12 @@ export default function RotationsView() {
             <span>{fmtClock(fight.durationMs)}</span>
           </div>
 
-          <div className="mt-5 max-h-72 overflow-y-auto custom-scrollbar">
+          <BoundedDataRegion
+            label={`${activePlayer.account} skill rotation, ${activePlayer.casts.length} casts`}
+            itemCount={activePlayer.casts.length}
+            maxHeightClass="max-h-72"
+            className="mt-5"
+          >
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500 sticky top-0 bg-[#0a0e1f]">
@@ -271,7 +282,7 @@ export default function RotationsView() {
                 })}
               </tbody>
             </table>
-          </div>
+          </BoundedDataRegion>
         </Panel>
       )}
     </div>
