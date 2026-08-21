@@ -179,3 +179,34 @@
   outline-color: var(--entropy-gold-bright) !important;
   --tw-ring-color: rgba(214, 168, 75, 0.42) !important;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Intelligence opt-out                                                        */
+/* -------------------------------------------------------------------------- */
+
+/* Intelligence shares the sidebar's "extras" tone with Archive/Compare/Builder.
+   Its dossier class is the reliable content signature, so restore the prior
+   Obsidian Gold workspace surfaces whenever Intelligence is mounted. This keeps
+   the black/gold finish from flattening its intentionally color-sorted evidence
+   language while allowing the other Extras views to keep the product finish. */
+.theme-main[data-workspace-tone="extras"]:has(.theme-intelligence-dossier) {
+  --theme-grid: #183037;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.012), transparent 20rem),
+    var(--entropy-bg) !important;
+}
+
+.theme-main[data-workspace-tone="extras"]:has(.theme-intelligence-dossier)
+  :is(.theme-panel, .theme-stat-card, .theme-analytics-surface, .theme-data-region, .theme-table-shell) {
+  background: var(--entropy-surface-1) !important;
+  border-color: var(--entropy-border-subtle) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    0 18px 42px -40px rgba(0, 0, 0, 0.95) !important;
+}
+
+.theme-main[data-workspace-tone="extras"]:has(.theme-intelligence-dossier)
+  :is(.theme-chart-stage, .theme-chart-frame, .theme-chart-tooltip) {
+  background-color: var(--entropy-surface-1) !important;
+  border-color: var(--entropy-border-subtle) !important;
+}
