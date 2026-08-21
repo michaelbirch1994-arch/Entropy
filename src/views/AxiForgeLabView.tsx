@@ -36,7 +36,6 @@ import {
 import {
   ARMOR_SLOTS,
   STAT_OPTIONS,
-  WEAPON_OPTIONS,
   buildAxiShape,
   builderFromAxiBuild,
   cloneBuilder,
@@ -51,18 +50,28 @@ import { loadBuilderWorkspace, saveBuilderWorkspace } from "../lib/axiforge/buil
 import { BOON_DISPLAY_ORDER, type BoonCoverageEntry } from "../lib/axiforge/boonEngine";
 import { computeBuildBoonCoverage } from "../lib/axiforge/squadBoons";
 import {
-  fetchGw2Professions,
   fetchGw2Skills,
   fetchGw2Specializations,
   fetchGw2Traits,
   wikiSearchUrl,
 } from "../lib/gw2/gw2Api";
+import {
+  availableProfessionWeapons,
+  isTwoHandedWeapon,
+  loadBuilderFoundationCatalog,
+  validateBuilderEquipmentAgainstCatalog,
+  weaponFitsBuilderSlot,
+  type BuilderCatalogSource,
+} from "../lib/gw2/builderCatalog";
 import type {
   BuilderComposition,
   BuilderSummaryItem,
   BuilderWorkspace,
   EntropyBuilderState,
   Gw2ApiFact,
+  Gw2ItemStat,
+  Gw2Legend,
+  Gw2Pet,
   Gw2Profession,
   Gw2Skill,
   Gw2SkillSlot,
@@ -82,6 +91,10 @@ const GAME_MODES = [
 ] as const;
 
 const ROLE_OPTIONS = ["", "DPS", "Support", "Healer", "Boon Support", "Control", "Roamer", "Commander"];
+
+function legendLabel(id: string): string {
+  return id.replace(/^Legendary/, "").replace(/([a-z])([A-Z])/g, "$1 $2").trim() || id;
+}
 
 function factLabel(fact: Gw2ApiFact): string {
   const parts = [fact.text, fact.status, fact.description].filter(Boolean);
@@ -383,6 +396,10 @@ export default function AxiForgeLabView() {
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("build");
   const [editingBuildId, setEditingBuildId] = useState<string | null>(null);
   const [professions, setProfessions] = useState<Gw2Profession[]>([]);
+  const [itemStats, setItemStats] = useState<Gw2ItemStat[]>([]);
+  const [legends, setLegends] = useState<Gw2Legend[]>([]);
+  const [pets, setPets] = useState<Gw2Pet[]>([]);
+  const [catalogSource, setCatalogSource] = useState<BuilderCatalogSource | null>(null);
   const [professionSpecs, setProfessionSpecs] = useState<Gw2Specialization[]>([]);
   const [selectedSpecTraits, setSelectedSpecTraits] = useState<Gw2Trait[]>([]);
   const [professionSkills, setProfessionSkills] = useState<Gw2Skill[]>([]);
@@ -411,18 +428,35 @@ export default function AxiForgeLabView() {
     return map;
   }, [selectedSpecTraits]);
   const skillsById = useMemo(() => new Map(professionSkills.map((skill) => [skill.id, skill])), [professionSkills]);
-  const issues = useMemo(() => validateBuilder(builder), [builder]);
+  const availableWeapons = useMemo(
+    () => availableProfessionWeapons(selectedProfession, builder.specializationIds),
+    [builder.specializationIds, selectedProfession],
+  );
+  const statOptions = useMemo(() => {
+    const liveNames = [...new Set(itemStats.map((stat) => stat.name).filter(Boolean))];
+    return liveNames.length ? ["", ...liveNames] : [...STAT_OPTIONS];
+  }, [itemStats]);
+  const issues = useMemo(
+    () => [...validateBuilder(builder), ...validateBuilderEquipmentAgainstCatalog(builder, selectedProfession)],
+    [builder, selectedProfession],
+  );
   const detectedKind = useMemo(() => detectAxiForgeCodeKind(importCode), [importCode]);
   const activeComposition = workspace.compositions.find((composition) => composition.id === workspace.activeCompositionId) ?? null;
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchGw2Professions()
-      .then((items) => {
+    loadBuilderFoundationCatalog()
+      .then((catalog) => {
         if (cancelled) return;
-        setProfessions(items);
-        if (!items.some((item) => item.id === builder.professionId) && items[0]) updateBuilder((current) => ({ ...current, professionId: items[0].id }));
+        setProfessions(catalog.professions);
+        setItemStats(catalog.itemStats);
+        setLegends(catalog.legends);
+        setPets(catalog.pets);
+        setCatalogSource(catalog.source);
+        if (!catalog.professions.some((item) => item.id === builder.professionId) && catalog.professions[0]) {
+          updateBuilder((current) => ({ ...current, professionId: catalog.professions[0].id }));
+        }
       })
       .catch((error) => !cancelled && setCatalogError(error instanceof Error ? error.message : "Unable to load Guild Wars 2 data."))
       .finally(() => !cancelled && setLoading(false));
@@ -682,13 +716,21 @@ export default function AxiForgeLabView() {
   }
 
   const skillGroups = useMemo(() => ({ Heal: professionSkills.filter((skill) => skill.slot === "Heal"), Utility: professionSkills.filter((skill) => skill.slot === "Utility"), Elite: professionSkills.filter((skill) => skill.slot === "Elite") }), [professionSkills]);
+  const engineerKitOptions = useMemo(
+    () => professionSkills.filter((skill) => skill.name.toLowerCase().includes("kit")),
+    [professionSkills],
+  );
+  const thiefArtifactOptions = useMemo(
+    () => professionSkills.filter((skill) => skill.slot === "Profession"),
+    [professionSkills],
+  );
 
   return (
     <div className="theme-builder-root">
       <header className="theme-builder-command-deck">
         <div className="theme-builder-title-block">
           <div className="theme-builder-mark"><Wrench className="h-6 w-6" /></div>
-          <div><div className="theme-builder-kicker">Neon systems loadout workshop</div><h2>Entropy Builder</h2><p>Construct, verify, archive, and organize Guild Wars 2 squad doctrine.</p></div>
+          <div><div className="theme-builder-kicker">Neon systems loadout workshop</div><h2>Entropy Builder</h2><p>Construct, verify, archive, and organize Guild Wars 2 squad doctrine. {catalogSource === "cache" ? "Cached catalog ready." : catalogSource === "live" ? "Live catalog connected." : ""}</p></div>
         </div>
         <div className="theme-builder-command-actions">
           <button type="button" onClick={() => setImportOpen((open) => !open)} className="theme-command-button"><Download className="h-4 w-4" /> Import</button>
@@ -786,7 +828,39 @@ export default function AxiForgeLabView() {
             <section className="theme-panel theme-builder-panel">
               <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Step 04</div><h3>Equipment doctrine</h3></div><Wrench className="h-5 w-5 text-theme-info" /></div>
               <div className="theme-builder-equipment-grid">
-                <div className="theme-builder-equipment-group"><h4>Weapons and stats</h4><label><FieldLabel>Stat package</FieldLabel><SelectField value={builder.equipment.statPackage} onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, statPackage: event.target.value } }))}>{STAT_OPTIONS.map((stat) => <option key={stat} value={stat}>{stat || "Choose stats"}</option>)}</SelectField></label><div className="grid grid-cols-2 gap-2">{(["mainhand1", "offhand1", "mainhand2", "offhand2"] as const).map((slot) => <label key={slot}><FieldLabel>{slot.replace("hand", " hand ").replace("1", " I").replace("2", " II")}</FieldLabel><SelectField value={builder.equipment.weapons[slot]} onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, weapons: { ...current.equipment.weapons, [slot]: event.target.value } } }))}>{WEAPON_OPTIONS.map((weapon) => <option key={weapon} value={weapon}>{weapon || "Empty"}</option>)}</SelectField></label>)}</div></div>
+                <div className="theme-builder-equipment-group">
+                  <h4>Weapons and stats</h4>
+                  <label>
+                    <FieldLabel>Stat package</FieldLabel>
+                    <SelectField value={builder.equipment.statPackage} onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, statPackage: event.target.value } }))}>
+                      {statOptions.map((stat) => <option key={stat} value={stat}>{stat || "Choose stats"}</option>)}
+                    </SelectField>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["mainhand1", "offhand1", "mainhand2", "offhand2"] as const).map((slot) => {
+                      const currentWeapon = builder.equipment.weapons[slot];
+                      const validWeapons = availableWeapons.filter(([, weapon]) => weaponFitsBuilderSlot(weapon, slot));
+                      const currentIsValid = !currentWeapon || validWeapons.some(([name]) => name.toLowerCase() === currentWeapon.toLowerCase());
+                      const setNumber = slot.endsWith("1") ? "I" : "II";
+                      const mainhand = builder.equipment.weapons[`mainhand${slot.endsWith("1") ? "1" : "2"}`];
+                      const offhandDisabled = slot.startsWith("offhand") && isTwoHandedWeapon(selectedProfession, mainhand);
+                      return (
+                        <label key={slot}>
+                          <FieldLabel>{slot.startsWith("mainhand") ? `Main hand ${setNumber}` : `Off hand ${setNumber}`}</FieldLabel>
+                          <SelectField
+                            value={currentWeapon}
+                            disabled={offhandDisabled}
+                            onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, weapons: { ...current.equipment.weapons, [slot]: event.target.value } } }))}
+                          >
+                            <option value="">{offhandDisabled ? "Two-handed weapon equipped" : "Empty"}</option>
+                            {!currentIsValid && <option value={currentWeapon}>Unavailable · {currentWeapon}</option>}
+                            {validWeapons.map(([name]) => <option key={name} value={name.toLowerCase()}>{name}</option>)}
+                          </SelectField>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
                 <div className="theme-builder-equipment-group"><h4>Runes and sigils</h4><label><FieldLabel>Armor rune item ID</FieldLabel><TextField inputMode="numeric" value={builder.equipment.runes.head} onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, runes: Object.fromEntries(ARMOR_SLOTS.map((slot) => [slot, event.target.value])) as EntropyBuilderState["equipment"]["runes"] } }))} placeholder="Applied to all armor" /></label>{(["mainhand1", "mainhand2"] as const).map((slot) => <label key={slot}><FieldLabel>{slot === "mainhand1" ? "Weapon set I sigil IDs" : "Weapon set II sigil IDs"}</FieldLabel><TextField value={builder.equipment.sigils[slot].join(", ")} onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, sigils: { ...current.equipment.sigils, [slot]: event.target.value.split(",").map((value) => value.trim()).filter(Boolean) } } }))} placeholder="24615, 24868" /></label>)}</div>
                 <div className="theme-builder-equipment-group"><h4>Relic and consumables</h4>{(["relic", "food", "utility", "enrichment"] as const).map((field) => <label key={field}><FieldLabel>{field}</FieldLabel><TextField value={builder.equipment[field]} onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, [field]: event.target.value } }))} placeholder={field === "relic" ? "Relic of ..." : "Optional exact item name"} /></label>)}</div>
               </div>
@@ -794,12 +868,12 @@ export default function AxiForgeLabView() {
 
             {(builder.professionId === "Revenant" || builder.professionId === "Ranger" || builder.professionId === "Elementalist" || builder.professionId === "Engineer" || builder.professionId === "Warrior" || builder.professionId === "Thief") && (
               <section className="theme-panel theme-builder-panel"><div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Profession system</div><h3>{builder.professionId} mechanics</h3></div><Sparkles className="h-5 w-5 text-theme-accent" /></div><div className="theme-builder-mechanics">
-                {builder.professionId === "Revenant" && <>{[0, 1].map((index) => <label key={index}><FieldLabel>Legend {index + 1}</FieldLabel><SelectField value={builder.selectedLegends[index]} onChange={(event) => updateBuilder((current) => ({ ...current, selectedLegends: current.selectedLegends.map((value, itemIndex) => itemIndex === index ? event.target.value : value) as [string, string] }))}>{["", "Legend1", "Legend2", "Legend3", "Legend4", "Legend5", "Legend6", "Legend7"].map((legend) => <option key={legend} value={legend}>{legend || "None"}</option>)}</SelectField></label>)}</>}
-                {builder.professionId === "Ranger" && <>{(["terrestrial1", "terrestrial2"] as const).map((field, index) => <label key={field}><FieldLabel>Terrestrial pet {index + 1} ID</FieldLabel><TextField inputMode="numeric" value={builder.selectedPets[field] || ""} onChange={(event) => updateBuilder((current) => ({ ...current, selectedPets: { ...current.selectedPets, [field]: Number(event.target.value) || 0 } }))} /></label>)}</>}
+                {builder.professionId === "Revenant" && <>{[0, 1].map((index) => <label key={index}><FieldLabel>Legend {index + 1}</FieldLabel><SelectField value={builder.selectedLegends[index]} onChange={(event) => updateBuilder((current) => ({ ...current, selectedLegends: current.selectedLegends.map((value, itemIndex) => itemIndex === index ? event.target.value : value) as [string, string] }))}><option value="">None</option>{legends.map((legend) => <option key={legend.id} value={legend.id}>{legendLabel(legend.id)}</option>)}</SelectField></label>)}</>}
+                {builder.professionId === "Ranger" && <>{(["terrestrial1", "terrestrial2"] as const).map((field, index) => <label key={field}><FieldLabel>Terrestrial pet {index + 1}</FieldLabel><SelectField value={builder.selectedPets[field] || ""} onChange={(event) => updateBuilder((current) => ({ ...current, selectedPets: { ...current.selectedPets, [field]: Number(event.target.value) || 0 } }))}><option value="">None</option>{pets.map((pet) => <option key={pet.id} value={pet.id}>{pet.name}</option>)}</SelectField></label>)}</>}
                 {builder.professionId === "Elementalist" && <>{(["activeAttunement", "activeAttunement2"] as const).map((field, index) => <label key={field}><FieldLabel>Attunement {index + 1}</FieldLabel><SelectField value={builder[field]} onChange={(event) => updateBuilder((current) => ({ ...current, [field]: event.target.value }))}>{["", "Fire", "Water", "Air", "Earth"].map((attunement) => <option key={attunement} value={attunement}>{attunement || "None"}</option>)}</SelectField></label>)}</>}
-                {builder.professionId === "Engineer" && <label><FieldLabel>Active kit skill ID</FieldLabel><TextField inputMode="numeric" value={builder.activeKit || ""} onChange={(event) => updateBuilder((current) => ({ ...current, activeKit: Number(event.target.value) || 0 }))} /></label>}
+                {builder.professionId === "Engineer" && <label><FieldLabel>Active kit</FieldLabel><SelectField value={builder.activeKit || ""} onChange={(event) => updateBuilder((current) => ({ ...current, activeKit: Number(event.target.value) || 0 }))}><option value="">None</option>{builder.activeKit > 0 && !engineerKitOptions.some((skill) => skill.id === builder.activeKit) && <option value={builder.activeKit}>Unavailable skill · {builder.activeKit}</option>}{engineerKitOptions.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}</SelectField></label>}
                 {builder.professionId === "Warrior" && <label><FieldLabel>Active weapon set</FieldLabel><SelectField value={builder.activeWeaponSet} onChange={(event) => updateBuilder((current) => ({ ...current, activeWeaponSet: Number(event.target.value) }))}><option value={1}>Weapon set I</option><option value={2}>Weapon set II</option></SelectField></label>}
-                {builder.professionId === "Thief" && <>{(["f2", "f3", "f4"] as const).map((field) => <label key={field}><FieldLabel>Antiquary {field.toUpperCase()} skill ID</FieldLabel><TextField inputMode="numeric" value={builder.antiquaryArtifacts[field] || ""} onChange={(event) => updateBuilder((current) => ({ ...current, antiquaryArtifacts: { ...current.antiquaryArtifacts, [field]: Number(event.target.value) || 0 } }))} /></label>)}</>}
+                {builder.professionId === "Thief" && <>{(["f2", "f3", "f4"] as const).map((field) => { const currentId = builder.antiquaryArtifacts[field]; return <label key={field}><FieldLabel>Antiquary {field.toUpperCase()}</FieldLabel><SelectField value={currentId || ""} onChange={(event) => updateBuilder((current) => ({ ...current, antiquaryArtifacts: { ...current.antiquaryArtifacts, [field]: Number(event.target.value) || 0 } }))}><option value="">None</option>{currentId > 0 && !thiefArtifactOptions.some((skill) => skill.id === currentId) && <option value={currentId}>Unavailable skill · {currentId}</option>}{thiefArtifactOptions.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}</SelectField></label>; })}</>}
               </div></section>
             )}
 

@@ -1,4 +1,12 @@
-import type { Gw2Profession, Gw2Skill, Gw2Specialization, Gw2Trait } from "../../types/buildEditor";
+import type {
+  Gw2ItemStat,
+  Gw2Legend,
+  Gw2Pet,
+  Gw2Profession,
+  Gw2Skill,
+  Gw2Specialization,
+  Gw2Trait,
+} from "../../types/buildEditor";
 
 const GW2_API_BASE = "https://api.guildwars2.com/v2";
 
@@ -54,6 +62,23 @@ export async function fetchGw2Skills(ids: number[]): Promise<Gw2Skill[]> {
   return skills
     .map((skill) => ({ ...skill, description: stripMarkup(skill.description) }))
     .sort((a, b) => a.slot.localeCompare(b.slot) || a.name.localeCompare(b.name));
+}
+
+export async function fetchGw2ItemStats(): Promise<Gw2ItemStat[]> {
+  const stats = await getJson<Gw2ItemStat[]>("/itemstats?ids=all");
+  return stats.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function fetchGw2Legends(): Promise<Gw2Legend[]> {
+  const legends = await getJson<Gw2Legend[]>("/legends?ids=all");
+  return legends.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+export async function fetchGw2Pets(): Promise<Gw2Pet[]> {
+  const pets = await getJson<Gw2Pet[]>("/pets?ids=all");
+  return pets
+    .map((pet) => ({ ...pet, description: stripMarkup(pet.description) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function wikiSearchUrl(name: string): string {
