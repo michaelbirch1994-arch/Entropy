@@ -38,7 +38,7 @@ function SkillIcon({ src, index }: { src?: string; index: number }) {
   const [failed, setFailed] = useState(false);
   if (!src || failed) {
     return (
-      <div className="w-9 h-9 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-center text-[10px] font-bold text-slate-400 font-mono">
+      <div className="w-9 h-9 rounded-lg bg-theme-surface-inset border border-theme-border flex items-center justify-center text-[10px] font-bold text-theme-muted font-mono">
         {index + 1}
       </div>
     );
@@ -49,13 +49,14 @@ function SkillIcon({ src, index }: { src?: string; index: number }) {
       alt=""
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
-      className="w-9 h-9 rounded-lg border border-slate-700/50"
+      className="w-9 h-9 rounded-lg border border-theme-border"
       loading="lazy"
     />
   );
 }
 
 function TabRow({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
+  const inactive = "bg-theme-surface text-theme-muted border-theme-border hover:border-theme-accent/20 hover:text-theme-text";
   return (
     <div className="flex items-center gap-2">
       <button
@@ -63,7 +64,7 @@ function TabRow({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
           tab === "outgoing"
             ? "bg-orange-500/15 text-orange-400 border-orange-500/40"
-            : "bg-[#0a101f] text-slate-500 border-slate-800 hover:text-slate-300"
+            : inactive
         }`}
       >
         <Zap className="w-3.5 h-3.5" /> Outgoing
@@ -73,7 +74,7 @@ function TabRow({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
           tab === "incoming"
             ? "bg-rose-500/15 text-rose-400 border-rose-500/40"
-            : "bg-[#0a101f] text-slate-500 border-slate-800 hover:text-slate-300"
+            : inactive
         }`}
       >
         <ArrowDownLeft className="w-3.5 h-3.5" /> Incoming
@@ -83,7 +84,7 @@ function TabRow({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
           tab === "healing"
             ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/40"
-            : "bg-[#0a101f] text-slate-500 border-slate-800 hover:text-slate-300"
+            : inactive
         }`}
       >
         <HeartPulse className="w-3.5 h-3.5" /> Healing
@@ -161,7 +162,7 @@ function SkillSampleContext({
 }) {
   if (sample.fightCount === undefined) {
     return (
-      <div className="mt-2 text-[9px] font-mono text-slate-600" title="Re-import the logs to calculate skill sample coverage.">
+      <div className="mt-2 text-[9px] font-mono text-theme-faint" title="Re-import the logs to calculate skill sample coverage.">
         Sample context unavailable for this archived report
       </div>
     );
@@ -170,7 +171,7 @@ function SkillSampleContext({
   const reliability = getSampleReliability(sample.fightCount, totalFights);
   const activeTime = formatActiveTime(sample.activeMs);
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] font-mono text-slate-500">
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] font-mono text-theme-muted">
       <span>{sample.fightCount}/{totalFights} fights</span>
       <span>·</span>
       <span>{sample.playerCount ?? 0} {playerLabel}</span>
@@ -198,23 +199,23 @@ function PerFightRange({ sample, label }: { sample: SkillSample; label: string }
   const spikeRatio = average > 0 ? peak / average : 0;
   const isSpikeHeavy = (sample.fightCount ?? 0) >= 3 && spikeRatio >= 2.5;
   return (
-    <div className="mt-2 rounded-lg border border-slate-800/60 bg-slate-950/30 p-2">
+    <div className="mt-2 rounded-lg border border-theme-border/70 bg-theme-surface-inset/55 p-2">
       <div className="grid grid-cols-3 gap-2 text-center">
       <div>
-        <div className="text-[8px] uppercase tracking-wider text-slate-600">Min {label}</div>
-        <div className="mt-0.5 font-bold text-slate-300">{fmtCompact(sample.perFightMin ?? 0)}</div>
+        <div className="text-[8px] uppercase tracking-wider text-theme-faint">Min {label}</div>
+        <div className="mt-0.5 font-bold text-theme-muted">{fmtCompact(sample.perFightMin ?? 0)}</div>
       </div>
       <div>
-        <div className="text-[8px] uppercase tracking-wider text-slate-600">Avg {label}</div>
-        <div className="mt-0.5 font-bold text-sky-300">{fmtCompact(sample.perFightAverage ?? 0)}</div>
+        <div className="text-[8px] uppercase tracking-wider text-theme-faint">Avg {label}</div>
+        <div className="mt-0.5 font-bold text-theme-text">{fmtCompact(sample.perFightAverage ?? 0)}</div>
       </div>
       <div>
-        <div className="text-[8px] uppercase tracking-wider text-slate-600">Max {label}</div>
+        <div className="text-[8px] uppercase tracking-wider text-theme-faint">Max {label}</div>
         <div className="mt-0.5 font-bold text-amber-300">{fmtCompact(sample.perFightMax ?? 0)}</div>
       </div>
       </div>
       {maxContext && (
-        <div className="mt-2 border-t border-slate-800/60 pt-2 text-[10px] text-slate-500">
+        <div className="mt-2 border-t border-theme-border/60 pt-2 text-[10px] text-theme-muted">
           Peak fight: <span className="font-bold text-amber-300">{maxContext}</span>
         </div>
       )}
@@ -234,9 +235,9 @@ function ActiveRateLine({ label, value, activeMs }: { label: string; value: numb
   const rate = perActiveMinute(value, activeMs);
   if (!rate) return null;
   return (
-    <div className="mt-2 flex items-center justify-between rounded-lg border border-sky-400/10 bg-sky-500/[0.04] px-2 py-1.5">
-      <span className="text-slate-500">{label}</span>
-      <span className="font-bold text-sky-300">{rate}</span>
+    <div className="mt-2 flex items-center justify-between rounded-lg border border-theme-accent/15 bg-theme-accent/[0.035] px-2 py-1.5">
+      <span className="text-theme-muted">{label}</span>
+      <span className="font-bold text-theme-accent-strong">{rate}</span>
     </div>
   );
 }
@@ -246,14 +247,14 @@ function ExtremeHitLine({ label, hit, tone }: { label: string; hit: ExtremeConte
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-slate-500">{label}</span>
+        <span className="text-theme-muted">{label}</span>
         <span className={`${tone} text-right font-bold`}>
           {fmtCompact(hit.value)} - {hit.account} ({hit.profession})
         </span>
       </div>
       {context && (
-        <div className="text-right text-slate-500">
-          Occurred in <span className="font-bold text-slate-300">{context}</span>
+        <div className="text-right text-theme-muted">
+          Occurred in <span className="font-bold text-theme-text">{context}</span>
         </div>
       )}
     </div>
@@ -347,7 +348,7 @@ function LifeStealSpotlight({
           <div className="flex items-center gap-2 text-sm font-black text-emerald-300">
             <HeartPulse className="w-4 h-4" /> Life-steal and conversion healing detected
           </div>
-          <p className="text-[11px] text-slate-400 mt-1 max-w-3xl">
+          <p className="text-[11px] text-theme-text/75 mt-1 max-w-3xl">
             These are healing sources produced by skills or trait-triggered siphons. When the same id also dealt outgoing damage,
             the card below shows both sides of the trade: damage dealt and healing returned.
           </p>
@@ -364,12 +365,12 @@ function LifeStealSpotlight({
         {topSources.map((source, i) => {
           const matchingDamage = damageById.get(source.id);
           return (
-            <div key={`lifesteal:${source.isTrait ? "trait" : "skill"}:${source.id}:${source.healing}:${source.hits}`} className="rounded-xl border border-slate-800/70 bg-[#080d19]/80 p-3">
+            <div key={`lifesteal:${source.isTrait ? "trait" : "skill"}:${source.id}:${source.healing}:${source.hits}`} className="rounded-xl border border-theme-border/70 bg-theme-surface-inset/65 p-3">
               <div className="flex items-start gap-3 mb-3">
                 <SkillIcon src={source.icon || matchingDamage?.icon} index={i} />
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-bold text-slate-100">{source.name}</div>
-                  <div className="text-[10px] text-slate-500 font-mono">
+                  <div className="truncate text-sm font-bold text-theme-text">{source.name}</div>
+                  <div className="text-[10px] text-theme-muted font-mono">
                     {source.isTrait ? "Trait-triggered" : "Skill"} · {fmtNum(source.hits)} healing hits
                   </div>
                 </div>
@@ -378,10 +379,10 @@ function LifeStealSpotlight({
               <div className="space-y-2">
                 <div>
                   <div className="flex justify-between text-[10px] font-mono mb-1">
-                    <span className="text-slate-500">Healing returned</span>
+                    <span className="text-theme-muted">Healing returned</span>
                     <span className="text-emerald-300 font-bold">{fmtCompact(source.healing)}</span>
                   </div>
-                  <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-theme-surface rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-emerald-700 to-emerald-300 rounded-full"
                       style={{ width: `${(source.healing / maxHealing) * 100}%` }}
@@ -389,12 +390,12 @@ function LifeStealSpotlight({
                   </div>
                 </div>
                 {matchingDamage ? (
-                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-500">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-theme-muted">
                     <span>Matched damage</span>
                     <span className="text-orange-300 font-bold">{fmtCompact(matchingDamage.damage)}</span>
                   </div>
                 ) : (
-                  <div className="text-[10px] text-slate-500">
+                  <div className="text-[10px] text-theme-muted">
                     Healing-only source or below the outgoing top-damage cutoff.
                   </div>
                 )}
@@ -429,7 +430,7 @@ export default function TopSkillsView() {
         <TabRow tab={tab} setTab={setTab} />
 
         <div className="flex items-center gap-2 text-[11px]">
-          <span className="text-slate-500 font-bold uppercase tracking-wider">Sort by:</span>
+          <span className="text-theme-muted font-bold uppercase tracking-wider">Sort by:</span>
           {([
             { k: "damage", l: "Healing", icon: HeartPulse },
             { k: "hits", l: "Hits", icon: Zap },
@@ -441,7 +442,7 @@ export default function TopSkillsView() {
                 key={opt.k}
                 onClick={() => setSort(opt.k)}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-bold transition-all ${
-                  isActive ? "bg-sky-500/15 text-sky-400" : "text-slate-500 hover:text-slate-300"
+                  isActive ? "bg-theme-accent/10 text-theme-accent-strong" : "text-theme-muted hover:text-theme-text"
                 }`}
               >
                 <Icon className="w-3 h-3" />
@@ -452,9 +453,9 @@ export default function TopSkillsView() {
         </div>
 
         {sortedHealing.length === 0 ? (
-          <div className="py-10 text-center text-sm text-slate-500">
+          <div className="py-10 text-center text-sm text-theme-muted">
             No healing-source breakdown available for this report.
-            <p className="text-[11px] text-slate-500 mt-1">
+            <p className="text-[11px] text-theme-muted mt-1">
               Only populated when the raw log was recorded with arcdps's healing addon active - this is what
               lets a trait like Replenishing Despair (converts damage dealt into self-healing) or a skill
               like Life Siphon show up as its own quantified line instead of disappearing into the total.
@@ -470,14 +471,14 @@ export default function TopSkillsView() {
                   key={`healing:${sort}:${hs.isTrait ? "trait" : "skill"}:${hs.id}:${hs.name}:${hs.healing}:${hs.hits}`}
                   onClick={() => setExpandedKey(expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}` ? null : `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}`)}
                   aria-expanded={expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}`}
-                  className="w-full bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 text-left shadow-lg hover:border-slate-700 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+                  className="w-full bg-theme-surface border border-theme-border rounded-2xl p-4 text-left shadow-lg hover:border-theme-accent/25 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-theme-accent-strong/50"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <SkillIcon src={hs.icon} index={i} />
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-bold text-slate-100">{hs.name}</span>
+                          <span className="text-sm font-bold text-theme-text">{hs.name}</span>
                           <span
                             className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
                               hs.isTrait ? "border-fuchsia-500/30 text-fuchsia-400" : "border-emerald-500/30 text-emerald-400"
@@ -486,20 +487,20 @@ export default function TopSkillsView() {
                             {hs.isTrait ? "Trait" : "Skill"}
                           </span>
                         </div>
-                        <div className="text-[10px] text-slate-500 font-mono">{fmtNum(hs.hits)} hits</div>
+                        <div className="text-[10px] text-theme-muted font-mono">{fmtNum(hs.hits)} hits</div>
                         <SkillSampleContext sample={hs} totalFights={s.total} playerLabel="contributors" />
                       </div>
                     </div>
-                    <span className={`text-xs font-black font-mono ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>
+                    <span className={`text-xs font-black font-mono ${i < 3 ? "text-amber-400" : "text-theme-muted"}`}>
                       #{i + 1}
                     </span>
                   </div>
                   <div>
                     <div className="flex justify-between text-[10px] font-mono mb-1">
-                      <span className="text-slate-500">Sorted by {sort === "hits" ? "Hits" : "Healing"}</span>
+                      <span className="text-theme-muted">Sorted by {sort === "hits" ? "Hits" : "Healing"}</span>
                       <span className="text-emerald-400 font-bold">{sort === "hits" ? fmtNum(activeValue) : fmtCompact(activeValue)}</span>
                     </div>
-                    <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-theme-surface-inset rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
                         style={{ width: `${(activeValue / maxHeal) * 100}%` }}
@@ -507,11 +508,11 @@ export default function TopSkillsView() {
                     </div>
                   </div>
                 {expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}` && (
-                  <div className="mt-3 pt-3 border-t border-slate-800/60 text-[10px] font-mono">
+                  <div className="mt-3 pt-3 border-t border-theme-border/60 text-[10px] font-mono">
                     {hs.biggestHit ? (
                       <ExtremeHitLine label="Biggest single heal" hit={hs.biggestHit} tone="text-emerald-400" />
                     ) : (
-                      <span className="text-slate-600">No single-hit data available</span>
+                      <span className="text-theme-faint">No single-hit data available</span>
                     )}
                     <ActiveRateLine label="Healing rate by contributor active time" value={hs.healing} activeMs={hs.activeMs} />
                     <PerFightRange sample={hs} label="healing" />
@@ -548,7 +549,7 @@ export default function TopSkillsView() {
 
       {/* Sort selector */}
       <div className="flex items-center gap-2 text-[11px]">
-        <span className="text-slate-500 font-bold uppercase tracking-wider">Sort by:</span>
+        <span className="text-theme-muted font-bold uppercase tracking-wider">Sort by:</span>
         {([
           { k: "damage", l: "Damage", icon: Flame },
           { k: "downContribution", l: "Down Contrib", icon: Trophy },
@@ -560,7 +561,7 @@ export default function TopSkillsView() {
               key={opt.k}
               onClick={() => setSort(opt.k)}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg font-bold transition-all ${
-                sort === opt.k ? "bg-sky-500/15 text-sky-400" : "text-slate-500 hover:text-slate-300"
+                sort === opt.k ? "bg-theme-accent/10 text-theme-accent-strong" : "text-theme-muted hover:text-theme-text"
               }`}
             >
               <Icon className="w-3 h-3" />
@@ -585,21 +586,21 @@ export default function TopSkillsView() {
               key={`${tab}:${sort}:${sk.id}:${sk.name}:${sk.damage}:${sk.downContribution}:${sk.hits}`}
               onClick={() => setExpandedKey(expandedKey === `${tab}:${sk.id}` ? null : `${tab}:${sk.id}`)}
               aria-expanded={expandedKey === `${tab}:${sk.id}`}
-              className="w-full bg-[#0a101f]/90 border border-slate-800/80 rounded-2xl p-4 text-left shadow-lg hover:border-slate-700 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+              className="w-full bg-theme-surface border border-theme-border rounded-2xl p-4 text-left shadow-lg hover:border-theme-accent/25 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-theme-accent-strong/50"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <SkillIcon src={sk.icon || healingMatch?.icon} index={i} />
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-bold text-slate-100">{sk.name}</span>
+                      <span className="text-sm font-bold text-theme-text">{sk.name}</span>
                       {healingMatch && (
                         <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border border-emerald-500/30 text-emerald-400">
                           Life steal
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-slate-500 font-mono">{fmtNum(sk.hits)} hits</div>
+                    <div className="text-[10px] text-theme-muted font-mono">{fmtNum(sk.hits)} hits</div>
                     <SkillSampleContext
                       sample={sk}
                       totalFights={s.total}
@@ -607,17 +608,17 @@ export default function TopSkillsView() {
                     />
                   </div>
                 </div>
-                <span className={`text-xs font-black font-mono ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>
+                <span className={`text-xs font-black font-mono ${i < 3 ? "text-amber-400" : "text-theme-muted"}`}>
                   #{i + 1}
                 </span>
               </div>
 
               <div className={`mb-3 rounded-xl border ${accent.border} ${accent.bg} p-3`}>
                 <div className="flex justify-between text-[10px] font-mono mb-1">
-                  <span className="text-slate-400">Sorted by {SORT_LABEL[sort]}</span>
+                  <span className="text-theme-text/70">Sorted by {SORT_LABEL[sort]}</span>
                   <span className={`${accent.text} font-bold`}>{sort === "hits" ? fmtNum(activeValue) : fmtCompact(activeValue)}</span>
                 </div>
-                <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-theme-surface-inset rounded-full overflow-hidden">
                   <div
                     className={`h-full bg-gradient-to-r ${accent.from} ${accent.to} rounded-full transition-all duration-500`}
                     style={{ width: `${(activeValue / maxActive) * 100}%` }}
@@ -628,10 +629,10 @@ export default function TopSkillsView() {
               <div className="space-y-2">
                 <div>
                   <div className="flex justify-between text-[10px] font-mono mb-1">
-                    <span className="text-slate-500">Damage</span>
+                    <span className="text-theme-muted">Damage</span>
                     <span className={`${accent.text} font-bold`}>{fmtCompact(sk.damage)}</span>
                   </div>
-                  <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-theme-surface-inset rounded-full overflow-hidden">
                     <div
                       className={`h-full bg-gradient-to-r ${accent.from} ${accent.to} rounded-full transition-all duration-500`}
                       style={{ width: `${(sk.damage / maxDmg) * 100}%` }}
@@ -640,12 +641,12 @@ export default function TopSkillsView() {
                 </div>
                 <div>
                   <div className="flex justify-between text-[10px] font-mono mb-1">
-                    <span className="text-slate-500">Down Contrib</span>
-                    <span className="text-sky-400 font-bold">{fmtCompact(sk.downContribution)}</span>
+                    <span className="text-theme-muted">Down Contrib</span>
+                    <span className="text-amber-300 font-bold">{fmtCompact(sk.downContribution)}</span>
                   </div>
-                  <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-theme-surface-inset rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-sky-600 to-sky-400 rounded-full transition-all duration-500"
+                      className="h-full bg-gradient-to-r from-amber-700 to-amber-300 rounded-full transition-all duration-500"
                       style={{ width: `${(sk.downContribution / maxDc) * 100}%` }}
                     />
                   </div>
@@ -653,10 +654,10 @@ export default function TopSkillsView() {
                 {healingMatch && (
                   <div>
                     <div className="flex justify-between text-[10px] font-mono mb-1">
-                      <span className="text-slate-500">Life-steal healing</span>
+                      <span className="text-theme-muted">Life-steal healing</span>
                       <span className="text-emerald-400 font-bold">{fmtCompact(healingMatch.healing)}</span>
                     </div>
-                    <div className="h-1.5 bg-slate-800/60 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-theme-surface-inset rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-emerald-700 to-emerald-300 rounded-full transition-all duration-500"
                         style={{ width: `${(healingMatch.healing / maxMatchedHealing) * 100}%` }}
@@ -666,7 +667,7 @@ export default function TopSkillsView() {
                 )}
               </div>
                 {expandedKey === `${tab}:${sk.id}` && (
-                  <div className="mt-3 pt-3 border-t border-slate-800/60 text-[10px] font-mono">
+                  <div className="mt-3 pt-3 border-t border-theme-border/60 text-[10px] font-mono">
                     {sk.biggestHit ? (
                       <ExtremeHitLine
                         label={tab === "incoming" ? "Biggest single hit taken" : "Biggest single hit"}
@@ -674,7 +675,7 @@ export default function TopSkillsView() {
                         tone="text-amber-400"
                       />
                     ) : (
-                      <span className="text-slate-600">No single-hit data available</span>
+                      <span className="text-theme-faint">No single-hit data available</span>
                     )}
                     <ActiveRateLine
                       label={tab === "incoming" ? "Damage taken by affected active time" : "Damage by contributor active time"}
