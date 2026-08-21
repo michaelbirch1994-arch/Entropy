@@ -10,7 +10,7 @@ export default function RecapPanel({ recap }: { recap: FightRecap | null }) {
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="theme-recap-panel relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/[0.06] via-[#0a101f]/80 to-sky-500/[0.04] backdrop-blur-md p-5"
+      className="theme-recap-panel relative overflow-hidden rounded-2xl border border-amber-500/20 bg-[#080808] backdrop-blur-md p-5"
     >
       <div className="flex items-center gap-2 mb-2">
         <motion.span
