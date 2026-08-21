@@ -11,6 +11,10 @@ function applyEntropyTheme() {
   for (const [token, value] of Object.entries(ENTROPY_THEME.colors)) {
     root.style.setProperty(`--theme-${token}`, value);
   }
+
+  for (const [token, value] of Object.entries(ENTROPY_THEME.semantic)) {
+    root.style.setProperty(`--entropy-${token}`, value);
+  }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
