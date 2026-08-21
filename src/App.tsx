@@ -164,6 +164,13 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
       <div className="theme-cinematic-scanline" aria-hidden="true" />
 
       <section className="theme-cinematic-stage" aria-labelledby="entropy-landing-title">
+        <div className="theme-royal-aperture" aria-hidden="true">
+          <span className="theme-royal-aperture-ring theme-royal-aperture-ring-outer" />
+          <span className="theme-royal-aperture-ring theme-royal-aperture-ring-inner" />
+          <span className="theme-royal-aperture-crown" />
+          <span className="theme-royal-aperture-beam" />
+        </div>
+
         <div className="theme-cinematic-copy">
           <div className="theme-cinematic-kicker">
             <span className="theme-cinematic-signal" aria-hidden="true" />
@@ -697,3 +704,4 @@ export default function App() {
     </ViewProvider>
   );
 }
+
