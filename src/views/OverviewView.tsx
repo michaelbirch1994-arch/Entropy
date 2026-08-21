@@ -12,7 +12,7 @@ import { useView } from "../store/ViewContext";
 const ACCENT_STYLES = {
   amber: {
     border: "border-amber-500/30 hover:border-amber-500/50",
-    glow: "shadow-[0_0_50px_-12px_rgba(245,158,11,0.35)]",
+    glow: "shadow-[0_0_50px_-18px_rgba(214,168,75,0.24)]",
     heading: "text-amber-500",
     circle: "border-amber-500/50 bg-amber-500/10",
     crown: "text-amber-400",
@@ -22,15 +22,15 @@ const ACCENT_STYLES = {
     scoreVal: "text-amber-400",
   },
   teal: {
-    border: "border-teal-500/30 hover:border-teal-500/50",
-    glow: "shadow-[0_0_50px_-12px_rgba(20,184,166,0.35)]",
-    heading: "text-teal-500",
-    circle: "border-teal-500/50 bg-teal-500/10",
-    crown: "text-teal-400",
-    reason: "text-teal-400",
-    statVal: "text-teal-400",
-    scoreLbl: "text-teal-500/70",
-    scoreVal: "text-teal-400",
+    border: "border-amber-500/25 hover:border-amber-500/45",
+    glow: "shadow-[0_0_50px_-18px_rgba(214,168,75,0.18)]",
+    heading: "text-amber-500",
+    circle: "border-amber-500/45 bg-amber-500/[0.08]",
+    crown: "text-amber-400",
+    reason: "text-amber-300",
+    statVal: "text-amber-300",
+    scoreLbl: "text-amber-500/70",
+    scoreVal: "text-amber-400",
   },
 } as const;
 
@@ -60,7 +60,7 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label, onOpen }: {
         type="button"
         onClick={() => onOpen(card)}
         aria-label={`View ${card.account} in Top Players`}
-        className={`w-full cursor-pointer rounded-xl p-2 text-left transition-colors hover:bg-slate-800/35 focus:outline-none focus:ring-2 focus:ring-sky-500/40 ${medal === "bronze" ? "border-l border-slate-800/60 pl-4" : ""}`}
+        className={`w-full cursor-pointer rounded-xl p-2 text-left transition-colors hover:bg-slate-800/35 focus:outline-none focus:ring-2 focus:ring-amber-500/40 ${medal === "bronze" ? "border-l border-slate-800/60 pl-4" : ""}`}
       >
         <span className={`text-[10px] font-black uppercase tracking-wider ${medal === "silver" ? "text-slate-300" : "text-amber-600"} block mb-1`}>
           {medal === "silver" ? "Silver" : "Bronze"}
@@ -91,13 +91,13 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label, onOpen }: {
       initial={{ opacity: 0, y: 16, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.45, ease: "easeOut", delay: accent === "amber" ? 0 : 0.1 }}
-      className={`theme-player-card theme-mvp-card ${accent === "amber" ? "neon-offense" : "neon-barrier"} w-full bg-[#0a101f]/55 backdrop-blur-md border rounded-2xl p-5 text-left transition-colors duration-300 flex flex-col ${a.border} ${a.glow}`}
+      className={`theme-player-card theme-mvp-card ${accent === "amber" ? "neon-offense" : "neon-barrier"} w-full bg-[#090909]/95 backdrop-blur-md border rounded-2xl p-5 text-left transition-colors duration-300 flex flex-col ${a.border} ${a.glow}`}
     >
       <button
         type="button"
         onClick={() => onOpen(mvp)}
         aria-label={`View ${mvp.account} in Top Players for ${label}`}
-        className="w-full cursor-pointer rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-sky-500/50"
+        className="w-full cursor-pointer rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-amber-500/45"
       >
         <div className={`flex items-center gap-2 ${a.heading} text-[11px] font-black uppercase tracking-widest mb-4`}>
           {accent === "amber" ? <Swords className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
@@ -194,7 +194,7 @@ export default function OverviewView() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: i * 0.05 }}
-            className="theme-kdr-stat cursor-pointer text-center bg-[#0a101f] py-4 transition-colors hover:bg-slate-900/85 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-500/40"
+            className="theme-kdr-stat cursor-pointer text-center bg-[#090909] py-4 transition-colors hover:bg-[#0d0c0a] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500/40"
           >
             <span className={`text-3xl font-black font-mono ${b.color}`}>{fmtNum(b.value)}</span>
             <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mt-1">{b.label}</span>
@@ -232,7 +232,7 @@ export default function OverviewView() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: 0.15 + i * 0.04 }}
             whileHover={{ y: -2 }}
-            className={`theme-stat-card theme-metric-card ${c.glow} cursor-pointer bg-[#0a101f]/90 border border-slate-800/80 p-4 rounded-2xl text-left shadow-lg hover:border-slate-700 transition-colors flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:ring-offset-2 focus:ring-offset-[#050914]`}
+            className={`theme-stat-card theme-metric-card ${c.glow} cursor-pointer bg-[#090909]/95 border border-slate-800/80 p-4 rounded-2xl text-left shadow-lg hover:border-amber-500/20 transition-colors flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-amber-500/45 focus:ring-offset-2 focus:ring-offset-black`}
           >
             <div>
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
@@ -242,7 +242,7 @@ export default function OverviewView() {
               <div className="text-2xl font-black font-mono text-slate-100">{c.value}</div>
             </div>
             <div className="mt-3 pt-3 border-t border-slate-800/60 flex justify-between items-center text-[10px]">
-              <span className="text-sky-400 font-bold truncate">{c.player}</span>
+              <span className="text-amber-300 font-bold truncate">{c.player}</span>
               <span className="text-slate-500 font-mono">{c.count} logs</span>
             </div>
           </motion.button>

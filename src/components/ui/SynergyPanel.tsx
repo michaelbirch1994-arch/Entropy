@@ -4,10 +4,10 @@ import type { SynergyInsight } from "../../types/report";
 import Panel from "./Panel";
 
 const SEVERITY_STYLE: Record<SynergyInsight["severity"], { icon: React.ReactNode; text: string; border: string; bg: string }> = {
-  good: { icon: <CircleCheck className="w-4 h-4" />, text: "text-emerald-400", border: "border-emerald-500/20", bg: "bg-emerald-500/[0.04]" },
-  info: { icon: <Info className="w-4 h-4" />, text: "text-slate-300", border: "border-white/[0.08]", bg: "bg-white/[0.025]" },
-  warn: { icon: <TriangleAlert className="w-4 h-4" />, text: "text-amber-400", border: "border-amber-500/20", bg: "bg-amber-500/[0.04]" },
-  critical: { icon: <CircleAlert className="w-4 h-4" />, text: "text-rose-400", border: "border-rose-500/20", bg: "bg-rose-500/[0.04]" },
+  good: { icon: <CircleCheck className="w-4 h-4" />, text: "text-emerald-400", border: "border-emerald-500/18", bg: "bg-[#090909]" },
+  info: { icon: <Info className="w-4 h-4" />, text: "text-slate-300", border: "border-white/[0.08]", bg: "bg-[#090909]" },
+  warn: { icon: <TriangleAlert className="w-4 h-4" />, text: "text-amber-400", border: "border-amber-500/18", bg: "bg-[#090909]" },
+  critical: { icon: <CircleAlert className="w-4 h-4" />, text: "text-rose-400", border: "border-rose-500/18", bg: "bg-[#090909]" },
 };
 
 const SEVERITY_ORDER: Record<SynergyInsight["severity"], number> = { critical: 0, warn: 1, info: 2, good: 3 };
@@ -22,6 +22,7 @@ export default function SynergyPanel({ insights }: { insights: SynergyInsight[] 
       subtitle="Automated read on composition and performance, computed from this session's own data"
       icon={<Sparkles className="w-3.5 h-3.5" />}
       action={`${insights.length} insights`}
+      className="theme-synergy-panel"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         {sorted.map((insight, i) => {

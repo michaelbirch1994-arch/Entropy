@@ -1,0 +1,503 @@
+/* Final black + gold refinement layer.
+   Presentation only. This file deliberately avoids Intelligence and Combat/Replay
+   workspace content, and does not remap semantic data fills, profession colors,
+   boon/condition identity, or chart-series colors. */
+
+/* -------------------------------------------------------------------------- */
+/* Non-Combat neutral chrome                                                   */
+/* -------------------------------------------------------------------------- */
+
+.theme-main[data-workspace-tone="overview"] :is(.theme-source-card, .theme-alert-plate, .theme-player-card-head, .theme-player-card-body),
+.theme-main[data-workspace-tone="squad"] :is(.theme-source-card, .theme-alert-plate, .theme-player-card-head, .theme-player-card-body),
+.theme-main[data-workspace-tone="performance"] :is(.theme-source-card, .theme-alert-plate, .theme-player-card-head, .theme-player-card-body) {
+  background-color: #090909 !important;
+  border-color: rgba(255, 255, 255, 0.075) !important;
+  box-shadow: none !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-alert-plate,
+.theme-main[data-workspace-tone="squad"] .theme-alert-plate,
+.theme-main[data-workspace-tone="performance"] .theme-alert-plate {
+  background-image: none !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-progress-track,
+.theme-main[data-workspace-tone="squad"] .theme-progress-track,
+.theme-main[data-workspace-tone="performance"] .theme-progress-track {
+  background: #151515 !important;
+  border: 1px solid rgba(255, 255, 255, 0.045) !important;
+  box-shadow: none !important;
+}
+
+/* The legacy theme grid token is teal. Keep Combat/Replay untouched, but make
+   analytical grid/chrome lines neutral everywhere else. */
+.theme-main[data-workspace-tone="overview"],
+.theme-main[data-workspace-tone="squad"],
+.theme-main[data-workspace-tone="performance"],
+.theme-main[data-workspace-tone="extras"] {
+  --theme-grid: rgba(255, 255, 255, 0.055);
+}
+
+/* Legacy neon classes may still identify a metric family, but they no longer
+   tint or glow the surrounding card chrome. The actual semantic progress fills
+   and icon/text colors inside those cards remain untouched. */
+.theme-main[data-workspace-tone="overview"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival),
+.theme-main[data-workspace-tone="squad"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival),
+.theme-main[data-workspace-tone="performance"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival) {
+  filter: none !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+.theme-main[data-workspace-tone="overview"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival)::before,
+.theme-main[data-workspace-tone="overview"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival)::after,
+.theme-main[data-workspace-tone="squad"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival)::before,
+.theme-main[data-workspace-tone="squad"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival)::after,
+.theme-main[data-workspace-tone="performance"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival)::before,
+.theme-main[data-workspace-tone="performance"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival)::after {
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Overview-specific cleanup                                                   */
+/* -------------------------------------------------------------------------- */
+
+/* Every generic Overview panel/header is black chrome. This removes the final
+   inherited teal/green header wash without touching semantic content inside. */
+.theme-main[data-workspace-tone="overview"] .theme-panel {
+  background: #090909 !important;
+  border-color: rgba(255, 255, 255, 0.075) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-panel-header {
+  background: #080808 !important;
+  background-image: none !important;
+  border-bottom-color: rgba(255, 255, 255, 0.065) !important;
+  box-shadow: none !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-panel-header::before,
+.theme-main[data-workspace-tone="overview"] .theme-panel-header::after {
+  background: none !important;
+  box-shadow: none !important;
+  opacity: 0 !important;
+}
+
+/* Defensive MVP used teal as a presentation identity. In the black/gold product
+   system, MVP identity is product chrome, so it becomes gold. Profession chips
+   and any genuinely semantic child data remain unchanged. */
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier {
+  border-color: rgba(214, 168, 75, 0.16) !important;
+  background: #090909 !important;
+  color: var(--theme-text) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.018) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier [class*="text-teal-"],
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier [class*="text-cyan-"] {
+  color: var(--entropy-gold-bright) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier [class*="border-teal-"],
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier [class*="border-cyan-"] {
+  border-color: rgba(214, 168, 75, 0.34) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier [class*="bg-teal-"],
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier [class*="bg-cyan-"] {
+  background-color: rgba(214, 168, 75, 0.08) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier:hover {
+  border-color: rgba(214, 168, 75, 0.22) !important;
+  box-shadow: inset 2px 0 0 rgba(214, 168, 75, 0.36) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier > button:focus-visible {
+  --tw-ring-color: rgba(214, 168, 75, 0.42) !important;
+}
+
+/* Keep semantic severity in icon/title/border; remove colored atmosphere from
+   the plate itself. */
+.theme-main[data-workspace-tone="overview"] .theme-alert-plate {
+  background: #090909 !important;
+  box-shadow: none !important;
+}
+
+/* Small nested stat rows inside MVP cards should read as black chrome rather
+   than old slate/blue plates. */
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card [class*="bg-slate-900"] {
+  background-color: #0b0b0b !important;
+  border-color: rgba(255, 255, 255, 0.065) !important;
+}
+
+/* Squad Synergy is informational product chrome. The surrounding panel and
+   header stay neutral black; severity remains inside each alert plate. */
+.theme-main[data-workspace-tone="overview"] .theme-synergy-panel,
+.theme-main[data-workspace-tone="overview"] .theme-synergy-panel .theme-panel-header,
+.theme-main[data-workspace-tone="overview"] .theme-synergy-panel .theme-panel-body {
+  background: #080808 !important;
+  background-image: none !important;
+  border-color: rgba(255, 255, 255, 0.075) !important;
+  box-shadow: none !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-synergy-panel::before,
+.theme-main[data-workspace-tone="overview"] .theme-synergy-panel::after,
+.theme-main[data-workspace-tone="overview"] .theme-synergy-panel .theme-panel-header::before,
+.theme-main[data-workspace-tone="overview"] .theme-synergy-panel .theme-panel-header::after {
+  background: none !important;
+  box-shadow: none !important;
+  opacity: 0 !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-synergy-panel .theme-panel-icon {
+  color: var(--entropy-gold-bright) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Squad + Performance shared cards                                            */
+/* -------------------------------------------------------------------------- */
+
+.theme-main[data-workspace-tone="squad"] :is(.theme-player-card, .theme-source-card),
+.theme-main[data-workspace-tone="performance"] :is(.theme-player-card, .theme-source-card) {
+  background: #090909 !important;
+  border-color: rgba(255, 255, 255, 0.075) !important;
+}
+
+.theme-main[data-workspace-tone="squad"] :is(.theme-player-card, .theme-source-card):hover,
+.theme-main[data-workspace-tone="performance"] :is(.theme-player-card, .theme-source-card):hover {
+  background: #0d0c0a !important;
+  border-color: rgba(214, 168, 75, 0.18) !important;
+}
+
+/* Focus, selected state, and neutral interactive chrome stay gold. */
+.theme-main[data-workspace-tone="overview"] :is(button, [role="button"]):focus-visible,
+.theme-main[data-workspace-tone="squad"] :is(button, [role="button"]):focus-visible,
+.theme-main[data-workspace-tone="performance"] :is(button, [role="button"]):focus-visible {
+  outline-color: var(--entropy-gold-bright) !important;
+  --tw-ring-color: rgba(214, 168, 75, 0.42) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Intelligence opt-out                                                        */
+/* -------------------------------------------------------------------------- */
+
+/* Intelligence shares the sidebar's "extras" tone with Archive/Compare/Builder.
+   Its dossier class is the reliable content signature, so restore the prior
+   Obsidian Gold workspace surfaces whenever Intelligence is mounted. This keeps
+   the black/gold finish from flattening its intentionally color-sorted evidence
+   language while allowing the other Extras views to keep the product finish. */
+.theme-main[data-workspace-tone="extras"]:has(.theme-intelligence-dossier) {
+  --theme-grid: #183037;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.012), transparent 20rem),
+    var(--entropy-bg) !important;
+}
+
+.theme-main[data-workspace-tone="extras"]:has(.theme-intelligence-dossier)
+  :is(.theme-panel, .theme-stat-card, .theme-analytics-surface, .theme-data-region, .theme-table-shell) {
+  background: var(--entropy-surface-1) !important;
+  border-color: var(--entropy-border-subtle) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    0 18px 42px -40px rgba(0, 0, 0, 0.95) !important;
+}
+
+.theme-main[data-workspace-tone="extras"]:has(.theme-intelligence-dossier)
+  :is(.theme-chart-stage, .theme-chart-frame, .theme-chart-tooltip) {
+  background-color: var(--entropy-surface-1) !important;
+  border-color: var(--entropy-border-subtle) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Royal cinematic landing                                                     */
+/* -------------------------------------------------------------------------- */
+
+.theme-cinematic-landing {
+  --royal-gold: #d6a84b;
+  --royal-gold-bright: #f4d887;
+  --royal-gold-deep: #7d581d;
+  background:
+    radial-gradient(circle at 31% 46%, rgba(214, 168, 75, 0.12), transparent 13rem),
+    radial-gradient(circle at 76% 44%, rgba(240, 201, 106, 0.07), transparent 21rem),
+    linear-gradient(115deg, #020202 0%, #070603 44%, #020202 100%) !important;
+}
+
+.theme-cinematic-landing::before {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.9), transparent 30%, transparent 70%, rgba(0, 0, 0, 0.82)),
+    repeating-linear-gradient(90deg, transparent 0 8.9rem, rgba(214, 168, 75, 0.025) 9rem),
+    repeating-linear-gradient(0deg, transparent 0 8.9rem, rgba(214, 168, 75, 0.018) 9rem) !important;
+}
+
+.theme-cinematic-landing::after {
+  bottom: 4.25rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 2%, rgba(125, 88, 29, 0.24) 18%, var(--royal-gold-bright) 50%, rgba(125, 88, 29, 0.24) 82%, transparent 98%) !important;
+  box-shadow:
+    0 0 22px rgba(214, 168, 75, 0.34),
+    0 -1px 0 rgba(255, 239, 189, 0.12) !important;
+}
+
+.theme-cinematic-scanline {
+  opacity: 0.2 !important;
+  background:
+    radial-gradient(circle at center, rgba(240, 201, 106, 0.05) 0 1px, transparent 1.4px) 0 0 / 38px 38px,
+    repeating-linear-gradient(180deg, transparent 0 6px, rgba(240, 201, 106, 0.018) 6px 7px) !important;
+  mask-image: radial-gradient(ellipse 85% 76% at 50% 48%, black 18%, transparent 82%);
+}
+
+.theme-cinematic-stage {
+  position: relative;
+}
+
+.theme-cinematic-stage::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 27%;
+  width: min(42vw, 42rem);
+  aspect-ratio: 1;
+  pointer-events: none;
+  opacity: 0.42;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 0 29%, rgba(240, 201, 106, 0.34) 29.15% 29.45%, transparent 29.6% 41%, rgba(214, 168, 75, 0.18) 41.1% 41.35%, transparent 41.5% 49%, rgba(214, 168, 75, 0.12) 49.1% 49.35%, transparent 49.5%),
+    repeating-conic-gradient(from 7deg, rgba(240, 201, 106, 0.27) 0 0.28deg, transparent 0.35deg 12deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 0 23%, black 24% 52%, transparent 67%);
+  mask-image: radial-gradient(circle, transparent 0 23%, black 24% 52%, transparent 67%);
+  animation: royalOrbit 38s linear infinite;
+}
+
+.theme-cinematic-stage::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 27%;
+  bottom: 2.25rem;
+  width: min(28vw, 28rem);
+  height: 10rem;
+  pointer-events: none;
+  opacity: 0.34;
+  transform: translateX(-50%);
+  background:
+    linear-gradient(90deg, transparent 49.75%, rgba(240, 201, 106, 0.68) 50%, transparent 50.25%),
+    linear-gradient(135deg, transparent 44%, rgba(214, 168, 75, 0.32) 44.25% 44.55%, transparent 44.8%) 12% 62% / 38% 42% no-repeat,
+    linear-gradient(225deg, transparent 44%, rgba(214, 168, 75, 0.32) 44.25% 44.55%, transparent 44.8%) 88% 62% / 38% 42% no-repeat;
+  filter: drop-shadow(0 0 9px rgba(214, 168, 75, 0.22));
+}
+
+.theme-cinematic-stage > * {
+  position: relative;
+  z-index: 1;
+}
+
+.theme-cinematic-kicker {
+  color: #bba67d !important;
+}
+
+.theme-cinematic-signal {
+  background: linear-gradient(90deg, var(--royal-gold-deep), var(--royal-gold-bright)) !important;
+  box-shadow: 0 0 16px rgba(240, 201, 106, 0.54) !important;
+}
+
+.theme-cinematic-mark {
+  color: var(--royal-gold-bright) !important;
+  border-color: rgba(240, 201, 106, 0.54) !important;
+  background:
+    radial-gradient(circle at 45% 36%, rgba(240, 201, 106, 0.15), transparent 56%),
+    #080704 !important;
+  box-shadow:
+    inset 0 0 28px rgba(214, 168, 75, 0.08),
+    0 0 0 1px rgba(214, 168, 75, 0.08),
+    0 14px 38px -16px rgba(240, 201, 106, 0.46) !important;
+}
+
+.theme-cinematic-wordmark {
+  color: #f8f1df !important;
+  text-shadow:
+    0 1px 0 #50340e,
+    0 0 24px rgba(240, 201, 106, 0.2),
+    0 24px 58px rgba(0, 0, 0, 0.92) !important;
+}
+
+.theme-cinematic-declaration {
+  color: #eee2c8 !important;
+}
+
+.theme-cinematic-support {
+  color: #aaa398 !important;
+}
+
+.theme-cinematic-readouts {
+  border-top-color: rgba(214, 168, 75, 0.38) !important;
+  box-shadow: 0 -12px 28px -26px rgba(240, 201, 106, 0.44);
+}
+
+.theme-cinematic-readouts > div {
+  border-right-color: rgba(214, 168, 75, 0.2) !important;
+}
+
+.theme-cinematic-readouts span {
+  color: var(--royal-gold-bright) !important;
+}
+
+.theme-cinematic-readouts strong {
+  color: #c2b9a9 !important;
+}
+
+.theme-ingress-console {
+  border-color: rgba(214, 168, 75, 0.34) !important;
+  background:
+    radial-gradient(circle at 84% 14%, rgba(240, 201, 106, 0.08), transparent 15rem),
+    linear-gradient(135deg, rgba(214, 168, 75, 0.07), transparent 31%),
+    rgba(6, 6, 5, 0.94) !important;
+  box-shadow:
+    inset 3px 0 0 rgba(214, 168, 75, 0.52),
+    inset 0 1px 0 rgba(255, 242, 204, 0.07),
+    0 28px 78px -38px rgba(0, 0, 0, 1),
+    0 22px 54px -40px rgba(240, 201, 106, 0.48) !important;
+}
+
+.theme-ingress-console::before {
+  background: linear-gradient(90deg, transparent, var(--royal-gold-bright), transparent) !important;
+  box-shadow: 0 0 18px rgba(240, 201, 106, 0.42) !important;
+}
+
+.theme-ingress-header,
+.theme-ingress-footer,
+.theme-saved-report-gate {
+  border-color: rgba(214, 168, 75, 0.2) !important;
+}
+
+.theme-ingress-header span,
+.theme-ingress-formats {
+  color: #887f70 !important;
+}
+
+.theme-ingress-header strong {
+  color: #eee8db !important;
+}
+
+.theme-ingress-status {
+  color: #c7bda9 !important;
+}
+
+.theme-ingress-status i {
+  background: var(--royal-gold-bright) !important;
+  box-shadow: 0 0 12px rgba(240, 201, 106, 0.7) !important;
+}
+
+.theme-saved-report-gate summary:hover,
+.theme-builder-entry:hover {
+  color: var(--royal-gold-bright) !important;
+}
+
+.theme-builder-entry {
+  border-color: rgba(214, 168, 75, 0.32) !important;
+  background: rgba(214, 168, 75, 0.065) !important;
+  color: #c6a967 !important;
+}
+
+.theme-cinematic-horizon {
+  color: #897557 !important;
+  background: rgba(2, 2, 2, 0.82) !important;
+}
+
+@keyframes royalOrbit {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Defined royal surfaces + player-card backlight                              */
+/* -------------------------------------------------------------------------- */
+
+.theme-main[data-workspace-tone="overview"] :is(.theme-panel, .theme-stat-card, .theme-analytics-surface, .theme-data-region, .theme-table-shell),
+.theme-main[data-workspace-tone="squad"] :is(.theme-panel, .theme-stat-card, .theme-analytics-surface, .theme-data-region, .theme-table-shell),
+.theme-main[data-workspace-tone="performance"] :is(.theme-panel, .theme-stat-card, .theme-analytics-surface, .theme-data-region, .theme-table-shell) {
+  border-color: rgba(214, 168, 75, 0.12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 244, 211, 0.025),
+    0 22px 54px -48px rgba(214, 168, 75, 0.3),
+    0 28px 62px -48px rgba(0, 0, 0, 1) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] :is(.theme-player-card, .theme-podium-card),
+.theme-main[data-workspace-tone="squad"] .theme-player-card,
+.theme-main[data-workspace-tone="performance"] :is(.theme-player-card, .theme-podium-card) {
+  background:
+    radial-gradient(ellipse 88% 32% at 50% 108%, rgba(240, 201, 106, 0.13), transparent 72%),
+    linear-gradient(135deg, rgba(214, 168, 75, 0.045), transparent 35%),
+    #0a0907 !important;
+  border-color: rgba(214, 168, 75, 0.2) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 243, 207, 0.055),
+    inset 0 -1px 0 rgba(214, 168, 75, 0.13),
+    0 18px 44px -30px rgba(214, 168, 75, 0.3),
+    0 28px 64px -48px rgba(0, 0, 0, 1) !important;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease, background-color 180ms ease !important;
+}
+
+.theme-main[data-workspace-tone="overview"] :is(.theme-player-card, .theme-podium-card):hover,
+.theme-main[data-workspace-tone="squad"] .theme-player-card:hover,
+.theme-main[data-workspace-tone="performance"] :is(.theme-player-card, .theme-podium-card):hover {
+  border-color: rgba(240, 201, 106, 0.38) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 243, 207, 0.09),
+    inset 0 -2px 0 rgba(214, 168, 75, 0.24),
+    0 20px 52px -27px rgba(240, 201, 106, 0.44),
+    0 34px 72px -48px rgba(0, 0, 0, 1) !important;
+  transform: translateY(-2px);
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card {
+  border-color: rgba(240, 201, 106, 0.32) !important;
+  background:
+    radial-gradient(ellipse 96% 38% at 50% 106%, rgba(240, 201, 106, 0.2), transparent 70%),
+    linear-gradient(130deg, rgba(214, 168, 75, 0.08), transparent 42%),
+    #0b0a08 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 245, 215, 0.08),
+    inset 0 -2px 0 rgba(214, 168, 75, 0.2),
+    0 20px 58px -28px rgba(240, 201, 106, 0.46),
+    0 36px 82px -54px rgba(0, 0, 0, 1) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card:hover {
+  border-color: rgba(240, 201, 106, 0.5) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 245, 215, 0.12),
+    inset 0 -2px 0 rgba(240, 201, 106, 0.28),
+    0 22px 64px -24px rgba(240, 201, 106, 0.56),
+    0 40px 88px -54px rgba(0, 0, 0, 1) !important;
+}
+
+@media (max-width: 800px) {
+  .theme-cinematic-stage::before {
+    top: 22%;
+    left: 50%;
+    width: min(88vw, 34rem);
+    opacity: 0.24;
+  }
+
+  .theme-cinematic-stage::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-cinematic-stage::before {
+    animation: none;
+  }
+
+  .theme-main[data-workspace-tone="overview"] :is(.theme-player-card, .theme-podium-card),
+  .theme-main[data-workspace-tone="squad"] .theme-player-card,
+  .theme-main[data-workspace-tone="performance"] :is(.theme-player-card, .theme-podium-card) {
+    transition: none !important;
+  }
+}
+
