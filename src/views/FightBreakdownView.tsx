@@ -4,7 +4,7 @@ import { useReport } from "../store/ReportContext";
 import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
 import { fmtCompact } from "../utils/format";
-import { Activity, BrainCircuit, ExternalLink, GitCompare, Swords, Target } from "lucide-react";
+import { Activity, BrainCircuit, ExternalLink, GitCompare, Swords } from "lucide-react";
 import type { FightRow } from "../types/report";
 import { BarChart, Bar, Line, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { CHART_COLORS, TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE } from "../utils/chartTheme";
@@ -87,7 +87,11 @@ export default function FightBreakdownView() {
     const glyph = active ? (sort.dir === "desc" ? "▼" : "▲") : "↕";
     return (
       <th className={`p-2.5 font-medium ${className}`}>
-        <button type="button" onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 hover:text-slate-200 transition-colors">
+        <button
+          type="button"
+          onClick={() => toggleSort(k)}
+          className={`inline-flex items-center gap-1 transition-colors ${active ? "text-theme-accent-strong" : "text-theme-muted hover:text-theme-text"}`}
+        >
           {children}
           <span className="text-[8px] opacity-70">{glyph}</span>
         </button>
@@ -98,9 +102,6 @@ export default function FightBreakdownView() {
   const hasHealingData = fights.some((f) => f.totalOutgoingHealing !== undefined);
   const hasSustainData = fights.some((f) => f.effectiveHealing !== undefined);
 
-  // Recharts data for the damage/sustain chart and the KDR trend line, built
-  // from whatever's currently shown (respects the outcome filter and the
-  // show-all toggle) so the chart never contradicts the table beneath it.
   const chartData = useMemo(
     () =>
       shown.map(({ fight: f, index }) => ({
@@ -134,7 +135,6 @@ export default function FightBreakdownView() {
       <Panel
         title="Fight Breakdown"
         icon={<Swords className="w-4 h-4" />}
-        accent="text-blue-500"
         action={<span>{fights.length} FIGHTS</span>}
         bodyClassName="p-0"
       >
@@ -146,7 +146,7 @@ export default function FightBreakdownView() {
                 type="button"
                 aria-pressed={outcomeFilter === filter}
                 onClick={() => setOutcomeFilter(filter)}
-                className={`theme-filter-chip border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider ${outcomeFilter === filter ? "border-orange-400/40 bg-orange-500/10 text-orange-200" : "border-theme-border text-theme-muted"}`}
+                className={`theme-filter-chip border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-colors ${outcomeFilter === filter ? "border-theme-accent/40 bg-theme-accent/10 text-theme-accent-strong" : "border-theme-border text-theme-muted hover:border-theme-accent/25 hover:text-theme-text"}`}
               >
                 {filter}
               </button>
@@ -157,7 +157,7 @@ export default function FightBreakdownView() {
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse text-xs whitespace-nowrap">
             <thead>
-              <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/40">
+              <tr className="text-[10px] text-theme-muted uppercase font-bold tracking-wider border-b border-theme-border/50">
                 <SortHeader k="fight">#</SortHeader>
                 <th className="p-2.5 font-medium">Fight</th>
                 <th className="p-2.5 font-medium">Compare</th>
@@ -175,22 +175,22 @@ export default function FightBreakdownView() {
                 {hasSustainData && <SortHeader k="sustain" className="text-right">Sustain</SortHeader>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/30 font-mono">
+            <tbody className="divide-y divide-theme-border/30 font-mono">
               {shown.map(({ fight: f, index }) => (
-                <tr key={f.id} className={`transition-colors ${selectedFightId === f.id ? "bg-orange-500/[0.08]" : "hover:bg-orange-950/20"}`}>
-                  <td className="p-2.5 text-slate-500">{index + 1}</td>
+                <tr key={f.id} className={`transition-colors ${selectedFightId === f.id ? "bg-theme-accent/[0.07] shadow-[inset_2px_0_0_var(--theme-accent)]" : "hover:bg-theme-surface-elevated/55"}`}>
+                  <td className="p-2.5 text-theme-muted">{index + 1}</td>
                   <td className="p-2.5">
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => setSelectedFightId(f.id)} className="font-semibold text-slate-300 hover:text-orange-200">{f.label}</button>
+                      <button type="button" onClick={() => setSelectedFightId(f.id)} className="font-semibold text-theme-text/85 transition-colors hover:text-theme-accent-strong">{f.label}</button>
                       {f.permalink && (
                         <a
                           href={f.permalink}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-blue-500 hover:text-blue-400"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
+                          className="text-theme-accent transition-colors hover:text-theme-accent-strong"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
                       )}
                     </div>
                   </td>
@@ -201,23 +201,23 @@ export default function FightBreakdownView() {
                       disabled={selectedFightId === f.id}
                       onClick={() => setComparisonFightId((current) => current === f.id ? null : f.id)}
                       title="Use this fight as the comparison"
-                      className={`inline-grid h-7 w-7 place-items-center border disabled:cursor-not-allowed disabled:opacity-30 ${comparisonFightId === f.id ? "border-cyan-400/50 bg-cyan-500/10 text-cyan-200" : "border-slate-800 text-slate-500 hover:text-slate-200"}`}
+                      className={`inline-grid h-7 w-7 place-items-center border transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${comparisonFightId === f.id ? "border-theme-accent/50 bg-theme-accent/10 text-theme-accent-strong" : "border-theme-border text-theme-muted hover:border-theme-accent/25 hover:text-theme-text"}`}
                     >
                       <GitCompare className="h-3.5 w-3.5" />
                     </button>
                   </td>
-                  <td className="p-2.5 text-slate-400">{f.mapName}</td>
-                  <td className="p-2.5 text-slate-400">{f.duration}</td>
+                  <td className="p-2.5 text-theme-muted">{f.mapName}</td>
+                  <td className="p-2.5 text-theme-muted">{f.duration}</td>
                   <td className={`p-2.5 font-bold ${f.isWin ? "text-emerald-400" : "text-rose-400"}`}>
                     {f.isWin ? "Win" : "Loss"}
                   </td>
-                  <td className="p-2.5 text-right text-slate-300">{f.squadCount}</td>
-                  <td className="p-2.5 text-right text-slate-300">{f.enemyCount}</td>
+                  <td className="p-2.5 text-right text-theme-text/80">{f.squadCount}</td>
+                  <td className="p-2.5 text-right text-theme-text/80">{f.enemyCount}</td>
                   <td className="p-2.5 text-right text-emerald-400">{f.enemyDeaths}</td>
                   <td className="p-2.5 text-right text-rose-400">{f.alliesDead}</td>
-                  <td className="p-2.5 text-right text-slate-300">{fmtCompact(f.totalOutgoingDamage)}</td>
-                  <td className="p-2.5 text-right text-slate-400">{fmtCompact(f.totalIncomingDamage)}</td>
-                  <td className="p-2.5 text-right text-slate-400">{f.totalOutgoingStrips}</td>
+                  <td className="p-2.5 text-right text-theme-text/85">{fmtCompact(f.totalOutgoingDamage)}</td>
+                  <td className="p-2.5 text-right text-theme-muted">{fmtCompact(f.totalIncomingDamage)}</td>
+                  <td className="p-2.5 text-right text-theme-muted">{f.totalOutgoingStrips}</td>
                   {hasHealingData && (
                     <td className="p-2.5 text-right text-emerald-300">
                       {f.totalOutgoingHealing !== undefined ? fmtCompact(f.totalOutgoingHealing) : "-"}
@@ -235,10 +235,10 @@ export default function FightBreakdownView() {
         </div>
 
         {fights.length > 12 && (
-          <div className="p-3 border-t border-slate-800/40 text-center">
+          <div className="p-3 border-t border-theme-border/50 text-center">
             <button
               onClick={() => setShowAll(!showAll)}
-              className="text-xs font-bold text-sky-400 hover:text-sky-300 transition-colors"
+              className="text-xs font-bold text-theme-accent transition-colors hover:text-theme-accent-strong"
             >
               {showAll ? "Show less" : `Show all ${fights.length} fights`}
             </button>
@@ -248,12 +248,12 @@ export default function FightBreakdownView() {
 
       {selectedRow && (
         <section className="theme-fight-dossier grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
-          <div className="theme-selected-fight border border-orange-400/20 bg-black/45 p-5">
+          <div className="theme-selected-fight border border-theme-accent/25 bg-theme-surface/90 p-5 shadow-[inset_2px_0_0_var(--theme-accent)]">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-300">Selected fight dossier</div>
-                <h3 className="mt-1 text-xl font-black uppercase text-slate-100">Fight {selectedRow.index + 1} · {selectedRow.fight.fullLabel}</h3>
-                <p className="mt-2 text-xs text-slate-500">Direct report totals. No scoring or methodology changes are applied in this dossier.</p>
+                <div className="text-[10px] font-black uppercase tracking-[0.24em] text-theme-accent-strong">Selected fight dossier</div>
+                <h3 className="mt-1 text-xl font-black uppercase text-theme-text">Fight {selectedRow.index + 1} · {selectedRow.fight.fullLabel}</h3>
+                <p className="mt-2 text-xs text-theme-muted">Direct report totals. No scoring or methodology changes are applied in this dossier.</p>
               </div>
               <span className={`border px-3 py-1 text-xs font-black uppercase ${selectedRow.fight.isWin ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300" : "border-rose-400/30 bg-rose-500/10 text-rose-300"}`}>
                 {selectedRow.fight.isWin ? "Win" : "Loss"}
@@ -280,22 +280,22 @@ export default function FightBreakdownView() {
               )}
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
-              <button type="button" onClick={() => openFightIn("squad-stats")} className="theme-command-button inline-flex items-center gap-2 border border-orange-400/30 bg-orange-500/10 px-4 py-2 text-xs font-black uppercase text-orange-200">
+              <button type="button" onClick={() => openFightIn("squad-stats")} className="theme-command-button inline-flex items-center gap-2 border border-theme-accent/30 bg-theme-accent/10 px-4 py-2 text-xs font-black uppercase text-theme-accent-strong">
                 <Activity className="h-4 w-4" /> Open pressure and sustain
               </button>
-              <button type="button" onClick={() => openFightIn("intelligence")} className="theme-command-button inline-flex items-center gap-2 border border-cyan-400/25 bg-cyan-500/[0.08] px-4 py-2 text-xs font-black uppercase text-cyan-200">
+              <button type="button" onClick={() => openFightIn("intelligence")} className="theme-command-button inline-flex items-center gap-2 border border-theme-border bg-theme-surface-inset px-4 py-2 text-xs font-black uppercase text-theme-text hover:border-theme-accent/30 hover:text-theme-accent-strong">
                 <BrainCircuit className="h-4 w-4" /> Open intelligence
-            </button>
+              </button>
             </div>
           </div>
 
-          <div className="theme-comparison-slab border border-cyan-400/15 bg-black/35 p-5">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300"><GitCompare className="h-4 w-4" /> Comparison</div>
+          <div className="theme-comparison-slab border border-theme-border bg-theme-surface-inset/70 p-5">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-theme-accent-strong"><GitCompare className="h-4 w-4" /> Comparison</div>
             {comparisonRow ? (
               <div className="mt-4 space-y-4">
                 <div>
-                  <div className="text-sm font-black text-slate-100">Fight {comparisonRow.index + 1} · {comparisonRow.fight.mapName}</div>
-                  <div className="mt-1 text-xs text-slate-500">Difference from selected fight</div>
+                  <div className="text-sm font-black text-theme-text">Fight {comparisonRow.index + 1} · {comparisonRow.fight.mapName}</div>
+                  <div className="mt-1 text-xs text-theme-muted">Difference from selected fight</div>
                 </div>
                 <Delta label="Outgoing damage" value={comparisonRow.fight.totalOutgoingDamage - selectedRow.fight.totalOutgoingDamage} compact />
                 <Delta label="Incoming damage" value={comparisonRow.fight.totalIncomingDamage - selectedRow.fight.totalIncomingDamage} compact inverse />
@@ -303,28 +303,24 @@ export default function FightBreakdownView() {
                 <Delta label="Squad deaths" value={comparisonRow.fight.alliesDead - selectedRow.fight.alliesDead} inverse />
               </div>
             ) : (
-              <div className="mt-4 border-l-2 border-cyan-400/30 px-3 py-2 text-xs leading-5 text-slate-500">Use the comparison icon in another row to measure it against this fight.</div>
+              <div className="mt-4 border-l-2 border-theme-accent/35 px-3 py-2 text-xs leading-5 text-theme-muted">Use the comparison icon in another row to measure it against this fight.</div>
             )}
           </div>
         </section>
       )}
 
-      {/* Damage per fight, plus a KDR trend line so a spike in pressure and a
-          spike in kill efficiency can be read against the same fight axis at
-          a glance instead of scrolling between the table and a bar list. */}
       <Panel
         title="Damage & KDR Per Fight"
         subtitle="Bars: outgoing vs incoming squad damage per fight. Line: kill/death ratio for that fight."
         icon={<Swords className="w-4 h-4" />}
-        accent="text-orange-400"
       >
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 8, right: 24, left: 0, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-              <XAxis dataKey="fightNo" tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" tickFormatter={(v) => `#${v}`} />
-              <YAxis yAxisId="dmg" tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" width={44} tickFormatter={(v) => fmtCompact(Number(v))} />
-              <YAxis yAxisId="kdr" orientation="right" tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" width={32} />
+              <XAxis dataKey="fightNo" tick={{ fill: "var(--entropy-text-muted)", fontSize: 10 }} stroke="rgba(255,255,255,0.10)" tickFormatter={(v) => `#${v}`} />
+              <YAxis yAxisId="dmg" tick={{ fill: "var(--entropy-text-muted)", fontSize: 10 }} stroke="rgba(255,255,255,0.10)" width={44} tickFormatter={(v) => fmtCompact(Number(v))} />
+              <YAxis yAxisId="kdr" orientation="right" tick={{ fill: "var(--entropy-text-muted)", fontSize: 10 }} stroke="rgba(255,255,255,0.10)" width={32} />
               <Tooltip
                 contentStyle={TOOLTIP_STYLE}
                 itemStyle={TOOLTIP_ITEM_STYLE}
@@ -335,7 +331,7 @@ export default function FightBreakdownView() {
                   return `Fight #${v}${row?.label ? ` · ${row.label}` : ""}${row?.isWin != null ? ` · ${row.isWin ? "Win" : "Loss"}` : ""}`;
                 }}
               />
-              <Legend wrapperStyle={{ fontSize: 10, color: "#64748b" }} />
+              <Legend wrapperStyle={{ fontSize: 10, color: "var(--entropy-text-muted)" }} />
               <Bar yAxisId="dmg" dataKey="outDamage" name="Outgoing" fill={CHART_COLORS.amber} radius={[3, 3, 0, 0]} />
               <Bar yAxisId="dmg" dataKey="inDamage" name="Incoming" fill={CHART_COLORS.rose} radius={[3, 3, 0, 0]} />
               <Line yAxisId="kdr" type="monotone" dataKey="kdr" name="KDR" stroke={CHART_COLORS.cyan} strokeWidth={2} dot={{ r: 2 }} />
@@ -347,11 +343,11 @@ export default function FightBreakdownView() {
   );
 }
 
-function DossierMetric({ label, value, tone = "text-slate-100" }: { label: string; value: string; tone?: string }) {
-  return <div className="theme-dossier-metric border-l-2 border-orange-400/30 bg-black/25 px-3 py-2"><div className="text-[9px] font-black uppercase tracking-wider text-slate-500">{label}</div><div className={`mt-1 font-mono text-lg font-black ${tone}`}>{value}</div></div>;
+function DossierMetric({ label, value, tone = "text-theme-text" }: { label: string; value: string; tone?: string }) {
+  return <div className="theme-dossier-metric border-l-2 border-theme-accent/30 bg-theme-surface-inset/70 px-3 py-2"><div className="text-[9px] font-black uppercase tracking-wider text-theme-muted">{label}</div><div className={`mt-1 font-mono text-lg font-black ${tone}`}>{value}</div></div>;
 }
 
 function Delta({ label, value, compact = false, inverse = false }: { label: string; value: number; compact?: boolean; inverse?: boolean }) {
   const beneficial = inverse ? value <= 0 : value >= 0;
-  return <div className="flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3 text-xs"><span className="text-slate-500">{label}</span><span className={`font-mono font-black ${beneficial ? "text-emerald-300" : "text-rose-300"}`}>{value >= 0 ? "+" : ""}{compact ? fmtCompact(value) : value}</span></div>;
+  return <div className="flex items-center justify-between gap-3 border-t border-theme-border/60 pt-3 text-xs"><span className="text-theme-muted">{label}</span><span className={`font-mono font-black ${beneficial ? "text-emerald-300" : "text-rose-300"}`}>{value >= 0 ? "+" : ""}{compact ? fmtCompact(value) : value}</span></div>;
 }
