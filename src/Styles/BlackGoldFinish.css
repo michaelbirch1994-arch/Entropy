@@ -112,6 +112,61 @@
   box-shadow: inset 2px 0 0 var(--entropy-gold) !important;
 }
 
+/* Tone-specific rules in the legacy navigation layer are intentionally stronger
+   than generic navigation rules. Neutralize them here so sidebar state never
+   inherits overview/squad/performance/combat teal, green, blue, or red washes. */
+.theme-app-shell .theme-sidebar .theme-nav-section[data-tone],
+.theme-app-shell .theme-sidebar [data-tone] > .theme-nav-section {
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.theme-app-shell .theme-sidebar .theme-nav-section[data-tone]:hover,
+.theme-app-shell .theme-sidebar [data-tone] > .theme-nav-section:hover {
+  background: linear-gradient(90deg, rgba(214, 168, 75, 0.055), #0a0a09 72%) !important;
+  border-color: rgba(214, 168, 75, 0.12) !important;
+}
+
+.theme-app-shell .theme-sidebar .theme-nav-section[data-tone][aria-expanded="true"],
+.theme-app-shell .theme-sidebar [data-tone] > .theme-nav-section[aria-expanded="true"] {
+  background: linear-gradient(90deg, rgba(214, 168, 75, 0.09), #0b0a08 68%) !important;
+  border-color: rgba(214, 168, 75, 0.18) !important;
+  box-shadow: inset 2px 0 0 rgba(214, 168, 75, 0.72) !important;
+}
+
+.theme-app-shell .theme-sidebar .theme-nav-item[data-tone] {
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.theme-app-shell .theme-sidebar .theme-nav-item[data-tone]:hover {
+  background: linear-gradient(90deg, rgba(214, 168, 75, 0.05), #0a0a09 72%) !important;
+  border-color: rgba(214, 168, 75, 0.10) !important;
+}
+
+.theme-app-shell .theme-sidebar .theme-nav-item[data-tone][aria-current="page"] {
+  background:
+    linear-gradient(90deg, rgba(214, 168, 75, 0.14), rgba(214, 168, 75, 0.025) 58%, transparent),
+    #090909 !important;
+  border-color: rgba(214, 168, 75, 0.20) !important;
+  box-shadow: inset 2px 0 0 var(--entropy-gold) !important;
+  color: var(--entropy-gold-bright) !important;
+}
+
+.theme-app-shell .theme-sidebar nav ul::before {
+  background: rgba(214, 168, 75, 0.16) !important;
+}
+
+.theme-app-shell .theme-sidebar nav,
+.theme-app-shell .theme-sidebar nav > div,
+.theme-app-shell .theme-sidebar footer {
+  background-color: transparent !important;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Non-Intelligence / non-Replay workspace chrome                              */
 /* -------------------------------------------------------------------------- */
@@ -238,6 +293,35 @@
 .theme-main[data-workspace-tone="overview"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival) {
   --player-glow: var(--entropy-gold);
   filter: none !important;
+}
+
+/* Generic Overview grouping plates should be neutral even when older utility
+   classes supply emerald/cyan tinted backgrounds. This intentionally does not
+   remap text, icons, badges, progress values, or explicitly semantic alerts. */
+.theme-main[data-workspace-tone="overview"] :is(
+  .theme-section,
+  .theme-card,
+  .theme-card-shell,
+  .theme-summary-strip,
+  .theme-summary-grid,
+  .theme-section-shell,
+  .theme-panel-shell
+) {
+  background-color: #080808 !important;
+  border-color: var(--black-gold-border) !important;
+  box-shadow: none !important;
+}
+
+.theme-main[data-workspace-tone="overview"] :is(
+  .theme-section,
+  .theme-card,
+  .theme-card-shell,
+  .theme-summary-strip,
+  .theme-summary-grid,
+  .theme-section-shell,
+  .theme-panel-shell
+):hover {
+  border-color: rgba(214, 168, 75, 0.14) !important;
 }
 
 /* Neutral separators should never inherit old teal borders. */
