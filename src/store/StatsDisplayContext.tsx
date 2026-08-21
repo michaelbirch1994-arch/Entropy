@@ -64,13 +64,12 @@ export function StatsDisplayToggle({ className = "" }: { className?: string }) {
       type="button"
       onClick={() => setMode(isPerSecond ? "total" : "perSecond")}
       title={isPerSecond ? "Showing per-second rates. Click to show fight totals." : "Showing fight totals. Click to show per-second rates."}
-      className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border transition-colors ${
-        isPerSecond
-          ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10"
-          : "text-slate-400 border-slate-600/30 bg-slate-500/5 hover:bg-slate-500/10"
-      } ${className}`}
+      className={`theme-filter-button flex items-center gap-1.5 rounded-lg border border-theme-border bg-theme-surface px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-theme-muted transition-colors hover:border-theme-accent/30 hover:bg-theme-surface-elevated hover:text-theme-text ${className}`}
+      data-active="true"
     >
-      {isPerSecond ? <Timer className="w-3 h-3" /> : <Hash className="w-3 h-3" />}
+      <span className="text-theme-accent-strong">
+        {isPerSecond ? <Timer className="w-3 h-3" /> : <Hash className="w-3 h-3" />}
+      </span>
       {isPerSecond ? "Per Second" : "Totals"}
     </button>
   );
