@@ -30,24 +30,29 @@ function ReplayInspectorDrawer({
     ? "h-[clamp(520px,60vh,760px)]"
     : "h-[420px] xl:h-[520px] 2xl:h-[600px]";
 
+  const modeClass = (selected: boolean) =>
+    selected
+      ? "border-theme-accent/35 bg-theme-accent/[0.09] text-theme-accent-strong"
+      : "border-theme-border bg-theme-surface text-theme-muted hover:border-theme-accent/25 hover:text-theme-text";
+
   return (
-    <aside className={`${heightClass} flex min-w-0 flex-col overflow-hidden rounded-xl border border-sky-400/15 bg-[#060c14]/95 shadow-[0_0_35px_-25px_rgba(56,189,248,0.75)]`}>
-      <div className="flex shrink-0 items-center gap-1 border-b border-white/[0.07] bg-black/20 p-2">
+    <aside className={`${heightClass} flex min-w-0 flex-col overflow-hidden rounded-xl border border-theme-border bg-theme-surface/95 shadow-[0_18px_45px_-36px_rgba(0,0,0,0.95)]`}>
+      <div className="flex shrink-0 items-center gap-1 border-b border-theme-border/70 bg-theme-surface-inset/65 p-2">
         <button
           type="button"
           onClick={() => onModeChange("intelligence")}
-          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1.5 text-[9px] font-black uppercase tracking-wider transition ${mode === "intelligence" ? "border-sky-300/30 bg-sky-300/[0.09] text-sky-200" : "border-white/[0.07] text-slate-500 hover:text-slate-300"}`}
+          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1.5 text-[9px] font-black uppercase tracking-wider transition ${modeClass(mode === "intelligence")}`}
         >
           <BrainCircuit className="h-3 w-3" /> Live Intel
-          {evidenceEvent && <span className="h-1.5 w-1.5 rounded-full bg-sky-300 shadow-[0_0_8px_rgba(125,211,252,0.85)]" aria-label="Evidence available" />}
+          {evidenceEvent && <span className="h-1.5 w-1.5 rounded-full bg-theme-accent-strong shadow-[0_0_8px_color-mix(in_srgb,var(--theme-accent)_55%,transparent)]" aria-label="Evidence available" />}
         </button>
         <button
           type="button"
           onClick={() => onModeChange("player")}
-          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1.5 text-[9px] font-black uppercase tracking-wider transition ${mode === "player" ? "border-amber-300/30 bg-amber-300/[0.08] text-amber-200" : "border-white/[0.07] text-slate-500 hover:text-slate-300"}`}
+          className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1.5 text-[9px] font-black uppercase tracking-wider transition ${modeClass(mode === "player")}`}
         >
           <Crosshair className="h-3 w-3" /> Player
-          {player && <span className="max-w-24 truncate font-mono normal-case tracking-normal text-slate-400">{player.name}</span>}
+          {player && <span className="max-w-24 truncate font-mono normal-case tracking-normal text-theme-text/75">{player.name}</span>}
         </button>
       </div>
 
@@ -62,9 +67,11 @@ function ReplayInspectorDrawer({
             />
           ) : (
             <div className="flex h-full min-h-64 flex-col items-center justify-center px-5 text-center">
-              <BrainCircuit className="h-6 w-6 text-sky-400/45" />
-              <div className="mt-3 text-[10px] font-black uppercase tracking-[0.17em] text-slate-300">Live Intelligence</div>
-              <p className="mt-2 max-w-56 text-[10px] leading-relaxed text-slate-500">
+              <div className="grid h-10 w-10 place-items-center rounded-xl border border-theme-accent/20 bg-theme-accent/[0.06] text-theme-accent">
+                <BrainCircuit className="h-5 w-5" />
+              </div>
+              <div className="mt-3 text-[10px] font-black uppercase tracking-[0.17em] text-theme-text">Live Intelligence</div>
+              <p className="mt-2 max-w-56 text-[10px] leading-relaxed text-theme-muted">
                 Evidence will update inside this drawer without moving the replay map or the page.
               </p>
             </div>

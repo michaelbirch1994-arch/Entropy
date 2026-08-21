@@ -27,18 +27,18 @@ export default function ReplayIntelligenceAnchorRail() {
   if (!report || anchors.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-sky-400/15 bg-[#07101c]/90 px-4 py-3 shadow-[0_0_34px_-26px_rgba(56,189,248,0.8)]">
+    <section className="theme-evidence-gate rounded-2xl border border-theme-accent/25 bg-theme-surface/95 px-4 py-3 shadow-[inset_2px_0_0_color-mix(in_srgb,var(--theme-accent)_50%,transparent)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-sky-400/20 bg-sky-400/[0.08] text-sky-300">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-theme-accent/25 bg-theme-accent/[0.08] text-theme-accent-strong">
             <BrainCircuit className="h-4 w-4" />
           </div>
           <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-sky-300">Intelligence Replay Anchors</div>
-            <div className="mt-0.5 text-[10px] text-slate-500">Evidence-backed moments with exact replay coverage. Select one to seek directly to it.</div>
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-theme-accent-strong">Intelligence Replay Anchors</div>
+            <div className="mt-0.5 text-[10px] text-theme-muted">Evidence-backed moments with exact replay coverage. Select one to seek directly to it.</div>
           </div>
         </div>
-        <div className="rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1 font-mono text-[10px] text-slate-400">
+        <div className="rounded-full border border-theme-border bg-theme-surface-inset px-2.5 py-1 font-mono text-[10px] text-theme-muted">
           {anchors.length} linked event{anchors.length === 1 ? "" : "s"}
         </div>
       </div>
@@ -60,25 +60,25 @@ export default function ReplayIntelligenceAnchorRail() {
                 metric: titleForKind(anchor.kind),
               })
             }
-            className="group min-w-[210px] max-w-[270px] shrink-0 cursor-pointer rounded-xl border border-white/[0.08] bg-black/20 px-3 py-2.5 text-left transition hover:border-sky-400/30 hover:bg-sky-400/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50"
+            className="group min-w-[210px] max-w-[270px] shrink-0 cursor-pointer rounded-xl border border-theme-border bg-theme-surface-inset/55 px-3 py-2.5 text-left transition hover:border-theme-accent/35 hover:bg-theme-accent/[0.055] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent-strong/60"
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-[10px] font-black uppercase tracking-[0.13em] text-slate-300 group-hover:text-sky-200">
+              <span className="truncate text-[10px] font-black uppercase tracking-[0.13em] text-theme-text/85 group-hover:text-theme-accent-strong">
                 {titleForKind(anchor.kind)}
               </span>
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-600 transition group-hover:translate-x-0.5 group-hover:text-sky-300" />
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-theme-faint transition group-hover:translate-x-0.5 group-hover:text-theme-accent-strong" />
             </div>
-            <div className="mt-1 flex items-center gap-1.5 font-mono text-[9px] text-slate-500">
+            <div className="mt-1 flex items-center gap-1.5 font-mono text-[9px] text-theme-muted">
               <span>F{anchor.fightIndex + 1}</span>
               <span>·</span>
               <span>{fmtClock(anchor.timestampMs)}</span>
               <span>·</span>
               <span className="truncate">{anchor.category}</span>
             </div>
-            <p className="mt-1.5 line-clamp-2 text-[10px] leading-relaxed text-slate-500 group-hover:text-slate-400">
+            <p className="mt-1.5 line-clamp-2 text-[10px] leading-relaxed text-theme-muted group-hover:text-theme-text/75">
               {anchor.summary}
             </p>
-            <div className="mt-2 text-[8px] font-bold uppercase tracking-wider text-sky-400/55">
+            <div className="mt-2 text-[8px] font-bold uppercase tracking-wider text-theme-accent/70">
               {anchor.confidence} evidence
             </div>
           </button>

@@ -12,7 +12,7 @@ function uptimeColor(pct: number): string {
   if (pct >= 90) return "text-emerald-400";
   if (pct >= 50) return "text-amber-400";
   if (pct > 0) return "text-orange-400/80";
-  return "text-slate-500";
+  return "text-theme-muted";
 }
 
 // Tab order mirrors dps.report's Buffs sub-tabs. Shared with Buff Generation
@@ -44,7 +44,7 @@ export default function BuffsView() {
           title="Buffs"
           icon={<Sparkles className="w-3.5 h-3.5" />}
           empty={
-            <div className="py-10 text-center text-sm text-slate-500">
+            <div className="py-10 text-center text-sm text-theme-muted">
               No buff uptime data available for this report.
             </div>
           }
@@ -89,7 +89,7 @@ export default function BuffsView() {
   const sortLabel = (key: SortKey) => (!sort || sort.key !== key ? "SORT" : sort.dir === "desc" ? "DESC" : "ASC");
   const sortButtonClass = (key: SortKey, extra = "") =>
     `inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
-      sort?.key === key ? "text-amber-300" : "text-slate-500 hover:text-slate-300"
+      sort?.key === key ? "text-theme-accent-strong" : "text-theme-muted hover:text-theme-text"
     } ${extra}`;
 
   // Precompute each stacking column's values once so relativeStackColor doesn't
@@ -115,8 +115,8 @@ export default function BuffsView() {
               }}
               className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all border ${
                 activeTab === t
-                  ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
-                  : "bg-white/[0.02] border-white/[0.06] text-slate-500 hover:text-slate-300 hover:border-white/[0.12]"
+                  ? "bg-theme-accent/10 border-theme-accent/40 text-theme-accent-strong"
+                  : "bg-theme-surface border-theme-border text-theme-muted hover:text-theme-text hover:border-theme-accent/20"
               }`}
             >
               {t}
@@ -135,8 +135,8 @@ export default function BuffsView() {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500">
-                <th className="text-left font-bold px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">
+              <tr className="border-b border-theme-border/60 text-[10px] uppercase tracking-wider text-theme-muted">
+                <th className="text-left font-bold px-4 py-3 sticky left-0 bg-theme-surface/95">
                   <button type="button" onClick={() => toggleSort("player")} className={sortButtonClass("player")}>
                     Player <span className="text-[8px] opacity-70">{sortLabel("player")}</span>
                   </button>
@@ -169,9 +169,9 @@ export default function BuffsView() {
               {sortedRows.map((row, i) => (
                 <tr
                   key={row.account}
-                  className={`border-b border-slate-800/40 hover:bg-white/[0.02] transition-colors ${i % 2 === 0 ? "bg-white/[0.01]" : ""}`}
+                  className={`border-b border-theme-border/40 hover:bg-theme-surface-elevated/55 transition-colors ${i % 2 === 0 ? "bg-theme-surface-inset/20" : ""}`}
                 >
-                  <td className="px-4 py-2.5 font-semibold text-slate-200 sticky left-0 bg-[#0a0e1f]/95 whitespace-nowrap">
+                  <td className="px-4 py-2.5 font-semibold text-theme-text sticky left-0 bg-theme-surface/95 whitespace-nowrap">
                     {row.account}
                   </td>
                   <td className="px-2 py-2.5">

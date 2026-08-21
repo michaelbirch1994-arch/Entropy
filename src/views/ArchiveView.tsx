@@ -67,7 +67,7 @@ export default function ArchiveView() {
         onClick={() => toggleSort(k)}
         className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
           align === "right" ? "justify-end" : ""
-        } ${sort?.key === k ? "text-sky-300" : "text-slate-500 hover:text-slate-300"}`}
+        } ${sort?.key === k ? "text-theme-accent-strong" : "text-theme-muted hover:text-theme-text"}`}
       >
         {label} <span className="text-[8px] opacity-70">{sortLabel(k)}</span>
       </button>
@@ -114,7 +114,7 @@ export default function ArchiveView() {
   }
 
   if (entries === null) {
-    return <div className="flex items-center justify-center py-24 text-slate-500 text-sm">Loading archive...</div>;
+    return <div className="flex items-center justify-center py-24 text-theme-muted text-sm">Loading archive...</div>;
   }
 
   return (
@@ -123,44 +123,43 @@ export default function ArchiveView() {
         title="Report Archive"
         subtitle="Every report you've loaded on this device, searchable by title or commander - stored locally, no server involved"
         icon={<Archive className="w-4 h-4" />}
-        accent="text-sky-400"
-        action={<span className="text-[10px] text-slate-500 font-mono">{entries.length} reports saved</span>}
+        action={<span className="text-[10px] text-theme-muted font-mono">{entries.length} reports saved</span>}
       >
         {entries.length === 0 ? (
-          <div className="py-12 text-center text-sm text-slate-500">
+          <div className="py-12 text-center text-sm text-theme-muted">
             No archived reports yet - it fills up automatically as you load reports.
           </div>
         ) : (
           <>
             <div className="flex items-center gap-3 mb-3">
               <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-theme-muted" />
                 <input
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search by title or commander..."
-                  className="w-full bg-white/[0.03] border border-amber-500/10 rounded-lg pl-8 pr-3 py-2 text-xs text-slate-200 placeholder:text-slate-500 outline-none focus:border-amber-500/40 transition-all"
+                  className="w-full rounded-lg border border-theme-border bg-theme-surface-inset pl-8 pr-3 py-2 text-xs text-theme-text placeholder:text-theme-faint outline-none transition-all focus:border-theme-accent/50"
                 />
               </div>
               {selected.size === 2 && (
                 <button
                   type="button"
                   onClick={handleCompare}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-sky-500/10 border border-sky-500/30 text-sky-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-sky-500/20 transition-all"
+                  className="flex items-center gap-1.5 rounded-lg border border-theme-accent/35 bg-theme-accent/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-theme-accent-strong transition-all hover:bg-theme-accent/15"
                 >
                   <GitCompare className="w-3.5 h-3.5" /> Compare Selected
                 </button>
               )}
               {selected.size > 0 && (
-                <span className="text-[10px] text-slate-500">{selected.size}/2 selected for compare</span>
+                <span className="text-[10px] text-theme-muted">{selected.size}/2 selected for compare</span>
               )}
             </div>
 
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
+                  <tr className="text-[10px] text-theme-muted uppercase font-bold tracking-wider border-b border-theme-border/50">
                     <th className="p-2.5 w-8"></th>
                     <SortHeader label="Report" k="title" />
                     <SortHeader label="Commanders" k="commanders" />
@@ -171,37 +170,37 @@ export default function ArchiveView() {
                     <th className="p-2.5"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/30 font-mono">
+                <tbody className="divide-y divide-theme-border/30 font-mono">
                   {filtered.map((e) => (
-                    <tr key={e.id} className="hover:bg-blue-950/20 transition-colors">
+                    <tr key={e.id} className="transition-colors hover:bg-theme-surface-elevated/60">
                       <td className="p-2.5">
                         <input
                           type="checkbox"
                           checked={selected.has(e.id)}
                           onChange={() => toggleSelected(e.id)}
-                          className="w-3.5 h-3.5 accent-sky-500 cursor-pointer"
+                          className="w-3.5 h-3.5 accent-theme-accent cursor-pointer"
                         />
                       </td>
                       <td className="p-2.5">
-                        <div className="text-slate-200 font-semibold">{e.title}</div>
-                        <div className="text-[10px] text-slate-500">{e.dateLabel}</div>
+                        <div className="text-theme-text font-semibold">{e.title}</div>
+                        <div className="text-[10px] text-theme-muted">{e.dateLabel}</div>
                       </td>
-                      <td className="p-2.5 text-slate-400 whitespace-nowrap">{e.commanders.join(", ") || "—"}</td>
-                      <td className="p-2.5 text-right text-slate-300">{fmtNum(e.fights)}</td>
+                      <td className="p-2.5 text-theme-muted whitespace-nowrap">{e.commanders.join(", ") || "—"}</td>
+                      <td className="p-2.5 text-right text-theme-text/80">{fmtNum(e.fights)}</td>
                       <td className="p-2.5 text-right">
                         <span className="text-emerald-400">{e.wins}</span>
-                        <span className="text-slate-600"> / </span>
+                        <span className="text-theme-faint"> / </span>
                         <span className="text-rose-400">{e.losses}</span>
                       </td>
                       <td className="p-2.5 text-right text-orange-400 font-bold">{fmtCompact(e.totalDamage)}</td>
-                      <td className="p-2.5 text-right text-slate-300">{e.avgSquadSize.toFixed(1)}</td>
+                      <td className="p-2.5 text-right text-theme-text/80">{e.avgSquadSize.toFixed(1)}</td>
                       <td className="p-2.5">
                         <div className="flex items-center gap-2 justify-end">
                           <button
                             type="button"
                             onClick={() => handleOpen(e)}
                             title="Open this report"
-                            className="text-slate-500 hover:text-amber-400 transition-colors"
+                            className="text-theme-muted hover:text-theme-accent-strong transition-colors"
                           >
                             <FolderOpen className="w-3.5 h-3.5" />
                           </button>
@@ -209,7 +208,7 @@ export default function ArchiveView() {
                             type="button"
                             onClick={() => void handleDelete(e.id)}
                             title="Remove from archive"
-                            className="text-slate-500 hover:text-rose-400 transition-colors"
+                            className="text-theme-muted hover:text-rose-400 transition-colors"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

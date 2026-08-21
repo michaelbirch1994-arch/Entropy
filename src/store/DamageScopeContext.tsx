@@ -73,13 +73,12 @@ export function DamageScopeToggle({ className = "" }: { className?: string }) {
           ? "Showing damage/DPS against everything (players, siege, NPCs, gates). Click to show players only."
           : "Showing damage/DPS against players only, matching dps.report/TopStats. Click to include siege/NPCs/gates."
       }
-      className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border transition-colors ${
-        isAll
-          ? "text-sky-400 border-sky-500/30 bg-sky-500/5 hover:bg-sky-500/10"
-          : "text-amber-400 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10"
-      } ${className}`}
+      className={`theme-filter-button flex items-center gap-1.5 rounded-lg border border-theme-border bg-theme-surface px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-theme-muted transition-colors hover:border-theme-accent/30 hover:bg-theme-surface-elevated hover:text-theme-text ${className}`}
+      data-active="true"
     >
-      {isAll ? <Globe2 className="w-3 h-3" /> : <Crosshair className="w-3 h-3" />}
+      <span className="text-theme-accent-strong">
+        {isAll ? <Globe2 className="w-3 h-3" /> : <Crosshair className="w-3 h-3" />}
+      </span>
       {isAll ? "All Damage" : "Players Only"}
     </button>
   );

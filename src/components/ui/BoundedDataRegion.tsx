@@ -30,7 +30,7 @@ export default function BoundedDataRegion({
       tabIndex={0}
       data-item-count={itemCount}
       className={clsx(
-        "custom-scrollbar overscroll-contain rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#05090d]",
+        "custom-scrollbar overscroll-contain rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent-strong/70 focus-visible:ring-offset-2 focus-visible:ring-offset-theme-bg",
         scrollAxes === "both" ? "overflow-auto" : "overflow-y-auto",
         maxHeightClass,
         className,

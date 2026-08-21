@@ -66,13 +66,12 @@ export function AllyScopeToggle({ className = "" }: { className?: string }) {
           ? "Counting healing/barrier given to squad members only. Click to include off-squad allies too."
           : "Counting healing/barrier given to all allies (squad + off-squad). Click to count squad only."
       }
-      className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border transition-colors ${
-        isSquad
-          ? "text-teal-400 border-teal-500/30 bg-teal-500/5 hover:bg-teal-500/10"
-          : "text-fuchsia-400 border-fuchsia-500/30 bg-fuchsia-500/5 hover:bg-fuchsia-500/10"
-      } ${className}`}
+      className={`theme-filter-button flex items-center gap-1.5 rounded-lg border border-theme-border bg-theme-surface px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-theme-muted transition-colors hover:border-theme-accent/30 hover:bg-theme-surface-elevated hover:text-theme-text ${className}`}
+      data-active="true"
     >
-      {isSquad ? <Users className="w-3 h-3" /> : <UsersRound className="w-3 h-3" />}
+      <span className="text-theme-accent-strong">
+        {isSquad ? <Users className="w-3 h-3" /> : <UsersRound className="w-3 h-3" />}
+      </span>
       {isSquad ? "Squad Only" : "All Allies"}
     </button>
   );

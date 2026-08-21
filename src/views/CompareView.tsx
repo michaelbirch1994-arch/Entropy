@@ -34,32 +34,28 @@ interface MetricRow {
   a: number;
   b: number;
   fmt: (v: number) => string;
-  // Whether a higher number is the "better" outcome for this metric - used
-  // only to color which side's cell is highlighted, not a value judgment on
-  // the raid itself (e.g. a lopsided kill count might mean an easy fight,
-  // not a better-played one).
   higherIsBetter: boolean;
 }
 
 function MetricTable({ rows, titleA, titleB }: { rows: MetricRow[]; titleA: string; titleB: string }) {
   return (
-    <div className="overflow-x-auto custom-scrollbar">
+    <div className="overflow-x-auto custom-scrollbar rounded-xl border border-theme-border/70 bg-theme-surface-inset/55">
       <table className="w-full text-left text-xs">
         <thead>
-          <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
+          <tr className="text-[10px] text-theme-muted uppercase font-bold tracking-wider border-b border-theme-border/50">
             <th className="p-2.5">Metric</th>
             <th className="p-2.5 text-right">{titleA}</th>
             <th className="p-2.5 text-right">{titleB}</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/30 font-mono">
+        <tbody className="divide-y divide-theme-border/30 font-mono">
           {rows.map((r) => {
             const aWins = r.higherIsBetter ? r.a >= r.b : r.a <= r.b;
             return (
-              <tr key={r.label} className="hover:bg-blue-950/20 transition-colors">
-                <td className="p-2.5 text-slate-400 font-sans">{r.label}</td>
-                <td className={`p-2.5 text-right font-bold ${aWins ? "text-emerald-400" : "text-slate-300"}`}>{r.fmt(r.a)}</td>
-                <td className={`p-2.5 text-right font-bold ${!aWins ? "text-emerald-400" : "text-slate-300"}`}>{r.fmt(r.b)}</td>
+              <tr key={r.label} className="transition-colors hover:bg-theme-surface-elevated/60">
+                <td className="p-2.5 text-theme-muted font-sans">{r.label}</td>
+                <td className={`p-2.5 text-right font-bold ${aWins ? "text-emerald-400" : "text-theme-text/80"}`}>{r.fmt(r.a)}</td>
+                <td className={`p-2.5 text-right font-bold ${!aWins ? "text-emerald-400" : "text-theme-text/80"}`}>{r.fmt(r.b)}</td>
               </tr>
             );
           })}
@@ -118,15 +114,14 @@ export default function CompareView() {
         <Panel
           title="Compare Reports"
           icon={<GitCompare className="w-4 h-4" />}
-          accent="text-sky-400"
           empty={
-            <div className="py-10 text-center text-sm text-slate-500">
+            <div className="py-10 text-center text-sm text-theme-muted">
               Pick two reports from the Archive to compare them side by side.
               <div className="mt-4">
                 <button
                   type="button"
                   onClick={() => setActiveView("archive")}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-500/10 border border-sky-500/30 text-sky-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-sky-500/20 transition-all"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-theme-accent/35 bg-theme-accent/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-theme-accent-strong transition-all hover:bg-theme-accent/15"
                 >
                   Go to Report Archive <ArrowRight className="w-3 h-3" />
                 </button>
@@ -141,7 +136,7 @@ export default function CompareView() {
   }
 
   if (loading || !metricsA || !metricsB) {
-    return <div className="flex items-center justify-center py-24 text-slate-500 text-sm">Loading comparison...</div>;
+    return <div className="flex items-center justify-center py-24 text-theme-muted text-sm">Loading comparison...</div>;
   }
 
   return (
@@ -150,18 +145,17 @@ export default function CompareView() {
         title="Compare Reports"
         subtitle="Squad-wide totals side by side - green highlights the higher value per row, which isn't always the 'better played' side (an easy fight can inflate several of these just as much as good play does)"
         icon={<GitCompare className="w-4 h-4" />}
-        accent="text-sky-400"
       >
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
-            <div className="text-[10px] uppercase tracking-wider text-amber-400/70 font-bold">Report A</div>
-            <div className="text-sm font-bold text-slate-100 truncate">{metricsA.entry.title}</div>
-            <div className="text-[10px] text-slate-500">{metricsA.entry.dateLabel}</div>
+          <div className="rounded-xl border border-theme-border bg-theme-surface-inset/70 px-4 py-3 shadow-[inset_2px_0_0_color-mix(in_srgb,var(--theme-accent)_38%,transparent)]">
+            <div className="text-[10px] uppercase tracking-wider text-theme-accent-strong font-bold">Report A</div>
+            <div className="text-sm font-bold text-theme-text truncate">{metricsA.entry.title}</div>
+            <div className="text-[10px] text-theme-muted">{metricsA.entry.dateLabel}</div>
           </div>
-          <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 px-4 py-3">
-            <div className="text-[10px] uppercase tracking-wider text-sky-400/70 font-bold">Report B</div>
-            <div className="text-sm font-bold text-slate-100 truncate">{metricsB.entry.title}</div>
-            <div className="text-[10px] text-slate-500">{metricsB.entry.dateLabel}</div>
+          <div className="rounded-xl border border-theme-border bg-theme-surface-inset/70 px-4 py-3 shadow-[inset_2px_0_0_color-mix(in_srgb,var(--theme-accent)_22%,transparent)]">
+            <div className="text-[10px] uppercase tracking-wider text-theme-accent-strong font-bold">Report B</div>
+            <div className="text-sm font-bold text-theme-text truncate">{metricsB.entry.title}</div>
+            <div className="text-[10px] text-theme-muted">{metricsB.entry.dateLabel}</div>
           </div>
         </div>
         <MetricTable rows={rows} titleA="Report A" titleB="Report B" />
