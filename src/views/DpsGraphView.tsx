@@ -181,7 +181,7 @@ const tally = new Map<number, { count: number; players: Set<string> }>();
           <select
             value={fightIdx}
             onChange={(e) => { setFightIdx(Number(e.target.value)); setCompareAccounts([]); setSelectedT(null); }}
-            className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2"
+            className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2 focus:border-theme-focus focus:outline-none"
           >
             {data.fights.map((f, i) => (
               <option key={f.fightId} value={i}>#{i + 1} · {f.fightName}</option>
@@ -214,7 +214,7 @@ const tally = new Map<number, { count: number; players: Set<string> }>();
                   contentStyle={{ background: "#0a0e1f", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, fontSize: 11 }}
                 />
                 {compareAccounts.length > 0 && <Legend wrapperStyle={{ fontSize: 10 }} />}
-                {selectedT != null && <ReferenceLine x={selectedT} stroke="#38bdf8" strokeDasharray="4 4" />}
+                {selectedT != null && <ReferenceLine x={selectedT} stroke="var(--theme-accentStrong)" strokeDasharray="4 4" />}
                 <Line type="monotone" dataKey="squad" name="Squad" stroke="#f59e0b" strokeWidth={2} dot={false} />
                 {compareAccounts.map((acc, i) => (
                   <Line
@@ -243,8 +243,8 @@ const tally = new Map<number, { count: number; players: Set<string> }>();
                     onClick={() => toggleCompare(p.account)}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all ${
                       active
-                        ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
-                        : "bg-white/[0.02] border-white/[0.06] text-slate-500 hover:text-slate-300"
+                        ? "border-theme-focus bg-theme-accentDim text-theme-accentStrong"
+                        : "bg-white/[0.02] border-white/[0.06] text-slate-500 hover:text-slate-300 hover:border-theme-border"
                     }`}
                   >
                     {p.account}
@@ -264,7 +264,6 @@ const tally = new Map<number, { count: number; players: Set<string> }>();
               : "Click any point on the DPS graph above to see what the squad was casting at that moment"
           }
           icon={<Swords className="w-3.5 h-3.5" />}
-          accent="text-rose-400"
         >
           {!rotationFight ? (
             <div className="py-6 text-center text-sm text-slate-500">
