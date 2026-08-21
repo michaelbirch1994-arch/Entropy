@@ -65,7 +65,7 @@ function BoonIconTick(props: any) {
       {icon ? (
         <image href={icon} x={-10} y={6} width={20} height={20} />
       ) : (
-        <text x={0} y={16} textAnchor="middle" fill="#64748b" fontSize={9}>
+        <text x={0} y={16} textAnchor="middle" fill="var(--entropy-text-muted)" fontSize={9}>
           {String(payload.value).slice(0, 4)}
         </text>
       )}
@@ -220,7 +220,7 @@ export default function BuffGenerationView() {
           type="button"
           onClick={() => toggleSort(sortKey)}
           className={`inline-flex items-center justify-center gap-1 rounded-md px-1.5 py-1 font-bold transition-colors ${
-            active ? "text-amber-300" : "text-slate-500 hover:text-slate-300"
+            active ? "text-theme-accent-strong" : "text-theme-muted hover:text-theme-text"
           }`}
         >
           {children}
@@ -239,9 +239,9 @@ export default function BuffGenerationView() {
           title="Buff Generation"
           icon={<Sparkles className="w-3.5 h-3.5" />}
           empty={
-            <div className="py-10 text-center text-sm text-slate-500">
+            <div className="py-10 text-center text-sm text-theme-muted">
               No boon generation data available for this report.
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-[11px] text-theme-muted mt-1">
                 Buff Generation shows how much effect-time each player actually created. Buff uptime remains under Buffs and Party Boons.
               </p>
             </div>
@@ -268,8 +268,8 @@ export default function BuffGenerationView() {
               }}
               className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all border ${
                 activeTab === item
-                  ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
-                  : "bg-white/[0.02] border-white/[0.06] text-slate-500 hover:text-slate-300 hover:border-white/[0.12]"
+                  ? "bg-theme-accent/10 border-theme-accent/40 text-theme-accent-strong"
+                  : "bg-theme-surface border-theme-border text-theme-muted hover:text-theme-text hover:border-theme-accent/20"
               }`}
             >
               {item}
@@ -292,11 +292,11 @@ export default function BuffGenerationView() {
                 interval={0}
                 height={40}
                 tick={(props) => <BoonIconTick {...props} icons={iconsByName} />}
-                stroke="#334155"
+                stroke="rgba(255,255,255,0.10)"
               />
               <YAxis
-                tick={{ fill: "#64748b", fontSize: 10 }}
-                stroke="#334155"
+                tick={{ fill: "var(--entropy-text-muted)", fontSize: 10 }}
+                stroke="rgba(255,255,255,0.10)"
                 width={58}
                 tickFormatter={(value) => `${Math.round(Number(value))} e-s`}
               />
@@ -316,7 +316,7 @@ export default function BuffGenerationView() {
                 {chartData.map((entry, index) => (
                   <Cell
                     key={entry.id}
-                    fill={selectedTable?.id === entry.id ? CHART_COLORS.amber : BAR_COLORS[index % BAR_COLORS.length]}
+                    fill={selectedTable?.id === entry.id ? "var(--entropy-gold)" : BAR_COLORS[index % BAR_COLORS.length]}
                   />
                 ))}
               </Bar>
@@ -324,7 +324,7 @@ export default function BuffGenerationView() {
           </ResponsiveContainer>
         </div>
 
-        <div className="mt-2 text-[10px] leading-4 text-slate-500">
+        <div className="mt-2 text-[10px] leading-4 text-theme-muted">
           The chart uses a shared effect-second scale for ranking. Duration seconds and intensity stack-seconds are different physical meanings, so compare individual values with their unit labels rather than treating them as identical wall-clock time.
         </div>
 
@@ -340,8 +340,8 @@ export default function BuffGenerationView() {
                 onClick={() => setSelectedBoonId(table.id)}
                 className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition-all ${
                   selected
-                    ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-                    : "border-slate-800/70 bg-slate-950/40 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                    ? "border-theme-accent/40 bg-theme-accent/10 text-theme-accent-strong"
+                    : "border-theme-border bg-theme-surface-inset/55 text-theme-muted hover:border-theme-accent/20 hover:text-theme-text"
                 }`}
                 title={`${seconds.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${unit} generated`}
               >
@@ -355,7 +355,7 @@ export default function BuffGenerationView() {
                 </span>
                 <span className="shrink-0 text-right font-mono text-[11px]">
                   <span className="block font-bold">{formatGeneratedEffect(seconds, table.stacking)}</span>
-                  <span className="text-[9px] uppercase tracking-wider text-slate-500">{table.rows.length} players</span>
+                  <span className="text-[9px] uppercase tracking-wider text-theme-faint">{table.rows.length} players</span>
                 </span>
               </button>
             );
@@ -382,20 +382,20 @@ export default function BuffGenerationView() {
             action={`${rows.length} players`}
             bodyClassName="p-0"
           >
-            <div className="grid grid-cols-3 gap-2 border-b border-slate-800/50 p-3 text-center text-[10px] uppercase tracking-wider text-slate-500">
-              <div className="rounded-lg bg-slate-950/50 p-2">
+            <div className="grid grid-cols-3 gap-2 border-b border-theme-border/60 p-3 text-center text-[10px] uppercase tracking-wider text-theme-muted">
+              <div className="rounded-lg bg-theme-surface-inset/65 p-2">
                 <div>Squad Generated</div>
                 <div className="mt-1 font-mono text-sm font-bold text-emerald-400">
                   {formatGeneratedEffect(totalSquadGeneratedSeconds, table.stacking)}
                 </div>
               </div>
-              <div className="rounded-lg bg-slate-950/50 p-2">
+              <div className="rounded-lg bg-theme-surface-inset/65 p-2">
                 <div>Reapplied / Wasted</div>
                 <div className="mt-1 font-mono text-sm font-bold text-amber-400">
                   {formatGeneratedEffect(totalWastedSeconds, table.stacking)}
                 </div>
               </div>
-              <div className="rounded-lg bg-slate-950/50 p-2">
+              <div className="rounded-lg bg-theme-surface-inset/65 p-2">
                 <div>EI Overstack</div>
                 <div className="mt-1 font-mono text-sm font-bold text-rose-400">{fmtCompact(totalOverstack)}</div>
               </div>
@@ -404,8 +404,8 @@ export default function BuffGenerationView() {
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500">
-                    <SortHeader sortKey="player" className="text-left px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">
+                  <tr className="border-b border-theme-border/60 text-[10px] uppercase tracking-wider text-theme-muted">
+                    <SortHeader sortKey="player" className="text-left px-4 py-3 sticky left-0 bg-theme-surface/95">
                       Player
                     </SortHeader>
                     <SortHeader sortKey="class" className="text-left px-2 py-3">Class</SortHeader>
@@ -437,9 +437,9 @@ export default function BuffGenerationView() {
                     return (
                       <tr
                         key={row.account}
-                        className={`border-b border-slate-800/40 hover:bg-white/[0.02] transition-colors ${index % 2 === 0 ? "bg-white/[0.01]" : ""}`}
+                        className={`border-b border-theme-border/40 hover:bg-theme-surface-elevated/55 transition-colors ${index % 2 === 0 ? "bg-theme-surface-inset/20" : ""}`}
                       >
-                        <td className="px-4 py-2.5 font-semibold text-slate-200 sticky left-0 bg-[#0a0e1f]/95 whitespace-nowrap">{row.account}</td>
+                        <td className="px-4 py-2.5 font-semibold text-theme-text sticky left-0 bg-theme-surface/95 whitespace-nowrap">{row.account}</td>
                         <td className="px-2 py-2.5"><ClassCell profession={row.profession} /></td>
                         <td className="px-2 py-2.5 text-right"><PlayerSampleCell sample={row.sample} /></td>
                         {(Object.keys(CATEGORY_LABELS) as GenerationCategory[]).map((category) => {
@@ -447,7 +447,7 @@ export default function BuffGenerationView() {
                           return (
                             <td key={category} className="text-center px-3 py-2.5 font-mono">
                               <span
-                                className={seconds > 0 ? "font-bold text-emerald-400" : "font-bold text-slate-600"}
+                                className={seconds > 0 ? "font-bold text-emerald-400" : "font-bold text-theme-faint"}
                                 title={`${seconds.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${unit} generated`}
                               >
                                 {formatGeneratedEffect(seconds, table.stacking)}
@@ -457,14 +457,14 @@ export default function BuffGenerationView() {
                         })}
                         <td className="text-center px-3 py-2.5 font-mono">
                           <span
-                            className={wastedSeconds > 0 ? "text-amber-400/80" : "text-slate-700"}
+                            className={wastedSeconds > 0 ? "text-amber-400/80" : "text-theme-faint"}
                             title={`${wastedSeconds.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${unit} wasted/reapplied`}
                           >
                             {formatGeneratedEffect(wastedSeconds, table.stacking)}
                           </span>
                         </td>
                         <td className="text-center px-3 py-2.5 font-mono">
-                          <span className={overstack > 0 ? "text-rose-400/80" : "text-slate-700"}>
+                          <span className={overstack > 0 ? "text-rose-400/80" : "text-theme-faint"}>
                             {table.stacking ? overstack.toFixed(2) : `${overstack.toFixed(0)}%`}
                           </span>
                         </td>
