@@ -22,6 +22,7 @@ export default function SynergyPanel({ insights }: { insights: SynergyInsight[] 
       subtitle="Automated read on composition and performance, computed from this session's own data"
       icon={<Sparkles className="w-3.5 h-3.5" />}
       action={`${insights.length} insights`}
+      className="theme-synergy-panel"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         {sorted.map((insight, i) => {
