@@ -51,6 +51,17 @@ export interface Gw2ItemStat {
   attributes?: Record<string, number>;
 }
 
+export interface Gw2Item {
+  id: number;
+  name: string;
+  icon?: string;
+  description?: string;
+  type?: string;
+  subtype?: string;
+  rarity?: string;
+  level?: number;
+}
+
 export interface Gw2Legend {
   id: string;
   code?: number;

@@ -31,7 +31,20 @@ Status: implemented on `feature/entropy-builder-parity`.
 
 ## Cut 2 — complete equipment editor
 
-- Resolve runes, sigils, relics, food, utility, and enrichment by searchable name and icon.
+Status: in progress on `feature/entropy-builder-parity`.
+
+Implemented in the current slice:
+
+- Searchable, codec-backed relic, food, and utility choices.
+- Official GW2 item-name and icon resolution for imported rune, sigil, and enrichment IDs.
+- Local item metadata cache with raw-value fallback when metadata is unavailable.
+- Compact visual loadout summary for stats, weapon sets, runes, relic, and consumables.
+- Mixed per-slot rune imports remain independently editable instead of being flattened.
+- Unsupported future text values remain visible and are clearly marked as not encodable by the installed AxiCode format.
+
+Remaining in Cut 2:
+
+- Add full searchable rune, sigil, and enrichment catalogs, plus official relic icon resolution.
 - Add armor, trinket, and weapon slot cards with clear empty and unavailable states.
 - Add weapon-specific skill previews and profession mechanic slots.
 - Add game-mode-aware filtering where the GW2 API exposes a reliable mode distinction.

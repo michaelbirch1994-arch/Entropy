@@ -1,4 +1,5 @@
 import type {
+  Gw2Item,
   Gw2ItemStat,
   Gw2Legend,
   Gw2Pet,
@@ -67,6 +68,17 @@ export async function fetchGw2Skills(ids: number[]): Promise<Gw2Skill[]> {
 export async function fetchGw2ItemStats(): Promise<Gw2ItemStat[]> {
   const stats = await getJson<Gw2ItemStat[]>("/itemstats?ids=all");
   return stats.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function fetchGw2Items(ids: number[]): Promise<Gw2Item[]> {
+  const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))];
+  if (!uniqueIds.length) return [];
+  const batches: number[][] = [];
+  for (let index = 0; index < uniqueIds.length; index += 200) batches.push(uniqueIds.slice(index, index + 200));
+  const items = (await Promise.all(batches.map((batch) => getJson<Gw2Item[]>(`/items?ids=${idsParam(batch)}`)))).flat();
+  return items
+    .map((item) => ({ ...item, description: stripMarkup(item.description) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function fetchGw2Legends(): Promise<Gw2Legend[]> {
