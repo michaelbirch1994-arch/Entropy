@@ -1,0 +1,113 @@
+/* Final black + gold refinement layer.
+   Presentation only. This file deliberately avoids Intelligence and Combat/Replay
+   workspace content, and does not remap semantic data fills, profession colors,
+   boon/condition identity, or chart-series colors. */
+
+/* -------------------------------------------------------------------------- */
+/* Non-Combat neutral chrome                                                   */
+/* -------------------------------------------------------------------------- */
+
+.theme-main[data-workspace-tone="overview"] :is(.theme-source-card, .theme-alert-plate, .theme-player-card-head, .theme-player-card-body),
+.theme-main[data-workspace-tone="squad"] :is(.theme-source-card, .theme-alert-plate, .theme-player-card-head, .theme-player-card-body),
+.theme-main[data-workspace-tone="performance"] :is(.theme-source-card, .theme-alert-plate, .theme-player-card-head, .theme-player-card-body) {
+  background-color: #090909 !important;
+  border-color: rgba(255, 255, 255, 0.075) !important;
+  box-shadow: none !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-alert-plate,
+.theme-main[data-workspace-tone="squad"] .theme-alert-plate,
+.theme-main[data-workspace-tone="performance"] .theme-alert-plate {
+  background-image: none !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-progress-track,
+.theme-main[data-workspace-tone="squad"] .theme-progress-track,
+.theme-main[data-workspace-tone="performance"] .theme-progress-track {
+  background: #151515 !important;
+  border: 1px solid rgba(255, 255, 255, 0.045) !important;
+  box-shadow: none !important;
+}
+
+/* Legacy neon classes may still identify a metric family, but they no longer
+   tint or glow the surrounding card chrome. The actual semantic progress fills
+   and icon/text colors inside those cards remain untouched. */
+.theme-main[data-workspace-tone="overview"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival),
+.theme-main[data-workspace-tone="squad"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival),
+.theme-main[data-workspace-tone="performance"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival) {
+  filter: none !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+.theme-main[data-workspace-tone="overview"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival)::before,
+.theme-main[data-workspace-tone="overview"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival)::after,
+.theme-main[data-workspace-tone="squad"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival)::before,
+.theme-main[data-workspace-tone="squad"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival)::after,
+.theme-main[data-workspace-tone="performance"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival)::before,
+.theme-main[data-workspace-tone="performance"] :is(.neon-offense, .neon-healing, .neon-barrier, .neon-control, .neon-survival)::after {
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Overview-specific cleanup                                                   */
+/* -------------------------------------------------------------------------- */
+
+/* Defensive MVP used teal as a presentation identity. In the black/gold product
+   system, MVP identity is product chrome, so it becomes gold. Profession chips
+   and any genuinely semantic child data remain unchanged. */
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier {
+  border-color: rgba(214, 168, 75, 0.16) !important;
+  background: #090909 !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier [class*="text-teal-"] {
+  color: var(--entropy-gold-bright) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier [class*="border-teal-"] {
+  border-color: rgba(214, 168, 75, 0.34) !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier [class*="bg-teal-"] {
+  background-color: rgba(214, 168, 75, 0.08) !important;
+}
+
+/* Keep semantic severity in icon/title/border; remove colored atmosphere from
+   the plate itself. */
+.theme-main[data-workspace-tone="overview"] .theme-alert-plate {
+  background: #090909 !important;
+  box-shadow: none !important;
+}
+
+/* Small nested stat rows inside MVP cards should read as black chrome rather
+   than old slate/blue plates. */
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card [class*="bg-slate-900"] {
+  background-color: #0b0b0b !important;
+  border-color: rgba(255, 255, 255, 0.065) !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Squad + Performance shared cards                                            */
+/* -------------------------------------------------------------------------- */
+
+.theme-main[data-workspace-tone="squad"] :is(.theme-player-card, .theme-source-card),
+.theme-main[data-workspace-tone="performance"] :is(.theme-player-card, .theme-source-card) {
+  background: #090909 !important;
+  border-color: rgba(255, 255, 255, 0.075) !important;
+}
+
+.theme-main[data-workspace-tone="squad"] :is(.theme-player-card, .theme-source-card):hover,
+.theme-main[data-workspace-tone="performance"] :is(.theme-player-card, .theme-source-card):hover {
+  background: #0d0c0a !important;
+  border-color: rgba(214, 168, 75, 0.18) !important;
+}
+
+/* Focus, selected state, and neutral interactive chrome stay gold. */
+.theme-main[data-workspace-tone="overview"] :is(button, [role="button"]):focus-visible,
+.theme-main[data-workspace-tone="squad"] :is(button, [role="button"]):focus-visible,
+.theme-main[data-workspace-tone="performance"] :is(button, [role="button"]):focus-visible {
+  outline-color: var(--entropy-gold-bright) !important;
+  --tw-ring-color: rgba(214, 168, 75, 0.42) !important;
+}
