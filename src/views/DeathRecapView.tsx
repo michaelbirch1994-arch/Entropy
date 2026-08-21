@@ -80,14 +80,14 @@ function DeathCard({
       ref={cardRef}
       className={`bg-[#0a101f]/90 border rounded-2xl overflow-hidden transition-shadow ${
         focused
-          ? "border-sky-400/45 shadow-[0_0_28px_-14px_rgba(56,189,248,0.75)]"
+          ? "border-theme-focus shadow-[0_0_28px_-16px_var(--theme-accentDim)]"
           : "border-slate-800/80"
       }`}
     >
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full text-left p-4 flex items-center gap-3 hover:bg-white/[0.02] transition-colors cursor-pointer"
+        className="w-full text-left p-4 flex items-center gap-3 hover:bg-white/[0.02] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme-focus"
       >
         <div className="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-center justify-center flex-shrink-0">
           <Skull className="w-4 h-4 text-rose-400" />
@@ -99,7 +99,7 @@ function DeathCard({
               {entry.profession}
             </span>
             {focused && (
-              <span className="rounded-full border border-sky-400/25 bg-sky-500/[0.08] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-sky-200">
+              <span className="rounded-full border border-theme-focus bg-theme-accentDim px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-theme-accentStrong">
                 Intelligence evidence
               </span>
             )}
@@ -117,9 +117,9 @@ function DeathCard({
 
       {open && (
         <div className="px-4 pb-4 space-y-3">
-          <div className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 ${onViewIntelligence || onViewReplay ? "border-violet-400/20 bg-violet-500/[0.05]" : "border-slate-700/60 bg-slate-900/40"}`}>
+          <div className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 ${onViewIntelligence || onViewReplay ? "border-theme-focus bg-theme-accentDim" : "border-slate-700/60 bg-slate-900/40"}`}>
             <div>
-              <div className={`text-[10px] font-black uppercase tracking-wider ${onViewIntelligence || onViewReplay ? "text-violet-200" : "text-slate-500"}`}>Evidence workspace</div>
+              <div className={`text-[10px] font-black uppercase tracking-wider ${onViewIntelligence || onViewReplay ? "text-theme-accentStrong" : "text-slate-500"}`}>Evidence workspace</div>
               <div className="mt-0.5 text-[10px] leading-4 text-slate-500">
                 Intelligence keeps the exact {fmtClock(entry.deathTimeMs)} source moment and only selects nearby persisted evidence. {onViewReplay
                   ? "Replay can open the same timestamp with this player selected."
@@ -131,7 +131,7 @@ function DeathCard({
                 <button
                   type="button"
                   onClick={onViewIntelligence}
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-violet-400/25 bg-violet-500/[0.08] px-3 py-2 text-[9px] font-black uppercase tracking-wider text-violet-200 transition-colors hover:border-violet-300/40 hover:bg-violet-500/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-theme-focus bg-theme-accentDim px-3 py-2 text-[9px] font-black uppercase tracking-wider text-theme-accentStrong transition-colors hover:bg-theme-accentDim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-focus"
                 >
                   <BrainCircuit className="h-3.5 w-3.5" /> Inspect in Intelligence
                 </button>
@@ -140,7 +140,7 @@ function DeathCard({
                 <button
                   type="button"
                   onClick={onViewReplay}
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/[0.08] px-3 py-2 text-[9px] font-black uppercase tracking-wider text-sky-200 transition-colors hover:border-sky-300/40 hover:bg-sky-500/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-theme-border bg-white/[0.03] px-3 py-2 text-[9px] font-black uppercase tracking-wider text-slate-300 transition-colors hover:border-theme-focus hover:text-theme-accentStrong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-focus"
                 >
                   <Film className="h-3.5 w-3.5" /> View in Replay
                 </button>
@@ -209,7 +209,7 @@ function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<type
 
   const sortButtonClass = (key: DeathBoonSortKey, extra = "") =>
     `inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
-      sort?.key === key ? "text-rose-300" : "text-slate-500 hover:text-slate-300"
+      sort?.key === key ? "text-theme-accentStrong" : "text-slate-500 hover:text-slate-300"
     } ${extra}`;
 
   return (
@@ -222,7 +222,7 @@ function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<type
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500">
+            <tr className="border-b border-theme-border text-[10px] uppercase tracking-wider text-slate-500">
               <th className="text-left font-bold px-4 py-3 sticky left-0 bg-[#0a0e1f]/95">
                 <button type="button" onClick={() => toggleSort("player")} className={sortButtonClass("player")}>
                   Player <span className="text-[8px] opacity-70">{sortLabel("player")}</span>
@@ -330,7 +330,7 @@ export default function DeathRecapView() {
         <select
           value={accountFilter}
           onChange={(e) => setAccountFilter(e.target.value)}
-          className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2"
+          className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2 focus:border-theme-focus focus:outline-none"
         >
           <option value="all">All players ({recaps.length} deaths)</option>
           {accounts.map((a) => (
@@ -340,7 +340,7 @@ export default function DeathRecapView() {
           ))}
         </select>
         {intelligenceTarget && (
-          <span className="rounded-full border border-sky-400/20 bg-sky-500/[0.06] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-sky-200">
+          <span className="rounded-full border border-theme-focus bg-theme-accentDim px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-theme-accentStrong">
             Opened from Intelligence · Fight {(intelligenceTarget.fightIndex ?? 0) + 1} · {fmtClock(intelligenceTarget.timestampMs ?? 0)}
           </span>
         )}
