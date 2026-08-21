@@ -23,13 +23,13 @@ function titleForKind(kind: string): string {
 }
 
 function markerClass(category: string, aligned: boolean): string {
-  if (aligned) return "bg-sky-200 ring-2 ring-sky-300/35";
+  if (aligned) return "bg-theme-accent-strong ring-2 ring-theme-accent/35";
   if (category === "defense") return "bg-rose-400";
   if (category === "positioning") return "bg-amber-300";
   if (category === "support") return "bg-emerald-400";
   if (category === "offense") return "bg-orange-400";
   if (category === "coordination") return "bg-violet-400";
-  return "bg-sky-400";
+  return "bg-theme-accent";
 }
 
 function ReplayLiveIntelligencePulse({
@@ -99,20 +99,19 @@ function ReplayLiveIntelligencePulse({
     <section
       className={`mb-3 overflow-hidden rounded-xl border px-3 py-2.5 transition ${
         active
-          ? "border-sky-300/35 bg-sky-400/[0.09] shadow-[0_0_28px_-18px_rgba(56,189,248,0.9)]"
-          : "border-sky-400/15 bg-sky-400/[0.035]"
+          ? "border-theme-accent/35 bg-theme-accent/[0.075] shadow-[inset_2px_0_0_var(--theme-accent)]"
+          : "border-theme-border bg-theme-surface/90"
       }`}
       aria-label="Nearby Intelligence events"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <div className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${active ? "border-sky-300/35 bg-sky-300/10 text-sky-200" : "border-sky-400/20 bg-sky-400/[0.06] text-sky-400"}`}>
-            {alignedEvent && <span className="absolute inset-0 animate-ping rounded-lg border border-sky-300/25" aria-hidden="true" />}
+          <div className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${active ? "border-theme-accent/35 bg-theme-accent/10 text-theme-accent-strong" : "border-theme-border bg-theme-surface-inset text-theme-accent"}`}>
             <BrainCircuit className="relative h-3.5 w-3.5" />
           </div>
           <div className="min-w-0">
-            <div className="text-[9px] font-black uppercase tracking-[0.18em] text-sky-300">Entropy live intelligence</div>
-            <div className="truncate text-[10px] text-slate-500">
+            <div className="text-[9px] font-black uppercase tracking-[0.18em] text-theme-accent-strong">Entropy live intelligence</div>
+            <div className="truncate text-[10px] text-theme-muted">
               {alignedEvent
                 ? "Critical evidence aligns with the current playhead."
                 : evidenceEvent
@@ -123,19 +122,19 @@ function ReplayLiveIntelligencePulse({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1 font-mono text-[9px] text-slate-500">
+        <div className="flex items-center gap-1 font-mono text-[9px] text-theme-muted">
           <Clock3 className="h-3 w-3" /> {nearby.length > 0 ? "±5s live window" : `${fightAnchors.length} fight events`}
         </div>
       </div>
 
-      <div className="mt-3 rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2">
-        <div className="mb-1.5 flex items-center justify-between gap-2 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-600">
+      <div className="mt-3 rounded-lg border border-theme-border/70 bg-theme-surface-inset/65 px-2.5 py-2">
+        <div className="mb-1.5 flex items-center justify-between gap-2 text-[8px] font-bold uppercase tracking-[0.14em] text-theme-faint">
           <span>Intelligence event track</span>
-          <span className="font-mono normal-case tracking-normal text-slate-500">{fmtClock(timestampMs)} / {fmtClock(fight.data.durationMs)}</span>
+          <span className="font-mono normal-case tracking-normal text-theme-muted">{fmtClock(timestampMs)} / {fmtClock(fight.data.durationMs)}</span>
         </div>
         <div className="relative h-6" aria-label={`${fightAnchors.length} Intelligence events across this fight`}>
-          <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-slate-700/70" />
-          <div className="absolute bottom-0 top-0 w-px bg-sky-200/70 shadow-[0_0_8px_rgba(125,211,252,0.65)]" style={{ left: `${playheadPct}%` }} aria-hidden="true" />
+          <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-theme-border" />
+          <div className="absolute bottom-0 top-0 w-px bg-theme-accent-strong/80 shadow-[0_0_8px_color-mix(in_srgb,var(--theme-accent)_45%,transparent)]" style={{ left: `${playheadPct}%` }} aria-hidden="true" />
           {fightAnchors.map((anchor) => {
             const pct = fight.data.durationMs > 0
               ? Math.max(0, Math.min(100, (anchor.timestampMs / fight.data.durationMs) * 100))
@@ -149,32 +148,32 @@ function ReplayLiveIntelligencePulse({
                 onClick={() => onSeek(anchor.timestampMs, anchor.account)}
                 title={`${titleForKind(anchor.kind)} · ${fmtClock(anchor.timestampMs)}${participantLabel} · ${anchor.summary}`}
                 aria-label={`Seek to ${titleForKind(anchor.kind)} at ${fmtClock(anchor.timestampMs)}`}
-                className={`absolute top-1/2 h-3 w-1.5 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full transition hover:h-4 hover:w-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 ${markerClass(anchor.category, aligned)}`}
+                className={`absolute top-1/2 h-3 w-1.5 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full transition hover:h-4 hover:w-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-accent-strong/60 ${markerClass(anchor.category, aligned)}`}
                 style={{ left: `${pct}%` }}
               />
             );
           })}
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[8px] text-slate-600">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[8px] text-theme-faint">
           <span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-rose-400" />Defense</span>
           <span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-amber-300" />Positioning</span>
           <span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />Support</span>
           <span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-orange-400" />Offense</span>
           <span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-violet-400" />Coordination</span>
-          <span className="ml-auto text-slate-500">Click any marker to seek to exact evidence.</span>
+          <span className="ml-auto text-theme-muted">Click any marker to seek to exact evidence.</span>
         </div>
 
-        <div className="mt-2 flex items-center justify-between gap-2 border-t border-white/[0.05] pt-2">
+        <div className="mt-2 flex items-center justify-between gap-2 border-t border-theme-border/60 pt-2">
           <button
             type="button"
             disabled={!previousAnchor}
             onClick={() => previousAnchor && onSeek(previousAnchor.timestampMs, previousAnchor.account)}
             title={previousAnchor ? `Previous: ${titleForKind(previousAnchor.kind)} at ${fmtClock(previousAnchor.timestampMs)}` : "No previous Intelligence event"}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-white/[0.07] bg-white/[0.025] px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-slate-500 transition hover:border-sky-400/20 hover:text-sky-300 disabled:cursor-not-allowed disabled:opacity-25"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-theme-border bg-theme-surface px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-theme-muted transition hover:border-theme-accent/30 hover:text-theme-accent-strong disabled:cursor-not-allowed disabled:opacity-25"
           >
             <SkipBack className="h-3 w-3" /> Previous event
           </button>
-          <span className="truncate text-center font-mono text-[8px] text-slate-600">
+          <span className="truncate text-center font-mono text-[8px] text-theme-faint">
             {nextAnchor ? `Next ${fmtOffset(nextAnchor.timestampMs - timestampMs)} · ${titleForKind(nextAnchor.kind)}` : "End of Intelligence track"}
           </span>
           <button
@@ -182,13 +181,12 @@ function ReplayLiveIntelligencePulse({
             disabled={!nextAnchor}
             onClick={() => nextAnchor && onSeek(nextAnchor.timestampMs, nextAnchor.account)}
             title={nextAnchor ? `Next: ${titleForKind(nextAnchor.kind)} at ${fmtClock(nextAnchor.timestampMs)}` : "No next Intelligence event"}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-white/[0.07] bg-white/[0.025] px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-slate-500 transition hover:border-sky-400/20 hover:text-sky-300 disabled:cursor-not-allowed disabled:opacity-25"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-theme-border bg-theme-surface px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-theme-muted transition hover:border-theme-accent/30 hover:text-theme-accent-strong disabled:cursor-not-allowed disabled:opacity-25"
           >
             Next event <SkipForward className="h-3 w-3" />
           </button>
         </div>
       </div>
-
     </section>
   );
 }
