@@ -29,6 +29,15 @@
   box-shadow: none !important;
 }
 
+/* The legacy theme grid token is teal. Keep Combat/Replay untouched, but make
+   analytical grid/chrome lines neutral everywhere else. */
+.theme-main[data-workspace-tone="overview"],
+.theme-main[data-workspace-tone="squad"],
+.theme-main[data-workspace-tone="performance"],
+.theme-main[data-workspace-tone="extras"] {
+  --theme-grid: rgba(255, 255, 255, 0.055);
+}
+
 /* Legacy neon classes may still identify a metric family, but they no longer
    tint or glow the surrounding card chrome. The actual semantic progress fills
    and icon/text colors inside those cards remain untouched. */
