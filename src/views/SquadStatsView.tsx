@@ -13,6 +13,7 @@ import { resolveChartSelectionIndex, type ChartSelectionRow } from "../utils/cha
 import type { HealingPlayer, HealingCoverage, OffensePlayer, TopBarrierSource, TopHealingSource, TopSkill } from "../types/report";
 import { buildHealingFightDrilldowns } from "../lib/squadStatsDrilldowns";
 import DistanceToTagPanel, { resolveDistanceToTagResult } from "../components/squad/DistanceToTagPanel";
+import BoundedDataRegion from "../components/ui/BoundedDataRegion";
 
 type SquadOverviewSortKey = "player" | "class" | "damage" | "dps" | "downContribution" | "healing" | "cleanses" | "strips" | "combat" | "participation";
 
@@ -105,7 +106,11 @@ function SkillSourceRows({
 }) {
   const tone = kind === "healing" ? "text-emerald-200" : kind === "barrier" ? "text-teal-200" : "text-rose-200";
   return rows.length ? (
-    <div className="max-h-[32rem] overflow-y-auto custom-scrollbar">
+    <BoundedDataRegion
+      label={`${kind} skill sources, ${rows.length} skills`}
+      itemCount={rows.length}
+      maxHeightClass="max-h-[32rem]"
+    >
       {rows.map((skill, index) => {
         const asPressure = skill as TopSkill;
         const asHealing = skill as TopHealingSource;
@@ -134,7 +139,7 @@ function SkillSourceRows({
           </div>
         );
       })}
-    </div>
+    </BoundedDataRegion>
   ) : null;
 }
 
@@ -705,5 +710,4 @@ export default function SquadStatsView() {
     </div>
   );
 }
-
 

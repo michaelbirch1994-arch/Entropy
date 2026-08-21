@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
+import BoundedDataRegion from "../components/ui/BoundedDataRegion";
 import { fmtCompact, profChip } from "../utils/format";
 import type { DeathRecapEntry, DeathRecapHit } from "../types/report";
-import { Skull, ArrowDown, Swords, ShieldAlert, Film } from "lucide-react";
+import { Skull, ArrowDown, Swords, ShieldAlert, Film, BrainCircuit } from "lucide-react";
 import {
   buildDeathBoonCorrelationRows,
   nextDeathBoonSort,
@@ -49,11 +50,13 @@ function HitRow({ hit, deathTime }: { hit: DeathRecapHit; deathTime: number }) {
 function DeathCard({
   entry,
   focused = false,
+  onViewIntelligence,
   onViewReplay,
   replayUnavailableReason,
 }: {
   entry: DeathRecapEntry;
   focused?: boolean;
+  onViewIntelligence?: () => void;
   onViewReplay?: () => void;
   replayUnavailableReason?: string;
 }) {
@@ -114,24 +117,35 @@ function DeathCard({
 
       {open && (
         <div className="px-4 pb-4 space-y-3">
-          <div className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 ${onViewReplay ? "border-sky-400/20 bg-sky-500/[0.05]" : "border-slate-700/60 bg-slate-900/40"}`}>
+          <div className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2 ${onViewIntelligence || onViewReplay ? "border-violet-400/20 bg-violet-500/[0.05]" : "border-slate-700/60 bg-slate-900/40"}`}>
             <div>
-              <div className={`text-[10px] font-black uppercase tracking-wider ${onViewReplay ? "text-sky-200" : "text-slate-500"}`}>Replay evidence</div>
+              <div className={`text-[10px] font-black uppercase tracking-wider ${onViewIntelligence || onViewReplay ? "text-violet-200" : "text-slate-500"}`}>Evidence workspace</div>
               <div className="mt-0.5 text-[10px] leading-4 text-slate-500">
-                {onViewReplay
-                  ? `Open the exact ${fmtClock(entry.deathTimeMs)} death timestamp with ${entry.account} selected.`
+                Intelligence keeps the exact {fmtClock(entry.deathTimeMs)} source moment and only selects nearby persisted evidence. {onViewReplay
+                  ? "Replay can open the same timestamp with this player selected."
                   : replayUnavailableReason ?? "Exact Replay coverage is unavailable for this death."}
               </div>
             </div>
-            {onViewReplay && (
-              <button
-                type="button"
-                onClick={onViewReplay}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/[0.08] px-3 py-2 text-[9px] font-black uppercase tracking-wider text-sky-200 transition-colors hover:border-sky-300/40 hover:bg-sky-500/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
-              >
-                <Film className="h-3.5 w-3.5" /> View in Replay
-              </button>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {onViewIntelligence && (
+                <button
+                  type="button"
+                  onClick={onViewIntelligence}
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-violet-400/25 bg-violet-500/[0.08] px-3 py-2 text-[9px] font-black uppercase tracking-wider text-violet-200 transition-colors hover:border-violet-300/40 hover:bg-violet-500/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60"
+                >
+                  <BrainCircuit className="h-3.5 w-3.5" /> Inspect in Intelligence
+                </button>
+              )}
+              {onViewReplay && (
+                <button
+                  type="button"
+                  onClick={onViewReplay}
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/[0.08] px-3 py-2 text-[9px] font-black uppercase tracking-wider text-sky-200 transition-colors hover:border-sky-300/40 hover:bg-sky-500/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
+                >
+                  <Film className="h-3.5 w-3.5" /> View in Replay
+                </button>
+              )}
+            </div>
           </div>
           {entry.toDown.length > 0 && (
             <div>
@@ -334,7 +348,12 @@ export default function DeathRecapView() {
 
       {boonCorrelation && <DeathBoonCorrelationPanel data={boonCorrelation} />}
 
-      <div className="space-y-3">
+      <BoundedDataRegion
+        label={`Death recap list, ${filtered.length} deaths`}
+        itemCount={filtered.length}
+        maxHeightClass={filtered.length > 6 ? "max-h-[46rem]" : "max-h-none"}
+        className="space-y-3 pr-1"
+      >
         {filtered.map((entry, i) => {
           const fightId = report.stats.fightBreakdown[entry.fightIndex]?.id;
           const replayAvailable = !!fightId && replayFightIds.has(fightId) && Number.isFinite(entry.deathTimeMs);
@@ -343,6 +362,14 @@ export default function DeathRecapView() {
               key={`${entry.account}-${entry.fightIndex}-${entry.deathTimeMs}-${i}`}
               entry={entry}
               focused={isFocusedDeath(entry)}
+              onViewIntelligence={fightId && Number.isFinite(entry.deathTimeMs) ? () => navigateToView("intelligence", {
+                source: "other",
+                fightId,
+                fightIndex: entry.fightIndex,
+                timestampMs: entry.deathTimeMs,
+                account: entry.account,
+                metric: "Death Recap",
+              }) : undefined}
               onViewReplay={replayAvailable ? () => navigateToView("fight-replay", {
                 source: "other",
                 fightId,
@@ -357,7 +384,7 @@ export default function DeathRecapView() {
             />
           );
         })}
-      </div>
+      </BoundedDataRegion>
     </div>
   );
 }

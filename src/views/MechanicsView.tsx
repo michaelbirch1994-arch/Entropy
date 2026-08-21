@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
-import { Crosshair, Film } from "lucide-react";
+import BoundedDataRegion from "../components/ui/BoundedDataRegion";
+import { BrainCircuit, Crosshair, Film } from "lucide-react";
 
 function fmtClock(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -177,7 +178,11 @@ export default function MechanicsView() {
                         </div>
                       )}
 
-                      <div className="max-h-56 overflow-y-auto custom-scrollbar">
+                      <BoundedDataRegion
+                        label={`${m.def.fullName} occurrence evidence, ${m.events.length} events`}
+                        itemCount={m.events.length}
+                        maxHeightClass="max-h-56"
+                      >
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500 sticky top-0 bg-[#0a0e1f]">
@@ -195,10 +200,10 @@ export default function MechanicsView() {
                                   {!e.isPlayer && <span className="text-slate-500 ml-1 text-[10px]">(NPC)</span>}
                                 </td>
                                 <td className="px-3 py-1.5 text-right">
-                                  {replayAvailable ? (
+                                  <div className="inline-flex flex-wrap justify-end gap-1.5">
                                     <button
                                       type="button"
-                                      onClick={() => navigateToView("fight-replay", {
+                                      onClick={() => navigateToView("intelligence", {
                                         source: "other",
                                         fightId: fight.fightId,
                                         fightIndex: reportFightIndex >= 0 ? reportFightIndex : undefined,
@@ -206,20 +211,37 @@ export default function MechanicsView() {
                                         account: e.account,
                                         metric: m.def.fullName,
                                       })}
-                                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-sky-400/20 bg-sky-500/[0.06] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-sky-200 transition-colors hover:border-sky-300/40 hover:bg-sky-500/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
-                                      aria-label={`View ${m.def.fullName} for ${e.account ?? e.actor} at ${fmtClock(e.time)} in Fight Replay`}
+                                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-violet-400/20 bg-violet-500/[0.06] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-violet-200 transition-colors hover:border-violet-300/40 hover:bg-violet-500/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60"
+                                      aria-label={`Inspect ${m.def.fullName} for ${e.account ?? e.actor} at ${fmtClock(e.time)} in Intelligence`}
                                     >
-                                      <Film className="h-3 w-3" /> Replay
+                                      <BrainCircuit className="h-3 w-3" /> Intelligence
                                     </button>
-                                  ) : (
-                                    <span className="text-[9px] uppercase tracking-wider text-slate-600" title="This fight has no persisted Replay position data.">Unavailable</span>
-                                  )}
+                                    {replayAvailable ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => navigateToView("fight-replay", {
+                                          source: "other",
+                                          fightId: fight.fightId,
+                                          fightIndex: reportFightIndex >= 0 ? reportFightIndex : undefined,
+                                          timestampMs: e.time,
+                                          account: e.account,
+                                          metric: m.def.fullName,
+                                        })}
+                                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-sky-400/20 bg-sky-500/[0.06] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-sky-200 transition-colors hover:border-sky-300/40 hover:bg-sky-500/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
+                                        aria-label={`View ${m.def.fullName} for ${e.account ?? e.actor} at ${fmtClock(e.time)} in Fight Replay`}
+                                      >
+                                        <Film className="h-3 w-3" /> Replay
+                                      </button>
+                                    ) : (
+                                      <span className="self-center text-[9px] uppercase tracking-wider text-slate-600" title="This fight has no persisted Replay position data.">Replay unavailable</span>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
-                      </div>
+                      </BoundedDataRegion>
                     </div>
                   )}
                 </div>

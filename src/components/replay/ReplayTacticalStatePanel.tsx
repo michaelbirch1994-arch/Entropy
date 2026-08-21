@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Activity, Crosshair, Shield, Swords, Users } from "lucide-react";
 import type { ReplayData, ReplayEffectTrack, ReplayPlayerTrack } from "../../lib/parseReplayData";
 import { distanceBetween, interpolatePosition, isInInterval } from "../../lib/parseReplayData";
@@ -64,7 +65,7 @@ function EffectRow({ effects, empty }: { effects: Array<ReplayEffectTrack & { st
   );
 }
 
-export default function ReplayTacticalStatePanel({
+function ReplayTacticalStatePanel({
   data,
   player,
   t,
@@ -193,3 +194,5 @@ export default function ReplayTacticalStatePanel({
     </aside>
   );
 }
+
+export default memo(ReplayTacticalStatePanel);

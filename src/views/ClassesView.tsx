@@ -7,6 +7,7 @@ import { Activity, Layers, ShieldCheck, Swords, Users } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE } from "../utils/chartTheme";
 import ClassIcon from "../components/ui/ClassIcon";
+import BoundedDataRegion from "../components/ui/BoundedDataRegion";
 
 type RoleSortKey = "account" | "profession" | "role" | "supportScore" | "confidenceScore";
 type RoleSortState = { key: RoleSortKey; dir: "asc" | "desc" } | null;
@@ -187,7 +188,12 @@ export default function ClassesView() {
 
         <div className="theme-comparison-slab border border-cyan-400/15 bg-black/35 p-5">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300"><Activity className="h-4 w-4" /> Fight presence</div>
-          <div className="mt-4 grid max-h-72 gap-2 overflow-y-auto pr-1 custom-scrollbar">
+          <BoundedDataRegion
+            label={`${selectedName ?? "Selected profession"} fight presence, ${fightPresence.length} fights`}
+            itemCount={fightPresence.length}
+            maxHeightClass="max-h-72"
+            className="mt-4 grid gap-2 pr-1"
+          >
             {fightPresence.map((fight) => (
               <div key={fight.label} className="grid grid-cols-[2.5rem_1fr_1.5rem] items-center gap-2 text-[10px]">
                 <span className="font-mono text-slate-500">{fight.label}</span>
@@ -195,7 +201,7 @@ export default function ClassesView() {
                 <span className="text-right font-mono font-black text-slate-300">{fight.count}</span>
               </div>
             ))}
-          </div>
+          </BoundedDataRegion>
         </div>
       </section>
 

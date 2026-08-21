@@ -1,10 +1,9 @@
-import { useEffect, useMemo } from "react";
-import { BrainCircuit, Clock3, SkipBack, SkipForward, Users } from "lucide-react";
+import { memo, useEffect, useMemo } from "react";
+import { BrainCircuit, Clock3, SkipBack, SkipForward } from "lucide-react";
 import { buildIntelligenceDashboard } from "../../lib/intelligence/intelligenceDashboard";
 import { alignedReplayIntelligenceEvent, nearbyReplayIntelligenceEvents } from "../../lib/replayNearbyIntelligence";
 import { buildReplayIntelligenceAnchors, type ReplayIntelligenceAnchor } from "../../lib/replayIntelligenceAnchors";
 import { useReport } from "../../store/ReportContext";
-import ReplayEventEvidencePanel from "./ReplayEventEvidencePanel";
 
 const EVIDENCE_PERSIST_MS = 5000;
 
@@ -33,16 +32,18 @@ function markerClass(category: string, aligned: boolean): string {
   return "bg-sky-400";
 }
 
-export default function ReplayLiveIntelligencePulse({
+function ReplayLiveIntelligencePulse({
   fightIndex,
   timestampMs,
   onSeek,
   onAlignedEventChange,
+  onEvidenceEventChange,
 }: {
   fightIndex: number;
   timestampMs: number;
   onSeek: (timestampMs: number, account?: string) => void;
   onAlignedEventChange?: (event: ReplayIntelligenceAnchor | null) => void;
+  onEvidenceEventChange?: (event: ReplayIntelligenceAnchor | null) => void;
 }) {
   const { report } = useReport();
   const replayFights = report?.stats.replayFights;
@@ -73,11 +74,6 @@ export default function ReplayLiveIntelligencePulse({
     return null;
   }, [alignedEvent, fightAnchors, timestampMs]);
 
-  const playerNameByAccount = useMemo(
-    () => new Map((fight?.data.players ?? []).map((player) => [player.account, player.name])),
-    [fight],
-  );
-
   const nearest = nearby[0];
   const active = evidenceEvent != null;
 
@@ -85,6 +81,11 @@ export default function ReplayLiveIntelligencePulse({
     onAlignedEventChange?.(alignedEvent);
     return () => onAlignedEventChange?.(null);
   }, [alignedEvent?.id, fightIndex, onAlignedEventChange]);
+
+  useEffect(() => {
+    onEvidenceEventChange?.(evidenceEvent);
+    return () => onEvidenceEventChange?.(null);
+  }, [evidenceEvent?.id, fightIndex, onEvidenceEventChange]);
 
   if (!fight || fightAnchors.length === 0) return null;
 
@@ -126,17 +127,6 @@ export default function ReplayLiveIntelligencePulse({
           <Clock3 className="h-3 w-3" /> {nearby.length > 0 ? "±5s live window" : `${fightAnchors.length} fight events`}
         </div>
       </div>
-
-      {evidenceEvent && (
-        <div className="mt-3">
-          <ReplayEventEvidencePanel
-            data={fight.data}
-            event={evidenceEvent}
-            t={evidenceEvent.timestampMs}
-            onSelectAccount={(account) => onSeek(evidenceEvent.timestampMs, account)}
-          />
-        </div>
-      )}
 
       <div className="mt-3 rounded-lg border border-white/[0.07] bg-black/25 px-2.5 py-2">
         <div className="mb-1.5 flex items-center justify-between gap-2 text-[8px] font-bold uppercase tracking-[0.14em] text-slate-600">
@@ -199,61 +189,8 @@ export default function ReplayLiveIntelligencePulse({
         </div>
       </div>
 
-      {nearby.length > 0 && (
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
-          {nearby.map((event) => (
-            <div
-              key={event.id}
-              className={`min-w-[220px] max-w-[310px] shrink-0 overflow-hidden rounded-lg border transition ${
-                event.distanceMs <= 750
-                  ? "border-sky-300/30 bg-sky-300/[0.07]"
-                  : "border-white/[0.07] bg-black/20 hover:border-sky-400/20"
-              }`}
-            >
-              <button
-                type="button"
-                title={event.summary}
-                onClick={() => onSeek(event.timestampMs, event.account)}
-                className="block w-full cursor-pointer px-2.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400/50"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-[9px] font-black uppercase tracking-[0.12em] text-slate-300">{titleForKind(event.kind)}</span>
-                  <span className={`shrink-0 font-mono text-[9px] font-bold ${event.distanceMs <= 750 ? "text-sky-200" : "text-sky-400/70"}`}>{fmtOffset(event.offsetMs)}</span>
-                </div>
-                <p className="mt-1 line-clamp-2 text-[9px] leading-relaxed text-slate-500">{event.summary}</p>
-                <div className="mt-1.5 flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-wider text-slate-600">
-                  <span>{event.confidence} evidence</span>
-                  {event.accounts.length > 0 && (
-                    <>
-                      <span>·</span>
-                      <span className="inline-flex items-center gap-1 text-sky-400/70"><Users className="h-2.5 w-2.5" /> {event.accounts.length} tracked</span>
-                    </>
-                  )}
-                </div>
-              </button>
-
-              {event.accounts.length > 0 && (
-                <div className="flex flex-wrap gap-1 border-t border-white/[0.05] px-2.5 py-2">
-                  {event.accounts.slice(0, 5).map((account) => (
-                    <button
-                      key={account}
-                      type="button"
-                      onClick={() => onSeek(event.timestampMs, account)}
-                      title={`Open Tactical State for ${playerNameByAccount.get(account) ?? account}`}
-                      className="max-w-[132px] cursor-pointer truncate rounded-md border border-sky-400/15 bg-sky-400/[0.045] px-1.5 py-1 text-[8px] font-semibold text-sky-300/80 transition hover:border-sky-300/30 hover:bg-sky-400/[0.08] hover:text-sky-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/45"
-                    >
-                      {playerNameByAccount.get(account) ?? account}
-                    </button>
-                  ))}
-                  {event.accounts.length > 5 && (
-                    <span className="px-1 py-1 font-mono text-[8px] text-slate-600">+{event.accounts.length - 5} more</span>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
     </section>
   );
 }
+
+export default memo(ReplayLiveIntelligencePulse);

@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, BrainCircuit, Crosshair, ShieldCheck, Skull, Users } from "lucide-react";
 import type { ReplayData } from "../../lib/parseReplayData";
 import { buildReplayEventEvidenceState } from "../../lib/replayEventEvidenceState";
@@ -19,7 +20,7 @@ function DeltaIcon({ delta }: { delta: number }) {
   return <ArrowRight className="h-3 w-3" />;
 }
 
-export default function ReplayEventEvidencePanel({
+function ReplayEventEvidencePanel({
   data,
   event,
   t,
@@ -30,13 +31,12 @@ export default function ReplayEventEvidencePanel({
   t: number;
   onSelectAccount: (account: string) => void;
 }) {
-  const state = buildReplayEventEvidenceState(data, event, t);
+  const state = useMemo(() => buildReplayEventEvidenceState(data, event, t), [data, event, t]);
+  const preEvent = useMemo(() => buildReplayPreEventChanges(data, event, 5000), [data, event]);
+  const narrative = useMemo(() => buildReplayEventNarrative(preEvent), [preEvent]);
+  const names = useMemo(() => new Map(data.players.map((player) => [player.account, player.name])), [data.players]);
   if (!state) return null;
-  const preEvent = buildReplayPreEventChanges(data, event, 5000);
-  const narrative = buildReplayEventNarrative(preEvent);
   const changedMetrics = (preEvent?.metrics ?? []).filter((metric) => Math.abs(metric.delta) >= (metric.format === "average" ? 0.5 : 1));
-
-  const names = new Map(data.players.map((player) => [player.account, player.name]));
 
   return (
     <section className="rounded-xl border border-sky-300/25 bg-sky-400/[0.055] p-3 shadow-[0_0_28px_-22px_rgba(125,211,252,0.9)]">
@@ -158,3 +158,5 @@ export default function ReplayEventEvidencePanel({
     </section>
   );
 }
+
+export default memo(ReplayEventEvidencePanel);

@@ -2,7 +2,7 @@
 
 This worklist tracks correctness, performance, readability, interaction, and longer-term raid intelligence work. Correctness and reproducible evidence take priority over presentation.
 
-## Active delivery sequence — reconciled after v0.2.65
+## Active delivery sequence — reconciled after v0.2.66
 
 This sequence incorporates the current full-app screenshot audit, the Intelligence nervous-system direction, the Replay world-space handoff, and the existing correctness/performance backlog. It is the authoritative order for upcoming cuts.
 
@@ -111,16 +111,18 @@ This sequence incorporates the current full-app screenshot audit, the Intelligen
   - [x] Verify the production build, all tests, changed-file lint, and a presentation-only diff boundary.
   - [ ] Complete desktop and hosted-web visual review before marking the foundation merged/released.
 - [ ] Run a view-by-view color-role audit so each screen has one structural accent while success, warning, danger, healing, barrier, damage, profession, and evidence colors retain distinct meanings.
-- [ ] Replace unbounded walls of text/rows with professional progressive disclosure without hiding data.
-  - Keep the selected/summary context visible above the scroll region.
-  - Use bounded, keyboard-accessible drill-down regions for long event feeds, skill lists, rotations, recap hits, and evidence collections.
-  - Avoid nested scroll traps; full analytics tables may retain page scrolling when comparison across many rows is the primary task.
-  - Add explicit counts, filters, and expand/show-all controls so containment never implies truncation or missing evidence.
+- [~] Replace unbounded walls of text/rows with professional progressive disclosure without hiding data.
+  - [x] Add one reusable, labelled, keyboard-focusable bounded-data region with visible focus treatment and overscroll containment.
+  - [x] Contain long Intelligence critical-event, action, timeline, and findings collections while preserving their summary counts and show-all controls.
+  - [x] Contain Mechanics occurrence evidence, Death Recap card collections, squad rotations, and per-player cast lists without truncating their underlying data.
+  - [x] Avoid nested scroll traps in the completed pass; full analytics tables retain page scrolling when comparison across many rows is the primary task.
+  - [x] Standardize the remaining long skill-source, profession-presence, and distance-to-tag collections on the same accessible treatment.
+  - [ ] Complete desktop/web visual acceptance with a representative multi-fight report before marking this slice complete.
 - [ ] Standardize dense table readability across 1080p desktop and hosted web: sticky context where useful, stable row height, tabular figures, honest horizontal overflow, and readable selected/hover states.
 - [ ] Add cinematic but useful transitions only at meaningful moments: evidence selection, Replay seek, inspector reveal, and workspace entry.
   - Respect reduced-motion preferences.
   - Never animate chart values or report rows in a way that implies changing data.
-  - Prevent content height changes from jerking the page or Replay playhead.
+  - [x] Prevent live Replay evidence changes from changing the map/page height or jerking the playhead.
 - [ ] Complete a visual acceptance matrix for Overview, Squad/Roster, Performance, Combat Log, Intelligence, Archive/Compare, and Entropy Builder in desktop and hosted-web builds.
 
 ## P1 — Intelligence nervous system across evidence views
@@ -129,19 +131,31 @@ This sequence incorporates the current full-app screenshot audit, the Intelligen
 - [x] Link supported Intelligence evidence into Fight Replay and Death Recap without duplicating metric calculations.
 - [x] Add a compact Intelligence evidence layer to Mechanics Timeline.
   - [x] Each timestamped mechanic occurrence can seek to that exact fight/time in Replay.
+  - [x] Each timestamped mechanic occurrence can open Intelligence with the same fight, player, timestamp, and mechanic label.
+  - [x] Intelligence selects only a persisted nearby event inside the explicit ±15 second window and keeps the source moment visible when no event exists.
   - [x] Carry the affected player when the mechanic resolves to a squad account.
   - [x] Keep severity and occurrence counts descriptive; do not equate EI severity with causal impact.
 - [x] Add a compact Intelligence evidence layer to Death Recap.
   - [x] Each death can seek to the exact death timestamp in Replay with that player selected.
+  - [x] Each death can open Intelligence with the exact fight, player, timestamp, and Death Recap context.
+  - [x] Preserve an explicit no-nearby-event state instead of synthesizing a CriticalEvent for the death.
   - [x] Preserve the existing hit breakdown as the authoritative damage evidence.
   - [x] Make unavailable Replay coverage explicit instead of disabling a control without explanation.
 - [x] Keep cross-view navigation reversible and stable: users can return to their source view with fight/player/time context intact.
-- [ ] Add synchronized before/event/after evidence presentation using only persisted timestamp-level state.
-- [ ] Enrich per-fight Intelligence with concise commander-readable narration.
+- [x] Add synchronized before/event/after evidence presentation using only persisted timestamp-level state.
+  - [x] The Intelligence event inspector remains authoritative when a persisted nearby event is selected.
+  - [x] The source fight/time/player remain visible and Replay-addressable when no persisted event exists nearby.
+- [x] Enrich per-fight Intelligence with concise commander-readable narration.
+  - [x] Present deterministic What happened, Likely issue, and What to improve summaries for the selected fight.
   - State what happened, what changed before the event, and which response could be reviewed.
   - Phrase improvement opportunities as evidence-backed review prompts, not fabricated coaching conclusions.
-  - Expose supporting fights/events, sample count, confidence, and counter-evidence.
-- [ ] Group related critical events into inspectable combat episodes without hiding the underlying event stream.
+  - [x] Expose supporting fights/events, sample count, confidence, and counter-evidence consistently in every narration card.
+    - Each card now states its supporting fight, evidence-reference, and sample counts without inventing missing support.
+    - Counter-evidence is explicit when the fight result limits a failure claim, and unavailable counter-evidence is labeled as an evidence boundary rather than assumed absent.
+- [x] Group related critical events into inspectable combat episodes without hiding the underlying event stream.
+  - Persisted engagement-segment membership remains authoritative.
+  - Unsegmented events group only when explicit player/event evidence overlaps inside a short review window; proximity alone is insufficient.
+  - Episode cards seek into the existing event inspector while the complete filterable Critical Events feed remains visible and unchanged.
 
 ## P1 — Replay world-space and tactical workspace
 
@@ -155,10 +169,15 @@ This sequence incorporates the current full-app screenshot audit, the Intelligen
 - [ ] Render a restrained objective overlay only after projection is proven across Eternal Battlegrounds, both Alpine Borderlands, and Desert Borderlands.
 - [ ] Investigate higher-resolution official map imagery/tiles after objective alignment is correct.
 - [ ] Add spatial Intelligence only when map/objective evidence is trustworthy; never infer geography from fight names or approximate pixels.
-- [ ] Build the expanded/pop-out Replay workspace after the world-space layer is stable.
-  - Reuse the same Replay components and evidence model.
-  - Preserve fight, playhead, player, and Intelligence selection.
-  - Prefer a Tauri secondary window on desktop and an expanded in-page workspace on web.
+- [~] Build the expanded/pop-out Replay workspace without splitting the evidence model.
+  - [x] Add a web-and-desktop in-app Focus Mode that reuses the live Replay components and maximizes the tactical workspace.
+  - [x] Preserve the selected fight, playhead, player inspector, and live Intelligence evidence while entering/exiting Focus Mode.
+  - [x] Move exact-time Intelligence evidence into a stable, internally scrolling inspector drawer beside the map.
+  - [x] Bound visual playback to 30 FPS, derive it from one monotonic clock anchor, and throttle expensive tactical/Intelligence analysis to 5 FPS.
+  - [~] Profile a representative large multi-fight report after this stabilization slice and extract the SVG stage into its own render boundary if frame time remains high.
+    - [x] Extract the animated SVG map/marker stage into a memoized render boundary so evidence-drawer and workspace-state updates do not rebuild every marker while paused.
+    - [ ] Capture a representative large-report performance trace on desktop and hosted web before claiming the remaining frame-time problem is solved.
+  - [ ] Add a true Tauri secondary Replay window only after the shared Focus Mode workspace is accepted; keep hosted web on the expanded in-page workspace.
 
 ## P2 — Entropy Builder and desktop/web product boundaries
 
