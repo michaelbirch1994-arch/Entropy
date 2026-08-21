@@ -13,6 +13,7 @@ import "./Styles/CrossViewTrail.css";
 import "./Styles/IntelligencePulse.css";
 import "./Styles/ObsidianGold.css";
 import "./Styles/BlackGoldFinish.css";
+import "./Styles/BlackGoldRefinement.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
