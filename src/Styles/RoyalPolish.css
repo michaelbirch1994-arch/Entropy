@@ -1,0 +1,249 @@
+/* Royal polish is the final presentation layer.
+   It deliberately leaves combat, profession, boon, condition, healing, and
+   friendly/enemy colors intact while making Entropy chrome consistently gold. */
+
+/* The topbar was still inheriting each workspace's legacy teal/green/pink
+   signal. The page title can keep its semantic icon; the frame belongs to the
+   product identity. */
+.theme-main[data-workspace-tone] .theme-topbar {
+  border-bottom-color: rgba(214, 168, 75, 0.2) !important;
+  background:
+    radial-gradient(ellipse 28rem 7rem at 12% 0%, rgba(240, 201, 106, 0.045), transparent 72%),
+    linear-gradient(180deg, rgba(10, 10, 9, 0.985), rgba(5, 5, 5, 0.97)) !important;
+  box-shadow:
+    inset 0 -1px 0 rgba(255, 242, 201, 0.025),
+    0 18px 40px -34px rgba(214, 168, 75, 0.2),
+    0 20px 48px -42px #000 !important;
+}
+
+.theme-main[data-workspace-tone] .theme-topbar::before {
+  right: 1.5rem !important;
+  bottom: -1px !important;
+  width: min(22vw, 18rem) !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, transparent, rgba(240, 201, 106, 0.22), rgba(214, 168, 75, 0.54), transparent) !important;
+  box-shadow: 0 0 12px rgba(214, 168, 75, 0.13) !important;
+  opacity: 1 !important;
+}
+
+.theme-main[data-workspace-tone] .theme-topbar::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(125, 88, 29, 0.2) 5%, rgba(240, 201, 106, 0.72) 14%, rgba(214, 168, 75, 0.2) 46%, transparent 82%) !important;
+  box-shadow: 0 0 14px rgba(214, 168, 75, 0.16) !important;
+  opacity: 0.72 !important;
+}
+
+/* Every player surface gets a visible lower-edge backlight. Metric/profession
+   colors remain inside the card and in progress fills; they no longer decide
+   the surrounding glow. */
+.theme-main[data-workspace-tone="overview"] :is(.theme-player-card, .theme-podium-card),
+.theme-main[data-workspace-tone="squad"] :is(.theme-player-card, .theme-roster-player),
+.theme-main[data-workspace-tone="performance"] :is(.theme-player-card, .theme-podium-card) {
+  --royal-card-light: rgba(240, 201, 106, 0.38);
+  border-color: rgba(214, 168, 75, 0.25) !important;
+  background:
+    radial-gradient(ellipse 82% 30% at 50% 108%, rgba(240, 201, 106, 0.18), transparent 70%),
+    linear-gradient(132deg, rgba(214, 168, 75, 0.06), transparent 34%),
+    #090806 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 244, 211, 0.07),
+    inset 0 -2px 0 rgba(214, 168, 75, 0.18),
+    0 10px 18px -15px rgba(240, 201, 106, 0.7),
+    0 24px 40px -24px var(--royal-card-light),
+    0 34px 62px -45px #000 !important;
+}
+
+.theme-main[data-workspace-tone="overview"] :is(.theme-player-card, .theme-podium-card):hover,
+.theme-main[data-workspace-tone="squad"] :is(.theme-player-card, .theme-roster-player):hover,
+.theme-main[data-workspace-tone="performance"] :is(.theme-player-card, .theme-podium-card):hover {
+  border-color: rgba(240, 201, 106, 0.46) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 246, 219, 0.11),
+    inset 0 -2px 0 rgba(240, 201, 106, 0.28),
+    0 12px 22px -15px rgba(240, 201, 106, 0.82),
+    0 28px 48px -22px rgba(214, 168, 75, 0.5),
+    0 38px 68px -46px #000 !important;
+}
+
+/* Match the defensive MVP to the offensive MVP. The extra class specificity
+   is intentional: an earlier cleanup rule singled out neon-barrier and left it
+   with only an inset highlight. */
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-offense,
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier {
+  border-color: rgba(240, 201, 106, 0.4) !important;
+  background:
+    radial-gradient(ellipse 96% 42% at 50% 108%, rgba(240, 201, 106, 0.27), transparent 70%),
+    linear-gradient(128deg, rgba(214, 168, 75, 0.095), transparent 40%),
+    #0b0906 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 246, 219, 0.11),
+    inset 0 -2px 0 rgba(240, 201, 106, 0.27),
+    0 12px 24px -14px rgba(240, 201, 106, 0.88),
+    0 30px 56px -24px rgba(214, 168, 75, 0.56),
+    0 44px 84px -54px #000 !important;
+}
+
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-offense:hover,
+.theme-main[data-workspace-tone="overview"] .theme-mvp-card.neon-barrier:hover {
+  border-color: rgba(240, 201, 106, 0.58) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 225, 0.14),
+    inset 0 -2px 0 rgba(240, 201, 106, 0.34),
+    0 14px 26px -13px rgba(240, 201, 106, 0.94),
+    0 34px 62px -22px rgba(214, 168, 75, 0.66),
+    0 48px 92px -56px #000 !important;
+}
+
+/* A new opening composition: a static royal aperture and crown-like circuit
+   crest replaces the single large spinning instrument as the primary motif. */
+.theme-cinematic-stage::before {
+  left: 25% !important;
+  width: min(37vw, 36rem) !important;
+  opacity: 0.2 !important;
+  background:
+    radial-gradient(circle, transparent 0 35%, rgba(240, 201, 106, 0.32) 35.2% 35.55%, transparent 35.8% 47%, rgba(214, 168, 75, 0.13) 47.2% 47.45%, transparent 47.7%),
+    repeating-conic-gradient(from 0deg, rgba(240, 201, 106, 0.2) 0 0.2deg, transparent 0.28deg 15deg) !important;
+  animation: royalApertureDrift 48s linear infinite !important;
+}
+
+.theme-cinematic-stage::after {
+  left: 25% !important;
+  bottom: 1.4rem !important;
+  width: min(34vw, 34rem) !important;
+  height: 12rem !important;
+  opacity: 0.5 !important;
+  background:
+    linear-gradient(90deg, transparent 49.8%, rgba(240, 201, 106, 0.74) 50%, transparent 50.2%),
+    linear-gradient(140deg, transparent 46%, rgba(214, 168, 75, 0.38) 46.2% 46.5%, transparent 46.7%) 7% 72% / 42% 54% no-repeat,
+    linear-gradient(220deg, transparent 46%, rgba(214, 168, 75, 0.38) 46.2% 46.5%, transparent 46.7%) 93% 72% / 42% 54% no-repeat !important;
+  filter: drop-shadow(0 0 12px rgba(214, 168, 75, 0.28)) !important;
+}
+
+.theme-royal-aperture {
+  position: absolute !important;
+  z-index: 0 !important;
+  left: 25%;
+  top: 48%;
+  width: min(34vw, 33rem);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0.78;
+  filter: drop-shadow(0 0 18px rgba(214, 168, 75, 0.12));
+}
+
+.theme-royal-aperture-ring {
+  position: absolute;
+  inset: 9%;
+  border-radius: 50%;
+  border: 1px solid rgba(214, 168, 75, 0.18);
+}
+
+.theme-royal-aperture-ring::before,
+.theme-royal-aperture-ring::after {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  border-top: 1px solid rgba(240, 201, 106, 0.46);
+  border-bottom: 1px solid rgba(125, 88, 29, 0.3);
+  transform: rotate(37deg);
+}
+
+.theme-royal-aperture-ring-outer {
+  box-shadow:
+    inset 0 0 38px rgba(214, 168, 75, 0.035),
+    0 0 36px rgba(214, 168, 75, 0.045);
+}
+
+.theme-royal-aperture-ring-inner {
+  inset: 24%;
+  border-color: rgba(240, 201, 106, 0.34);
+  box-shadow: inset 0 0 28px rgba(214, 168, 75, 0.06);
+}
+
+.theme-royal-aperture-crown {
+  position: absolute;
+  left: 50%;
+  bottom: 14%;
+  width: 44%;
+  height: 24%;
+  transform: translateX(-50%);
+  background:
+    linear-gradient(64deg, transparent 0 47%, rgba(240, 201, 106, 0.72) 47.5% 48%, transparent 48.5%) left / 36% 100% no-repeat,
+    linear-gradient(116deg, transparent 0 47%, rgba(240, 201, 106, 0.72) 47.5% 48%, transparent 48.5%) right / 36% 100% no-repeat,
+    linear-gradient(90deg, transparent, rgba(214, 168, 75, 0.75) 12% 88%, transparent) bottom / 100% 1px no-repeat;
+}
+
+.theme-royal-aperture-crown::before,
+.theme-royal-aperture-crown::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 66%;
+  background: linear-gradient(transparent, rgba(240, 201, 106, 0.76));
+  box-shadow: 0 0 8px rgba(214, 168, 75, 0.34);
+}
+
+.theme-royal-aperture-crown::before { left: 34%; transform: rotate(-13deg); }
+.theme-royal-aperture-crown::after { right: 34%; transform: rotate(13deg); }
+
+.theme-royal-aperture-beam {
+  position: absolute;
+  left: 50%;
+  top: 12%;
+  bottom: 16%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(transparent, rgba(240, 201, 106, 0.68) 42%, rgba(214, 168, 75, 0.16) 82%, transparent);
+  box-shadow: 0 0 14px rgba(240, 201, 106, 0.3);
+}
+
+.theme-cinematic-copy {
+  position: relative;
+  z-index: 2 !important;
+}
+
+.theme-cinematic-mark {
+  box-shadow:
+    inset 0 0 32px rgba(214, 168, 75, 0.1),
+    0 0 0 1px rgba(240, 201, 106, 0.08),
+    0 10px 22px -12px rgba(240, 201, 106, 0.84),
+    0 26px 48px -26px rgba(214, 168, 75, 0.54) !important;
+}
+
+.theme-ingress-console {
+  box-shadow:
+    inset 3px 0 0 rgba(214, 168, 75, 0.58),
+    inset 0 1px 0 rgba(255, 242, 204, 0.08),
+    0 12px 24px -18px rgba(240, 201, 106, 0.65),
+    0 34px 82px -38px #000 !important;
+}
+
+@keyframes royalApertureDrift {
+  to { transform: translate(-50%, -50%) rotate(-360deg); }
+}
+
+@media (max-width: 800px) {
+  .theme-royal-aperture {
+    left: 50%;
+    top: 19%;
+    width: min(88vw, 31rem);
+    opacity: 0.38;
+  }
+
+  .theme-cinematic-stage::before {
+    left: 50% !important;
+    top: 19% !important;
+    width: min(88vw, 31rem) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-cinematic-stage::before { animation: none !important; }
+
+  .theme-main[data-workspace-tone] :is(.theme-player-card, .theme-podium-card, .theme-roster-player) {
+    transition: none !important;
+  }
+}
+
