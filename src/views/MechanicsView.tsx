@@ -17,7 +17,7 @@ function severityRank(sev: string): number {
 
 const SEVERITY_STYLE: Record<number, { label: string; dot: string; text: string; border: string }> = {
   0: { label: "Info", dot: "bg-slate-500", text: "text-slate-400", border: "border-slate-700/60" },
-  1: { label: "Minor", dot: "bg-sky-500", text: "text-sky-400", border: "border-sky-500/20" },
+  1: { label: "Minor", dot: "bg-slate-400", text: "text-slate-300", border: "border-slate-600/50" },
   2: { label: "Moderate", dot: "bg-amber-500", text: "text-amber-400", border: "border-amber-500/20" },
   3: { label: "Major", dot: "bg-orange-500", text: "text-orange-400", border: "border-orange-500/20" },
   4: { label: "Critical", dot: "bg-rose-500", text: "text-rose-400", border: "border-rose-500/20" },
@@ -81,7 +81,7 @@ export default function MechanicsView() {
               setFightIdx(Number(e.target.value));
               setExpandedKey(null);
             }}
-            className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2"
+            className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2 focus:border-theme-focus focus:outline-none"
           >
             {data.fights.map((f, i) => (
               <option key={f.fightId} value={i}>
@@ -118,7 +118,7 @@ export default function MechanicsView() {
                   <button
                     type="button"
                     onClick={() => setExpandedKey(isOpen ? null : m.key)}
-                    className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors cursor-pointer"
+                    className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme-focus"
                   >
                     <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${style.dot}`} />
                     <div className="flex-1 min-w-0">
@@ -139,7 +139,7 @@ export default function MechanicsView() {
 
                   {isOpen && (
                     <div className="px-4 pb-4">
-                      <div className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-[10px] ${replayAvailable ? "border-sky-400/20 bg-sky-500/[0.05] text-sky-200" : "border-slate-700/60 bg-slate-900/40 text-slate-500"}`}>
+                      <div className={`mb-3 flex items-center gap-2 rounded-lg border px-3 py-2 text-[10px] ${replayAvailable ? "border-theme-focus bg-theme-accentDim text-theme-accentStrong" : "border-slate-700/60 bg-slate-900/40 text-slate-500"}`}>
                         <Film className="h-3.5 w-3.5 flex-shrink-0" />
                         <span>
                           {replayAvailable
@@ -185,7 +185,7 @@ export default function MechanicsView() {
                       >
                         <table className="w-full text-xs">
                           <thead>
-                            <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500 sticky top-0 bg-[#0a0e1f]">
+                            <tr className="border-b border-theme-border text-[10px] uppercase tracking-wider text-slate-500 sticky top-0 bg-[#0a0e1f]">
                               <th className="text-left font-bold px-3 py-2">Time</th>
                               <th className="text-left font-bold px-3 py-2">Who</th>
                               <th className="text-right font-bold px-3 py-2">Evidence</th>
@@ -211,7 +211,7 @@ export default function MechanicsView() {
                                         account: e.account,
                                         metric: m.def.fullName,
                                       })}
-                                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-violet-400/20 bg-violet-500/[0.06] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-violet-200 transition-colors hover:border-violet-300/40 hover:bg-violet-500/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60"
+                                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-theme-focus bg-theme-accentDim px-2 py-1 text-[9px] font-black uppercase tracking-wider text-theme-accentStrong transition-colors hover:bg-theme-accentDim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-focus"
                                       aria-label={`Inspect ${m.def.fullName} for ${e.account ?? e.actor} at ${fmtClock(e.time)} in Intelligence`}
                                     >
                                       <BrainCircuit className="h-3 w-3" /> Intelligence
@@ -227,7 +227,7 @@ export default function MechanicsView() {
                                           account: e.account,
                                           metric: m.def.fullName,
                                         })}
-                                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-sky-400/20 bg-sky-500/[0.06] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-sky-200 transition-colors hover:border-sky-300/40 hover:bg-sky-500/[0.1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
+                                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-theme-border bg-white/[0.03] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-slate-300 transition-colors hover:border-theme-focus hover:text-theme-accentStrong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-focus"
                                         aria-label={`View ${m.def.fullName} for ${e.account ?? e.actor} at ${fmtClock(e.time)} in Fight Replay`}
                                       >
                                         <Film className="h-3 w-3" /> Replay

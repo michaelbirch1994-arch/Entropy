@@ -118,10 +118,10 @@ export default function IntelligenceEventInspector({
     : null;
 
   return (
-    <section className="theme-intelligence-dossier border border-sky-400/20 bg-sky-500/[0.035] p-5" aria-label="Selected Intelligence event inspector">
+    <section className="theme-intelligence-dossier border border-theme-focus bg-theme-accentDim p-5" aria-label="Selected Intelligence event inspector">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="text-[10px] font-black uppercase tracking-[0.24em] text-sky-300">Forensic event inspector</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.24em] text-theme-accentStrong">Forensic event inspector</div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-black uppercase text-slate-100">{event.kind}</h3>
             <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-bold uppercase text-slate-300">{fightLabel}</span>
@@ -132,7 +132,7 @@ export default function IntelligenceEventInspector({
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs font-bold uppercase text-slate-400 transition hover:border-white/20 hover:text-slate-200"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-xs font-bold uppercase text-slate-400 transition hover:border-theme-focus hover:text-slate-200"
         >
           <X className="h-4 w-4" /> Close
         </button>
@@ -159,7 +159,7 @@ export default function IntelligenceEventInspector({
 
       <div className="mt-5 grid gap-4 xl:grid-cols-3">
         <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-4">
-          <div className="text-xs font-black uppercase tracking-wider text-amber-300">Before</div>
+          <div className="text-xs font-black uppercase tracking-wider text-slate-400">Before</div>
           <div className="mt-3 grid gap-2">
             {eventsBefore.length > 0 ? eventsBefore.map((candidate) => (
               <EventRow key={candidate.id} event={candidate} anchorMs={window.anchorTimestampMs} />
@@ -167,10 +167,10 @@ export default function IntelligenceEventInspector({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-sky-400/20 bg-sky-500/[0.05] p-4">
-          <div className="text-xs font-black uppercase tracking-wider text-sky-300">Selected moment</div>
-          <div className="mt-3 rounded-xl border border-sky-400/20 bg-black/25 p-4">
-            <div className="font-mono text-sm font-black text-sky-100">{formatTime(event.timestampMs)}</div>
+        <div className="rounded-2xl border border-theme-focus bg-theme-accentDim p-4">
+          <div className="text-xs font-black uppercase tracking-wider text-theme-accentStrong">Selected moment</div>
+          <div className="mt-3 rounded-xl border border-theme-focus bg-black/25 p-4">
+            <div className="font-mono text-sm font-black text-theme-accentStrong">{formatTime(event.timestampMs)}</div>
             <div className="mt-1 text-xs font-black uppercase tracking-wider text-slate-100">{event.kind}</div>
             <p className="mt-2 text-xs leading-5 text-slate-300">{event.summary}</p>
           </div>
@@ -187,7 +187,7 @@ export default function IntelligenceEventInspector({
         </div>
 
         <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-4">
-          <div className="text-xs font-black uppercase tracking-wider text-emerald-300">After</div>
+          <div className="text-xs font-black uppercase tracking-wider text-slate-400">After</div>
           <div className="mt-3 grid gap-2">
             {eventsAfter.length > 0 ? eventsAfter.map((candidate) => (
               <EventRow key={candidate.id} event={candidate} anchorMs={window.anchorTimestampMs} />
@@ -197,9 +197,9 @@ export default function IntelligenceEventInspector({
       </div>
 
       {replaySnapshot && (
-        <div className="mt-4 rounded-2xl border border-cyan-400/15 bg-cyan-500/[0.025] p-4">
+        <div className="mt-4 rounded-2xl border border-theme-border bg-black/20 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-cyan-300">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-theme-accentStrong">
               <MapPin className="h-4 w-4" /> Replay state at {formatTime(replaySnapshot.timestampMs)}
             </div>
             <span className="text-[10px] font-bold uppercase text-slate-500">existing Fight Replay evidence</span>
@@ -212,7 +212,7 @@ export default function IntelligenceEventInspector({
             <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Squad down</div><div className="mt-1 font-mono text-lg font-black text-amber-200">{replaySnapshot.squadDown}</div></div>
             <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Enemies alive</div><div className="mt-1 font-mono text-lg font-black text-slate-100">{replaySnapshot.enemiesAlive}</div></div>
             <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Enemies down</div><div className="mt-1 font-mono text-lg font-black text-rose-200">{replaySnapshot.enemiesDown}</div></div>
-            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Avg. dist to tag</div><div className="mt-1 font-mono text-lg font-black text-cyan-100">{formatDistance(replaySnapshot.averageSquadDistanceToCommander)}</div></div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Avg. dist to tag</div><div className="mt-1 font-mono text-lg font-black text-slate-100">{formatDistance(replaySnapshot.averageSquadDistanceToCommander)}</div></div>
           </div>
           <div className="mt-3 rounded-xl border border-white/[0.06] bg-black/20 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-wider text-slate-500">Commander state</div><div className="font-mono text-[11px] font-bold text-slate-300">{replaySnapshot.commanderAccount ?? "commander unavailable/dead"}</div></div></div>
           {replaySnapshot.linkedPlayers.length > 0 && (
@@ -240,7 +240,7 @@ export default function IntelligenceEventInspector({
           <div className="mt-3 grid gap-3">
             {deathEvidence.map(({ recap, linkedPlayer, offsetMs }) => (
               <details key={`${recap.fightIndex}-${recap.account}-${recap.deathTimeMs}`} className="group rounded-xl border border-white/[0.06] bg-black/25 p-3">
-                <summary className="cursor-pointer list-none"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-sm font-black text-slate-100">{recap.account}</div><div className="mt-1 text-[11px] text-slate-500">{recap.characterName} · {recap.profession}</div></div><div className="flex flex-wrap items-center gap-2">{linkedPlayer && <span className="rounded-full border border-sky-400/20 bg-sky-500/[0.06] px-2 py-1 text-[10px] font-bold uppercase text-sky-200">linked player</span>}<span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 font-mono text-[10px] font-bold text-slate-400">{formatTime(recap.deathTimeMs)} · {formatOffset(offsetMs)}</span></div></div></summary>
+                <summary className="cursor-pointer list-none"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="text-sm font-black text-slate-100">{recap.account}</div><div className="mt-1 text-[11px] text-slate-500">{recap.characterName} · {recap.profession}</div></div><div className="flex flex-wrap items-center gap-2">{linkedPlayer && <span className="rounded-full border border-theme-focus bg-theme-accentDim px-2 py-1 text-[10px] font-bold uppercase text-theme-accentStrong">linked player</span>}<span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-1 font-mono text-[10px] font-bold text-slate-400">{formatTime(recap.deathTimeMs)} · {formatOffset(offsetMs)}</span></div></div></summary>
                 <div className="mt-4 grid gap-4 xl:grid-cols-2"><HitList title={`To down · ${recap.toDown.length} hits`} hits={recap.toDown} /><HitList title={`Down to death · ${recap.toKill.length} hits`} hits={recap.toKill} /></div>
                 <div className="mt-4 flex justify-end border-t border-white/[0.06] pt-3"><button type="button" onClick={() => navigateToView("death-recap", { source: "intelligence", fightIndex: recap.fightIndex, account: recap.account, timestampMs: recap.deathTimeMs, eventId: event.id })} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-rose-400/20 bg-rose-500/[0.06] px-3 py-2 text-[10px] font-black uppercase tracking-wider text-rose-200 transition hover:border-rose-300/35 hover:bg-rose-500/[0.1]">Open full Death Recap <ArrowRight className="h-3.5 w-3.5" /></button></div>
               </details>
@@ -251,7 +251,7 @@ export default function IntelligenceEventInspector({
 
       {relatedFindings.length > 0 && (
         <div className="mt-4 rounded-2xl border border-white/[0.06] bg-black/20 p-4">
-          <div className="text-xs font-black uppercase tracking-wider text-violet-300">Evidence-backed findings connected to this event</div>
+          <div className="text-xs font-black uppercase tracking-wider text-theme-accentStrong">Evidence-backed findings connected to this event</div>
           <div className="mt-3 grid gap-2 md:grid-cols-2">
             {relatedFindings.map((finding) => (
               <div key={finding.id} className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs font-black uppercase text-slate-100">{finding.title}</span><span className="text-[10px] font-bold uppercase text-slate-500">{finding.confidence}</span></div><p className="mt-2 text-xs leading-5 text-slate-400">{finding.summary}</p></div>

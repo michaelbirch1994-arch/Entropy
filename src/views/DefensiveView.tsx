@@ -257,7 +257,7 @@ export default function DefensiveView() {
       <button
         type="button"
         onClick={() => toggleSort(k)}
-        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-slate-300 ${sort?.key === k ? "text-sky-400" : ""}`}
+        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-slate-300 ${sort?.key === k ? "text-theme-accentStrong" : ""}`}
       >
         {label}
         <span className="text-[8px] opacity-70">{sort?.key === k ? (sort.dir === "desc" ? "▼" : "▲") : "↕"}</span>
@@ -279,11 +279,11 @@ export default function DefensiveView() {
         <StatCard label={lbl("Total Healing")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalHealing, totals.healingActiveSec))} icon={<Heart className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
         <StatCard label={lbl("Total Barrier")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrier, totals.healingActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-teal-400" />} accent="text-teal-400" />
         <StatCard label={lbl("Barrier Absorbed")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrierAbsorbed, totals.defenseActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-teal-300" />} accent="text-teal-300" />
-        <StatCard label={lbl("Mitigated Damage")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalMitigatedDamage, totals.mitigationActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-blue-400" />} accent="text-blue-400" />
-        <StatCard label={lbl("Cleanses")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalCleanses, totals.supportActiveSec))} icon={<Droplet className="w-3.5 h-3.5 text-cyan-400" />} accent="text-cyan-400" />
+        <StatCard label={lbl("Mitigated Damage")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalMitigatedDamage, totals.mitigationActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-slate-300" />} accent="text-slate-100" />
+        <StatCard label={lbl("Cleanses")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalCleanses, totals.supportActiveSec))} icon={<Droplet className="w-3.5 h-3.5 text-emerald-300" />} accent="text-emerald-300" />
         <StatCard label={lbl("Boon Strips")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalStrips, totals.supportActiveSec))} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
-        <StatCard label={lbl("Resurrects")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalRes, totals.supportActiveSec))} icon={<Wind className="w-3.5 h-3.5 text-sky-400" />} accent="text-sky-400" />
-        <StatCard label={lbl("Blocks")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalBlocks, totals.defenseActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-indigo-400" />} accent="text-indigo-400" />
+        <StatCard label={lbl("Resurrects")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalRes, totals.supportActiveSec))} icon={<Wind className="w-3.5 h-3.5 text-emerald-300" />} accent="text-emerald-300" />
+        <StatCard label={lbl("Blocks")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalBlocks, totals.defenseActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-slate-300" />} accent="text-slate-100" />
         <StatCard label={lbl("Damage Taken")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalDamageTaken, totals.defenseActiveSec))} icon={<Target className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" />
       </div>
 
@@ -299,7 +299,7 @@ export default function DefensiveView() {
             onClick={() => setTab(t.k)}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
               tab === t.k
-                ? "bg-teal-500/15 text-teal-400 border-teal-500/40"
+                ? "border-theme-focus bg-theme-accentDim text-theme-accentStrong"
                 : "bg-[#0a101f] text-slate-500 border-slate-800 hover:text-slate-300"
             }`}
           >
@@ -309,7 +309,7 @@ export default function DefensiveView() {
       </div>
 
       {tab === "support" && (
-        <Panel title="Support Stats" icon={<Droplet className="w-4 h-4" />} accent="text-cyan-400" bodyClassName="p-0">
+        <Panel title="Support Stats" icon={<Droplet className="w-4 h-4" />} bodyClassName="p-0">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left text-xs">
               <thead>
@@ -327,12 +327,12 @@ export default function DefensiveView() {
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">
                 {supportRows.map((p, i) => (
-                  <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
+                  <tr key={p.account} className="hover:bg-white/[0.025] transition-colors">
                     <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
                     <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
                     <td className="p-2.5"><ClassCell profession={p.profession} /></td>
                     <td className="p-2.5 text-right"><PlayerSampleCell sample={p.sample} /></td>
-                    <td className="p-2.5 text-right text-cyan-400 font-bold">{perPlayerN(p.supportTotals.condiCleanse ?? 0, p.activeMs)}</td>
+                    <td className="p-2.5 text-right text-emerald-300 font-bold">{perPlayerN(p.supportTotals.condiCleanse ?? 0, p.activeMs)}</td>
                     <td className="p-2.5 text-right text-amber-400">{perPlayerN(p.supportTotals.boonStrips ?? 0, p.activeMs)}</td>
                     <td className="p-2.5 text-right text-slate-300">{perPlayerN(p.supportTotals.stunBreak ?? 0, p.activeMs)}</td>
                     <td className="p-2.5 text-right text-emerald-400">{perPlayerN(p.supportTotals.resurrects ?? 0, p.activeMs)}</td>
@@ -350,7 +350,6 @@ export default function DefensiveView() {
           title="Healing MVP Player Cards"
           subtitle="Top sustain output by player. This replaces the per-target attribution overview until that data path is reliable."
           icon={<Heart className="w-4 h-4" />}
-          accent="text-emerald-400"
         >
           {healingMvpRows.length > 0 ? (
             <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
@@ -376,11 +375,11 @@ export default function DefensiveView() {
                     </div>
                     <div>
                       <div>Downed</div>
-                      <div className="font-mono text-[12px] text-lime-400">{fmtCompact(p.downedHealing)}</div>
+                      <div className="font-mono text-[12px] text-emerald-300">{fmtCompact(p.downedHealing)}</div>
                     </div>
                     <div>
                       <div>Life</div>
-                      <div className="font-mono text-[12px] text-purple-400">{fmtCompact(p.lifeSiphon)}</div>
+                      <div className="font-mono text-[12px] text-emerald-200">{fmtCompact(p.lifeSiphon)}</div>
                     </div>
                   </div>
                   <div className="mt-3 border-t border-theme-border/50 pt-2">
@@ -398,7 +397,7 @@ export default function DefensiveView() {
       )}
 
       {tab === "healing" && (
-        <Panel title="Healing & Barrier" icon={<Heart className="w-4 h-4" />} accent="text-emerald-400" bodyClassName="p-0">
+        <Panel title="Healing & Barrier" icon={<Heart className="w-4 h-4" />} bodyClassName="p-0">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left text-xs">
               <thead>
@@ -415,7 +414,7 @@ export default function DefensiveView() {
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">
                 {healingRows.map((p, i) => (
-                  <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
+                  <tr key={p.account} className="hover:bg-white/[0.025] transition-colors">
                     <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
                     <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
                     <td className="p-2.5"><ClassCell profession={p.profession} /></td>
@@ -423,7 +422,7 @@ export default function DefensiveView() {
                     <td className="p-2.5 text-right text-emerald-400 font-bold">{perPlayer(pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing), p.activeMs)}</td>
                     <td className="p-2.5 text-right text-emerald-400/70">{perPlayer(p.healingTotals.squadHealing ?? 0, p.activeMs)}</td>
                     <td className="p-2.5 text-right text-teal-400">{perPlayer(pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier), p.activeMs)}</td>
-                    <td className="p-2.5 text-right text-lime-400">{perPlayer(p.healingTotals.downedHealing ?? 0, p.activeMs)}</td>
+                    <td className="p-2.5 text-right text-emerald-300">{perPlayer(p.healingTotals.downedHealing ?? 0, p.activeMs)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -433,7 +432,7 @@ export default function DefensiveView() {
       )}
 
       {tab === "defense" && (
-        <Panel title="Defensive Stats" icon={<Shield className="w-4 h-4" />} accent="text-rose-400" bodyClassName="p-0">
+        <Panel title="Defensive Stats" icon={<Shield className="w-4 h-4" />} bodyClassName="p-0">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left text-xs">
               <thead>
@@ -460,23 +459,23 @@ export default function DefensiveView() {
                 {defenseRows.map((p, i) => {
                   const mitigation = (mitigationByAccount.get(`${p.account}::${p.profession}`) ?? mitigationByAccount.get(p.account))?.mitigationTotals;
                   return (
-                    <tr key={p.account} className="hover:bg-blue-950/20 transition-colors">
+                    <tr key={p.account} className="hover:bg-white/[0.025] transition-colors">
                       <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
                       <td className="p-2.5 text-slate-200 font-semibold whitespace-nowrap">{p.account}</td>
                       <td className="p-2.5"><ClassCell profession={p.profession} /></td>
                       <td className="p-2.5 text-right"><PlayerSampleCell sample={p.sample} /></td>
                       <td className="p-2.5 text-right text-rose-400 font-bold">{perPlayer(p.defenseTotals.damageTaken ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-orange-400">{perPlayer(p.defenseTotals.powerDamageTaken ?? 0, p.totalFightMs)}</td>
-                      <td className="p-2.5 text-right text-fuchsia-400">{perPlayer(p.defenseTotals.conditionDamageTaken ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-amber-300">{perPlayer(p.defenseTotals.conditionDamageTaken ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-slate-400">{perPlayerN(p.defenseTotals.damageTakenCount ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-teal-400">{perPlayer(p.defenseTotals.damageBarrier ?? 0, p.totalFightMs)}</td>
-                      <td className="p-2.5 text-right text-blue-400">{perPlayer(mitigation?.totalMitigation ?? 0, p.totalFightMs)}</td>
-                      <td className="p-2.5 text-right text-indigo-400">{perPlayerN(mitigation?.blocked ?? p.defenseTotals.blockedCount ?? 0, p.totalFightMs)}</td>
-                      <td className="p-2.5 text-right text-cyan-400">{perPlayerN(p.defenseTotals.dodgeCount ?? 0, p.totalFightMs)}</td>
-                      <td className="p-2.5 text-right text-sky-400">{perPlayerN(p.defenseTotals.invulnedCount ?? 0, p.totalFightMs)}</td>
-                      <td className="p-2.5 text-right text-purple-400">{perPlayerN(p.defenseTotals.interruptedCount ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-slate-100">{perPlayer(mitigation?.totalMitigation ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-slate-300">{perPlayerN(mitigation?.blocked ?? p.defenseTotals.blockedCount ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-slate-300">{perPlayerN(p.defenseTotals.dodgeCount ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-slate-300">{perPlayerN(p.defenseTotals.invulnedCount ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-orange-300">{perPlayerN(p.defenseTotals.interruptedCount ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-amber-400">{perPlayerN(p.defenseTotals.downCount ?? 0, p.totalFightMs)}</td>
-                      <td className="p-2.5 text-right text-slate-300">{perPlayerN(p.defenseTotals.deadCount ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-rose-400">{perPlayerN(p.defenseTotals.deadCount ?? 0, p.totalFightMs)}</td>
                     </tr>
                   );
                 })}

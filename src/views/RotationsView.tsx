@@ -124,7 +124,7 @@ export default function RotationsView() {
           <select
             value={fightIdx}
             onChange={(e) => { setFightIdx(Number(e.target.value)); setPlayerAccount(null); }}
-            className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2"
+            className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2 focus:border-theme-focus focus:outline-none"
           >
             {data.fights.map((f, i) => (
               <option key={f.fightId} value={i}>#{i + 1} · {f.fightName} ({fmtClock(f.durationMs)})</option>
@@ -137,7 +137,7 @@ export default function RotationsView() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter by player or class..."
-            className="w-full bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg pl-8 pr-3 py-2"
+            className="w-full bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg pl-8 pr-3 py-2 focus:border-theme-focus focus:outline-none focus:ring-1 focus:ring-theme-focus"
           />
         </div>
       </div>
@@ -165,12 +165,12 @@ export default function RotationsView() {
                 <button
                   key={p.account}
                   onClick={() => setPlayerAccount(p.account)}
-                  className={`w-full flex items-stretch gap-2 px-3 py-1 border-b border-slate-800/40 text-left transition-colors ${
-                    isActive ? "bg-amber-500/10" : "hover:bg-white/[0.02]"
+                  className={`w-full flex items-stretch gap-2 px-3 py-1 border-b border-slate-800/40 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-theme-focus ${
+                    isActive ? "bg-theme-accentDim" : "hover:bg-white/[0.02]"
                   }`}
                 >
                   <div className="w-40 flex-shrink-0 flex flex-col justify-center py-0.5">
-                    <span className={`truncate text-[11px] font-semibold ${isActive ? "text-amber-300" : "text-slate-300"}`}>
+                    <span className={`truncate text-[11px] font-semibold ${isActive ? "text-theme-accentStrong" : "text-slate-300"}`}>
                       {p.account}
                     </span>
                     <span className={`px-1 py-0 rounded text-[9px] font-bold border w-fit ${profChip(p.profession)}`}>
@@ -214,9 +214,9 @@ export default function RotationsView() {
 
       {fight && activePlayer && (
         <div className="theme-stat-grid grid gap-3 md:grid-cols-3">
-          <StatCard label={hasActiveTime ? "Parsed casts / active minute" : "Parsed casts / fight minute"} value={castRate.toFixed(1)} icon={<Activity className="h-3.5 w-3.5 text-orange-400" />} accent="text-orange-300" sub={hasActiveTime ? "Uses this build's EI active time, not the full fight clock" : "Archived report fallback; re-import logs for exact active time"} />
-          <StatCard label="Unique skills" value={uniqueSkills} icon={<Repeat2 className="h-3.5 w-3.5 text-cyan-400" />} accent="text-cyan-300" sub={`${castCount} parsed casts in selected fight`} />
-          <StatCard label="Most-used skill" value={mostUsedSkill?.count ?? 0} icon={<Clock className="h-3.5 w-3.5 text-amber-400" />} accent="text-amber-300" sub={mostUsedSkill?.name ?? "No parsed casts"} />
+          <StatCard label={hasActiveTime ? "Parsed casts / active minute" : "Parsed casts / fight minute"} value={castRate.toFixed(1)} icon={<Activity className="h-3.5 w-3.5 text-slate-300" />} accent="text-slate-100" sub={hasActiveTime ? "Uses this build's EI active time, not the full fight clock" : "Archived report fallback; re-import logs for exact active time"} />
+          <StatCard label="Unique skills" value={uniqueSkills} icon={<Repeat2 className="h-3.5 w-3.5 text-slate-300" />} accent="text-slate-100" sub={`${castCount} parsed casts in selected fight`} />
+          <StatCard label="Most-used skill" value={mostUsedSkill?.count ?? 0} icon={<Clock className="h-3.5 w-3.5 text-theme-accentStrong" />} accent="text-theme-accentStrong" sub={mostUsedSkill?.name ?? "No parsed casts"} />
         </div>
       )}
 
@@ -262,7 +262,7 @@ export default function RotationsView() {
           >
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-amber-500/10 text-[10px] uppercase tracking-wider text-slate-500 sticky top-0 bg-[#0a0e1f]">
+                <tr className="border-b border-theme-border text-[10px] uppercase tracking-wider text-slate-500 sticky top-0 bg-[#0a0e1f]">
                   <th className="text-left font-bold px-3 py-2">Time</th>
                   <th className="text-left font-bold px-3 py-2">Skill</th>
                 </tr>

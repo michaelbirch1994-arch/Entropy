@@ -5,7 +5,7 @@ import Panel from "./Panel";
 
 const SEVERITY_STYLE: Record<SynergyInsight["severity"], { icon: React.ReactNode; text: string; border: string; bg: string }> = {
   good: { icon: <CircleCheck className="w-4 h-4" />, text: "text-emerald-400", border: "border-emerald-500/20", bg: "bg-emerald-500/[0.04]" },
-  info: { icon: <Info className="w-4 h-4" />, text: "text-sky-400", border: "border-sky-500/20", bg: "bg-sky-500/[0.04]" },
+  info: { icon: <Info className="w-4 h-4" />, text: "text-slate-300", border: "border-white/[0.08]", bg: "bg-white/[0.025]" },
   warn: { icon: <TriangleAlert className="w-4 h-4" />, text: "text-amber-400", border: "border-amber-500/20", bg: "bg-amber-500/[0.04]" },
   critical: { icon: <CircleAlert className="w-4 h-4" />, text: "text-rose-400", border: "border-rose-500/20", bg: "bg-rose-500/[0.04]" },
 };

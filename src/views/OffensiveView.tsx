@@ -118,7 +118,7 @@ function ChartTooltip({ active, payload, unit }: { active?: boolean; payload?: {
   return (
     <div className="rounded-xl border border-white/[0.08] bg-black/80 backdrop-blur-xl px-3.5 py-2.5 shadow-2xl">
       <div className="text-[11px] font-bold text-slate-100">{p.name}</div>
-      <div className="text-xs font-mono text-sky-400 mt-0.5">
+      <div className="text-xs font-mono text-slate-100 mt-0.5">
         {Math.round(p.value).toLocaleString()} {unit}
       </div>
     </div>
@@ -258,7 +258,7 @@ export default function OffensiveView() {
       {/* Summary stat cards */}
       <div className={`grid grid-cols-2 gap-4 ${derived.hasSiegeData ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
         <StatCard label="Total Damage" value={fmtCompact(derived.totalDamage)} icon={<Swords className="w-3.5 h-3.5 text-orange-400" />} accent="text-orange-400" />
-        <StatCard label="Down Contrib" value={fmtCompact(derived.totalDown)} icon={<Target className="w-3.5 h-3.5 text-sky-400" />} accent="text-sky-400" />
+        <StatCard label="Down Contrib" value={fmtCompact(derived.totalDown)} icon={<Target className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-300" />
         <StatCard label="Boon Strips" value={fmtNum(derived.totalStrips)} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
         <StatCard label="Crowd Control" value={fmtNum(derived.totalCC)} icon={<Crosshair className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" />
         {derived.hasSiegeData && (
@@ -273,7 +273,7 @@ export default function OffensiveView() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <Panel title="Top 5 Damage Output" icon={<TrendingUp className="w-4 h-4" />} accent="text-orange-400">
+        <Panel title="Top 5 Damage Output" icon={<TrendingUp className="w-4 h-4" />}>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={derived.top5Dmg} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
@@ -299,7 +299,7 @@ export default function OffensiveView() {
           </div>
         </Panel>
 
-        <Panel title="Top 5 Boon Strips" icon={<ShieldOff className="w-4 h-4" />} accent="text-amber-400">
+        <Panel title="Top 5 Boon Strips" icon={<ShieldOff className="w-4 h-4" />}>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={derived.top5Strips} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
@@ -324,7 +324,6 @@ export default function OffensiveView() {
       <Panel
         title="Offensive Breakdown"
         icon={<Flame className="w-4 h-4" />}
-        accent="text-orange-400"
         bodyClassName="p-0"
       >
         <div className="overflow-x-auto custom-scrollbar">
@@ -339,7 +338,7 @@ export default function OffensiveView() {
                       onClick={() => toggleSort(col.key)}
                       className={`p-2.5 cursor-pointer select-none hover:text-slate-300 transition-colors ${
                         col.align === "right" ? "text-right" : ""
-                      } ${sortKey === col.key ? "text-sky-400" : ""}`}
+                      } ${sortKey === col.key ? "text-theme-accentStrong" : ""}`}
                     >
                       <span className={`inline-flex items-center gap-1 ${col.align === "right" ? "flex-row-reverse" : ""}`}>
                         {label}
@@ -355,7 +354,7 @@ export default function OffensiveView() {
               {sorted.map((p, i) => {
                 const dmgPct = (pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll) / derived.maxDamage) * 100;
                 return (
-                  <tr key={p.account} className={`transition-colors hover:bg-blue-950/20 ${i % 2 === 1 ? "bg-slate-900/20" : ""}`}>
+                  <tr key={p.account} className={`transition-colors hover:bg-white/[0.025] ${i % 2 === 1 ? "bg-slate-900/20" : ""}`}>
                     {/* Player */}
                     <td className="p-2.5">
                       <div className="flex items-center gap-2">
@@ -378,15 +377,15 @@ export default function OffensiveView() {
                     {/* Target/Cleave -> directDmg proxy */}
                     <td className="p-2.5 text-right text-slate-300">{perPlayer(p.offenseTotals.directDmg ?? 0, p.totalFightMs)}</td>
                     {/* Down contrib */}
-                    <td className="p-2.5 text-right text-sky-400">{perPlayer(p.offenseTotals.downContribution ?? 0, p.totalFightMs)}</td>
+                    <td className="p-2.5 text-right text-amber-300">{perPlayer(p.offenseTotals.downContribution ?? 0, p.totalFightMs)}</td>
                     {/* Crit % */}
-                    <td className="p-2.5 text-right text-rose-400">{fmtFixed(p.critRate, 1)}%</td>
+                    <td className="p-2.5 text-right text-slate-300">{fmtFixed(p.critRate, 1)}%</td>
                     {/* Flank % */}
-                    <td className="p-2.5 text-right text-fuchsia-400">{fmtFixed(p.flankRate, 1)}%</td>
+                    <td className="p-2.5 text-right text-slate-300">{fmtFixed(p.flankRate, 1)}%</td>
                     {/* Glance % */}
                     <td className="p-2.5 text-right text-slate-400">{fmtFixed(p.glanceRate, 1)}%</td>
                     {/* Interrupts */}
-                    <td className="p-2.5 text-right text-cyan-400">{perPlayerN(p.offenseTotals.interrupts ?? 0, p.totalFightMs)}</td>
+                    <td className="p-2.5 text-right text-slate-300">{perPlayerN(p.offenseTotals.interrupts ?? 0, p.totalFightMs)}</td>
                     {/* Invulned (times the enemy target was invulnerable to this player's hits) */}
                     <td className="p-2.5 text-right text-slate-400">{fmtNum(p.offenseTotals.invulned ?? 0)}</td>
                     {/* Strips */}
