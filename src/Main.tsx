@@ -11,6 +11,7 @@ import "./Styles/ReplayWorkspace.css";
 import "./Styles/MotionPolish.css";
 import "./Styles/CrossViewTrail.css";
 import "./Styles/IntelligencePulse.css";
+import "./Styles/ObsidianGold.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

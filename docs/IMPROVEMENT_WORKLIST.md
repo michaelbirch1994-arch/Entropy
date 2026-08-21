@@ -6,7 +6,7 @@ This worklist tracks correctness, performance, readability, interaction, and lon
 
 This sequence incorporates the current full-app screenshot audit, the Intelligence nervous-system direction, the Replay world-space handoff, and the existing correctness/performance backlog. It is the authoritative order for upcoming cuts.
 
-1. **Readability foundation** — calm the shared palette and visual hierarchy without changing any metric or report contract.
+1. **Obsidian Gold consolidation** — migrate the existing theme architecture to a quiet obsidian/warm-white/gold application chrome without changing any metric or report contract or suppressing semantic combat colors.
 2. **Evidence navigation** — make Mechanics Timeline and Death Recap exact-time entry points into Fight Replay.
 3. **Density and overflow** — replace unbounded walls of rows/text with professional summaries and accessible drill-down regions.
 4. **Intelligence integration** — carry the same selected fight, player, timestamp, and evidence across Intelligence, Mechanics, Death Recap, and Replay.
@@ -94,6 +94,15 @@ This sequence incorporates the current full-app screenshot audit, the Intelligen
 
 ## P2 — Visual polish
 
+- [~] Consolidate Entropy around the Obsidian Gold visual system without creating a second theme engine.
+  - [x] Complete the Pass 1 color/theme architecture audit in `docs/OBSIDIAN_GOLD_UI_AUDIT.md`; no visual or behavior changes are included in the audit slice.
+  - [x] Pass 2: complete and centralize semantic surface, hierarchy, interaction, focus, friendly/enemy, healing, and barrier tokens while keeping CSS fallbacks synchronized.
+  - [x] Pass 3: convert the application shell, sidebar, navigation, header, and shared cards; remove decorative workspace-specific cyan/green/amber/rose/violet accent overrides.
+  - [x] Pass 4: convert analytical tables, filters, tabs, buttons, metric cards, chart chrome, tooltips, and bounded-data surfaces while preserving true data colors.
+  - [x] Pass 5: make restrained gold the Intelligence selection/evidence language while preserving severity, side, profession, boon, condition, and combat-status colors.
+  - [x] Pass 6: quiet Replay chrome and use gold for playhead/evidence focus only; do not touch Replay geometry, coordinate, interpolation, identity, timing, or evidence logic.
+  - [x] Pass 7: complete contrast, keyboard focus, reduced-motion, tooltip, chart, disabled, hover, and selected-state review.
+  - [~] Pass 8: the production build and hosted-web shell have passed consistency inspection; final acceptance across every major workspace still needs representative multi-fight data.
 - [x] Give Fight Replay enemies stable instance identities, reject implausible position jumps, keep markers screen-sized, and re-center zoom on the commander/squad.
 - [x] Replace the Scorched Earth presentation layer with a graphite mechanical command theme, workspace-aware cyan/emerald/amber/rose/violet signals, brighter chart series, and metric-aware neon underglows on player cards.
 - [x] Improve accent foreground contrast and define explicit theme foreground tokens. The shared theme now exposes dark on-accent/on-warning/on-danger colors and high-contrast focus treatment.

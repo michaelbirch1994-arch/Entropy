@@ -1,0 +1,630 @@
+/* Obsidian Gold UI consolidation.
+   This is a migration layer over Entropy's existing theme provider. It consumes
+   centralized --entropy-* tokens and deliberately leaves combat, profession,
+   boon, condition, and chart-series colors alone. */
+
+.theme-app-shell {
+  --theme-bg: var(--entropy-bg-deep);
+  --theme-canvas: var(--entropy-bg);
+  --theme-sidebar: var(--entropy-bg-deep);
+  --theme-surface: var(--entropy-surface-1);
+  --theme-surfaceElevated: var(--entropy-surface-2);
+  --theme-surfaceInset: var(--entropy-bg-deep);
+  --theme-border: var(--entropy-border-subtle);
+  --theme-borderStrong: var(--entropy-border);
+  --theme-text: var(--entropy-text-primary);
+  --theme-textMuted: var(--entropy-text-secondary);
+  --theme-textFaint: var(--entropy-text-muted);
+  --theme-accent: var(--entropy-gold);
+  --theme-accentStrong: var(--entropy-gold-bright);
+  --theme-accentDim: var(--entropy-gold-muted);
+  --theme-secondary: var(--entropy-gold);
+  --theme-glow: var(--entropy-gold-faint);
+  color: var(--entropy-text-secondary);
+  background: var(--entropy-bg-deep);
+}
+
+.theme-main,
+.theme-main[data-workspace-tone="overview"],
+.theme-main[data-workspace-tone="squad"],
+.theme-main[data-workspace-tone="performance"],
+.theme-main[data-workspace-tone="combat"],
+.theme-main[data-workspace-tone="extras"] {
+  --workspace-accent: var(--entropy-gold);
+  --workspace-accent-strong: var(--entropy-gold-bright);
+  --workspace-accent-soft: var(--entropy-gold-faint);
+  --workspace-border: var(--entropy-border-subtle);
+  color: var(--entropy-text-secondary);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.012), transparent 20rem),
+    var(--entropy-bg);
+}
+
+/* Application shell and navigation */
+.theme-sidebar,
+.theme-topbar,
+.theme-page-toolbar,
+.theme-command-bar {
+  background: color-mix(in srgb, var(--entropy-bg-deep) 96%, transparent) !important;
+  border-color: var(--entropy-border-subtle) !important;
+  box-shadow: none !important;
+}
+
+.theme-topbar,
+.theme-page-toolbar,
+.theme-command-bar {
+  backdrop-filter: blur(18px);
+}
+
+.theme-sidebar::before,
+.theme-topbar::before,
+.theme-page-toolbar::before,
+.theme-command-bar::before {
+  opacity: 0;
+}
+
+.theme-sidebar-header,
+.theme-search-shell {
+  border-color: var(--entropy-border-subtle) !important;
+  background: color-mix(in srgb, var(--entropy-surface-1) 94%, transparent) !important;
+  box-shadow: none !important;
+}
+
+.theme-logo-tile {
+  color: var(--entropy-gold-bright) !important;
+  border-color: color-mix(in srgb, var(--entropy-gold) 28%, transparent) !important;
+  background: var(--entropy-gold-faint) !important;
+  box-shadow: 0 8px 24px -22px var(--entropy-gold-muted) !important;
+}
+
+.theme-quiet-button,
+.theme-status-pill {
+  border-color: var(--entropy-border) !important;
+  background: var(--entropy-surface-1) !important;
+  box-shadow: none !important;
+}
+
+.theme-quiet-button:hover,
+.theme-status-pill:hover {
+  border-color: color-mix(in srgb, var(--entropy-gold) 26%, transparent) !important;
+  background: var(--entropy-surface-2) !important;
+}
+
+.theme-app-shell h1,
+.theme-app-shell h2,
+.theme-app-shell h3,
+.theme-app-shell h4,
+.theme-app-shell strong {
+  color: var(--entropy-text-primary);
+}
+
+.theme-app-shell :is(.text-slate-100, .text-white) {
+  color: var(--entropy-text-primary) !important;
+}
+
+.theme-app-shell :is(.text-slate-200, .text-slate-300) {
+  color: var(--entropy-text-secondary) !important;
+}
+
+.theme-app-shell :is(.text-slate-400, .text-slate-500) {
+  color: var(--entropy-text-muted) !important;
+}
+
+.theme-nav-section,
+.theme-nav-item,
+.theme-nav-section[data-tone],
+.theme-nav-item[data-tone] {
+  --nav-signal: var(--entropy-gold);
+  --nav-signal-strong: var(--entropy-gold-bright);
+  --nav-signal-soft: var(--entropy-gold-faint);
+}
+
+.theme-nav-section,
+.theme-nav-item {
+  color: var(--entropy-text-muted);
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.theme-nav-section:hover,
+.theme-nav-item:hover {
+  color: var(--entropy-text-primary);
+  border-color: color-mix(in srgb, var(--entropy-gold) 18%, transparent);
+  background: color-mix(in srgb, var(--entropy-gold) 4%, var(--entropy-surface-1));
+}
+
+.theme-nav-section[aria-expanded="true"],
+.theme-nav-item[aria-current="page"],
+.theme-nav-item.is-active,
+.theme-nav-item[data-active="true"] {
+  color: var(--entropy-text-primary);
+  border-color: color-mix(in srgb, var(--entropy-gold) 26%, transparent);
+  background:
+    linear-gradient(90deg, var(--entropy-gold-faint), transparent 70%),
+    var(--entropy-surface-1);
+  box-shadow:
+    inset 2px 0 0 var(--entropy-gold),
+    0 10px 28px -24px var(--entropy-gold-muted);
+}
+
+/* General analytical surfaces */
+.theme-panel,
+.theme-stat-card,
+.theme-analytics-surface,
+.theme-data-region {
+  --plate-accent: var(--entropy-gold-muted);
+  --plate-accent-strong: var(--entropy-gold);
+  --plate-tint: transparent;
+  color: var(--entropy-text-secondary);
+  border-color: var(--entropy-border-subtle);
+  background: var(--entropy-surface-1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    0 18px 42px -40px rgba(0, 0, 0, 0.95);
+}
+
+.theme-panel:nth-child(n),
+.theme-stat-card:nth-child(n) {
+  --plate-accent: var(--entropy-gold-muted);
+  --plate-accent-strong: var(--entropy-gold);
+  --plate-tint: transparent;
+}
+
+.theme-panel::before,
+.theme-stat-card::before,
+.theme-analytics-surface::before {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--entropy-gold) 34%, transparent), transparent 34%);
+  opacity: 0.36;
+}
+
+.theme-panel[data-tone="danger"],
+.theme-stat-card[data-tone="danger"],
+.theme-panel[data-tone="enemy"],
+.theme-stat-card[data-tone="enemy"] {
+  --plate-accent: var(--entropy-danger);
+  --plate-accent-strong: var(--entropy-danger);
+}
+
+.theme-panel[data-tone="success"],
+.theme-stat-card[data-tone="success"],
+.theme-panel[data-tone="healing"],
+.theme-stat-card[data-tone="healing"] {
+  --plate-accent: var(--entropy-healing);
+  --plate-accent-strong: var(--entropy-healing);
+}
+
+.theme-panel[data-tone="friendly"],
+.theme-stat-card[data-tone="friendly"],
+.theme-panel[data-tone="info"],
+.theme-stat-card[data-tone="info"] {
+  --plate-accent: var(--entropy-friendly);
+  --plate-accent-strong: var(--entropy-friendly);
+}
+
+.theme-panel[data-selected="true"],
+.theme-stat-card[data-selected="true"],
+.theme-panel[aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--entropy-gold) 34%, transparent);
+  background:
+    linear-gradient(180deg, var(--entropy-gold-faint), transparent 55%),
+    var(--entropy-surface-2);
+  box-shadow: 0 10px 30px -24px var(--entropy-gold-muted);
+}
+
+/* Buttons, tabs, filters, and inputs */
+.theme-app-shell :is(button, [role="button"], input, select, textarea) {
+  transition: color 170ms ease, background-color 170ms ease, border-color 170ms ease, box-shadow 170ms ease, opacity 170ms ease;
+}
+
+.theme-command-button,
+.theme-tab-button,
+.theme-filter-button,
+.theme-app-shell button[class*="border-white"],
+.theme-app-shell button[class*="border-slate"] {
+  color: var(--entropy-text-secondary);
+  border-color: var(--entropy-border);
+  background: var(--entropy-surface-1);
+  box-shadow: none;
+}
+
+.theme-command-button:hover,
+.theme-tab-button:hover,
+.theme-filter-button:hover,
+.theme-app-shell button[class*="border-white"]:hover,
+.theme-app-shell button[class*="border-slate"]:hover {
+  color: var(--entropy-text-primary);
+  border-color: color-mix(in srgb, var(--entropy-gold) 28%, transparent);
+  background: var(--entropy-surface-2);
+  box-shadow: 0 9px 24px -24px var(--entropy-gold-muted);
+}
+
+.theme-command-button[aria-pressed="true"],
+.theme-tab-button[aria-selected="true"],
+.theme-filter-button[aria-pressed="true"],
+.theme-app-shell button[data-active="true"] {
+  color: var(--entropy-gold-bright);
+  border-color: color-mix(in srgb, var(--entropy-gold) 38%, transparent);
+  background: var(--entropy-gold-faint);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--entropy-gold) 42%, transparent);
+}
+
+.theme-app-shell :is(input, select, textarea) {
+  color: var(--entropy-text-primary);
+  border-color: var(--entropy-border);
+  background: var(--entropy-bg-deep);
+}
+
+.theme-app-shell :is(input, select, textarea)::placeholder {
+  color: var(--entropy-text-faint);
+}
+
+/* Dense tables stay neutral so value colors retain their meaning. */
+.theme-table,
+.theme-table-shell,
+.theme-app-shell table {
+  color: var(--entropy-text-secondary);
+  border-color: var(--entropy-border-subtle);
+  background: var(--entropy-surface-1);
+}
+
+.theme-app-shell :is(thead, th) {
+  color: var(--entropy-text-muted);
+  border-color: var(--entropy-border-subtle);
+  background: var(--entropy-bg-deep);
+}
+
+.theme-app-shell :is(td, tr) {
+  border-color: var(--entropy-border-subtle);
+}
+
+.theme-app-shell tbody tr:hover {
+  background: color-mix(in srgb, var(--entropy-gold) 3%, var(--entropy-surface-2));
+}
+
+.theme-app-shell tbody tr[aria-selected="true"],
+.theme-app-shell tbody tr[data-selected="true"] {
+  background: var(--entropy-gold-faint);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--entropy-gold) 56%, transparent);
+}
+
+/* Neutral chart chrome only. Series colors are intentionally untouched. */
+.theme-chart-stage,
+.theme-chart-frame,
+.theme-chart-tooltip {
+  color: var(--entropy-text-secondary);
+  border-color: var(--entropy-border-subtle);
+  background-color: var(--entropy-surface-1);
+  box-shadow: none;
+}
+
+.theme-chart-stage :is(.recharts-cartesian-grid line, .recharts-cartesian-axis line) {
+  stroke: rgba(255, 255, 255, 0.075);
+}
+
+.theme-chart-stage .recharts-text {
+  fill: var(--entropy-text-muted);
+}
+
+/* Player cards keep profession/metric identity, but their chrome stops glowing. */
+.theme-player-card,
+[class*="theme-player-card"] {
+  border-color: var(--entropy-border-subtle);
+  background: var(--entropy-surface-1);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--player-glow, var(--entropy-gold)) 20%, transparent);
+}
+
+.theme-player-card:hover,
+[class*="theme-player-card"]:hover {
+  border-color: color-mix(in srgb, var(--player-glow, var(--entropy-gold)) 28%, transparent);
+  background: var(--entropy-surface-2);
+  box-shadow: 0 10px 28px -25px color-mix(in srgb, var(--player-glow, var(--entropy-gold)) 48%, transparent);
+}
+
+/* Intelligence: gold means Entropy's interpretation, selection, or evidence. */
+.theme-intelligence-dossier,
+.theme-evidence-gate,
+.theme-intel-rail-item {
+  border-color: var(--entropy-border-subtle) !important;
+  background: var(--entropy-surface-1) !important;
+  box-shadow: none;
+}
+
+.theme-intelligence-dossier::after,
+.theme-evidence-gate::after,
+.theme-intel-rail-item::after {
+  background: radial-gradient(ellipse at center, var(--entropy-gold-soft), transparent 72%);
+  opacity: 0;
+  animation: none;
+}
+
+.theme-evidence-gate,
+.theme-intel-rail-item[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--entropy-gold) 30%, transparent) !important;
+  background:
+    linear-gradient(180deg, var(--entropy-gold-faint), transparent 58%),
+    var(--entropy-surface-1) !important;
+  box-shadow: 0 10px 30px -26px var(--entropy-gold-muted);
+}
+
+.theme-evidence-gate::after,
+.theme-intel-rail-item[aria-pressed="true"]::after {
+  opacity: 0.2;
+}
+
+.theme-intelligence-heartbeat,
+.theme-intelligence-command-grid {
+  color: var(--entropy-text-secondary);
+}
+
+/* Replay: battlefield colors dominate; gold identifies investigation state. */
+section[class*="border-sky-400/15"][class*="bg-[#07101c]/90"] {
+  border-color: var(--entropy-border-subtle);
+  background: var(--entropy-surface-1);
+  box-shadow: none;
+}
+
+section[class*="border-sky-300/25"][class*="bg-sky-400/[0.055]"] {
+  border-color: color-mix(in srgb, var(--entropy-gold) 36%, transparent);
+  background:
+    linear-gradient(115deg, var(--entropy-gold-faint), transparent 44%),
+    var(--entropy-surface-2);
+  box-shadow:
+    inset 2px 0 0 color-mix(in srgb, var(--entropy-gold) 66%, transparent),
+    0 12px 32px -28px var(--entropy-gold-muted);
+}
+
+aside[class*="border-sky-400/15"][class*="bg-[#080d18]/95"] {
+  border-color: color-mix(in srgb, var(--entropy-gold) 28%, transparent);
+  background: var(--entropy-surface-1);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--entropy-gold) 42%, transparent);
+}
+
+aside[class*="border-sky-400/15"][class*="bg-[#080d18]/95"]::before {
+  background: linear-gradient(180deg, var(--entropy-gold), var(--entropy-gold-muted), transparent 78%);
+  opacity: 0.56;
+}
+
+aside[class*="border-slate-800"][class*="bg-[#080d18]/90"] {
+  border-color: var(--entropy-border-subtle);
+  background: var(--entropy-surface-1);
+}
+
+.theme-app-shell [data-replay-selected="true"],
+.theme-app-shell [data-intelligence-selected="true"] {
+  border-color: color-mix(in srgb, var(--entropy-gold) 40%, transparent);
+  box-shadow: 0 10px 28px -24px var(--entropy-gold-muted);
+}
+
+/* Accessible, restrained focus and state handling. */
+.theme-app-shell :is(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--entropy-gold-bright);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--entropy-gold-faint);
+}
+
+.theme-app-shell :is(button, input, select, textarea)[disabled],
+.theme-app-shell [aria-disabled="true"] {
+  color: var(--entropy-text-faint);
+  opacity: 0.52;
+  box-shadow: none;
+}
+
+.theme-app-shell ::selection {
+  color: var(--entropy-text-primary);
+  background: var(--entropy-gold-soft);
+}
+
+.theme-app-shell .custom-scrollbar {
+  scrollbar-color: color-mix(in srgb, var(--entropy-gold-muted) 48%, var(--entropy-surface-3)) var(--entropy-bg-deep);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-app-shell *,
+  .theme-app-shell *::before,
+  .theme-app-shell *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Pass 8 visual acceptance corrections */
+
+/* Generic application interaction uses Entropy gold instead of workspace colors. */
+.theme-main,
+.theme-main[data-workspace-tone] {
+  --theme-accent: var(--entropy-gold) !important;
+  --theme-accentStrong: var(--entropy-gold-bright) !important;
+  --theme-accentDim: var(--entropy-gold-muted) !important;
+  --theme-glow: var(--entropy-gold-faint) !important;
+}
+
+/* Report metadata is hierarchy rather than an active interaction state. */
+.theme-topbar .theme-view-meta {
+  color: var(--entropy-text-secondary) !important;
+}
+
+/* Replay Intelligence anchors use Entropy gold rather than generic cyan chrome. */
+section[class*="border-sky-400/15"][class*="bg-[#07101c]/90"]
+  [class*="text-sky-"] {
+  color: var(--entropy-gold-bright) !important;
+}
+
+section[class*="border-sky-400/15"][class*="bg-[#07101c]/90"]
+  button:hover {
+  border-color: color-mix(in srgb, var(--entropy-gold) 30%, transparent) !important;
+  background: var(--entropy-gold-faint) !important;
+}
+
+/* Live Replay Intelligence stays neutral while idle and turns gold for
+   evidence aligned with or held at the playhead. */
+section[aria-label="Nearby Intelligence events"] {
+  border-color: var(--entropy-border-subtle) !important;
+  background: var(--entropy-surface-1) !important;
+  box-shadow: none !important;
+}
+
+section[aria-label="Nearby Intelligence events"][class*="border-sky-300/35"] {
+  border-color: color-mix(in srgb, var(--entropy-gold) 36%, transparent) !important;
+  background:
+    linear-gradient(180deg, var(--entropy-gold-faint), transparent 62%),
+    var(--entropy-surface-2) !important;
+  box-shadow: 0 10px 30px -26px var(--entropy-gold-muted) !important;
+}
+
+section[aria-label="Nearby Intelligence events"]
+  [class*="text-sky-"] {
+  color: var(--entropy-gold-bright) !important;
+}
+
+section[aria-label="Nearby Intelligence events"]
+  [class*="border-sky-"] {
+  border-color: color-mix(in srgb, var(--entropy-gold) 30%, transparent) !important;
+}
+
+section[aria-label="Nearby Intelligence events"]
+  [class*="bg-sky-200"],
+section[aria-label="Nearby Intelligence events"]
+  [class*="bg-sky-300"] {
+  background-color: var(--entropy-gold-bright) !important;
+}
+
+/* Pass 8 Intelligence episode evidence normalization */
+
+/* Combat Episodes are Entropy evidence groupings, not a separate violet
+   workspace identity. Keep true severity/status colors untouched elsewhere. */
+section.theme-intelligence-dossier[class*="border-violet-400/15"] {
+  border-color: var(--entropy-border-subtle) !important;
+}
+
+section.theme-intelligence-dossier[class*="border-violet-400/15"]
+  [class*="text-violet-"] {
+  color: var(--entropy-gold-bright) !important;
+}
+
+section.theme-intelligence-dossier[class*="border-violet-400/15"]
+  [class*="border-violet-"] {
+  border-color: color-mix(in srgb, var(--entropy-gold) 30%, transparent) !important;
+}
+
+section.theme-intelligence-dossier[class*="border-violet-400/15"]
+  [class*="bg-violet-"] {
+  background-color: var(--entropy-gold-faint) !important;
+}
+
+section.theme-intelligence-dossier[class*="border-violet-400/15"]
+  [class*="ring-violet-"] {
+  --tw-ring-color: color-mix(in srgb, var(--entropy-gold) 20%, transparent) !important;
+}
+
+/* Pass 8 typography readability lift */
+
+/* Older views use Tailwind slate levels as information hierarchy.
+   Preserve that hierarchy instead of collapsing slate-400 and slate-500
+   into one low-contrast gray. */
+.theme-app-shell .text-slate-400 {
+  color: var(--entropy-text-secondary) !important;
+}
+
+.theme-app-shell .text-slate-500 {
+  color: var(--entropy-text-muted) !important;
+}
+
+.theme-app-shell :is(.text-slate-600, .text-slate-700) {
+  color: var(--entropy-text-faint) !important;
+}
+
+/* Dense data labels need to be scannable without becoming primary copy. */
+.theme-app-shell :is(thead, th),
+.theme-table-head,
+.theme-stat-label {
+  color: var(--entropy-text-muted) !important;
+}
+
+/* Explanatory subtitles are reading text, not disabled text. */
+.theme-panel-subtitle,
+.theme-view-meta {
+  color: var(--entropy-text-secondary) !important;
+}
+
+/* Keep inactive navigation comfortably readable; gold still makes the
+   selected route unmistakable. */
+.theme-nav-section:not([aria-expanded="true"]),
+.theme-nav-item:not([aria-current="page"]) {
+  color: var(--entropy-text-muted);
+}
+
+/* Chart labels should be readable at a glance while data series keep their
+   own semantic colors. */
+.theme-chart-stage .recharts-text {
+  fill: var(--entropy-text-muted);
+}
+
+/* Pass 8 non-semantic blue cleanup */
+
+/* Panel-header color is application chrome. Legacy blue/sky/cyan header
+   accents collapse to Entropy gold; semantic data inside the panel remains
+   untouched. */
+.theme-panel-title > span[class*="text-blue-"],
+.theme-panel-title > span[class*="text-sky-"],
+.theme-panel-title > span[class*="text-cyan-"] {
+  color: var(--entropy-gold-bright) !important;
+}
+
+/* Fight Breakdown -------------------------------------------------------- */
+
+/* Permalink icons and disclosure actions are product interactions rather
+   than friendly/combat data. */
+.theme-panel:has(.theme-fight-toolbar)
+  a[class*="text-blue-"],
+.theme-panel:has(.theme-fight-toolbar)
+  button[class*="text-sky-"] {
+  color: var(--entropy-gold-bright) !important;
+}
+
+/* The compare selector used cyan as an old interactive selection color. */
+.theme-panel:has(.theme-fight-toolbar)
+  button[class*="border-cyan-"] {
+  border-color: color-mix(in srgb, var(--entropy-gold) 38%, transparent) !important;
+  color: var(--entropy-gold-bright) !important;
+}
+
+.theme-panel:has(.theme-fight-toolbar)
+  button[class*="bg-cyan-"] {
+  background: var(--entropy-gold-faint) !important;
+}
+
+/* Report Archive --------------------------------------------------------- */
+
+.theme-panel:has(input[placeholder="Search by title or commander..."])
+  button[class*="text-sky-"] {
+  color: var(--entropy-gold-bright) !important;
+}
+
+.theme-panel:has(input[placeholder="Search by title or commander..."])
+  button[class*="border-sky-"] {
+  border-color: color-mix(in srgb, var(--entropy-gold) 38%, transparent) !important;
+}
+
+.theme-panel:has(input[placeholder="Search by title or commander..."])
+  button[class*="bg-sky-"] {
+  background: var(--entropy-gold-faint) !important;
+}
+
+/* Archive selection is an application action, so use gold instead of sky. */
+.theme-panel:has(input[placeholder="Search by title or commander..."])
+  input[type="checkbox"] {
+  accent-color: var(--entropy-gold) !important;
+}
+
+/* Remove the old blue technical-looking hover wash. */
+.theme-panel:has(input[placeholder="Search by title or commander..."])
+  tbody tr:hover {
+  background: color-mix(
+    in srgb,
+    var(--entropy-gold) 4%,
+    var(--entropy-surface-2)
+  ) !important;
+}
