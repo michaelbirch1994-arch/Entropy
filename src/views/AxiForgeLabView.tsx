@@ -67,6 +67,10 @@ import {
   BUILDER_FOOD_CHOICES,
   BUILDER_RELIC_CHOICES,
   BUILDER_UTILITY_CHOICES,
+  BUILDER_RUNE_CHOICES,
+  BUILDER_SIGIL_CHOICES,
+  BUILDER_ENRICHMENT_CHOICES,
+  BUILDER_RELIC_IDS,
   choiceIsCodecSupported,
   equipmentItemIds,
   loadBuilderItemsByIds,
@@ -162,6 +166,47 @@ function SearchableChoiceField({
       </div>
       <datalist id={id}>{choices.map((choice) => <option key={choice} value={choice} />)}</datalist>
       {!supported && <span className="theme-builder-choice-note is-warning"><AlertCircle className="h-3.5 w-3.5" /> Kept in this draft, but this AxiCode version cannot encode it.</span>}
+    </label>
+  );
+}
+
+function SearchableItemChoiceField({
+  id,
+  label,
+  valueId,
+  choices,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  valueId: string;
+  choices: readonly { label: string; id?: number }[];
+  onChange: (id: string) => void;
+  placeholder: string;
+}) {
+  const byId = useMemo(() => new Map(choices.filter((choice) => choice.id != null).map((choice) => [String(choice.id), choice.label])), [choices]);
+  const byLabel = useMemo(() => new Map(choices.map((choice) => [choice.label, choice])), [choices]);
+  const displayValue = valueId ? (byId.get(valueId) ?? valueId) : "";
+  const resolved = !valueId || byId.has(valueId);
+  return (
+    <label>
+      <FieldLabel>{label}</FieldLabel>
+      <div className="theme-builder-choice-input">
+        <Search className="h-4 w-4" aria-hidden="true" />
+        <TextField
+          list={id}
+          value={displayValue}
+          onChange={(event) => {
+            const typed = event.target.value;
+            const match = byLabel.get(typed);
+            onChange(match ? String(match.id) : typed);
+          }}
+          placeholder={placeholder}
+        />
+      </div>
+      <datalist id={id}>{choices.map((choice) => <option key={choice.label} value={choice.label} />)}</datalist>
+      {!resolved && <span className="theme-builder-choice-note"><AlertCircle className="h-3.5 w-3.5" /> Raw item ID {valueId} — not in the curated catalog.</span>}
     </label>
   );
 }
@@ -519,7 +564,11 @@ export default function AxiForgeLabView() {
     const liveNames = [...new Set(itemStats.map((stat) => stat.name).filter(Boolean))];
     return liveNames.length ? ["", ...liveNames] : [...STAT_OPTIONS];
   }, [itemStats]);
-  const equipmentIds = useMemo(() => equipmentItemIds(builder.equipment), [builder.equipment]);
+  const equipmentIds = useMemo(() => {
+    const ids = equipmentItemIds(builder.equipment);
+    const relicId = BUILDER_RELIC_IDS[builder.equipment.relic];
+    return relicId ? [...ids, relicId] : ids;
+  }, [builder.equipment]);
   const equipmentIdsKey = equipmentIds.join(",");
   const runeValues = useMemo(() => [...new Set(Object.values(builder.equipment.runes).filter(Boolean))], [builder.equipment.runes]);
   const hasMixedRunes = runeValues.length > 1;
@@ -961,24 +1010,98 @@ export default function AxiForgeLabView() {
                   </div>
                 </div>
                 <div className="theme-builder-equipment-group">
-                  <h4>Runes and sigils</h4>
+                  <div className="theme-builder-equipment-group">
+  <h4>Trinkets</h4>
+  <div className="grid grid-cols-2 gap-2">
+    {["amulet", "ring1", "ring2", "accessory1", "accessory2", "backpack"].map((trinketSlot) => {
+      const current = builder.equipment.slots[trinketSlot] || "";
+      return (
+        <label key={trinketSlot}>
+          <FieldLabel>{trinketSlot}</FieldLabel>
+          <TextField
+            value={current}
+            onChange={(event) => updateBuilder((next) => ({ ...next, equipment: { ...next.equipment, slots: { ...next.equipment.slots, [trinketSlot]: event.target.value } } }))}
+            placeholder="Empty"
+          />
+          {!current && <span className="theme-builder-choice-note">Unassigned</span>}
+        </label>
+      );
+    })}
+  </div>
+</div>
+<div className="theme-builder-equipment-group">
+  <h4>Weapon skills</h4>
+  <div className="grid grid-cols-2 gap-2">
+    {(["mainhand1", "offhand1", "mainhand2", "offhand2"] as const).map((weaponSlot) => {
+      const weaponName = builder.equipment.weapons[weaponSlot];
+      const weaponEntry = weaponName ? availableWeapons.find(([name]) => name.toLowerCase() === weaponName.toLowerCase()) : null;
+      const weaponSkills = weaponEntry ? (weaponEntry[1].skills ?? []) : [];
+      return (
+        <div key={weaponSlot} className="theme-builder-weapon-skills">
+          <FieldLabel>{weaponSlot}</FieldLabel>
+          {!weaponName ? (
+            <span className="theme-builder-choice-note">Empty</span>
+          ) : weaponSkills.length ? (
+            <ul>
+              {weaponSkills.map((skillRef) => {
+                const skill = skillsById.get(skillRef.id);
+                return (
+                  <li key={`${skillRef.id}-${skillRef.slot}`}>
+                    {skill?.icon ? <img src={skill.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}
+                    <span>{skill?.name ?? `Skill ${skillRef.id}`}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <span className="theme-builder-choice-note">No skill data available</span>
+          )}
+        </div>
+      );
+    })}
+  </div>
+</div>
+<h4>Runes and sigils</h4>
                   {hasMixedRunes ? (
                     <div className="theme-builder-split-runes">
                       <span className="theme-builder-choice-note"><Layers3 className="h-3.5 w-3.5" /> Mixed imported rune set — each armor slot remains editable.</span>
-                      {ARMOR_SLOTS.map((slot) => <label key={slot}><FieldLabel>{slot} rune ID</FieldLabel><TextField inputMode="numeric" value={builder.equipment.runes[slot]} onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, runes: { ...current.equipment.runes, [slot]: event.target.value } } }))} /></label>)}
+                      {ARMOR_SLOTS.map((slot) => <SearchableItemChoiceField key={slot} id={`builder-rune-${slot}`} label={`${slot} rune`} valueId={builder.equipment.runes[slot]} choices={BUILDER_RUNE_CHOICES} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, runes: { ...current.equipment.runes, [slot]: value } } }))} placeholder="Search supported runes" />)}
                     </div>
                   ) : (
-                    <label><FieldLabel>Armor rune item ID</FieldLabel><TextField inputMode="numeric" value={builder.equipment.runes.head} onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, runes: Object.fromEntries(ARMOR_SLOTS.map((slot) => [slot, event.target.value])) as EntropyBuilderState["equipment"]["runes"] } }))} placeholder="Applied to all armor" /></label>
+                    <SearchableItemChoiceField id="builder-rune-all" label="Armor rune" valueId={builder.equipment.runes.head} choices={BUILDER_RUNE_CHOICES} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, runes: Object.fromEntries(ARMOR_SLOTS.map((slot) => [slot, value])) as EntropyBuilderState["equipment"]["runes"] } }))} placeholder="Applied to all armor" />
                   )}
                   <EquipmentItemSummary values={Object.values(builder.equipment.runes)} items={equipmentItems} />
-                  {(["mainhand1", "mainhand2"] as const).map((slot) => <label key={slot}><FieldLabel>{slot === "mainhand1" ? "Weapon set I sigil IDs" : "Weapon set II sigil IDs"}</FieldLabel><TextField value={builder.equipment.sigils[slot].join(", ")} onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, sigils: { ...current.equipment.sigils, [slot]: event.target.value.split(",").map((value) => value.trim()).filter(Boolean) } } }))} placeholder="24615, 24868" /><EquipmentItemSummary values={builder.equipment.sigils[slot]} items={equipmentItems} /></label>)}
+                  {(["mainhand1", "mainhand2"] as const).map((slot) => { const current = builder.equipment.sigils[slot]; return (
+  <div key={slot} className="theme-builder-sigil-pair">
+    <FieldLabel>{slot === "mainhand1" ? "Weapon set I sigils" : "Weapon set II sigils"}</FieldLabel>
+    <div className="grid grid-cols-2 gap-2">
+      {[0, 1].map((sigilIndex) => (
+        <SearchableItemChoiceField
+          key={sigilIndex}
+          id={`builder-sigil-${slot}-${sigilIndex}`}
+          label={`Sigil ${sigilIndex + 1}`}
+          valueId={current[sigilIndex] ?? ""}
+          choices={BUILDER_SIGIL_CHOICES}
+          onChange={(value) => updateBuilder((next) => {
+            const nextValues = [...next.equipment.sigils[slot]];
+            if (value) nextValues[sigilIndex] = value; else nextValues.splice(sigilIndex, 1);
+            return { ...next, equipment: { ...next.equipment, sigils: { ...next.equipment.sigils, [slot]: nextValues.filter(Boolean) } } };
+          })}
+          placeholder="Search supported sigils"
+        />
+      ))}
+    </div>
+    <EquipmentItemSummary values={current} items={equipmentItems} />
+  </div>
+); })}
                 </div>
                 <div className="theme-builder-equipment-group">
                   <h4>Relic and consumables</h4>
                   <SearchableChoiceField id="builder-relics" label="Relic" value={builder.equipment.relic} choices={BUILDER_RELIC_CHOICES} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, relic: value } }))} placeholder="Search supported relics" />
+<EquipmentItemSummary values={[String(BUILDER_RELIC_IDS[builder.equipment.relic] ?? "")]} items={equipmentItems} />
                   <SearchableChoiceField id="builder-foods" label="Food" value={builder.equipment.food} choices={BUILDER_FOOD_LABELS} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, food: value } }))} placeholder="Search supported food" />
                   <SearchableChoiceField id="builder-utilities" label="Utility" value={builder.equipment.utility} choices={BUILDER_UTILITY_LABELS} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, utility: value } }))} placeholder="Search supported utilities" />
-                  <label><FieldLabel>Enrichment item ID</FieldLabel><TextField inputMode="numeric" value={builder.equipment.enrichment} onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, enrichment: event.target.value } }))} placeholder="Optional item ID" /><EquipmentItemSummary values={[builder.equipment.enrichment]} items={equipmentItems} /></label>
+                  <SearchableItemChoiceField id="builder-enrichment" label="Enrichment" valueId={builder.equipment.enrichment} choices={BUILDER_ENRICHMENT_CHOICES} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, enrichment: value } }))} placeholder="Search supported enrichments" /><EquipmentItemSummary values={[builder.equipment.enrichment]} items={equipmentItems} />
                 </div>
               </div>
             </section>
