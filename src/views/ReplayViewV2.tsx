@@ -40,7 +40,7 @@ export default function ReplayViewV2() {
   const [followFocus, setFollowFocus] = useState(true);
   const [showMechanics, setShowMechanics] = useState(true);
   const [showCasts, setShowCasts] = useState(false);
-  const [showFacing, setShowFacing] = useState(false);
+  const [showFacing, setShowFacing] = useState(true);
   const rafRef = useRef<number | null>(null);
   const playbackTimeRef = useRef(0);
   const lastRenderTsRef = useRef(0);
