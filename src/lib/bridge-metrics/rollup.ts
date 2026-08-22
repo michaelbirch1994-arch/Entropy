@@ -16,6 +16,7 @@ export interface RollupCommanderRow {
     alliesDead: number;
     wins: number;
     losses: number;
+    unclassified: number;
     kdr: number;
     lastSeenTs: number;
 }
@@ -114,7 +115,8 @@ export const extractRollupSource = (payload: RollupReportPayload): RollupReportP
                     commanderDeaths: row?.commanderDeaths,
                     alliesDead: row?.alliesDead,
                     wins: row?.wins,
-                    losses: row?.losses
+                    losses: row?.losses,
+                    unclassified: row?.unclassified,
                 }))
             },
             attendanceData: attendanceRows.map((row: any) => ({
@@ -215,6 +217,7 @@ type CommanderAccumulator = {
     alliesDead: number;
     wins: number;
     losses: number;
+    unclassified: number;
     lastSeenTs: number;
 };
 
@@ -441,6 +444,7 @@ export const buildRollupData = (reports: RollupReportPayload[]): RollupData => {
                 alliesDead: 0,
                 wins: 0,
                 losses: 0,
+                unclassified: 0,
                 lastSeenTs: 0
             };
             existing.runs += 1;
@@ -451,6 +455,7 @@ export const buildRollupData = (reports: RollupReportPayload[]): RollupData => {
             existing.alliesDead += Math.max(0, toFiniteNumber(row?.alliesDead));
             existing.wins += Math.max(0, toFiniteNumber(row?.wins));
             existing.losses += Math.max(0, toFiniteNumber(row?.losses));
+            existing.unclassified += Math.max(0, toFiniteNumber(row?.unclassified ?? Math.max(0, toFiniteNumber(row?.fights) - toFiniteNumber(row?.wins) - toFiniteNumber(row?.losses))));
             existing.lastSeenTs = Math.max(existing.lastSeenTs, timestamp);
 
             if (Array.isArray(row?.characterNames)) {
@@ -486,6 +491,7 @@ export const buildRollupData = (reports: RollupReportPayload[]): RollupData => {
                 alliesDead: entry.alliesDead,
                 wins: entry.wins,
                 losses: entry.losses,
+                unclassified: entry.unclassified,
                 kdr,
                 lastSeenTs: entry.lastSeenTs
             };

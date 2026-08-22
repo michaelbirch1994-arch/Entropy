@@ -128,7 +128,9 @@ export function buildDiscordReportPayload(report: WvWReport, viewerUrl?: string 
   const safeUrl = safeViewerUrl(viewerUrl);
   const fields = [
     { name: "Fights", value: fmtNum(stats.total), inline: true },
-    { name: "Record", value: `${fmtNum(stats.wins)}W / ${fmtNum(stats.losses)}L`, inline: true },
+    { name: "Outcome", value: stats.wins + stats.losses > 0
+      ? `${fmtNum(stats.wins)}W / ${fmtNum(stats.losses)}L · ${fmtNum(stats.unclassified ?? Math.max(0, stats.total - stats.wins - stats.losses))} unclassified`
+      : `${fmtNum(stats.unclassified ?? stats.total)} unclassified`, inline: true },
     { name: "Squad KDR", value: fmtFixed(stats.squadKDR, 2), inline: true },
     { name: "Squad size", value: fmtFixed(stats.avgSquadSize, 1), inline: true },
     { name: "Enemy size", value: fmtFixed(stats.avgEnemies, 1), inline: true },

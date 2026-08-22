@@ -14,7 +14,7 @@ interface CompareMetrics {
   totalDownContrib: number;
   totalCleanses: number;
   totalStrips: number;
-  winRatePct: number;
+  winRatePct: number | null;
 }
 
 function computeMetrics(entry: ArchiveEntry): CompareMetrics {
@@ -25,7 +25,7 @@ function computeMetrics(entry: ArchiveEntry): CompareMetrics {
   const totalCleanses = (s.supportPlayers ?? []).reduce((a, p) => a + (p.supportTotals?.condiCleanse ?? 0), 0);
   const totalStrips = (s.supportPlayers ?? []).reduce((a, p) => a + (p.supportTotals?.boonStrips ?? 0), 0);
   const totalFights = entry.wins + entry.losses;
-  const winRatePct = totalFights > 0 ? (entry.wins / totalFights) * 100 : 0;
+  const winRatePct = totalFights > 0 ? (entry.wins / totalFights) * 100 : null;
   return { entry, totalHealing, totalBarrier, totalDownContrib, totalCleanses, totalStrips, winRatePct };
 }
 
@@ -93,11 +93,15 @@ export default function CompareView() {
 
   const rows = useMemo<MetricRow[]>(() => {
     if (!metricsA || !metricsB) return [];
+    const resultRows: MetricRow[] = metricsA.winRatePct != null && metricsB.winRatePct != null ? [
+      { label: "Source-classified Wins", a: metricsA.entry.wins, b: metricsB.entry.wins, fmt: fmtNum, higherIsBetter: true },
+      { label: "Source-classified Losses", a: metricsA.entry.losses, b: metricsB.entry.losses, fmt: fmtNum, higherIsBetter: false },
+      { label: "Classified Win Rate", a: metricsA.winRatePct, b: metricsB.winRatePct, fmt: (v) => `${fmtFixed(v, 0)}%`, higherIsBetter: true },
+    ] : [];
     return [
       { label: "Fights", a: metricsA.entry.fights, b: metricsB.entry.fights, fmt: fmtNum, higherIsBetter: true },
-      { label: "Wins", a: metricsA.entry.wins, b: metricsB.entry.wins, fmt: fmtNum, higherIsBetter: true },
-      { label: "Losses", a: metricsA.entry.losses, b: metricsB.entry.losses, fmt: fmtNum, higherIsBetter: false },
-      { label: "Win Rate", a: metricsA.winRatePct, b: metricsB.winRatePct, fmt: (v) => `${fmtFixed(v, 0)}%`, higherIsBetter: true },
+      { label: "Unclassified Outcomes", a: metricsA.entry.unclassified ?? Math.max(0, metricsA.entry.fights - metricsA.entry.wins - metricsA.entry.losses), b: metricsB.entry.unclassified ?? Math.max(0, metricsB.entry.fights - metricsB.entry.wins - metricsB.entry.losses), fmt: fmtNum, higherIsBetter: false },
+      ...resultRows,
       { label: "Avg Squad Size", a: metricsA.entry.avgSquadSize, b: metricsB.entry.avgSquadSize, fmt: (v) => fmtFixed(v, 1), higherIsBetter: true },
       { label: "Squad Damage", a: metricsA.entry.totalDamage, b: metricsB.entry.totalDamage, fmt: fmtCompact, higherIsBetter: true },
       { label: "Squad Healing", a: metricsA.totalHealing, b: metricsB.totalHealing, fmt: fmtCompact, higherIsBetter: true },

@@ -172,7 +172,7 @@ export default function ClassesView() {
             {fightPresence.map((fight) => (
               <div key={fight.label} className="grid grid-cols-[2.5rem_1fr_1.5rem] items-center gap-2 text-[10px]">
                 <span className="font-mono text-theme-muted">{fight.label}</span>
-                <div className="h-2 bg-theme-surface"><div className={`h-full ${fight.isWin ? "bg-emerald-400" : "bg-orange-400"}`} style={{ width: `${(fight.count / maxFightPresence) * 100}%` }} /></div>
+                <div className="h-2 bg-theme-surface"><div className={`h-full ${fight.isWin === true ? "bg-emerald-400" : fight.isWin === false ? "bg-rose-400" : "bg-theme-accent"}`} style={{ width: `${(fight.count / maxFightPresence) * 100}%` }} /></div>
                 <span className="text-right font-mono font-black text-theme-text/80">{fight.count}</span>
               </div>
             ))}

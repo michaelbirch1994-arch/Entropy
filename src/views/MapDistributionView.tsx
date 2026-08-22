@@ -2,7 +2,7 @@ import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
 import { fmtNum, fmtFixed } from "../utils/format";
-import { Map as MapIcon, Users, Clock } from "lucide-react";
+import { Map as MapIcon, Users, CircleHelp } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } from "../utils/chartTheme";
 
@@ -12,6 +12,7 @@ export default function MapDistributionView() {
   const s = report.stats;
   const mapData = s.mapData;
   const total = mapData.reduce((a, c) => a + c.value, 0);
+  const classifiedFights = s.wins + s.losses;
 
   return (
     <div className="space-y-5 animate-view pb-12">
@@ -19,7 +20,7 @@ export default function MapDistributionView() {
         <StatCard label="Avg Squad Size" value={fmtFixed(s.avgSquadSize, 0)} icon={<Users className="w-3.5 h-3.5 text-cyan-400" />} accent="text-cyan-400" />
         <StatCard label="Avg Enemies" value={fmtFixed(s.avgEnemies, 0)} icon={<Users className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" />
         <StatCard label="Total Fights" value={fmtNum(s.total)} icon={<MapIcon className="w-3.5 h-3.5 text-theme-accent-strong" />} accent="text-theme-accent-strong" />
-        <StatCard label="Borderlands %" value={`${fmtFixed(s.total > 0 ? (s.wins / s.total) * 100 : 0, 0)}%`} icon={<Clock className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" sub="win rate" />
+        <StatCard label="Outcome Coverage" value={`${classifiedFights}/${s.total}`} icon={<CircleHelp className="w-3.5 h-3.5 text-theme-muted" />} accent="text-theme-text" sub={classifiedFights > 0 ? "source-classified fights" : "WvW results unavailable"} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

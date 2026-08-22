@@ -18,7 +18,7 @@ export interface FightNarrativeEvidenceContext {
 export type FightNarrativeEvidence = Record<FightNarrativeSection, FightNarrativeEvidenceContext>;
 
 export interface BuildFightNarrativeEvidenceInput {
-  result?: "win" | "loss";
+  result?: "win" | "loss" | "unclassified";
   engagements: readonly IntelligenceEngagementInsight[];
   findings: readonly IntelligenceFinding[];
   criticalEvents: readonly CriticalEvent[];

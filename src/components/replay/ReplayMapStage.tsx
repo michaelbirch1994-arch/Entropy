@@ -8,7 +8,8 @@ function shortName(name: string): string {
   return trimmed.length > 16 ? `${trimmed.slice(0, 15)}…` : trimmed;
 }
 
-const FACING_ANGLE_SIGN = 1;
+// EI orientations use game-space Y, while replay pixels grow downward.
+const FACING_ANGLE_SIGN = -1;
 const FACING_ANGLE_OFFSET_DEG = 0;
 
 function facingLineEnd(cx: number, cy: number, length: number, angleDeg: number) {
@@ -20,7 +21,6 @@ interface ReplayMapStageProps {
   data: ReplayData;
   timestampMs: number;
   viewBox: string;
-  flipTransform: string;
   markerUnit: number;
   selectedAccount: string | null;
   alignedIntelligenceEvent: ReplayIntelligenceAnchor | null;
@@ -47,7 +47,6 @@ function ReplayMapStage({
   data,
   timestampMs,
   viewBox,
-  flipTransform,
   markerUnit,
   selectedAccount,
   alignedIntelligenceEvent,
@@ -78,7 +77,7 @@ function ReplayMapStage({
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
       >
-        <g transform={flipTransform}>
+        <g>
           {showMap && data.map?.images.map((image, index) => {
             const visible = image.endMs <= 0 || (timestampMs >= image.startMs && timestampMs <= image.endMs);
             if (!visible) return null;
@@ -157,7 +156,7 @@ function ReplayMapStage({
                   <title>{`${player.name} · ${player.profession}${player.isCommander ? " · commander" : ""}${down ? " · downed" : ""}${intelligenceParticipant ? " · Intelligence event participant" : ""}`}</title>
                 </circle>
                 {(selected || player.isCommander) && (
-                  <text x={point.x} y={point.y - (baseRadius + 6) * markerUnit} textAnchor="middle" fontSize={9 * markerUnit} fontWeight="800" fill={selected ? "#fef3c7" : "#e2e8f0"} stroke="#020617" strokeWidth={2.5 * markerUnit} paintOrder="stroke" transform={`translate(0 ${2 * (point.y - (baseRadius + 6) * markerUnit)}) scale(1 -1)`}>{shortName(player.name)}</text>
+                  <text x={point.x} y={point.y - (baseRadius + 6) * markerUnit} textAnchor="middle" fontSize={9 * markerUnit} fontWeight="800" fill={selected ? "#fef3c7" : "#e2e8f0"} stroke="#020617" strokeWidth={2.5 * markerUnit} paintOrder="stroke">{shortName(player.name)}</text>
                 )}
               </g>
             );

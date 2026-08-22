@@ -205,11 +205,6 @@ export default function ReplayViewV2() {
     return `${cx - frame.w / 2} ${cy - frame.h / 2} ${frame.w} ${frame.h}`;
   }, [frame, focusPoint, followFocus, pan, zoom]);
 
-  const [, vbYStr, , vbHStr] = viewBox.split(" ");
-  const vbY = Number(vbYStr);
-  const vbH = Number(vbHStr);
-  const flipTransform = `translate(0, ${2 * vbY + vbH}) scale(1, -1)`;
-
   const handlePointerDown = useCallback((event: PointerEvent<SVGSVGElement>) => {
     if (zoom <= 1) return;
     (event.target as Element).setPointerCapture(event.pointerId);
@@ -226,7 +221,7 @@ export default function ReplayViewV2() {
     const dy = event.clientY - dragRef.current.y;
     setPan({
       x: clamp(dragRef.current.panX - dx * (frame.w / rect.width), -frame.maxPanX, frame.maxPanX),
-      y: clamp(dragRef.current.panY + dy * (frame.h / rect.height), -frame.maxPanY, frame.maxPanY),
+      y: clamp(dragRef.current.panY - dy * (frame.h / rect.height), -frame.maxPanY, frame.maxPanY),
     });
   }, [frame]);
 
@@ -437,7 +432,6 @@ export default function ReplayViewV2() {
               data={fight.data}
               timestampMs={t}
               viewBox={viewBox}
-              flipTransform={flipTransform}
               markerUnit={markerUnit}
               selectedAccount={selectedAccount}
               alignedIntelligenceEvent={alignedIntelligenceEvent}

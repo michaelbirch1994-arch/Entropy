@@ -43,6 +43,7 @@ export interface RunSummary {
     fights: number;
     wins: number;
     losses: number;
+    unclassified: number;
     avgSquadSize: number | null;
     avgEnemies: number | null;
     squadDeaths: number;
@@ -144,6 +145,7 @@ export const extractRunSummary = (report: unknown): RunSummary => {
         fights: num(stats?.total),
         wins: num(stats?.wins),
         losses: num(stats?.losses),
+        unclassified: num(stats?.unclassified ?? Math.max(0, num(stats?.total) - num(stats?.wins) - num(stats?.losses))),
         avgSquadSize: typeof stats?.avgSquadSize === 'number' ? stats.avgSquadSize : null,
         avgEnemies: typeof stats?.avgEnemies === 'number' ? stats.avgEnemies : null,
         squadDeaths: num(stats?.totalSquadDeaths),

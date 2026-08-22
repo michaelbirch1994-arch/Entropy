@@ -20,6 +20,7 @@ export interface ArchiveEntry {
   fights: number;
   wins: number;
   losses: number;
+  unclassified?: number;
   totalDamage: number;
   avgSquadSize: number;
   report: WvWReport;
@@ -63,6 +64,7 @@ export async function saveToArchive(report: WvWReport): Promise<void> {
     fights: Number(report.stats.total ?? 0),
     wins: Number(report.stats.wins ?? 0),
     losses: Number(report.stats.losses ?? 0),
+    unclassified: Number(report.stats.unclassified ?? Math.max(0, report.stats.total - report.stats.wins - report.stats.losses)),
     totalDamage,
     avgSquadSize: Number(report.stats.avgSquadSize ?? 0),
     report,

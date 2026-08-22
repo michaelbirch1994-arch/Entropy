@@ -164,7 +164,7 @@ export default function ArchiveView() {
                     <SortHeader label="Report" k="title" />
                     <SortHeader label="Commanders" k="commanders" />
                     <SortHeader label="Fights" k="fights" align="right" />
-                    <SortHeader label="W / L" k="record" align="right" />
+                    <SortHeader label="Outcome" k="record" align="right" />
                     <SortHeader label="Squad Damage" k="totalDamage" align="right" />
                     <SortHeader label="Avg Squad" k="avgSquadSize" align="right" />
                     <th className="p-2.5"></th>
@@ -188,9 +188,11 @@ export default function ArchiveView() {
                       <td className="p-2.5 text-theme-muted whitespace-nowrap">{e.commanders.join(", ") || "—"}</td>
                       <td className="p-2.5 text-right text-theme-text/80">{fmtNum(e.fights)}</td>
                       <td className="p-2.5 text-right">
-                        <span className="text-emerald-400">{e.wins}</span>
-                        <span className="text-theme-faint"> / </span>
-                        <span className="text-rose-400">{e.losses}</span>
+                        {e.wins + e.losses > 0 ? <>
+                          <span className="text-emerald-400">{e.wins}</span>
+                          <span className="text-theme-faint"> / </span>
+                          <span className="text-rose-400">{e.losses}</span>
+                        </> : <span className="text-theme-muted">{e.unclassified ?? e.fights} unclassified</span>}
                       </td>
                       <td className="p-2.5 text-right text-orange-400 font-bold">{fmtCompact(e.totalDamage)}</td>
                       <td className="p-2.5 text-right text-theme-text/80">{e.avgSquadSize.toFixed(1)}</td>
