@@ -21,6 +21,20 @@ export interface Gw2ProfessionSkillRef {
   type?: string;
 }
 
+export interface Gw2ProfessionWeaponSkillRef {
+  id: number;
+  slot: string;
+  offhand?: string;
+  attunement?: string;
+  source?: string;
+}
+
+export interface Gw2ProfessionWeapon {
+  specialization?: number;
+  flags?: string[];
+  skills?: Gw2ProfessionWeaponSkillRef[];
+}
+
 export interface Gw2Profession {
   id: string;
   name: string;
@@ -28,6 +42,41 @@ export interface Gw2Profession {
   icon_big?: string;
   specializations: number[];
   skills: Gw2ProfessionSkillRef[];
+  weapons?: Record<string, Gw2ProfessionWeapon>;
+}
+
+export interface Gw2ItemStat {
+  id: number;
+  name: string;
+  attributes?: Record<string, number>;
+}
+
+export interface Gw2Item {
+  id: number;
+  name: string;
+  icon?: string;
+  description?: string;
+  type?: string;
+  subtype?: string;
+  rarity?: string;
+  level?: number;
+}
+
+export interface Gw2Legend {
+  id: string;
+  code?: number;
+  swap?: number;
+  heal?: number;
+  elite?: number;
+  utilities?: number[];
+}
+
+export interface Gw2Pet {
+  id: number;
+  name: string;
+  icon?: string;
+  description?: string;
+  skills?: Array<{ id: number }>;
 }
 
 export interface Gw2Specialization {

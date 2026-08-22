@@ -2238,6 +2238,42 @@ kbd {
 .theme-builder-equipment-grid { display: grid; grid-template-columns: 1.15fr 0.9fr 1fr; gap: 0.7rem; align-items: start; }
 .theme-builder-equipment-group { display: grid; gap: 0.62rem; min-height: 100%; padding: 0.75rem; border-left: 2px solid rgba(149, 45, 20, 0.58); background: rgba(4, 3, 2, 0.6); }
 .theme-builder-equipment-group h4 { color: #d2b9ad; font-size: 0.66rem; font-weight: 900; text-transform: uppercase; }
+.theme-builder-equipment-sheet {
+  display: grid;
+  grid-template-columns: minmax(11rem, 1.35fr) repeat(3, minmax(8rem, 1fr));
+  gap: 1px;
+  margin-bottom: 0.8rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 24%, var(--theme-border));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-border));
+}
+.theme-builder-equipment-sheet > div {
+  display: grid;
+  min-width: 0;
+  min-height: 3.8rem;
+  align-content: center;
+  gap: 0.22rem;
+  padding: 0.65rem 0.75rem;
+  background: color-mix(in srgb, var(--theme-surfaceInset) 96%, var(--theme-accent) 4%);
+}
+.theme-builder-equipment-sheet small { color: var(--theme-textFaint); font-size: 0.55rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.theme-builder-equipment-sheet strong { overflow: hidden; color: var(--theme-text); font-size: 0.68rem; line-height: 1.35; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
+.theme-builder-equipment-sheet-mark { grid-row: span 2; grid-template-columns: 2.75rem minmax(0, 1fr); align-items: center; align-content: center !important; gap: 0.7rem !important; }
+.theme-builder-equipment-sheet-mark > span { display: grid; gap: 0.25rem; min-width: 0; }
+.theme-builder-choice-input { position: relative; display: flex; align-items: center; }
+.theme-builder-choice-input > svg { position: absolute; left: 0.65rem; z-index: 1; color: var(--theme-textFaint); pointer-events: none; }
+.theme-builder-choice-input .theme-builder-input { padding-left: 2rem; }
+.theme-builder-choice-note { display: flex; align-items: center; gap: 0.32rem; margin-top: 0.35rem; color: var(--theme-textMuted); font-size: 0.58rem; line-height: 1.35; }
+.theme-builder-choice-note.is-warning { color: var(--theme-warning); }
+.theme-builder-item-summary { display: grid; gap: 0.3rem; margin-top: 0.38rem; }
+.theme-builder-item-summary > div { display: flex; align-items: center; gap: 0.45rem; min-width: 0; padding: 0.42rem 0.48rem; border: 1px solid var(--theme-border); border-radius: 5px; background: rgba(255,255,255,0.018); color: var(--theme-textMuted); }
+.theme-builder-item-summary img { width: 1.5rem; height: 1.5rem; flex: 0 0 auto; border-radius: 3px; object-fit: cover; }
+.theme-builder-item-summary > div > span { display: grid; min-width: 0; }
+.theme-builder-item-summary strong { overflow: hidden; color: var(--theme-text); font-size: 0.61rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.theme-builder-item-summary small { color: var(--theme-textFaint); font-family: var(--font-mono); font-size: 0.53rem; }
+.theme-builder-split-runes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.42rem; }
+.theme-builder-split-runes > .theme-builder-choice-note { grid-column: 1 / -1; margin: 0; }
 .theme-builder-mechanics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; }
 .theme-builder-notes { min-height: 8rem; font-family: inherit; font-size: 0.75rem; line-height: 1.6; }
 
@@ -2328,6 +2364,8 @@ kbd {
   .theme-builder-spec-line { grid-template-columns: 1fr; }
   .theme-builder-skill-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .theme-builder-equipment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .theme-builder-equipment-sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .theme-builder-equipment-sheet-mark { grid-row: auto; }
   .theme-builder-party-line { grid-template-columns: 1fr; }
 }
 
@@ -2343,6 +2381,7 @@ kbd {
   .theme-builder-trait-grid,
   .theme-builder-skill-bar,
   .theme-builder-equipment-grid,
+  .theme-builder-equipment-sheet,
   .theme-builder-mechanics,
   .theme-builder-rail { grid-template-columns: 1fr; }
   .theme-builder-trait-tier > div { grid-template-columns: repeat(3, minmax(2.35rem, 1fr)); }

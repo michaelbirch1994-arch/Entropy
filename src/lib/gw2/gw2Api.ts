@@ -1,4 +1,13 @@
-import type { Gw2Profession, Gw2Skill, Gw2Specialization, Gw2Trait } from "../../types/buildEditor";
+import type {
+  Gw2Item,
+  Gw2ItemStat,
+  Gw2Legend,
+  Gw2Pet,
+  Gw2Profession,
+  Gw2Skill,
+  Gw2Specialization,
+  Gw2Trait,
+} from "../../types/buildEditor";
 
 const GW2_API_BASE = "https://api.guildwars2.com/v2";
 
@@ -54,6 +63,34 @@ export async function fetchGw2Skills(ids: number[]): Promise<Gw2Skill[]> {
   return skills
     .map((skill) => ({ ...skill, description: stripMarkup(skill.description) }))
     .sort((a, b) => a.slot.localeCompare(b.slot) || a.name.localeCompare(b.name));
+}
+
+export async function fetchGw2ItemStats(): Promise<Gw2ItemStat[]> {
+  const stats = await getJson<Gw2ItemStat[]>("/itemstats?ids=all");
+  return stats.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function fetchGw2Items(ids: number[]): Promise<Gw2Item[]> {
+  const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))];
+  if (!uniqueIds.length) return [];
+  const batches: number[][] = [];
+  for (let index = 0; index < uniqueIds.length; index += 200) batches.push(uniqueIds.slice(index, index + 200));
+  const items = (await Promise.all(batches.map((batch) => getJson<Gw2Item[]>(`/items?ids=${idsParam(batch)}`)))).flat();
+  return items
+    .map((item) => ({ ...item, description: stripMarkup(item.description) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function fetchGw2Legends(): Promise<Gw2Legend[]> {
+  const legends = await getJson<Gw2Legend[]>("/legends?ids=all");
+  return legends.sort((a, b) => a.id.localeCompare(b.id));
+}
+
+export async function fetchGw2Pets(): Promise<Gw2Pet[]> {
+  const pets = await getJson<Gw2Pet[]>("/pets?ids=all");
+  return pets
+    .map((pet) => ({ ...pet, description: stripMarkup(pet.description) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function wikiSearchUrl(name: string): string {
