@@ -1,6 +1,7 @@
 import { memo, type PointerEventHandler, type RefObject } from "react";
 import { interpolateFacing, interpolatePosition, isInInterval, type ReplayData } from "../../lib/parseReplayData";
 import type { ReplayIntelligenceAnchor } from "../../lib/replayIntelligenceAnchors";
+import { classIconSrc } from "../../data/classIconAssets";
 
 function shortName(name: string): string {
   const trimmed = name.trim();
@@ -139,11 +140,15 @@ function ReplayMapStage({
             const selected = selectedAccount === player.account;
             const intelligenceParticipant = intelligenceAccounts.has(player.account);
             const baseRadius = player.isCommander ? 8.5 : 6;
-            const fill = player.inSquad ? "#38bdf8" : "#94a3b8";
+            const ringColor = player.inSquad ? "#38bdf8" : "#94a3b8";
+            const iconRadius = (down ? baseRadius + 1.5 : baseRadius) * markerUnit;
+            const iconSrc = classIconSrc(player.profession);
+            const clipId = `replay-icon-clip-${player.account.replace(/[^a-zA-Z0-9]/g, "")}`;
             const intelInnerRadius = (baseRadius + 3.5) * markerUnit;
             const intelOuterRadius = (baseRadius + 6.5) * markerUnit;
             return (
               <g key={player.account} onClick={(event) => { event.stopPropagation(); onSelectPlayer(player.account); }} className="cursor-pointer">
+                <title>{`${player.name} · ${player.profession}${player.isCommander ? " · commander" : ""}${down ? " · downed" : ""}${intelligenceParticipant ? " · Intelligence event participant" : ""}`}</title>
                 {intelligenceParticipant && (
                   <circle cx={point.x} cy={point.y} r={intelInnerRadius} fill="none" stroke="#7dd3fc" strokeWidth={1.4 * markerUnit} opacity={selected ? 0.45 : 0.72} pointerEvents="none">
                     <animate attributeName="r" values={`${intelInnerRadius};${intelOuterRadius};${intelInnerRadius}`} dur="1.8s" repeatCount="indefinite" />
@@ -152,9 +157,18 @@ function ReplayMapStage({
                 )}
                 {selected && <circle cx={point.x} cy={point.y} r={(baseRadius + 7) * markerUnit} fill="none" stroke="#fbbf24" strokeWidth={2 * markerUnit} opacity={0.95} />}
                 {player.isCommander && <circle cx={point.x} cy={point.y} r={(baseRadius + 3) * markerUnit} fill="none" stroke="#f59e0b" strokeWidth={2 * markerUnit} opacity={0.95} />}
-                <circle cx={point.x} cy={point.y} r={(down ? baseRadius + 1.5 : baseRadius) * markerUnit} fill={fill} fillOpacity={down ? 0.35 : 0.95} stroke={down ? "#fb7185" : "#e2e8f0"} strokeWidth={1.4 * markerUnit}>
-                  <title>{`${player.name} · ${player.profession}${player.isCommander ? " · commander" : ""}${down ? " · downed" : ""}${intelligenceParticipant ? " · Intelligence event participant" : ""}`}</title>
-                </circle>
+                {iconSrc ? (
+                  <>
+                    <clipPath id={clipId}>
+                      <circle cx={point.x} cy={point.y} r={iconRadius} />
+                    </clipPath>
+                    <circle cx={point.x} cy={point.y} r={iconRadius + 1.6 * markerUnit} fill={ringColor} fillOpacity={down ? 0.3 : 0.9} />
+                    <image href={iconSrc} x={point.x - iconRadius} y={point.y - iconRadius} width={iconRadius * 2} height={iconRadius * 2} clipPath={`url(#${clipId})`} preserveAspectRatio="xMidYMid slice" opacity={down ? 0.5 : 1} />
+                    <circle cx={point.x} cy={point.y} r={iconRadius} fill="none" stroke={down ? "#fb7185" : "#e2e8f0"} strokeWidth={1.4 * markerUnit} />
+                  </>
+                ) : (
+                  <circle cx={point.x} cy={point.y} r={iconRadius} fill={ringColor} fillOpacity={down ? 0.35 : 0.95} stroke={down ? "#fb7185" : "#e2e8f0"} strokeWidth={1.4 * markerUnit} />
+                )}
                 {(selected || player.isCommander) && (
                   <text x={point.x} y={point.y - (baseRadius + 6) * markerUnit} textAnchor="middle" fontSize={9 * markerUnit} fontWeight="800" fill={selected ? "#fef3c7" : "#e2e8f0"} stroke="#020617" strokeWidth={2.5 * markerUnit} paintOrder="stroke">{shortName(player.name)}</text>
                 )}
