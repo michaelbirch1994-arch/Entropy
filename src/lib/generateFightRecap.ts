@@ -18,14 +18,18 @@ function pick<T>(arr: T[], seed: number): T {
 export function generateFightRecap(s: ReportStats): FightRecap | null {
   if (!s || s.total === 0) return null;
 
-  const winRate = s.total > 0 ? s.wins / s.total : 0;
+  const classifiedFights = s.wins + s.losses;
+  const unclassifiedFights = s.unclassified ?? Math.max(0, s.total - classifiedFights);
+  const winRate = classifiedFights > 0 ? s.wins / classifiedFights : null;
   const kdrEdge = s.enemyKDR > 0 ? s.squadKDR / s.enemyKDR : s.squadKDR;
   const seed = Math.round((s.totalSquadKills + s.totalEnemyDeaths) * 7 + s.total * 13);
 
   // --- Headline ---
   let headline: string;
-  if (s.total === 1) {
-    headline = winRate === 1 ? "Clean win." : winRate === 0 ? "Tough fight." : "Mixed result.";
+  if (winRate == null) {
+    headline = kdrEdge >= 1.5 ? "Strong trade profile." : kdrEdge >= 1 ? "Even trade profile." : "Pressure-heavy engagement.";
+  } else if (s.total === 1) {
+    headline = winRate === 1 ? "Source-classified win." : "Source-classified loss.";
   } else if (winRate >= 0.75) {
     headline = pick(["Dominant night.", "Squad steamrolled.", "Near-perfect showing."], seed);
   } else if (winRate >= 0.5) {
@@ -38,10 +42,13 @@ export function generateFightRecap(s: ReportStats): FightRecap | null {
 
   const paragraphs: string[] = [];
 
-  // --- Opening: fight count, squad size, W/L ---
+  // --- Opening: fight count, squad size, and only source-classified outcomes ---
   const fightWord = s.total === 1 ? "fight" : "fights";
+  const outcomeSummary = classifiedFights > 0
+    ? `${s.wins}W-${s.losses}L from ${classifiedFights} source-classified ${classifiedFights === 1 ? "fight" : "fights"}`
+    : `${unclassifiedFights} ${unclassifiedFights === 1 ? "result" : "results"} left unclassified`;
   paragraphs.push(
-    `${s.total} ${fightWord} logged, ${s.wins}W-${s.losses}L, averaging ${Math.round(s.avgSquadSize)} in squad against ` +
+    `${s.total} ${fightWord} logged, ${outcomeSummary}, averaging ${Math.round(s.avgSquadSize)} in squad against ` +
     `roughly ${Math.round(s.avgEnemies)} enemies. Squad KDR came in at ${fmtFixed(s.squadKDR, 2)} against an enemy KDR of ${fmtFixed(s.enemyKDR, 2)}` +
     (kdrEdge >= 1.5
       ? " - a clear kill-efficiency edge."

@@ -6,6 +6,7 @@ import StatCard from "../components/ui/StatCard";
 import { fmtNum, fmtFixed } from "../utils/format";
 import { Swords, Skull, Crosshair, Users, TrendingUp, Activity } from "lucide-react";
 import type { FightRow } from "../types/report";
+import { fightOutcomeLabel, fightOutcomeMarkerClass, fightOutcomeSortValue, fightOutcomeTextClass } from "../utils/fightOutcome";
 
 type SortKey = "fight" | "outcome" | "kills" | "downs" | "deaths" | "trade" | "squad" | "enemies";
 type SortState = { key: SortKey; dir: "desc" | "asc" } | null;
@@ -34,7 +35,7 @@ export default function KdrView() {
       const f = row.fight;
       switch (sort.key) {
         case "fight": return row.index + 1;
-        case "outcome": return f.isWin ? 1 : 0;
+        case "outcome": return fightOutcomeSortValue(f.isWin);
         case "kills": return f.enemyDeaths;
         case "downs": return f.enemyDowns;
         case "deaths": return f.alliesDead;
@@ -77,7 +78,9 @@ export default function KdrView() {
   const squadKdr = tradeRatio(s.totalSquadKills, s.totalSquadDeaths);
   const tradeDelta = s.totalSquadKills - s.totalSquadDeaths;
   const deathsPerFight = s.total > 0 ? s.totalSquadDeaths / s.total : 0;
-  const winRate = s.total > 0 ? (s.wins / s.total) * 100 : 0;
+  const classifiedFights = s.wins + s.losses;
+  const unclassifiedFights = s.unclassified ?? Math.max(0, s.total - classifiedFights);
+  const winRate = classifiedFights > 0 ? (s.wins / classifiedFights) * 100 : null;
 
   return (
     <div className="space-y-6 animate-view pb-12">
@@ -104,11 +107,11 @@ export default function KdrView() {
           sub={`${fmtNum(s.totalSquadDeaths)} allied deaths across ${fmtNum(s.total)} fights`}
         />
         <StatCard
-          label="Win Rate"
-          value={`${fmtFixed(winRate, 1)}%`}
+          label="Classified Win Rate"
+          value={winRate == null ? "—" : `${fmtFixed(winRate, 1)}%`}
           icon={<Swords className="w-3.5 h-3.5 text-emerald-400" />}
           accent="text-emerald-400"
-          sub={`${s.wins}W / ${s.losses}L of ${s.total}`}
+          sub={classifiedFights > 0 ? `${s.wins}W / ${s.losses}L · ${unclassifiedFights} unclassified` : `${unclassifiedFights} fights · outcome unavailable`}
         />
         <StatCard
           label="Avg Squad Size"
@@ -142,12 +145,8 @@ export default function KdrView() {
           {s.fightBreakdown.map((f, i) => (
             <div
               key={f.id}
-              title={`${f.label} - ${f.mapName} (${f.duration}) - ${f.isWin ? "Win" : "Loss"} - ${f.enemyDeaths}/${f.alliesDead} trade`}
-              className={`w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-bold font-mono cursor-default transition-transform hover:scale-110 ${
-                f.isWin
-                  ? "bg-emerald-600/30 text-emerald-400 border border-emerald-500/40"
-                  : "bg-rose-600/30 text-rose-400 border border-rose-500/40"
-              }`}
+              title={`${f.label} - ${f.mapName} (${f.duration}) - ${fightOutcomeLabel(f.isWin)} - ${f.enemyDeaths}/${f.alliesDead} trade`}
+              className={`w-7 h-7 rounded-md flex items-center justify-center border text-[10px] font-bold font-mono cursor-default transition-transform hover:scale-110 ${fightOutcomeMarkerClass(f.isWin)}`}
             >
               {i + 1}
             </div>
@@ -175,7 +174,7 @@ export default function KdrView() {
                   <td className="p-2.5 text-theme-muted">F{index + 1}</td>
                   <td className="p-2.5 text-theme-text/85 font-semibold">{f.mapName}</td>
                   <td className="p-2.5 text-theme-muted">{f.duration}</td>
-                  <td className={`p-2.5 font-bold ${f.isWin ? "text-emerald-400" : "text-rose-400"}`}>{f.isWin ? "Win" : "Loss"}</td>
+                  <td className={`p-2.5 font-bold ${fightOutcomeTextClass(f.isWin)}`}>{fightOutcomeLabel(f.isWin)}</td>
                   <td className="p-2.5 text-right text-theme-text/80">{fmtNum(f.squadCount)}</td>
                   <td className="p-2.5 text-right text-theme-text/80">{fmtNum(f.enemyCount)}</td>
                   <td className="p-2.5 text-right text-emerald-400">{fmtNum(f.enemyDeaths)}</td>
@@ -193,6 +192,9 @@ export default function KdrView() {
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-sm bg-rose-600/40 border border-rose-500/40" /> Loss ({s.losses})
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-sm bg-theme-surface-elevated border border-theme-border" /> Unclassified ({unclassifiedFights})
           </span>
           <span>Sorted columns follow: descending, ascending, default.</span>
         </div>

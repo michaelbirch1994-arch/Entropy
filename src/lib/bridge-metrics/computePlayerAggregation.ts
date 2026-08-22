@@ -140,13 +140,28 @@ export const getFightDownsDeaths = (details: any) => {
         return { squadDownsDeaths, enemyDownsDeaths, squadDeaths, enemyDeaths };
 };
 
-export const getFightOutcome = (details: any) => {
-        const { squadDownsDeaths, enemyDownsDeaths } = getFightDownsDeaths(details);
-        if (squadDownsDeaths > 0 || enemyDownsDeaths > 0) {
-                    return enemyDownsDeaths > squadDownsDeaths;
-        }
+const WVW_MAP_IDS = new Set([38, 95, 96, 1099]);
+
+export const isWvWFight = (details: any): boolean => {
+        const mapId = Number(details?.mapID ?? details?.mapId ?? details?.MapID);
+        if (Number.isFinite(mapId) && WVW_MAP_IDS.has(mapId)) return true;
+        if (details?.wvwMapData != null || details?.WvWMapData != null) return true;
+
+        const label = String(details?.fightName ?? details?.name ?? '').toLowerCase();
+        return /\b(wvw|borderlands?|eternal battlegrounds?|obsidian sanctum|edge of the mists)\b/.test(label);
+};
+
+/**
+ * EI/arcdps does not provide a trustworthy WvW win/loss result. Downs, deaths,
+ * damage, and remaining tracked enemies are useful evidence, but none of them
+ * alone proves that either side won the engagement. Preserve those metrics and
+ * leave the outcome unclassified instead of presenting an inferred result as
+ * fact. Non-WvW encounters may still use EI's explicit success flag.
+ */
+export const getFightOutcome = (details: any): boolean | null => {
+        if (isWvWFight(details)) return null;
         if (typeof details?.success === 'boolean') return details.success;
-        return false;
+        return null;
 };
 
 const knownProfessionNames = new Set(Object.keys(PROFESSION_COLORS));
@@ -446,6 +461,7 @@ export interface PlayerAggregationAccumulators {
         mitigationMinionCumulativeCounts: Map<string, DamageMitigationTotals>;
         wins: number;
         losses: number;
+        unclassified: number;
         totalSquadSizeAccum: number;
         totalEnemiesAccum: number;
         totalSquadDeaths: number;
@@ -475,6 +491,7 @@ export const createPlayerAggregationAccumulators = (): PlayerAggregationAccumula
         mitigationMinionCumulativeCounts: new Map(),
         wins: 0,
         losses: 0,
+        unclassified: 0,
         totalSquadSizeAccum: 0,
         totalEnemiesAccum: 0,
         totalSquadDeaths: 0,
@@ -633,7 +650,9 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
         acc.totalEnemyDowns += Math.max(0, enemyDownsDeaths - enemyDeaths);
 
         const isWin = getFightOutcome(details);
-        if (isWin) acc.wins++; else acc.losses++;
+        if (isWin === true) acc.wins++;
+        else if (isWin === false) acc.losses++;
+        else acc.unclassified++;
 
         const battleStandardSkillId = details.skillMap
             ? Number(Object.keys(details.skillMap).find((key) => details.skillMap?.[key]?.name === 'Battle Standard')?.replace(/^s/, ''))
@@ -1683,6 +1702,7 @@ export const computePlayerAggregation = ({
                     mitigationMinionCumulativeCounts: acc.mitigationMinionCumulativeCounts,
                     wins: acc.wins,
                     losses: acc.losses,
+                    unclassified: acc.unclassified,
                     totalSquadSizeAccum: acc.totalSquadSizeAccum,
                     totalEnemiesAccum: acc.totalEnemiesAccum,
                     totalSquadDeaths: acc.totalSquadDeaths,

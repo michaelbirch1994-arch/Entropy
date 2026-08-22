@@ -165,7 +165,7 @@ export default function PartyBoonsView() {
                           <tr key={account} className="border-t border-slate-800/40 hover:bg-white/[0.02] transition-colors">
                             <td className="p-2 sticky left-0 bg-[#0a0e1f]/95">
                               <div className="flex items-center gap-2">
-                                <span className={`inline-flex items-center px-1 py-0.5 rounded border ${profChip(meta?.profession ?? "Unknown")}`}>
+                                <span className={`inline-flex items-center rounded border pt-0.5 pr-0.5 pb-0.5 pl-1 ${profChip(meta?.profession ?? "Unknown")}`}>
                                   <ProfessionIcon profession={meta?.profession ?? "Unknown"} className="h-3.5 w-3.5 shrink-0" />
                                 </span>
                                 <span className="truncate text-slate-200 font-semibold">{meta?.characterName ?? account}</span>

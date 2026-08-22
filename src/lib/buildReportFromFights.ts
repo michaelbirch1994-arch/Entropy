@@ -1570,8 +1570,8 @@ function computeFightHighlights(fights: FightInput[]): FightHighlight[] {
   if (perFight.length === 0) return [];
 
   const highlights: FightHighlight[] = [];
-    const wins = perFight.filter((f) => f.success && f.enemyKills > 0);
-    const losses = perFight.filter((f) => !f.success);
+    const wins = perFight.filter((f) => f.success === true && f.enemyKills > 0);
+    const losses = perFight.filter((f) => f.success === false);
 
   if (wins.length > 0) {
         const best = wins.reduce((a, b) => (b.kdr > a.kdr ? b : a));
@@ -1773,7 +1773,7 @@ function computeCommanderStats(fights: FightInput[]): CommanderRow[] {
 
   interface Acc {
         account: string; names: Set<string>; professions: Set<string>;
-        fights: number; wins: number; durationMs: number;
+        fights: number; wins: number; losses: number; unclassified: number; durationMs: number;
         squadSizeAccum: number; enemyAccum: number;
         kills: number; downs: number; cmdDowns: number; cmdDeaths: number;
         alliesDown: number; alliesDead: number; damageTaken: number; barrier: number;
@@ -1802,7 +1802,7 @@ function computeCommanderStats(fights: FightInput[]): CommanderRow[] {
               if (!a) {
                         a = {
                                     account, names: new Set(), professions: new Set(),
-                                    fights: 0, wins: 0, durationMs: 0, squadSizeAccum: 0, enemyAccum: 0,
+                                    fights: 0, wins: 0, losses: 0, unclassified: 0, durationMs: 0, squadSizeAccum: 0, enemyAccum: 0,
                                     kills: 0, downs: 0, cmdDowns: 0, cmdDeaths: 0,
                                     alliesDown: 0, alliesDead: 0, damageTaken: 0, barrier: 0,
                         };
@@ -1811,7 +1811,9 @@ function computeCommanderStats(fights: FightInput[]): CommanderRow[] {
               if (p.name) a.names.add(p.name);
               if (p.profession) a.professions.add(p.profession);
               a.fights += 1;
-              if (isWin) a.wins += 1;
+              if (isWin === true) a.wins += 1;
+              else if (isWin === false) a.losses += 1;
+              else a.unclassified += 1;
               a.durationMs += durationMs;
               a.squadSizeAccum += squad.length;
               a.enemyAccum += enemyCount;
@@ -1837,8 +1839,9 @@ function computeCommanderStats(fights: FightInput[]): CommanderRow[] {
                         professionList: Array.from(a.professions),
                         fights: a.fights,
                         wins: a.wins,
-                        losses: a.fights - a.wins,
-                        winRatePct: a.fights > 0 ? (a.wins / a.fights) * 100 : 0,
+                        losses: a.losses,
+                        unclassified: a.unclassified,
+                        winRatePct: a.wins + a.losses > 0 ? (a.wins / (a.wins + a.losses)) * 100 : 0,
                         totalDurationMs: a.durationMs,
                         avgSquadSize: a.fights > 0 ? Math.round(a.squadSizeAccum / a.fights) : 0,
                         avgEnemySize: a.fights > 0 ? Math.round(a.enemyAccum / a.fights) : 0,
@@ -2142,7 +2145,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
 
   const {
         playerStats,
-        wins, losses,
+        wins, losses, unclassified,
         totalSquadSizeAccum, totalEnemiesAccum,
         totalSquadDeaths, totalSquadKills, totalEnemyDeaths, totalEnemyKills,
         totalSquadDowns, totalEnemyDowns,
@@ -2326,7 +2329,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
   const persistedIntelligence = computePersistedIntelligence(fights);
 
   const stats: ReportStats = {
-        total, wins, losses, avgSquadSize, avgEnemies, squadKDR, enemyKDR,
+        total, wins, losses, unclassified, avgSquadSize, avgEnemies, squadKDR, enemyKDR,
         totalSquadKills: reportTotalSquadKills,
         totalSquadDeaths: reportTotalSquadDeaths,
         totalEnemyKills: reportTotalEnemyKills,

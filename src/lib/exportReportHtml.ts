@@ -101,7 +101,7 @@ export function buildReportHtmlExport(report: WvWReport): string {
 
   <div class="cards">
     <div class="card"><div class="card-label">Fights</div><div class="card-value">${s.total ?? 0}</div></div>
-    <div class="card"><div class="card-label">Wins / Losses</div><div class="card-value">${s.wins ?? 0} / ${s.losses ?? 0}</div></div>
+    <div class="card"><div class="card-label">Outcome</div><div class="card-value">${(s.wins ?? 0) + (s.losses ?? 0) > 0 ? `${s.wins ?? 0}W / ${s.losses ?? 0}L` : `${s.unclassified ?? s.total ?? 0} unclassified`}</div></div>
     <div class="card"><div class="card-label">Avg Squad Size</div><div class="card-value">${(s.avgSquadSize ?? 0).toFixed(1)}</div></div>
     <div class="card"><div class="card-label">Squad Damage</div><div class="card-value">${compact(totalDamage)}</div></div>
     <div class="card"><div class="card-label">Squad Healing</div><div class="card-value">${compact(totalHealing)}</div></div>

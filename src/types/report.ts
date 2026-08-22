@@ -309,7 +309,8 @@ export interface FightRow {
     timestamp: number;
     mapName: string;
     duration: string;
-    isWin: boolean;
+    /** Trustworthy source outcome, or null when WvW outcome cannot be proven from the log. */
+    isWin: boolean | null;
     squadCount: number;
     allyCount: number;
     enemyCount: number;
@@ -349,7 +350,7 @@ export interface TimelinePoint {
     squadCount: number;
     friendlyCount: number;
     enemies: number;
-    isWin: boolean;
+    isWin: boolean | null;
     index: number;
     label: string;
 }
@@ -394,6 +395,8 @@ export interface CommanderRow {
     fights: number;
     wins: number;
     losses: number;
+    /** Fights whose result cannot be established from source evidence. */
+    unclassified?: number;
     winRatePct: number;
     totalDurationMs: number;
     avgSquadSize: number;
@@ -719,6 +722,8 @@ export interface ReportStats {
     total: number;
     wins: number;
     losses: number;
+    /** Fights whose result cannot be established from source evidence. */
+    unclassified?: number;
     avgSquadSize: number;
     avgEnemies: number;
     squadKDR: number;

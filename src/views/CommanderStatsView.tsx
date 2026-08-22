@@ -42,6 +42,8 @@ export default function CommanderStatsView() {
   // not the commander's personal K/D - recomputed here (rather than trusting
   // a possibly-stale precomputed field) and labeled "Squad KDR" accordingly.
   const squadKdr = ratio(commander.kills, commander.alliesDead);
+  const classifiedFights = commander.wins + commander.losses;
+  const unclassifiedFights = commander.unclassified ?? Math.max(0, commander.fights - classifiedFights);
   const reviewCues = buildReviewCues(commander, downConversion, commanderSurvival, forceRatio);
 
   return (
@@ -71,15 +73,15 @@ export default function CommanderStatsView() {
               </div>
             </div>
             <div className="border-l-2 border-theme-focus pl-5 text-right">
-              <div className="font-mono text-4xl font-black text-theme-accentStrong">{fmtFixed(commander.winRatePct, 0)}%</div>
-              <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">win rate</div>
+              <div className="font-mono text-4xl font-black text-theme-accentStrong">{classifiedFights > 0 ? `${fmtFixed(commander.winRatePct, 0)}%` : "—"}</div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">classified win rate</div>
             </div>
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <StatCard label="Fights" value={fmtNum(commander.fights)} icon={<Swords className="h-3.5 w-3.5 text-theme-accentStrong" />} accent="text-theme-accentStrong" />
             <StatCard label="Wins" value={fmtNum(commander.wins)} icon={<Target className="h-3.5 w-3.5 text-emerald-400" />} accent="text-emerald-300" />
-            <StatCard label="Losses" value={fmtNum(commander.losses)} icon={<Skull className="h-3.5 w-3.5 text-rose-400" />} accent="text-rose-300" />
+            <StatCard label="Unclassified" value={fmtNum(unclassifiedFights)} icon={<Skull className="h-3.5 w-3.5 text-slate-400" />} accent="text-slate-300" sub={classifiedFights > 0 ? `${commander.wins}W / ${commander.losses}L classified` : "WvW result not inferred"} />
             <StatCard label="Squad KDR" value={fmtFixed(squadKdr, 2)} icon={<Gauge className="h-3.5 w-3.5 text-amber-400" />} accent="text-amber-300" sub="Squad kills / allied deaths while this commander led" />
             <StatCard label="Kills" value={fmtNum(commander.kills)} icon={<Swords className="h-3.5 w-3.5 text-emerald-400" />} accent="text-emerald-300" />
             <StatCard label="Duration" value={fmtDur(commander.totalDurationMs)} icon={<Clock className="h-3.5 w-3.5 text-slate-400" />} accent="text-slate-300" />
@@ -132,7 +134,7 @@ function buildReviewCues(commander: CommanderRow, conversion: number, survival: 
     { label: conversion >= 0.65 ? "Strong down conversion" : "Conversion review", detail: `${fmtFixed(conversion * 100, 0)}% of recorded enemy downs converted into kills.` },
     { label: survival >= 0.85 ? "Tag remained available" : "Tag survival review", detail: `${fmtFixed(survival * 100, 0)}% fight-level survival based on recorded commander deaths.` },
     { label: forceRatio > 1.15 ? "Frequent numerical pressure" : "Comparable force sizes", detail: `Average enemy-to-squad force ratio was ${fmtFixed(forceRatio, 2)}x.` },
-    { label: "Evidence boundary", detail: `${commander.fights} fights contribute to this commander aggregate; no unrecorded movement behavior is inferred.` },
+    { label: "Evidence boundary", detail: `${commander.fights} fights contribute to this commander aggregate; outcome and unrecorded movement behavior are not inferred.` },
   ];
 }
 

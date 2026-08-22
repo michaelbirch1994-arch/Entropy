@@ -59,7 +59,7 @@ interface FightContext {
   index: number;
   label: string;
   name: string;
-  result?: "win" | "loss";
+  result?: "win" | "loss" | "unclassified";
   squadCount: number;
   enemyCount: number;
   downs: number;
@@ -119,7 +119,7 @@ function buildFightContextMap(report: WvWReport, dashboard: IntelligenceDashboar
       index,
       label: `Fight ${index + 1}`,
       name,
-      result: fight.isWin ? "win" : "loss",
+      result: fight.isWin === true ? "win" : fight.isWin === false ? "loss" : "unclassified",
       squadCount: Number(fight.squadCount) || 0,
       enemyCount: Number(fight.enemyCount) || 0,
       downs: Number(fight.alliesDown) || 0,

@@ -6,8 +6,9 @@ import Panel from "../components/ui/Panel";
 import { fmtCompact } from "../utils/format";
 import { Activity, BrainCircuit, ExternalLink, GitCompare, Swords } from "lucide-react";
 import type { FightRow } from "../types/report";
-import { BarChart, Bar, Line, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Bar, Line, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { CHART_COLORS, TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE } from "../utils/chartTheme";
+import { fightOutcomeBadgeClass, fightOutcomeLabel, fightOutcomeSortValue, fightOutcomeTextClass } from "../utils/fightOutcome";
 
 type SortKey =
   | "fight"
@@ -24,7 +25,7 @@ type SortKey =
   | "healing"
   | "sustain";
 type SortState = { key: SortKey; dir: "desc" | "asc" } | null;
-type OutcomeFilter = "all" | "wins" | "losses";
+type OutcomeFilter = "all" | "wins" | "losses" | "unclassified";
 
 function parseDurationSeconds(duration: string) {
   const min = Number(duration.match(/(\d+)m/)?.[1] ?? 0);
@@ -32,7 +33,7 @@ function parseDurationSeconds(duration: string) {
   return min * 60 + sec;
 }
 
-function compareValues(a: string | number | boolean, b: string | number | boolean, dir: "desc" | "asc") {
+function compareValues(a: string | number, b: string | number, dir: "desc" | "asc") {
   const direction = dir === "desc" ? -1 : 1;
   if (typeof a === "string" || typeof b === "string") return String(a).localeCompare(String(b)) * direction;
   return (Number(a) - Number(b)) * direction;
@@ -51,7 +52,10 @@ export default function FightBreakdownView() {
   const sortedFights = useMemo(() => {
     const base = fights
       .map((fight, index) => ({ fight, index }))
-      .filter(({ fight }) => outcomeFilter === "all" || (outcomeFilter === "wins" ? fight.isWin : !fight.isWin));
+      .filter(({ fight }) => outcomeFilter === "all"
+        || (outcomeFilter === "wins" && fight.isWin === true)
+        || (outcomeFilter === "losses" && fight.isWin === false)
+        || (outcomeFilter === "unclassified" && fight.isWin == null));
     if (!sort) return base;
     const valueFor = (row: { fight: FightRow; index: number }) => {
       const f = row.fight;
@@ -59,7 +63,7 @@ export default function FightBreakdownView() {
         case "fight": return row.index + 1;
         case "map": return f.mapName;
         case "duration": return parseDurationSeconds(f.duration);
-        case "outcome": return f.isWin;
+        case "outcome": return fightOutcomeSortValue(f.isWin);
         case "squad": return f.squadCount;
         case "enemies": return f.enemyCount;
         case "kills": return f.enemyDeaths;
@@ -140,7 +144,7 @@ export default function FightBreakdownView() {
       >
         <div className="theme-fight-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-theme-border/50 px-4 py-3">
           <div className="flex flex-wrap gap-2" role="group" aria-label="Filter fights by outcome">
-            {(["all", "wins", "losses"] as OutcomeFilter[]).map((filter) => (
+            {(["all", "wins", "losses", "unclassified"] as OutcomeFilter[]).map((filter) => (
               <button
                 key={filter}
                 type="button"
@@ -208,8 +212,8 @@ export default function FightBreakdownView() {
                   </td>
                   <td className="p-2.5 text-theme-muted">{f.mapName}</td>
                   <td className="p-2.5 text-theme-muted">{f.duration}</td>
-                  <td className={`p-2.5 font-bold ${f.isWin ? "text-emerald-400" : "text-rose-400"}`}>
-                    {f.isWin ? "Win" : "Loss"}
+                  <td className={`p-2.5 font-bold ${fightOutcomeTextClass(f.isWin)}`}>
+                    {fightOutcomeLabel(f.isWin)}
                   </td>
                   <td className="p-2.5 text-right text-theme-text/80">{f.squadCount}</td>
                   <td className="p-2.5 text-right text-theme-text/80">{f.enemyCount}</td>
@@ -255,8 +259,8 @@ export default function FightBreakdownView() {
                 <h3 className="mt-1 text-xl font-black uppercase text-theme-text">Fight {selectedRow.index + 1} · {selectedRow.fight.fullLabel}</h3>
                 <p className="mt-2 text-xs text-theme-muted">Direct report totals. No scoring or methodology changes are applied in this dossier.</p>
               </div>
-              <span className={`border px-3 py-1 text-xs font-black uppercase ${selectedRow.fight.isWin ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300" : "border-rose-400/30 bg-rose-500/10 text-rose-300"}`}>
-                {selectedRow.fight.isWin ? "Win" : "Loss"}
+              <span className={`border px-3 py-1 text-xs font-black uppercase ${fightOutcomeBadgeClass(selectedRow.fight.isWin)}`}>
+                {fightOutcomeLabel(selectedRow.fight.isWin)}
               </span>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -327,8 +331,8 @@ export default function FightBreakdownView() {
                 labelStyle={TOOLTIP_LABEL_STYLE}
                 formatter={(v, name) => [name === "KDR" ? Number(v).toFixed(2) : fmtCompact(Number(v)), name]}
                 labelFormatter={(v, payload) => {
-                  const row = payload?.[0]?.payload as { label?: string; isWin?: boolean } | undefined;
-                  return `Fight #${v}${row?.label ? ` · ${row.label}` : ""}${row?.isWin != null ? ` · ${row.isWin ? "Win" : "Loss"}` : ""}`;
+                  const row = payload?.[0]?.payload as { label?: string; isWin?: boolean | null } | undefined;
+                  return `Fight #${v}${row?.label ? ` · ${row.label}` : ""} · ${fightOutcomeLabel(row?.isWin)}`;
                 }}
               />
               <Legend wrapperStyle={{ fontSize: 10, color: "var(--entropy-text-muted)" }} />
