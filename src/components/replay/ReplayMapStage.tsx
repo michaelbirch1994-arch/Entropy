@@ -18,6 +18,23 @@ function facingLineEnd(cx: number, cy: number, length: number, angleDeg: number)
   return { x2: cx + Math.cos(rad) * length, y2: cy + Math.sin(rad) * length };
 }
 
+function facingArrow(cx: number, cy: number, startRadius: number, arrowLength: number, angleDeg: number) {
+  const rad = ((FACING_ANGLE_SIGN * angleDeg + FACING_ANGLE_OFFSET_DEG) * Math.PI) / 180;
+  const dx = Math.cos(rad);
+  const dy = Math.sin(rad);
+  return {
+    x1: cx + dx * startRadius,
+    y1: cy + dy * startRadius,
+    x2: cx + dx * (startRadius + arrowLength),
+    y2: cy + dy * (startRadius + arrowLength),
+  };
+}
+
+function playerMarkerRadius(isCommander: boolean, down: boolean, markerUnit: number) {
+  const baseRadius = isCommander ? 10.5 : 7.5;
+  return (down ? baseRadius + 1.5 : baseRadius) * markerUnit;
+}
+
 interface ReplayMapStageProps {
   data: ReplayData;
   timestampMs: number;
@@ -78,6 +95,11 @@ function ReplayMapStage({
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
       >
+        <defs>
+          <marker id="replay-facing-arrow" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
+            <path d="M0,0 L4,2 L0,4 Z" fill="#ffffff" />
+          </marker>
+        </defs>
         <g>
           {showMap && data.map?.images.map((image, index) => {
             const visible = image.endMs <= 0 || (timestampMs >= image.startMs && timestampMs <= image.endMs);
@@ -129,8 +151,22 @@ function ReplayMapStage({
             const point = interpolatePosition(player.points, timestampMs);
             const angle = interpolateFacing(player.facings ?? [], timestampMs);
             if (!point || angle == null) return null;
-            const end = facingLineEnd(point.x, point.y, 11 * markerUnit, angle);
-            return <line key={`player-facing-${player.account}`} x1={point.x} y1={point.y} x2={end.x2} y2={end.y2} stroke={player.inSquad ? "#38bdf8" : "#94a3b8"} strokeWidth={1.2 * markerUnit} opacity={0.75} />;
+            const down = isInInterval(player.downIntervals, timestampMs);
+            const startRadius = playerMarkerRadius(player.isCommander, down, markerUnit);
+            const arrow = facingArrow(point.x, point.y, startRadius, 7 * markerUnit, angle);
+            return (
+              <line
+                key={`player-facing-${player.account}`}
+                x1={arrow.x1}
+                y1={arrow.y1}
+                x2={arrow.x2}
+                y2={arrow.y2}
+                stroke="#ffffff"
+                strokeWidth={1.3 * markerUnit}
+                opacity={0.9}
+                markerEnd="url(#replay-facing-arrow)"
+              />
+            );
           })}
 
           {data.players.map((player) => {
@@ -139,13 +175,13 @@ function ReplayMapStage({
             const down = isInInterval(player.downIntervals, timestampMs);
             const selected = selectedAccount === player.account;
             const intelligenceParticipant = intelligenceAccounts.has(player.account);
-            const baseRadius = player.isCommander ? 8.5 : 6;
-            const ringColor = player.inSquad ? "#38bdf8" : "#94a3b8";
-            const iconRadius = (down ? baseRadius + 1.5 : baseRadius) * markerUnit;
+            const baseRadius = player.isCommander ? 10.5 : 7.5;
+            const iconRadius = playerMarkerRadius(player.isCommander, down, markerUnit);
             const iconSrc = classIconSrc(player.profession);
             const clipId = `replay-icon-clip-${player.account.replace(/[^a-zA-Z0-9]/g, "")}`;
             const intelInnerRadius = (baseRadius + 3.5) * markerUnit;
             const intelOuterRadius = (baseRadius + 6.5) * markerUnit;
+            const outlineColor = down ? "#fb7185" : "#ffffff";
             return (
               <g key={player.account} onClick={(event) => { event.stopPropagation(); onSelectPlayer(player.account); }} className="cursor-pointer">
                 <title>{`${player.name} · ${player.profession}${player.isCommander ? " · commander" : ""}${down ? " · downed" : ""}${intelligenceParticipant ? " · Intelligence event participant" : ""}`}</title>
@@ -162,12 +198,11 @@ function ReplayMapStage({
                     <clipPath id={clipId}>
                       <circle cx={point.x} cy={point.y} r={iconRadius} />
                     </clipPath>
-                    <circle cx={point.x} cy={point.y} r={iconRadius + 1.6 * markerUnit} fill={ringColor} fillOpacity={down ? 0.3 : 0.9} />
-                    <image href={iconSrc} x={point.x - iconRadius} y={point.y - iconRadius} width={iconRadius * 2} height={iconRadius * 2} clipPath={`url(#${clipId})`} preserveAspectRatio="xMidYMid slice" opacity={down ? 0.5 : 1} />
-                    <circle cx={point.x} cy={point.y} r={iconRadius} fill="none" stroke={down ? "#fb7185" : "#e2e8f0"} strokeWidth={1.4 * markerUnit} />
+                    <image href={iconSrc} x={point.x - iconRadius} y={point.y - iconRadius} width={iconRadius * 2} height={iconRadius * 2} clipPath={`url(#${clipId})`} preserveAspectRatio="xMidYMid slice" opacity={down ? 0.55 : 1} />
+                    <circle cx={point.x} cy={point.y} r={iconRadius} fill="none" stroke={outlineColor} strokeWidth={1 * markerUnit} />
                   </>
                 ) : (
-                  <circle cx={point.x} cy={point.y} r={iconRadius} fill={ringColor} fillOpacity={down ? 0.35 : 0.95} stroke={down ? "#fb7185" : "#e2e8f0"} strokeWidth={1.4 * markerUnit} />
+                  <circle cx={point.x} cy={point.y} r={iconRadius} fill={player.inSquad ? "#475569" : "#334155"} fillOpacity={down ? 0.35 : 0.95} stroke={outlineColor} strokeWidth={1 * markerUnit} />
                 )}
                 {(selected || player.isCommander) && (
                   <text x={point.x} y={point.y - (baseRadius + 6) * markerUnit} textAnchor="middle" fontSize={9 * markerUnit} fontWeight="800" fill={selected ? "#fef3c7" : "#e2e8f0"} stroke="#020617" strokeWidth={2.5 * markerUnit} paintOrder="stroke">{shortName(player.name)}</text>
