@@ -105,7 +105,7 @@ export default function HighlightsView() {
 
   if (highlights.length === 0) {
     return (
-      <div className="space-y-5 animate-view-fade pb-12">
+      <div className="space-y-5 animate-view pb-12">
         <Panel
           title="Highlights"
           icon={<Sparkles className="w-3.5 h-3.5" />}
@@ -125,7 +125,7 @@ export default function HighlightsView() {
   }
 
   return (
-    <div className="space-y-5 animate-view-fade pb-12">
+    <div className="space-y-5 animate-view pb-12">
       <div className="text-[11px] text-theme-muted px-1">
         Auto-picked from the night's fights - biggest wins, closest calls, and standout individual performances.
       </div>
