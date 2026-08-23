@@ -88,6 +88,7 @@ const MENU: NavSection[] = [
       { id: "buffs", label: "Buffs", keywords: ["uptime", "boons", "conditions", "stability"] },
       { id: "buff-generation", label: "Buff Generation", keywords: ["boon generation", "cleanse", "stability", "quickness"] },
       { id: "party-boons", label: "Party Boons", keywords: ["subgroup", "party", "group boons"] },
+        { id: "conditions", label: "Conditions", keywords: ["debuff", "bleed", "burning", "cripple", "weakness", "vulnerability", "condi damage"] },
     ],
   },
   {

@@ -2382,6 +2382,11 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
                 totalFightMs: s.totalFightMs, squadActiveMs: s.squadActiveMs,
                 totalDist: s.totalDist, distCount: s.distCount, logsJoined: s.logsJoined, stackedLogCount: s.stackedLogCount,
         })),
+        conditionPlayers: playerEntries.map((s) => ({
+                account: s.account, profession: s.profession, professionList: s.professionList ?? [],
+                totalFightMs: s.totalFightMs, squadActiveMs: s.squadActiveMs, logsJoined: s.logsJoined,
+                outgoingConditions: s.outgoingConditions as any, incomingConditions: s.incomingConditions as any,
+        })),
         distanceToTag,
         offensiveMvp: offensiveScores.mvp,
         offensiveSilver: offensiveScores.silver,

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
+import ProfessionIcon from "../components/ui/ProfessionIcon";
 import { fmtNum } from "../utils/format";
 import { LineChart as LineChartIcon, Swords, MousePointerClick } from "lucide-react";
 

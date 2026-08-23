@@ -273,6 +273,34 @@ export interface GeneralPlayer {
     stackedLogCount: number;
 }
 
+export interface ConditionSkillEntry {
+    name: string;
+    hits: number;
+    damage: number;
+    icon?: string;
+}
+
+export interface PlayerConditionEntry {
+    icon?: string;
+    applications: number;
+    damage: number;
+    skills: Record<string, ConditionSkillEntry>;
+    applicationsFromBuffs?: number;
+    applicationsFromBuffsActive?: number;
+    uptimeMs?: number;
+}
+
+export interface ConditionPlayer {
+    account: string;
+    profession: string;
+    professionList: string[];
+    totalFightMs: number;
+    squadActiveMs: number;
+    logsJoined: number;
+    outgoingConditions: Record<string, PlayerConditionEntry>;
+    incomingConditions: Record<string, PlayerConditionEntry>;
+}
+
 export type DistanceToTagSource = 'replay' | 'fightAvg' | 'mixed' | 'legacy';
 
 export interface DistanceToTagRow {
@@ -768,6 +796,7 @@ export interface ReportStats {
      */
   survivalSupport?: import('../lib/bridge-metrics/incomingHealing').IncomingHealingBreakdown[];
     generalPlayers: GeneralPlayer[];
+    conditionPlayers: ConditionPlayer[];
     /** Source-aware squad distance statistics. Added in raw metrics v6; older reports fall back to generalPlayers. */
   distanceToTag?: DistanceToTagResult;
     offensiveMvp: MvpCard;

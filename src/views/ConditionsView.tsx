@@ -119,7 +119,7 @@ export default function ConditionsView() {
         if (value <= 0) return null;
         return { name, icon: entry.icon, value };
       })
-      .filter((e): e is { name: string; icon?: string; value: number } => e !== null)
+      .filter((e): e is { name: string; icon: string | undefined; value: number } => e !== null)
       .sort((a, b) => b.value - a.value);
   }, [namesForTab, summaryByName, tab]);
 
@@ -256,7 +256,6 @@ export default function ConditionsView() {
             : (tab === "Damage" ? "Squad Incoming Condition Damage" : "Squad Incoming Control Applications")
         }
         subtitle={
-          tab === "Damage"
             direction === "outgoing"
               ? (tab === "Damage"
                   ? "Total damage dealt by each damaging condition (bleeding, burning, confusion, poison, torment) across all fights joined."
