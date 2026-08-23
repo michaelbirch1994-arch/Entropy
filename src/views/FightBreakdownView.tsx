@@ -188,7 +188,7 @@ export default function FightBreakdownView() {
                       <button type="button" onClick={() => setSelectedFightId(f.id)} className="font-semibold text-theme-text/85 transition-colors hover:text-theme-accent-strong">{f.label}</button>
                       {f.permalink && (
                         <a
-                          href={f.permalink}
+                href={`https://dps.report/${f.permalink}`}                          
                           target="_blank"
                           rel="noreferrer"
                           className="text-theme-accent transition-colors hover:text-theme-accent-strong"
