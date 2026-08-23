@@ -3,6 +3,7 @@
 // navigate the user to a different view programmatically while preserving the
 // exact evidence target that motivated the jump.
 import { createContext, useContext, useState, type ReactNode } from "react";
+import { parseAxiForgeShareQuery } from "../lib/axiforge/axiForgeShareLink";
 
 export interface ViewNavigationTarget {
   source: "intelligence" | "archive" | "overview" | "other";
@@ -57,7 +58,9 @@ function viewLabel(view: string) {
 }
 
 export function ViewProvider({ children }: { children: ReactNode }) {
-  const [activeView, setActiveViewState] = useState("overview");
+  const [activeView, setActiveViewState] = useState(() =>
+    typeof window !== "undefined" && parseAxiForgeShareQuery(window.location.search) ? "axiforge-lab" : "overview"
+  );
   const [previousView, setPreviousView] = useState<string | null>(null);
   const [navigationTarget, setNavigationTarget] = useState<ViewNavigationTarget | null>(null);
   const [navigationTrailTarget, setNavigationTrailTarget] = useState<ViewNavigationTarget | null>(null);
