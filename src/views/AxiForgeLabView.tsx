@@ -14,6 +14,7 @@ import {
   FileCode2,
   FolderOpen,
   Layers3,
+  Link2,
   Loader2,
   Plus,
   RotateCcw,
@@ -34,6 +35,11 @@ import {
   encodeAxiForgeCompCode,
   type AxiForgeDecodeResult,
 } from "../lib/axiforge/axiForgeAdapter";
+import {
+  buildAxiForgeShareUrl,
+  parseAxiForgeShareQuery,
+  clearAxiForgeShareQuery,
+} from "../lib/axiforge/axiForgeShareLink";
 import {
   ARMOR_SLOTS,
   STAT_OPTIONS,
@@ -343,12 +349,14 @@ function BuildLibrary({
   onDuplicate,
   onDelete,
   onCopy,
+  onShare,
 }: {
   builds: SavedBuilderBuild[];
   onLoad: (build: SavedBuilderBuild) => void;
   onDuplicate: (build: SavedBuilderBuild) => void;
   onDelete: (id: string) => void;
   onCopy: (code: string) => void;
+  onShare: (code: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const filtered = builds.filter((build) => {
@@ -377,6 +385,7 @@ function BuildLibrary({
                 <button type="button" onClick={() => onLoad(build)} title="Open build"><FolderOpen /></button>
                 <button type="button" onClick={() => onDuplicate(build)} title="Duplicate build"><Copy /></button>
                 <button type="button" onClick={() => onCopy(build.shareCode)} title="Copy AxiCode"><Clipboard /></button>
+                <button type="button" onClick={() => onShare(build.shareCode)} title="Copy share link"><Link2 /></button>
                 <button type="button" onClick={() => onDelete(build.id)} title="Delete build"><Trash2 /></button>
               </div>
             </article>
@@ -819,6 +828,25 @@ export default function AxiForgeLabView() {
 
   useEffect(() => saveBuilderWorkspace(workspace), [workspace]);
 
+  useEffect(() => {
+    const sharedCode = parseAxiForgeShareQuery(window.location.search);
+    if (!sharedCode) return;
+    const result = decodeAxiForgeCode(sharedCode);
+    if (!result.ok || !result.value || result.kind !== "build") {
+      setNotice({ tone: "error", message: result.error ?? "This share link could not be read." });
+      clearAxiForgeShareQuery();
+      return;
+    }
+    const imported = builderFromAxiBuild(result.value, { name: "Shared Build" });
+    updateBuilder(imported);
+    setEditingBuildId(null);
+    setActiveTab("build");
+    setBuilderViewMode("preview");
+    setNotice({ tone: "success", message: "Loaded a shared build. This is your own local copy — edit it or save it to keep it." });
+    clearAxiForgeShareQuery();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const selectedProfession = useMemo(() => professions.find((profession) => profession.id === builder.professionId) ?? null, [builder.professionId, professions]);
   const attributeTotals = useMemo(() => computeAttributeTotals(builder, selectedProfession), [builder, selectedProfession]);
   const specsById = useMemo(() => new Map(professionSpecs.map((spec) => [spec.id, spec])), [professionSpecs]);
@@ -1028,6 +1056,16 @@ export default function AxiForgeLabView() {
     }
   }
 
+  async function shareCurrentBuild() {
+    try {
+      const code = createCurrentCode();
+      setExportCode(code);
+      await copyText(buildAxiForgeShareUrl(code), "Share link copied.");
+    } catch {
+      setNotice({ tone: "error", message: "Build code could not be created yet." });
+    }
+  }
+
   async function hydrateImportedBuild(value: unknown, name?: string): Promise<SavedBuilderBuild> {
     const state = builderFromAxiBuild(value, { name: name ?? "Imported Build" });
     const specIds = state.specializationIds.filter((id): id is number => Boolean(id));
@@ -1154,6 +1192,7 @@ export default function AxiForgeLabView() {
         <div className="theme-builder-command-actions">
           <button type="button" onClick={() => setImportOpen((open) => !open)} className="theme-command-button"><Download className="h-4 w-4" /> Import</button>
           <button type="button" onClick={exportCurrentBuild} className="theme-command-button"><FileCode2 className="h-4 w-4" /> Copy code</button>
+          <button type="button" onClick={shareCurrentBuild} className="theme-command-button"><Link2 className="h-4 w-4" /> Share link</button>
           <button type="button" onClick={saveCurrentBuild} className="theme-command-button is-primary"><Save className="h-4 w-4" /> {editingBuildId ? "Update" : "Save"}</button>
         </div>
       </header>
@@ -1188,7 +1227,7 @@ export default function AxiForgeLabView() {
         </div>
       )}
 
-      {activeTab === "library" && <BuildLibrary builds={workspace.builds} onLoad={loadBuild} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} />}
+      {activeTab === "library" && <BuildLibrary builds={workspace.builds} onLoad={loadBuild} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} onShare={(code) => copyText(buildAxiForgeShareUrl(code), "Share link copied.")} />}
       {activeTab === "squad" && <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} onCreate={createSquad} onChange={updateComposition} onCopyCode={exportSquad} />}
 
       {activeTab === "build" && (
