@@ -645,6 +645,142 @@ function BuildPreview({
   );
 }
 
+function EquipmentPreview({
+  builder,
+  items,
+  availableWeapons,
+  skillsById,
+}: {
+  builder: EntropyBuilderState;
+  items: Record<number, Gw2Item>;
+  availableWeapons: Array<[string, { skills?: Array<{ id: number; slot: string }> }]>;
+  skillsById: Map<number, Gw2Skill>;
+}) {
+  const itemFor = (id: string | number | undefined) => (id ? items[Number(id)] : undefined);
+  const trinketSlots = ["amulet", "ring1", "ring2", "accessory1", "accessory2", "backpack"];
+  const trinketLabels: Record<string, string> = {
+    amulet: "Amulet",
+    ring1: "Ring 1",
+    ring2: "Ring 2",
+    accessory1: "Accessory 1",
+    accessory2: "Accessory 2",
+    backpack: "Back",
+  };
+  const weaponSetDefs: Array<{ label: string; mainKey: "mainhand1" | "mainhand2"; offKey: "offhand1" | "offhand2" }> = [
+    { label: "I", mainKey: "mainhand1", offKey: "offhand1" },
+    { label: "II", mainKey: "mainhand2", offKey: "offhand2" },
+  ];
+
+  function weaponSkillsFor(weaponName: string) {
+    if (!weaponName) return [];
+    const entry = availableWeapons.find(([name]) => name.toLowerCase() === weaponName.toLowerCase());
+    return entry ? entry[1].skills ?? [] : [];
+  }
+
+  const relicItem = itemFor(BUILDER_RELIC_IDS[builder.equipment.relic]);
+  const enrichmentItem = itemFor(builder.equipment.enrichment);
+
+  return (
+    <div className="theme-builder-preview-equipment">
+      <div className="theme-builder-preview-equipment-column">
+        <h4>Armor</h4>
+        <div className="theme-builder-preview-armor-list">
+          {ARMOR_SLOTS.map((slot) => {
+            const rune = itemFor(builder.equipment.runes[slot]);
+            return (
+              <div key={slot} className="theme-builder-preview-armor-row">
+                <div className="theme-builder-preview-armor-icon"><Shield className="h-4 w-4" /></div>
+                <div className="theme-builder-preview-armor-info">
+                  <small>{slot}</small>
+                  <strong>{builder.equipment.statPackage || "Unassigned"}</strong>
+                </div>
+                <div className="theme-builder-preview-armor-badge" title={rune?.name ?? "No rune"}>
+                  {rune?.icon ? <img src={rune.icon} alt="" /> : <Sparkles className="h-4 w-4" />}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <h4>Weapons</h4>
+        {weaponSetDefs.map(({ label, mainKey, offKey }) => {
+          const main = builder.equipment.weapons[mainKey];
+          const off = builder.equipment.weapons[offKey];
+          const rows: Array<{ weapon: string; sigils: string[] }> = [];
+          if (main) rows.push({ weapon: main, sigils: builder.equipment.sigils[mainKey] });
+          if (off) rows.push({ weapon: off, sigils: builder.equipment.sigils[offKey] });
+          return (
+            <div key={label} className="theme-builder-preview-weapon-set">
+              <small>Set {label}</small>
+              {rows.length === 0 ? (
+                <p className="theme-builder-preview-empty-note">Empty</p>
+              ) : (
+                rows.map((row, index) => (
+                  <div key={index} className="theme-builder-preview-weapon-row">
+                    <span className="theme-builder-preview-weapon-name">{row.weapon}</span>
+                    <div className="theme-builder-preview-weapon-badges">
+                      {row.sigils.map((sigilId, sigilIndex) => {
+                        const sigil = itemFor(sigilId);
+                        return (
+                          <div key={sigilIndex} className="theme-builder-preview-armor-badge" title={sigil?.name ?? "No sigil"}>
+                            {sigil?.icon ? <img src={sigil.icon} alt="" /> : <Sparkles className="h-4 w-4" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+              <div className="theme-builder-preview-weapon-skills">
+                {rows.flatMap((row) => weaponSkillsFor(row.weapon)).map((skillRef, index) => {
+                  const skill = skillsById.get(skillRef.id);
+                  return (
+                    <div key={`${skillRef.id}-${index}`} className="theme-builder-preview-skill" title={skill?.name ?? ""}>
+                      {skill?.icon ? <img src={skill.icon} alt="" /> : <span className="theme-builder-preview-skill-empty">?</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="theme-builder-preview-equipment-column">
+        <h4>Trinkets</h4>
+        <div className="theme-builder-preview-trinkets">
+          {trinketSlots.map((slot) => (
+            <div key={slot} className="theme-builder-preview-trinket-card">
+              <small>{trinketLabels[slot]}</small>
+              <strong>{builder.equipment.slots[slot] || "Unassigned"}</strong>
+            </div>
+          ))}
+        </div>
+
+        <h4>Relic and consumables</h4>
+        <div className="theme-builder-preview-consumables">
+          <div className="theme-builder-preview-consumable-row">
+            <div className="theme-builder-preview-armor-badge">{relicItem?.icon ? <img src={relicItem.icon} alt="" /> : <Sparkles className="h-4 w-4" />}</div>
+            <div className="theme-builder-preview-armor-info"><small>Relic</small><strong>{builder.equipment.relic || "Unassigned"}</strong></div>
+          </div>
+          <div className="theme-builder-preview-consumable-row">
+            <div className="theme-builder-preview-armor-badge"><Sparkles className="h-4 w-4" /></div>
+            <div className="theme-builder-preview-armor-info"><small>Food</small><strong>{builder.equipment.food || "Unassigned"}</strong></div>
+          </div>
+          <div className="theme-builder-preview-consumable-row">
+            <div className="theme-builder-preview-armor-badge"><Sparkles className="h-4 w-4" /></div>
+            <div className="theme-builder-preview-armor-info"><small>Utility</small><strong>{builder.equipment.utility || "Unassigned"}</strong></div>
+          </div>
+          <div className="theme-builder-preview-consumable-row">
+            <div className="theme-builder-preview-armor-badge">{enrichmentItem?.icon ? <img src={enrichmentItem.icon} alt="" /> : <Sparkles className="h-4 w-4" />}</div>
+            <div className="theme-builder-preview-armor-info"><small>Enrichment</small><strong>{enrichmentItem?.name ?? (builder.equipment.enrichment || "Unassigned")}</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AxiForgeLabView() {
   const [workspace, setWorkspace] = useState<BuilderWorkspace>(() => loadBuilderWorkspace());
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("build");
@@ -1255,14 +1391,22 @@ export default function AxiForgeLabView() {
             <section className="theme-panel theme-builder-panel"><div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Field notes</div><h3>Usage and callouts</h3></div><BookOpen className="h-5 w-5 text-theme-muted" /></div><textarea className="theme-builder-notes" value={builder.notes} onChange={(event) => updateBuilder((current) => ({ ...current, notes: event.target.value }))} placeholder="Rotation priorities, weapon swaps, party role, situational substitutions..." /></section>
                     </>
                   ) : (
-                    <BuildPreview
-                      builder={builder}
-                      profession={selectedProfession}
-                      specsById={specsById}
-                      traitsBySpecId={traitsBySpecId}
-                      skillsById={skillsById}
-                      attributeTotals={attributeTotals}
-                    />
+                    <>
+                      <BuildPreview
+                        builder={builder}
+                        profession={selectedProfession}
+                        specsById={specsById}
+                        traitsBySpecId={traitsBySpecId}
+                        skillsById={skillsById}
+                        attributeTotals={attributeTotals}
+                      />
+                      <EquipmentPreview
+                        builder={builder}
+                        items={equipmentItems}
+                        availableWeapons={availableWeapons}
+                        skillsById={skillsById}
+                      />
+                    </>
                   )}
           </main>
 
