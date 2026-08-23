@@ -116,8 +116,8 @@ export default function KdrView() {
         <StatCard
           label="Avg Squad Size"
           value={fmtFixed(s.avgSquadSize, 0)}
-          icon={<Users className="w-3.5 h-3.5 text-cyan-400" />}
-          accent="text-cyan-400"
+          icon={<Users className="w-3.5 h-3.5 text-amber-400" />}
+          accent="text-amber-400"
           sub={`vs ${fmtFixed(s.avgEnemies, 0)} enemies`}
         />
       </div>

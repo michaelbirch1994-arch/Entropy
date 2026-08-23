@@ -148,12 +148,12 @@ function CompositionDeltaPanel({
                       <span className="text-theme-text/85 font-semibold">{r.name}</span>
                     </div>
                   </td>
-                  <td className="p-2.5 text-right text-sky-400">{fmtNum(r.squadCount)}</td>
+                  <td className="p-2.5 text-right text-amber-400">{fmtNum(r.squadCount)}</td>
                   <td className="p-2.5 text-right text-rose-400">{fmtNum(r.enemyCount)}</td>
                   <td className="p-2.5 text-right">
                     <span
                       className={`font-bold ${
-                        !heavy ? "text-theme-muted" : enemyHeavier ? "text-rose-400" : "text-sky-400"
+                        !heavy ? "text-theme-muted" : enemyHeavier ? "text-rose-400" : "text-amber-400"
                       }`}
                     >
                       {r.deltaPct > 0 ? "+" : ""}

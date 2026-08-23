@@ -270,7 +270,7 @@ export default function FightBreakdownView() {
               <DossierMetric label="Down conversion" value={`${selectedRow.fight.enemyDowns} → ${selectedRow.fight.enemyDeaths}`} tone="text-emerald-300" />
               <DossierMetric label="Outgoing damage" value={fmtCompact(selectedRow.fight.totalOutgoingDamage)} />
               <DossierMetric label="Incoming damage" value={fmtCompact(selectedRow.fight.totalIncomingDamage)} tone="text-rose-300" />
-              <DossierMetric label="Outgoing strips" value={String(selectedRow.fight.totalOutgoingStrips)} tone="text-cyan-300" />
+              <DossierMetric label="Outgoing strips" value={String(selectedRow.fight.totalOutgoingStrips)} tone="text-amber-300" />
               <DossierMetric label="Squad deaths" value={String(selectedRow.fight.alliesDead)} tone="text-rose-300" />
               {selectedRow.fight.totalOutgoingHealing !== undefined && (
                 <DossierMetric label="Outgoing healing" value={fmtCompact(selectedRow.fight.totalOutgoingHealing)} tone="text-emerald-300" />

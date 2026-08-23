@@ -277,8 +277,8 @@ export default function DefensiveView() {
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-9 gap-4">
         <StatCard label={lbl("Total Healing")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalHealing, totals.healingActiveSec))} icon={<Heart className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
-        <StatCard label={lbl("Total Barrier")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrier, totals.healingActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-teal-400" />} accent="text-teal-400" />
-        <StatCard label={lbl("Barrier Absorbed")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrierAbsorbed, totals.defenseActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-teal-300" />} accent="text-teal-300" />
+        <StatCard label={lbl("Total Barrier")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrier, totals.healingActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
+        <StatCard label={lbl("Barrier Absorbed")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrierAbsorbed, totals.defenseActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-amber-300" />} accent="text-amber-300" />
         <StatCard label={lbl("Mitigated Damage")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalMitigatedDamage, totals.mitigationActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-slate-300" />} accent="text-slate-100" />
         <StatCard label={lbl("Cleanses")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalCleanses, totals.supportActiveSec))} icon={<Droplet className="w-3.5 h-3.5 text-emerald-300" />} accent="text-emerald-300" />
         <StatCard label={lbl("Boon Strips")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalStrips, totals.supportActiveSec))} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
@@ -371,7 +371,7 @@ export default function DefensiveView() {
                     </div>
                     <div>
                       <div>Barrier</div>
-                      <div className="font-mono text-[12px] text-teal-400">{fmtCompact(p.barrier)}</div>
+                      <div className="font-mono text-[12px] text-amber-400">{fmtCompact(p.barrier)}</div>
                     </div>
                     <div>
                       <div>Downed</div>
@@ -421,7 +421,7 @@ export default function DefensiveView() {
                     <td className="p-2.5 text-right"><PlayerSampleCell sample={p.sample} /></td>
                     <td className="p-2.5 text-right text-emerald-400 font-bold">{perPlayer(pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing), p.activeMs)}</td>
                     <td className="p-2.5 text-right text-emerald-400/70">{perPlayer(p.healingTotals.squadHealing ?? 0, p.activeMs)}</td>
-                    <td className="p-2.5 text-right text-teal-400">{perPlayer(pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier), p.activeMs)}</td>
+                    <td className="p-2.5 text-right text-amber-400">{perPlayer(pickAllyScopeValue(allyScope, p.healingTotals.barrier, p.healingTotals.squadBarrier), p.activeMs)}</td>
                     <td className="p-2.5 text-right text-emerald-300">{perPlayer(p.healingTotals.downedHealing ?? 0, p.activeMs)}</td>
                   </tr>
                 ))}
@@ -468,7 +468,7 @@ export default function DefensiveView() {
                       <td className="p-2.5 text-right text-orange-400">{perPlayer(p.defenseTotals.powerDamageTaken ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-amber-300">{perPlayer(p.defenseTotals.conditionDamageTaken ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-slate-400">{perPlayerN(p.defenseTotals.damageTakenCount ?? 0, p.totalFightMs)}</td>
-                      <td className="p-2.5 text-right text-teal-400">{perPlayer(p.defenseTotals.damageBarrier ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-amber-400">{perPlayer(p.defenseTotals.damageBarrier ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-slate-100">{perPlayer(mitigation?.totalMitigation ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-slate-300">{perPlayerN(mitigation?.blocked ?? p.defenseTotals.blockedCount ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-slate-300">{perPlayerN(p.defenseTotals.dodgeCount ?? 0, p.totalFightMs)}</td>

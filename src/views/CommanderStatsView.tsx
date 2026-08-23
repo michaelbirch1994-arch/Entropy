@@ -119,8 +119,8 @@ export default function CommanderStatsView() {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Detail label="Damage taken" value={fmtNum(commander.damageTaken)} color="text-rose-300" />
             <Detail label="Damage / minute" value={fmtNum(commander.damageTakenPerMinute)} color="text-orange-300" />
-            <Detail label="Barrier absorbed" value={fmtNum(commander.incomingBarrierAbsorbed)} color="text-teal-300" />
-            <Detail label="Barrier / minute" value={fmtNum(commander.incomingBarrierAbsorbedPerMinute ?? 0)} color="text-teal-300" />
+            <Detail label="Barrier absorbed" value={fmtNum(commander.incomingBarrierAbsorbed)} color="text-amber-300" />
+            <Detail label="Barrier / minute" value={fmtNum(commander.incomingBarrierAbsorbedPerMinute ?? 0)} color="text-amber-300" />
           </div>
           <div className="mt-4 border-l-2 border-theme-border px-3 py-2 text-xs leading-5 text-slate-500">Push timing, tag movement, and squad response after a tag death require timestamped commander-position evidence that is not yet stored in the report contract. Entropy leaves those panels unavailable instead of estimating them.</div>
         </Panel>

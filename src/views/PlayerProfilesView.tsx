@@ -216,7 +216,7 @@ export default function PlayerProfilesView() {
                         <td className="p-2.5 text-right text-orange-400 font-bold">{fmtCompact(p.totalDamage)}</td>
                         <td className="p-2.5 text-right text-theme-text">{fmtFixedGrouped(p.bestDps, 0)}</td>
                         <td className="p-2.5 text-right text-emerald-400">{fmtCompact(p.totalHealing)}</td>
-                        <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.totalDownContrib)}</td>
+                        <td className="p-2.5 text-right text-amber-400">{fmtCompact(p.totalDownContrib)}</td>
                         <td className="p-2.5 text-right">
                           {mvpTotal > 0 ? (
                             <span className="inline-flex items-center gap-1 text-amber-400 font-bold">
@@ -246,7 +246,7 @@ export default function PlayerProfilesView() {
                                     <span
                                       key={b.id}
                                       title={b.detail}
-                                      className="px-1.5 py-0.5 rounded text-[10px] font-bold border border-sky-500/30 text-sky-400 bg-sky-500/10"
+                                      className="px-1.5 py-0.5 rounded text-[10px] font-bold border border-amber-500/30 text-amber-400 bg-amber-500/10"
                                     >
                                       {b.label}
                                     </span>
@@ -323,9 +323,9 @@ export default function PlayerProfilesView() {
             <ProfileMetric label="Best DPS" value={fmtFixedGrouped(selectedProfile.bestDps, 0)} />
             <ProfileMetric label="Total healing" value={fmtCompact(selectedProfile.totalHealing)} tone="text-emerald-400" />
             <ProfileMetric label="Total barrier" value={fmtCompact(selectedProfile.totalBarrier)} tone="text-emerald-300" />
-            <ProfileMetric label="Down contribution" value={fmtCompact(selectedProfile.totalDownContrib)} tone="text-sky-400" />
-            <ProfileMetric label="Boon strips" value={fmtCompact(selectedProfile.totalStrips)} tone="text-cyan-300" />
-            <ProfileMetric label="Condi cleanses" value={fmtCompact(selectedProfile.totalCleanses)} tone="text-cyan-300" />
+            <ProfileMetric label="Down contribution" value={fmtCompact(selectedProfile.totalDownContrib)} tone="text-amber-400" />
+            <ProfileMetric label="Boon strips" value={fmtCompact(selectedProfile.totalStrips)} tone="text-amber-300" />
+            <ProfileMetric label="Condi cleanses" value={fmtCompact(selectedProfile.totalCleanses)} tone="text-amber-300" />
             <ProfileMetric label="MVP awards" value={String(selectedProfile.offensiveMvpCount + selectedProfile.defensiveMvpCount)} tone="text-amber-400" />
             <ProfileMetric label="Current win streak" value={String(currentWinStreak(selectedProfile))} tone="text-orange-300" />
             <ProfileMetric label="Longest win streak" value={String(longestWinStreak(selectedProfile))} tone="text-orange-300" />
@@ -357,7 +357,7 @@ export default function PlayerProfilesView() {
                   <span
                     key={b.id}
                     title={b.detail}
-                    className="px-2 py-1 rounded text-[10px] font-bold border border-sky-500/30 text-sky-400 bg-sky-500/10"
+                    className="px-2 py-1 rounded text-[10px] font-bold border border-amber-500/30 text-amber-400 bg-amber-500/10"
                   >
                     {b.label}
                   </span>

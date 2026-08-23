@@ -165,9 +165,9 @@ export default function OverviewView() {
     { metric: "downContrib", label: "Down Contrib /s", value: fmtFixedGrouped(perSec(s.maxDownContrib)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, glow: "neon-offense" },
     { metric: "healing", label: "Healing /s", value: fmtFixedGrouped(perSec(s.maxHealing)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, glow: "neon-healing" },
     { metric: "barrier", label: "Barrier /s", value: fmtFixedGrouped(perSec(s.maxBarrier)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, glow: "neon-barrier" },
-    { metric: "cleanses", label: "Cleanses /s", value: fmtFixedGrouped(perSec(s.maxCleanses)), icon: <Droplet className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, glow: "neon-barrier" },
+    { metric: "cleanses", label: "Cleanses /s", value: fmtFixedGrouped(perSec(s.maxCleanses)), icon: <Droplet className="w-3.5 h-3.5 text-amber-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, glow: "neon-barrier" },
     { metric: "strips", label: "Strips /s", value: fmtFixedGrouped(perSec(s.maxStrips)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, glow: "neon-control" },
-    { metric: "stability", label: "Stability Gen /s", value: fmtFixedGrouped(perSec(s.maxStab)), icon: <Shield className="w-3.5 h-3.5 text-cyan-400" />, player: s.maxStab.player, count: s.maxStab.count, glow: "neon-control" },
+    { metric: "stability", label: "Stability Gen /s", value: fmtFixedGrouped(perSec(s.maxStab)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxStab.player, count: s.maxStab.count, glow: "neon-control" },
     { metric: "cc", label: "CC /s", value: fmtFixedGrouped(perSec(s.maxCC)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, glow: "neon-control" },
     { metric: "interrupts", label: "Interrupts /s", value: fmtFixedGrouped(perSec(s.maxInterrupts)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, glow: "neon-control" },
   ];

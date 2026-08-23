@@ -144,9 +144,9 @@ function buildPlayerSourceBreakdown({
       positiveRow("Total damage", damage, "bg-orange-400"),
       positiveRow("Direct damage", offenseTotals?.directDmg, "bg-amber-400"),
       positiveRow("Critical damage", offenseTotals?.criticalDmg, "bg-yellow-300"),
-      positiveRow("Down contribution", offenseTotals?.downContribution, "bg-sky-400"),
+      positiveRow("Down contribution", offenseTotals?.downContribution, "bg-amber-400"),
       positiveRow("Against downed", offenseTotals?.againstDownedDamage, "bg-rose-300"),
-      positiveRow("Enemy downs", offenseTotals?.downed, "bg-cyan-400"),
+      positiveRow("Enemy downs", offenseTotals?.downed, "bg-amber-400"),
       positiveRow("Kills", offenseTotals?.killed, "bg-red-400"),
     ),
     healing: rows(
@@ -154,18 +154,18 @@ function buildPlayerSourceBreakdown({
       positiveRow("Total healing", healingTotal, "bg-emerald-400"),
       positiveRow("Healing Power", pickAllyScopeValue(allyScope, healingTotals?.healingPowerHealing, healingTotals?.squadHealingPowerHealing), "bg-green-300"),
       positiveRow("Life steal / conversion", pickAllyScopeValue(allyScope, healingTotals?.conversionHealing, healingTotals?.squadConversionHealing), "bg-lime-300"),
-      positiveRow("Hybrid healing", pickAllyScopeValue(allyScope, healingTotals?.hybridHealing, healingTotals?.squadHybridHealing), "bg-teal-300"),
-      positiveRow("Downed healing", pickAllyScopeValue(allyScope, healingTotals?.downedHealing, healingTotals?.squadDownedHealing), "bg-cyan-300"),
+      positiveRow("Hybrid healing", pickAllyScopeValue(allyScope, healingTotals?.hybridHealing, healingTotals?.squadHybridHealing), "bg-amber-300"),
+      positiveRow("Downed healing", pickAllyScopeValue(allyScope, healingTotals?.downedHealing, healingTotals?.squadDownedHealing), "bg-amber-300"),
       positiveRow("Self healing", healingTotals?.selfHealing, "bg-emerald-600"),
     ),
     barrier: rows(
-      ...(skillBreakdown?.barrier.slice(0, 5).map((skill) => positiveRow(skill.name, skill.value, "bg-teal-400", skill.icon, skill.hits)) ?? []),
-      positiveRow("Total barrier", barrierTotal, "bg-teal-400"),
-      positiveRow("Group barrier", healingTotals?.groupBarrier, "bg-cyan-400"),
-      positiveRow("Self barrier", healingTotals?.selfBarrier, "bg-sky-400"),
+      ...(skillBreakdown?.barrier.slice(0, 5).map((skill) => positiveRow(skill.name, skill.value, "bg-amber-400", skill.icon, skill.hits)) ?? []),
+      positiveRow("Total barrier", barrierTotal, "bg-amber-400"),
+      positiveRow("Group barrier", healingTotals?.groupBarrier, "bg-amber-400"),
+      positiveRow("Self barrier", healingTotals?.selfBarrier, "bg-amber-400"),
     ),
     support: rows(
-      positiveRow("Cleanses", supportTotals?.condiCleanse, "bg-cyan-400"),
+      positiveRow("Cleanses", supportTotals?.condiCleanse, "bg-amber-400"),
       positiveRow("Boon strips", supportTotals?.boonStrips, "bg-amber-400"),
       positiveRow("Stability", findLeaderboardValue(leaderboards, "stability", account), "bg-blue-400"),
       positiveRow("Crowd control", offenseTotals?.appliedCrowdControl, "bg-purple-400"),
@@ -177,9 +177,9 @@ function buildPlayerSourceBreakdown({
       positiveRow("Damage taken", defenseTotals?.damageTaken, "bg-rose-400"),
       positiveRow("Power damage taken", defenseTotals?.powerDamageTaken, "bg-orange-300"),
       positiveRow("Condition damage taken", defenseTotals?.conditionDamageTaken, "bg-purple-300"),
-      positiveRow("Barrier absorbed", defenseTotals?.damageBarrier, "bg-teal-300"),
+      positiveRow("Barrier absorbed", defenseTotals?.damageBarrier, "bg-amber-300"),
       positiveRow("Dodges", findLeaderboardValue(leaderboards, "dodges", account), "bg-blue-300"),
-      positiveRow("Blocks", defenseTotals?.blockedCount, "bg-sky-300"),
+      positiveRow("Blocks", defenseTotals?.blockedCount, "bg-amber-300"),
       positiveRow("Evades", defenseTotals?.evadedCount, "bg-indigo-300"),
       positiveRow("Downs", defenseTotals?.downCount, "bg-amber-300"),
       positiveRow("Deaths", defenseTotals?.deadCount, "bg-red-400"),
@@ -391,7 +391,7 @@ export default function TopPlayersView() {
         title={`${active.label} Player Cards`}
         subtitle="These cards are driven by the same selected metric as the podium and table."
         icon={<active.icon className="w-4 h-4" />}
-        accent="text-sky-400"
+        accent="text-amber-400"
       >
         {entries.length > 0 ? (
           <div className="theme-player-card-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" key={`cards:${snapshotKey}`}>
@@ -432,7 +432,7 @@ export default function TopPlayersView() {
         )}
       </Panel>
 
-      <Panel title={`${active.label} Leaderboard`} icon={<active.icon className="w-4 h-4" />} accent="text-sky-400">
+      <Panel title={`${active.label} Leaderboard`} icon={<active.icon className="w-4 h-4" />} accent="text-amber-400">
         <LeaderboardTable
           entries={entries}
           metricLabel={active.label}

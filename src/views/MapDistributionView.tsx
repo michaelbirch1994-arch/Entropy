@@ -17,7 +17,7 @@ export default function MapDistributionView() {
   return (
     <div className="space-y-5 animate-view pb-12">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Avg Squad Size" value={fmtFixed(s.avgSquadSize, 0)} icon={<Users className="w-3.5 h-3.5 text-cyan-400" />} accent="text-cyan-400" />
+        <StatCard label="Avg Squad Size" value={fmtFixed(s.avgSquadSize, 0)} icon={<Users className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
         <StatCard label="Avg Enemies" value={fmtFixed(s.avgEnemies, 0)} icon={<Users className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" />
         <StatCard label="Total Fights" value={fmtNum(s.total)} icon={<MapIcon className="w-3.5 h-3.5 text-theme-accent-strong" />} accent="text-theme-accent-strong" />
         <StatCard label="Outcome Coverage" value={`${classifiedFights}/${s.total}`} icon={<CircleHelp className="w-3.5 h-3.5 text-theme-muted" />} accent="text-theme-text" sub={classifiedFights > 0 ? "source-classified fights" : "WvW results unavailable"} />

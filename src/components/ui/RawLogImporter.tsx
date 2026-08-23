@@ -385,8 +385,8 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
               )}
             </div>
           ) : (
-            <div className="rounded-xl border border-sky-500/10 bg-sky-500/[0.04] px-3.5 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-sky-300/80">
+            <div className="rounded-xl border border-amber-500/10 bg-amber-500/[0.04] px-3.5 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300/80">
                 Web intake ready
               </p>
               <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">

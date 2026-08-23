@@ -23,13 +23,13 @@ const KIND_LABEL: Record<string, string> = {
 
 const KIND_COLOR: Record<string, string> = {
   gain: "text-amber-400",
-  underEffect: "text-sky-400",
+  underEffect: "text-amber-400",
   counter: "text-slate-400",
 };
 
 const KIND_DOT: Record<string, string> = {
   gain: "bg-amber-500",
-  underEffect: "bg-sky-500",
+  underEffect: "bg-amber-500",
   counter: "bg-slate-500",
 };
 

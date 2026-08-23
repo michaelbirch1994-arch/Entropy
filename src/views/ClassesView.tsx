@@ -152,7 +152,7 @@ export default function ClassesView() {
               <p className="mt-2 text-xs text-theme-muted">Select any profession in either composition list to inspect roster roles and fight presence.</p>
             </div>
             <div className="flex gap-2 text-center">
-              <div className="border-l-2 border-sky-400/40 bg-theme-surface-inset/60 px-4 py-2"><div className="font-mono text-xl font-black text-sky-300">{selectedSquadCount}</div><div className="text-[9px] uppercase text-theme-muted">squad</div></div>
+              <div className="border-l-2 border-amber-400/40 bg-theme-surface-inset/60 px-4 py-2"><div className="font-mono text-xl font-black text-amber-300">{selectedSquadCount}</div><div className="text-[9px] uppercase text-theme-muted">squad</div></div>
               <div className="border-l-2 border-rose-400/40 bg-theme-surface-inset/60 px-4 py-2"><div className="font-mono text-xl font-black text-rose-300">{selectedEnemyCount}</div><div className="text-[9px] uppercase text-theme-muted">enemy</div></div>
             </div>
           </div>

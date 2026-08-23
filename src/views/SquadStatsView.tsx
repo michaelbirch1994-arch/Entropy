@@ -104,7 +104,7 @@ function SkillSourceRows({
   rows: Array<TopSkill | TopHealingSource | TopBarrierSource>;
   kind: "pressure" | "incoming" | "healing" | "barrier";
 }) {
-  const tone = kind === "healing" ? "text-emerald-200" : kind === "barrier" ? "text-teal-200" : "text-rose-200";
+  const tone = kind === "healing" ? "text-emerald-200" : kind === "barrier" ? "text-amber-200" : "text-rose-200";
   return rows.length ? (
     <BoundedDataRegion
       label={`${kind} skill sources, ${rows.length} skills`}
@@ -362,7 +362,7 @@ export default function SquadStatsView() {
       <button
         type="button"
         onClick={() => toggleOverviewSort(k)}
-        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-slate-300 ${overviewSort?.key === k ? "text-sky-400" : ""}`}
+        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-slate-300 ${overviewSort?.key === k ? "text-amber-400" : ""}`}
       >
         {label}
         <span className="text-[8px] opacity-70">{overviewSort?.key === k ? (overviewSort.dir === "desc" ? "▼" : "▲") : "↕"}</span>
@@ -375,10 +375,10 @@ export default function SquadStatsView() {
       {/* Summary */}
       <div className="theme-stat-grid grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard label="Total Damage" value={fmtCompact(totalDamage)} icon={<Swords className="w-3.5 h-3.5 text-orange-400" />} accent="text-orange-400" />
-        <StatCard label="Down Contrib" value={fmtCompact(totalDownContrib)} icon={<Target className="w-3.5 h-3.5 text-sky-400" />} accent="text-sky-400" />
+        <StatCard label="Down Contrib" value={fmtCompact(totalDownContrib)} icon={<Target className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
         <StatCard label="Total Healing" value={fmtCompact(totalHealing)} icon={<Heart className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
-        <StatCard label="Total Barrier" value={fmtCompact(totalBarrier)} icon={<Shield className="w-3.5 h-3.5 text-teal-400" />} accent="text-teal-400" />
-        <StatCard label="Cleanses" value={fmtNum(totalCleanses)} icon={<Zap className="w-3.5 h-3.5 text-cyan-400" />} accent="text-cyan-400" />
+        <StatCard label="Total Barrier" value={fmtCompact(totalBarrier)} icon={<Shield className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
+        <StatCard label="Cleanses" value={fmtNum(totalCleanses)} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
         <StatCard label="Strips" value={fmtNum(totalStrips)} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
       </div>
 
@@ -470,7 +470,7 @@ export default function SquadStatsView() {
                 <div className="mt-3 grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
                   <span>Score <b className="block text-rose-300">{selectedPressureFight.score}/100</b></span>
                   <span>Damage <b className="block text-orange-300">{fmtCompact(selectedPressureFight.outgoingDamage)}</b></span>
-                  <span>Downs <b className="block text-sky-300">{fmtNum(selectedPressureFight.downs)}</b></span>
+                  <span>Downs <b className="block text-amber-300">{fmtNum(selectedPressureFight.downs)}</b></span>
                   <span>Kills <b className="block text-amber-300">{fmtNum(selectedPressureFight.kills)}</b></span>
                 </div>
                 {(!selectedPressureFight.hasExactOutgoingSkills || !selectedPressureFight.hasExactIncomingSkills) && (
@@ -582,11 +582,11 @@ export default function SquadStatsView() {
                     <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] uppercase tracking-wider text-slate-500 sm:grid-cols-4">
                       <span>Incoming <b className="block text-rose-300">{fmtCompact(selectedHealingFight.incomingDamage)}</b></span>
                       <span>Healing <b className="block text-emerald-300">{selectedHealingFight.healing === null ? "n/a" : fmtCompact(selectedHealingFight.healing)}</b></span>
-                      <span>Barrier generated <b className="block text-teal-300">{selectedHealingFight.outgoingBarrier === null ? "n/a" : fmtCompact(selectedHealingFight.outgoingBarrier)}</b></span>
-                      <span>Barrier absorbed <b className="block text-cyan-300">{selectedHealingFight.absorbedBarrier === null ? "n/a" : fmtCompact(selectedHealingFight.absorbedBarrier)}</b></span>
+                      <span>Barrier generated <b className="block text-amber-300">{selectedHealingFight.outgoingBarrier === null ? "n/a" : fmtCompact(selectedHealingFight.outgoingBarrier)}</b></span>
+                      <span>Barrier absorbed <b className="block text-amber-300">{selectedHealingFight.absorbedBarrier === null ? "n/a" : fmtCompact(selectedHealingFight.absorbedBarrier)}</b></span>
                     </div>
                     {selectedHealingFight.effectiveHealing === null && (
-                      <div className="mt-3 border-l-2 border-cyan-400/60 bg-cyan-500/5 px-3 py-2 text-[11px] text-cyan-100/80">
+                      <div className="mt-3 border-l-2 border-amber-400/60 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-100/80">
                         Effective healing is unavailable for this fight because outgoing healing or generated barrier was not recorded. Absorbed barrier is shown separately and is never substituted.
                       </div>
                     )}
@@ -611,9 +611,9 @@ export default function SquadStatsView() {
                       <div className="text-[11px] text-slate-500">Exact per-fight healing sources need a report parsed with this build.</div>
                     )}
                   </div>
-                  <div className="theme-source-card rounded-xl border border-teal-500/15 bg-teal-500/5 p-3">
+                  <div className="theme-source-card rounded-xl border border-amber-500/15 bg-amber-500/5 p-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-teal-300">Outgoing barrier skills</div>
+                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-300">Outgoing barrier skills</div>
                       <div className="text-[10px] uppercase tracking-wider text-slate-500">{selectedHealingFight.barrierSkills.length}</div>
                     </div>
                     {selectedHealingFight.barrierSkills.length ? <SkillSourceRows rows={selectedHealingFight.barrierSkills} kind="barrier" /> : selectedHealingFight.hasExactBarrierSkills ? (
@@ -657,7 +657,7 @@ export default function SquadStatsView() {
       </Panel>
 
       {/* Squad summary table */}
-      <Panel title="Squad Roster Overview" icon={<Users className="w-4 h-4" />} accent="text-sky-400" bodyClassName="p-0">
+      <Panel title="Squad Roster Overview" icon={<Users className="w-4 h-4" />} accent="text-amber-400" bodyClassName="p-0">
         <div className="theme-table-shell overflow-x-auto custom-scrollbar">
           <table className="w-full text-left text-xs">
             <thead>
@@ -687,11 +687,11 @@ export default function SquadStatsView() {
                     </td>
                     <td className="p-2.5 text-right text-orange-400">{fmtCompact(p.damage)}</td>
                     <td className="p-2.5 text-right text-slate-200 font-bold">{fmtFixedGrouped(p.dps, 0)}</td>
-                    <td className="p-2.5 text-right text-sky-400">{fmtCompact(p.downContribution)}</td>
+                    <td className="p-2.5 text-right text-amber-400">{fmtCompact(p.downContribution)}</td>
                     <td className="p-2.5 text-right text-emerald-400">
                       {p.heal ? renderHealing(p.heal, p.healing) : "-"}
                     </td>
-                    <td className="p-2.5 text-right text-cyan-400">{p.cleanses > 0 ? fmtNum(p.cleanses) : "-"}</td>
+                    <td className="p-2.5 text-right text-amber-400">{p.cleanses > 0 ? fmtNum(p.cleanses) : "-"}</td>
                     <td className="p-2.5 text-right text-amber-400">{p.strips > 0 ? fmtNum(p.strips) : "-"}</td>
                     <td className="p-2.5 text-right text-slate-300" title="Active combat time across the fights this player joined">
                       {p.combatMs > 0 ? fmtDur(p.combatMs) : "-"}
