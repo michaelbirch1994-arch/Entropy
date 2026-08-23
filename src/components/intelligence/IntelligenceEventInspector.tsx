@@ -160,7 +160,7 @@ export default function IntelligenceEventInspector({
       <div className="mt-5 grid gap-4 xl:grid-cols-3">
         <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-4">
           <div className="text-xs font-black uppercase tracking-wider text-slate-400">Before</div>
-          <div className="mt-3 grid gap-2">
+          <div className="mt-3 grid gap-2 max-h-80 overflow-y-auto custom-scrollbar pr-1">
             {eventsBefore.length > 0 ? eventsBefore.map((candidate) => (
               <EventRow key={candidate.id} event={candidate} anchorMs={window.anchorTimestampMs} />
             )) : <p className="text-xs leading-5 text-slate-500">No other CriticalEvent was recorded inside the pre-event window.</p>}
@@ -188,7 +188,7 @@ export default function IntelligenceEventInspector({
 
         <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-4">
           <div className="text-xs font-black uppercase tracking-wider text-slate-400">After</div>
-          <div className="mt-3 grid gap-2">
+          <div className="mt-3 grid gap-2 max-h-80 overflow-y-auto custom-scrollbar pr-1">
             {eventsAfter.length > 0 ? eventsAfter.map((candidate) => (
               <EventRow key={candidate.id} event={candidate} anchorMs={window.anchorTimestampMs} />
             )) : <p className="text-xs leading-5 text-slate-500">No other CriticalEvent was recorded inside the post-event window.</p>}
