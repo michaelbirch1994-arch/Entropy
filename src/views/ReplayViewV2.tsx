@@ -150,8 +150,8 @@ export default function ReplayViewV2() {
       baseCy,
       w,
       h,
-      maxPanX: Math.max(0, (fullW - w) / 2),
-      maxPanY: Math.max(0, (fullH - h) / 2),
+      maxPanX: Math.max(fullW * 0.18, (fullW - w) / 2),
+      maxPanY: Math.max(fullH * 0.18, (fullH - h) / 2),
       minX: bounds.minX - pad,
       maxX: bounds.maxX + pad,
       minY: bounds.minY - pad,
@@ -206,7 +206,6 @@ export default function ReplayViewV2() {
   }, [frame, focusPoint, followFocus, pan, zoom]);
 
   const handlePointerDown = useCallback((event: PointerEvent<SVGSVGElement>) => {
-    if (zoom <= 1) return;
     (event.target as Element).setPointerCapture(event.pointerId);
     setFollowFocus(false);
     dragRef.current = { x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y };

@@ -31,8 +31,8 @@ function facingArrow(cx: number, cy: number, startRadius: number, arrowLength: n
 }
 
 function playerMarkerRadius(isCommander: boolean, down: boolean, markerUnit: number) {
-  const baseRadius = isCommander ? 10.5 : 7.5;
-  return (down ? baseRadius + 1.5 : baseRadius) * markerUnit;
+  const baseRadius = isCommander ? 13.5 : 9.5;
+  return (down ? baseRadius + 2 : baseRadius) * markerUnit;
 }
 
 interface ReplayMapStageProps {
@@ -87,9 +87,10 @@ function ReplayMapStage({
     <div className="overflow-hidden rounded-xl border border-slate-700/80 bg-black/70 shadow-[inset_0_0_50px_rgba(0,0,0,0.55)]">
       <svg
         ref={svgRef}
+          preserveAspectRatio="xMidYMid slice"
         viewBox={viewBox}
         className={focusMode ? "h-[clamp(520px,60vh,760px)] w-full select-none touch-none" : "h-[420px] w-full select-none touch-none xl:h-[520px] 2xl:h-[600px]"}
-        style={{ cursor: zoom > 1 ? (dragging ? "grabbing" : "grab") : "default" }}
+        style={{ cursor: dragging ? "grabbing" : "grab" }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

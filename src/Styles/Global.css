@@ -120,6 +120,7 @@ html,
 body,
 #root {
   height: 100%;
+  overflow: hidden;
   margin: 0;
   color: var(--theme-text);
   font-family: var(--theme-body-font);
