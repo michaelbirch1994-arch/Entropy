@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { computeAttributeTotals, type AttributeTotals } from "../lib/gw2/computeAttributes";
 import {
   AlertCircle,
   Archive,
@@ -518,9 +519,136 @@ function SquadWorkspace({
   );
 }
 
+function BuildPreview({
+  builder,
+  profession,
+  specsById,
+  traitsBySpecId,
+  skillsById,
+  attributeTotals,
+}: {
+  builder: EntropyBuilderState;
+  profession: Gw2Profession | null;
+  specsById: Map<number, Gw2Specialization>;
+  traitsBySpecId: Map<number, Gw2Trait[]>;
+  skillsById: Map<number, Gw2Skill>;
+  attributeTotals: AttributeTotals;
+}) {
+  const skillIds = [builder.healSkillId, builder.utilitySkillIds[0], builder.utilitySkillIds[1], builder.utilitySkillIds[2], builder.eliteSkillId];
+  const skillLabels = ["Heal", "Utility", "Utility", "Utility", "Elite"];
+  const attributeRows: Array<[string, string]> = [
+    ["Power", Math.round(attributeTotals.power).toLocaleString()],
+    ["Precision", Math.round(attributeTotals.precision).toLocaleString()],
+    ["Toughness", Math.round(attributeTotals.toughness).toLocaleString()],
+    ["Vitality", Math.round(attributeTotals.vitality).toLocaleString()],
+    ["Ferocity", Math.round(attributeTotals.ferocity).toLocaleString()],
+    ["Condition Damage", Math.round(attributeTotals.conditionDamage).toLocaleString()],
+    ["Expertise", Math.round(attributeTotals.expertise).toLocaleString()],
+    ["Concentration", Math.round(attributeTotals.concentration).toLocaleString()],
+    ["Healing Power", Math.round(attributeTotals.healingPower).toLocaleString()],
+    ["Crit Chance", attributeTotals.critChance.toFixed(1) + "%"],
+    ["Crit Damage", attributeTotals.critDamage.toFixed(1) + "%"],
+    ["Boon Duration", attributeTotals.boonDuration.toFixed(1) + "%"],
+    ["Condition Duration", attributeTotals.conditionDuration.toFixed(1) + "%"],
+  ];
+
+  return (
+    <div className="theme-builder-preview">
+      <div className="theme-builder-preview-header">
+        {profession && <ClassIcon name={profession.name} size="lg" />}
+        <div>
+          <h2>{builder.name || "Untitled Build"}</h2>
+          <p className="theme-builder-preview-subtitle">
+            {profession?.name ?? "No profession"} · {builder.gameMode.toUpperCase()}
+            {builder.role ? " · " + builder.role : ""}
+          </p>
+        </div>
+      </div>
+
+      <div className="theme-builder-preview-skillbar">
+        {skillIds.map((id, index) => {
+          const skill = id ? skillsById.get(id) : null;
+          return (
+            <div key={index} className="theme-builder-preview-skill" title={skill?.name ?? skillLabels[index]}>
+              {skill?.icon ? <img src={skill.icon} alt="" /> : <span className="theme-builder-preview-skill-empty">{skillLabels[index][0]}</span>}
+            </div>
+          );
+        })}
+        <div className="theme-builder-preview-hp">
+          <strong>{Math.round(attributeTotals.health).toLocaleString()}</strong>
+          <span>HP</span>
+        </div>
+      </div>
+
+      <div className="theme-builder-preview-attributes">
+        {attributeRows.map(([label, value]) => (
+          <div key={label} className="theme-builder-preview-attribute">
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+
+      <div className="theme-builder-preview-specs">
+        {[0, 1, 2].map((trackIndex) => {
+          const specId = builder.specializationIds[trackIndex];
+          const spec = specId ? specsById.get(specId) : null;
+          if (!spec) {
+            return (
+              <div key={trackIndex} className="theme-builder-preview-spec-row is-empty">
+                <p>Choose specialization {trackIndex + 1}</p>
+              </div>
+            );
+          }
+          const traits = traitsBySpecId.get(spec.id) ?? [];
+          const rowStyle = spec.background ? { backgroundImage: "url(" + spec.background + ")" } : undefined;
+          return (
+            <div key={trackIndex} className="theme-builder-preview-spec-row" style={rowStyle}>
+              <div className="theme-builder-preview-spec-badge">
+                {spec.icon && <img src={spec.icon} alt="" />}
+              </div>
+              <span className="theme-builder-preview-spec-name">{spec.name}</span>
+              <div className="theme-builder-preview-spec-tiers">
+                {[1, 2, 3].map((tier) => {
+                  const minor = traits.find((trait) => trait.slot === "Minor" && trait.tier === tier);
+                  const majors = traits
+                    .filter((trait) => trait.slot === "Major" && trait.tier === tier)
+                    .sort((a, b) => a.order - b.order);
+                  const chosenIndex = builder.traitChoices[trackIndex][tier - 1];
+                  return (
+                    <div key={tier} className="theme-builder-preview-tier">
+                      {minor?.icon && (
+                        <img className="theme-builder-preview-tier-minor" src={minor.icon} alt="" title={minor.name} />
+                      )}
+                      <div className="theme-builder-preview-tier-majors">
+                        {majors.map((trait, position) => (
+                          trait.icon ? (
+                            <img
+                              key={trait.id}
+                              className={chosenIndex === position + 1 ? "is-selected" : ""}
+                              src={trait.icon}
+                              alt=""
+                              title={trait.name}
+                            />
+                          ) : null
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function AxiForgeLabView() {
   const [workspace, setWorkspace] = useState<BuilderWorkspace>(() => loadBuilderWorkspace());
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("build");
+  const [builderViewMode, setBuilderViewMode] = useState<"edit" | "preview">("edit");
   const [editingBuildId, setEditingBuildId] = useState<string | null>(null);
   const [professions, setProfessions] = useState<Gw2Profession[]>([]);
   const [itemStats, setItemStats] = useState<Gw2ItemStat[]>([]);
@@ -549,6 +677,7 @@ export default function AxiForgeLabView() {
   useEffect(() => saveBuilderWorkspace(workspace), [workspace]);
 
   const selectedProfession = useMemo(() => professions.find((profession) => profession.id === builder.professionId) ?? null, [builder.professionId, professions]);
+  const attributeTotals = useMemo(() => computeAttributeTotals(builder, selectedProfession), [builder, selectedProfession]);
   const specsById = useMemo(() => new Map(professionSpecs.map((spec) => [spec.id, spec])), [professionSpecs]);
   const traitsBySpecId = useMemo(() => {
     const map = new Map<number, Gw2Trait[]>();
@@ -922,6 +1051,12 @@ export default function AxiForgeLabView() {
       {activeTab === "build" && (
         <div className="theme-builder-layout">
           <main className="space-y-5">
+          <div className="theme-builder-mode-toggle" role="tablist" aria-label="Builder view mode">
+            <button type="button" className={builderViewMode === "edit" ? "is-active" : ""} onClick={() => setBuilderViewMode("edit")}>Edit</button>
+            <button type="button" className={builderViewMode === "preview" ? "is-active" : ""} onClick={() => setBuilderViewMode("preview")}>Preview</button>
+          </div>
+          {builderViewMode === "edit" ? (
+            <>
             <section className="theme-panel theme-builder-panel theme-builder-identity">
               <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Loadout identity</div><h3>{editingBuildId ? "Editing saved build" : "Unsaved field draft"}</h3></div><button type="button" className="theme-quiet-button" onClick={() => { updateBuilder(createEmptyBuilder(builder.professionId)); setEditingBuildId(null); setExportCode(""); }}><RotateCcw className="h-4 w-4" /> Reset</button></div>
               <div className="grid gap-3 md:grid-cols-[minmax(16rem,1.5fr)_minmax(10rem,.7fr)_minmax(14rem,1fr)]">
@@ -1118,6 +1253,17 @@ export default function AxiForgeLabView() {
             )}
 
             <section className="theme-panel theme-builder-panel"><div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Field notes</div><h3>Usage and callouts</h3></div><BookOpen className="h-5 w-5 text-theme-muted" /></div><textarea className="theme-builder-notes" value={builder.notes} onChange={(event) => updateBuilder((current) => ({ ...current, notes: event.target.value }))} placeholder="Rotation priorities, weapon swaps, party role, situational substitutions..." /></section>
+                    </>
+                  ) : (
+                    <BuildPreview
+                      builder={builder}
+                      profession={selectedProfession}
+                      specsById={specsById}
+                      traitsBySpecId={traitsBySpecId}
+                      skillsById={skillsById}
+                      attributeTotals={attributeTotals}
+                    />
+                  )}
           </main>
 
           <aside className="theme-builder-rail">
