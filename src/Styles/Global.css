@@ -3413,12 +3413,27 @@ button:disabled,
 }
 
 .theme-builder-preview-equipment {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
   margin-top: 1.5rem;
   padding-top: 1.5rem;
   border-top: 1px solid rgba(91, 43, 29, 0.55);
+}
+
+.theme-builder-preview-equipment-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: #ff6a32;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.theme-builder-preview-equipment-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
 }
 
 .theme-builder-preview-equipment-column h4 {
@@ -3600,10 +3615,45 @@ button:disabled,
 }
 
 @media (max-width: 900px) {
-  .theme-builder-preview-equipment {
+  .theme-builder-preview-equipment-grid {
     grid-template-columns: 1fr;
   }
   .theme-builder-preview-trinkets {
     grid-template-columns: 1fr;
+  }
+}
+
+.theme-builder-preview-armor-row,
+.theme-builder-preview-weapon-set,
+.theme-builder-preview-trinket-card,
+.theme-builder-preview-consumable-row {
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.theme-builder-preview-armor-row:hover,
+.theme-builder-preview-weapon-set:hover,
+.theme-builder-preview-trinket-card:hover,
+.theme-builder-preview-consumable-row:hover {
+  border-color: rgba(255, 106, 50, 0.55);
+  background: rgba(255, 106, 50, 0.06);
+}
+
+.theme-builder-mode-toggle button:not(.is-active):hover {
+  border-color: rgba(255, 106, 50, 0.5);
+  color: #ffe6d9;
+}
+
+.theme-builder-mode-content {
+  animation: theme-builder-fade-in 0.22s ease;
+}
+
+@keyframes theme-builder-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

@@ -682,6 +682,11 @@ function EquipmentPreview({
 
   return (
     <div className="theme-builder-preview-equipment">
+      <div className="theme-builder-preview-equipment-heading">
+        <Wrench className="h-4 w-4" />
+        <span>Equipment Loadout</span>
+      </div>
+      <div className="theme-builder-preview-equipment-grid">
       <div className="theme-builder-preview-equipment-column">
         <h4>Armor</h4>
         <div className="theme-builder-preview-armor-list">
@@ -734,9 +739,10 @@ function EquipmentPreview({
               <div className="theme-builder-preview-weapon-skills">
                 {rows.flatMap((row) => weaponSkillsFor(row.weapon)).map((skillRef, index) => {
                   const skill = skillsById.get(skillRef.id);
+                  if (!skill?.icon) return null;
                   return (
-                    <div key={`${skillRef.id}-${index}`} className="theme-builder-preview-skill" title={skill?.name ?? ""}>
-                      {skill?.icon ? <img src={skill.icon} alt="" /> : <span className="theme-builder-preview-skill-empty">?</span>}
+                    <div key={`${skillRef.id}-${index}`} className="theme-builder-preview-skill" title={skill.name}>
+                      <img src={skill.icon} alt="" />
                     </div>
                   );
                 })}
@@ -776,6 +782,7 @@ function EquipmentPreview({
             <div className="theme-builder-preview-armor-info"><small>Enrichment</small><strong>{enrichmentItem?.name ?? (builder.equipment.enrichment || "Unassigned")}</strong></div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -1191,6 +1198,7 @@ export default function AxiForgeLabView() {
             <button type="button" className={builderViewMode === "edit" ? "is-active" : ""} onClick={() => setBuilderViewMode("edit")}>Edit</button>
             <button type="button" className={builderViewMode === "preview" ? "is-active" : ""} onClick={() => setBuilderViewMode("preview")}>Preview</button>
           </div>
+          <div key={builderViewMode} className="theme-builder-mode-content">
           {builderViewMode === "edit" ? (
             <>
             <section className="theme-panel theme-builder-panel theme-builder-identity">
@@ -1408,6 +1416,7 @@ export default function AxiForgeLabView() {
                       />
                     </>
                   )}
+          </div>
           </main>
 
           <aside className="theme-builder-rail">
