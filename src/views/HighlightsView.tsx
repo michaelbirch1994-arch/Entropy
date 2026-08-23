@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useReport } from "../store/ReportContext";
 import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
-import { profChip } from "../utils/format";
+import ProfessionIcon from "../components/ui/ProfessionIcon";
+import { fmtPct } from "../utils/format";
 import type { FightHighlight } from "../types/report";
 import { Activity, BrainCircuit, Sparkles, Swords, Skull, Clock, Users, ShieldCheck, Crown } from "lucide-react";
 
@@ -24,9 +25,26 @@ const ACCENTS: Record<string, string> = {
   "mvp-moment": "text-theme-accent-strong border-theme-accent/30 bg-theme-accent/10",
 };
 
+const LABELS: Record<string, string> = {
+  blowout: "Blowout",
+  toughest: "Toughest fight",
+  longest: "Longest fight",
+  outnumbered: "Outnumbered & won",
+  flawless: "Flawless victory",
+  "mvp-moment": "MVP moment",
+};
+
+function fightClock(timestamp: number) {
+  const d = new Date(timestamp);
+  return Number.isFinite(d.getTime()) ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null;
+}
+
 function HighlightCard({ h, selected, onSelect }: { h: FightHighlight; selected: boolean; onSelect: () => void }) {
   const Icon = ICONS[h.id] ?? Sparkles;
   const accent = ACCENTS[h.id] ?? "text-theme-accent-strong border-theme-accent/20 bg-theme-accent/[0.05]";
+  const label = LABELS[h.id] ?? "Highlight";
+  const clock = fightClock(h.timestamp);
+  const isMvp = h.id === "mvp-moment" && typeof h.value === "number";
 
   return (
     <button
@@ -34,26 +52,35 @@ function HighlightCard({ h, selected, onSelect }: { h: FightHighlight; selected:
       aria-pressed={selected}
       data-intelligence-selected={selected ? "true" : undefined}
       onClick={onSelect}
-      className={`theme-player-card min-h-48 border p-5 flex flex-col gap-3 text-left ${accent} ${selected ? "ring-1 ring-theme-accent/40" : ""}`}
+      className={`theme-player-card min-h-48 border p-5 flex flex-col gap-3 text-left ${accent} ${selected ? "ring-1 ring-theme-accent/40" : ""} ${isMvp ? "md:col-span-2" : ""}`}
     >
-      <div className="flex items-center gap-2.5">
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${accent}`}>
-          <Icon className="w-4 h-4" />
+      <div className="flex items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${accent}`}>
+            <Icon className="w-4 h-4" />
+          </div>
+          <div>
+            <div className={`inline-block rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${accent}`}>{label}</div>
+            <div className="mt-1 text-xs font-bold uppercase tracking-wider">{h.title}</div>
+          </div>
         </div>
-        <div>
-          <div className="text-xs font-bold uppercase tracking-wider">{h.title}</div>
-          <div className="text-[10px] text-theme-muted font-mono">{h.fightName}</div>
-        </div>
+        {isMvp && (
+          <div className="text-right shrink-0">
+            <div className="text-2xl font-black text-theme-accent-strong">{fmtPct(h.value, 1)}</div>
+            <div className="text-[9px] font-bold uppercase tracking-wider text-theme-muted">of squad downs</div>
+          </div>
+        )}
+      </div>
+      <div className="text-[10px] text-theme-muted font-mono">
+        {h.fightName}
+        {clock ? ` · ${clock}` : ""}
       </div>
       <p className="text-sm text-theme-text/80 leading-relaxed">{h.description}</p>
       {h.account && (
         <div className="flex items-center gap-2 pt-1">
+          {h.profession && <ProfessionIcon profession={h.profession} className="w-5 h-5 shrink-0" />}
           <span className="text-xs font-semibold text-theme-text">{h.account}</span>
-          {h.profession && (
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(h.profession)}`}>
-              {h.profession}
-            </span>
-          )}
+          {h.profession && <span className="text-[10px] font-bold uppercase tracking-wider text-theme-muted">{h.profession}</span>}
         </div>
       )}
     </button>
@@ -78,7 +105,7 @@ export default function HighlightsView() {
 
   if (highlights.length === 0) {
     return (
-      <div className="space-y-5 animate-view pb-12">
+      <div className="space-y-5 animate-view-fade pb-12">
         <Panel
           title="Highlights"
           icon={<Sparkles className="w-3.5 h-3.5" />}
@@ -98,7 +125,7 @@ export default function HighlightsView() {
   }
 
   return (
-    <div className="space-y-5 animate-view pb-12">
+    <div className="space-y-5 animate-view-fade pb-12">
       <div className="text-[11px] text-theme-muted px-1">
         Auto-picked from the night's fights - biggest wins, closest calls, and standout individual performances.
       </div>
@@ -110,9 +137,27 @@ export default function HighlightsView() {
         </div>
         {selected && (
           <aside className="theme-comparison-slab self-start border border-theme-accent/25 bg-theme-surface/90 p-5 shadow-[inset_2px_0_0_var(--theme-accent)] xl:sticky xl:top-5">
-            <div className="text-[10px] font-black uppercase tracking-[0.24em] text-theme-accent-strong">Review reel</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[10px] font-black uppercase tracking-[0.24em] text-theme-accent-strong">Review reel</div>
+              <div className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${ACCENTS[selected.id] ?? ""}`}>{LABELS[selected.id] ?? "Highlight"}</div>
+            </div>
             <h3 className="mt-2 text-xl font-black uppercase text-theme-text">{selected.title}</h3>
-            <div className="mt-1 font-mono text-xs text-theme-muted">Fight {selected.fightIndex + 1} · {selected.fightName}</div>
+            <div className="mt-1 font-mono text-xs text-theme-muted">
+              Fight {selected.fightIndex + 1} · {selected.fightName}
+              {fightClock(selected.timestamp) ? ` · ${fightClock(selected.timestamp)}` : ""}
+            </div>
+            {selected.account && (
+              <div className="mt-3 flex items-center gap-2">
+                {selected.profession && <ProfessionIcon profession={selected.profession} className="w-6 h-6" />}
+                <span className="text-sm font-bold text-theme-text">{selected.account}</span>
+              </div>
+            )}
+            {typeof selected.value === "number" && selected.id === "mvp-moment" && (
+              <div className="mt-3 flex items-baseline gap-2">
+                <span className="text-3xl font-black text-theme-accent-strong">{fmtPct(selected.value, 1)}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-theme-muted">of squad downs</span>
+              </div>
+            )}
             <p className="mt-5 border-l-2 border-theme-accent/35 pl-3 text-sm leading-6 text-theme-text/80">{selected.description}</p>
             <div className="mt-5 grid gap-2">
               <button type="button" onClick={() => openSelected("squad-stats")} className="theme-command-button inline-flex items-center gap-2 border border-theme-accent/30 bg-theme-accent/10 px-4 py-2 text-xs font-black uppercase text-theme-accent-strong"><Activity className="h-4 w-4" /> Inspect fight metrics</button>
