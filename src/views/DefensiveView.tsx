@@ -14,7 +14,7 @@ type Tab = "defense" | "support" | "healing";
 type DefensiveSortKey =
   | "player" | "class" | "sample" | "cleanses" | "strips" | "stunBreaks" | "resurrects" | "logs"
   | "healing" | "squadHealing" | "barrier" | "downedHealing"
-  | "damageTaken" | "powerDamage" | "condiDamage" | "hits" | "barrierAbsorbed" | "mitigatedDamage" | "blocks" | "dodges" | "invulned" | "interrupted" | "downs" | "deaths";
+  | "damageTaken" | "powerDamage" | "condiDamage" | "hits" | "barrierAbsorbed" | "mitigatedDamage" | "blocks" | "dodges" | "invulned" | "interrupted" | "stripsTaken" | "downs" | "deaths";
 
 // s.*Players arrays can contain duplicate entries for the same account (e.g.
 // a build swap mid-report), which is easy to miss in the default sort order
@@ -218,6 +218,7 @@ export default function DefensiveView() {
       dodges: (p) => metricSortValue(p.defenseTotals.dodgeCount ?? 0, p.totalFightMs, isPerSecond),
       invulned: (p) => metricSortValue(p.defenseTotals.invulnedCount ?? 0, p.totalFightMs, isPerSecond),
       interrupted: (p) => metricSortValue(p.defenseTotals.interruptedCount ?? 0, p.totalFightMs, isPerSecond),
+      stripsTaken: (p) => metricSortValue(p.defenseTotals.boonStrips ?? 0, p.totalFightMs, isPerSecond),
       downs: (p) => metricSortValue(p.defenseTotals.downCount ?? 0, p.totalFightMs, isPerSecond),
       deaths: (p) => metricSortValue(p.defenseTotals.deadCount ?? 0, p.totalFightMs, isPerSecond),
     };
@@ -451,6 +452,7 @@ export default function DefensiveView() {
                   <SortHeader label="Dodges" k="dodges" align="right" title="Number of dodges" />
                   <SortHeader label="Invulned" k="invulned" align="right" title="Number of times was invulnerable to damage" />
                   <SortHeader label="Interrupted" k="interrupted" align="right" title="Number of times interrupted" />
+                  <SortHeader label="Strips Taken" k="stripsTaken" align="right" title="Boon stacks stripped from you by enemies" />
                   <SortHeader label="Downs" k="downs" align="right" />
                   <SortHeader label="Deaths" k="deaths" align="right" />
                 </tr>
@@ -474,6 +476,7 @@ export default function DefensiveView() {
                       <td className="p-2.5 text-right text-slate-300">{perPlayerN(p.defenseTotals.dodgeCount ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-slate-300">{perPlayerN(p.defenseTotals.invulnedCount ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-orange-300">{perPlayerN(p.defenseTotals.interruptedCount ?? 0, p.totalFightMs)}</td>
+                      <td className="p-2.5 text-right text-violet-300">{perPlayerN(p.defenseTotals.boonStrips ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-amber-400">{perPlayerN(p.defenseTotals.downCount ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-rose-400">{perPlayerN(p.defenseTotals.deadCount ?? 0, p.totalFightMs)}</td>
                     </tr>

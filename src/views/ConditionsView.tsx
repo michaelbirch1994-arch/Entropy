@@ -77,6 +77,7 @@ function ConditionIconTick(props: any) {
 export default function ConditionsView() {
   const { report } = useReport();
   const [tab, setTab] = useState<Tab>("Damage");
+  const [direction, setDirection] = useState<"outgoing" | "incoming">("outgoing");
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [sort, setSort] = useState<SortState>(null);
 
@@ -85,7 +86,7 @@ export default function ConditionsView() {
   const summaryByName = useMemo(() => {
     const map = new Map<string, ConditionSummary>();
     conditionPlayers.forEach((p) => {
-      Object.entries(p.outgoingConditions || {}).forEach(([name, v]) => {
+      Object.entries((direction === "outgoing" ? p.outgoingConditions : p.incomingConditions) || {}).forEach(([name, v]) => {
         const existing = map.get(name) || {
           name,
           icon: v.icon || getDefaultConditionIcon(name),
@@ -101,7 +102,7 @@ export default function ConditionsView() {
       });
     });
     return map;
-  }, [conditionPlayers]);
+  }, [conditionPlayers, direction]);
 
   const namesForTab = useMemo(() => {
     return Array.from(summaryByName.keys()).filter((name) =>
@@ -139,7 +140,7 @@ export default function ConditionsView() {
     if (!selectedCondition) return [];
     const rows = conditionPlayers
       .map((p) => {
-        const entry = p.outgoingConditions?.[selectedCondition];
+        const entry = (direction === "outgoing" ? p.outgoingConditions : p.incomingConditions)?.[selectedCondition];
         if (!entry) return null;
         if ((entry.applications || 0) <= 0 && (entry.damage || 0) <= 0) return null;
         return {
@@ -168,7 +169,7 @@ export default function ConditionsView() {
       if (sort.key === "uptime") return ((a.uptimeMs ?? -1) - (b.uptimeMs ?? -1)) * dir || a.account.localeCompare(b.account);
       return 0;
     });
-  }, [selectedCondition, conditionPlayers, sort, report]);
+  }, [selectedCondition, conditionPlayers, sort, report, direction]);
 
   function toggleSort(key: SortKey) {
     setSort((current) => {
@@ -192,7 +193,7 @@ export default function ConditionsView() {
           icon={<Skull className="w-3.5 h-3.5" />}
           empty={
             <div className="py-10 text-center text-sm text-theme-muted">
-              No outgoing condition data available for this report.
+              {direction === "outgoing" ? "No outgoing condition data available for this report." : "No incoming condition data available for this report."}
             </div>
           }
         >
@@ -227,12 +228,42 @@ export default function ConditionsView() {
         ))}
       </div>
 
+<div className="flex flex-wrap gap-1.5">
+        {(["outgoing", "incoming"] as const).map((d) => (
+          <button
+            key={d}
+            type="button"
+            onClick={() => {
+              setDirection(d);
+              setSelectedName(null);
+              setSort(null);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all border ${
+              direction === d
+                ? "bg-theme-accent/10 border-theme-accent/40 text-theme-accent-strong"
+                : "bg-theme-surface border-theme-border text-theme-muted hover:text-theme-text hover:border-theme-accent/20"
+            }`}
+          >
+            {d === "outgoing" ? "Outgoing (to enemies)" : "Incoming (from enemies)"}
+          </button>
+        ))}
+</div>
+
       <Panel
-        title={tab === "Damage" ? "Squad Outgoing Condition Damage" : "Squad Outgoing Control Applications"}
+        title={
+          direction === "outgoing"
+            ? (tab === "Damage" ? "Squad Outgoing Condition Damage" : "Squad Outgoing Control Applications")
+            : (tab === "Damage" ? "Squad Incoming Condition Damage" : "Squad Incoming Control Applications")
+        }
         subtitle={
           tab === "Damage"
-            ? "Total damage dealt by each damaging condition (bleeding, burning, confusion, poison, torment) across all fights joined."
-            : "Total applications of each control condition (weakness, cripple, chill, immobilize, fear, taunt, slow, blind, vulnerability) landed on enemies."
+            direction === "outgoing"
+              ? (tab === "Damage"
+                  ? "Total damage dealt by each damaging condition (bleeding, burning, confusion, poison, torment) across all fights joined."
+                  : "Total applications of each control condition (weakness, cripple, chill, immobilize, fear, taunt, slow, blind, vulnerability) landed on enemies.")
+              : (tab === "Damage"
+                  ? "Total damage received from each damaging condition (bleeding, burning, confusion, poison, torment) across all fights joined."
+                  : "Total applications of each control condition (weakness, cripple, chill, immobilize, fear, taunt, slow, blind, vulnerability) received from enemies.")
         }
         icon={<Skull className="w-3.5 h-3.5" />}
       >
