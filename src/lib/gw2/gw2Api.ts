@@ -93,6 +93,38 @@ export async function fetchGw2Pets(): Promise<Gw2Pet[]> {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export interface Gw2LegendApiRecord {
+  id: string;
+  code: number;
+  swap?: number;
+  heal?: number;
+  elite?: number;
+  utilities?: number[];
+}
+
+/**
+ * Skill "palette" ids used by GW2 in-game chat codes (see chatCode.ts) are a
+ * different id space from the /v2/skills ids Entropy stores everywhere else.
+ * The profession-detail endpoint's skills_by_palette field maps paletteId ->
+ * skillId, only when queried with v=latest (per the wiki's chat-link-format
+ * documentation), so we invert it here to the skillId -> paletteId direction
+ * chat-code encoding actually needs.
+ */
+export async function fetchGw2ProfessionSkillPalette(professionId: string): Promise<Map<number, number>> {
+  const detail = await getJson<{ skills_by_palette?: [number, number][] }>(`/professions/${professionId}?v=latest`);
+  const paletteBySkillId = new Map<number, number>();
+  for (const [paletteId, skillId] of detail.skills_by_palette ?? []) {
+    paletteBySkillId.set(skillId, paletteId);
+  }
+  return paletteBySkillId;
+}
+
+export async function fetchGw2LegendCodes(ids: string[]): Promise<Gw2LegendApiRecord[]> {
+  const uniqueIds = [...new Set(ids.filter(Boolean))];
+  if (!uniqueIds.length) return [];
+  return getJson<Gw2LegendApiRecord[]>(`/legends?ids=${uniqueIds.join(",")}`);
+}
+
 export function wikiSearchUrl(name: string): string {
   return `https://wiki.guildwars2.com/index.php?search=${encodeURIComponent(name)}`;
 }
