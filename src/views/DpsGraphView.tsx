@@ -237,16 +237,24 @@ const tally = new Map<number, { count: number; players: Set<string> }>();
               .sort((a, b) => (b.points[b.points.length - 1] ?? 0) - (a.points[a.points.length - 1] ?? 0))
               .map((p) => {
                 const active = compareAccounts.includes(p.account);
+                const colorIndex = compareAccounts.indexOf(p.account);
                 return (
                   <button
                     key={p.account}
                     onClick={() => toggleCompare(p.account)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all ${
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all ${
                       active
                         ? "border-theme-focus bg-theme-accentDim text-theme-accentStrong"
                         : "bg-white/[0.02] border-white/[0.06] text-slate-500 hover:text-slate-300 hover:border-theme-border"
                     }`}
                   >
+                    {active && (
+                      <span
+                        className="inline-block w-2 h-2 rounded-full shrink-0"
+                        style={{ background: PLAYER_COLORS[colorIndex % PLAYER_COLORS.length] }}
+                      />
+                    )}
+                    <ProfessionIcon profession={p.profession} className="w-3.5 h-3.5 shrink-0" />
                     {p.account}
                   </button>
                 );
