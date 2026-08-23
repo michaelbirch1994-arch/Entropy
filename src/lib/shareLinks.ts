@@ -4,7 +4,7 @@ import type { WvWReport } from "../types/report";
 // real browser tab (SSR/tests) - live share links always prefer the
 // actual page the user is on (see getConfiguredShareViewerUrl), so this
 // never overrides the real Vercel URL for someone using the hosted app.
-export const DEFAULT_SHARE_VIEWER_URL = "https://entropy-pi-five.vercel.app/";
+export const DEFAULT_SHARE_VIEWER_URL = "https://entropy-um58.vercel.app/";
 
 export interface ReportLoadQuery {
   reportId: string | null;
