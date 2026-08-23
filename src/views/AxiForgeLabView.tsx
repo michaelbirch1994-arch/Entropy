@@ -61,7 +61,10 @@ import {
   fetchGw2Specializations,
   fetchGw2Traits,
   wikiSearchUrl,
+  fetchGw2ProfessionSkillPalette,
+  fetchGw2LegendCodes,
 } from "../lib/gw2/gw2Api";
+import { encodeBuildChatCode, type ChatCodeCatalog } from "../lib/gw2/chatCode";
 import {
   availableProfessionWeapons,
   isTwoHandedWeapon,
@@ -1066,6 +1069,27 @@ export default function AxiForgeLabView() {
     }
   }
 
+  async function exportChatCode() {
+    try {
+      const skillPaletteById = await fetchGw2ProfessionSkillPalette(builder.professionId);
+      let legendCodeById = new Map<string, number>();
+      if (builder.professionId === "Revenant") {
+        const legendIds = [...builder.selectedLegends, ...builder.selectedUnderwaterLegends].filter(Boolean);
+        const legendRecords = await fetchGw2LegendCodes(legendIds);
+        legendCodeById = new Map(legendRecords.map((legend) => [legend.id, legend.code]));
+      }
+      const catalog: ChatCodeCatalog = { skillPaletteById, legendCodeById };
+      const code = encodeBuildChatCode(builder, catalog);
+      if (!code) {
+        setNotice({ tone: "error", message: "Chat code is not supported for this profession." });
+        return;
+      }
+      await copyText(code, "GW2 chat code copied.");
+    } catch {
+      setNotice({ tone: "error", message: "Chat code could not be created yet." });
+    }
+  }
+
   async function hydrateImportedBuild(value: unknown, name?: string): Promise<SavedBuilderBuild> {
     const state = builderFromAxiBuild(value, { name: name ?? "Imported Build" });
     const specIds = state.specializationIds.filter((id): id is number => Boolean(id));
@@ -1192,6 +1216,7 @@ export default function AxiForgeLabView() {
         <div className="theme-builder-command-actions">
           <button type="button" onClick={() => setImportOpen((open) => !open)} className="theme-command-button"><Download className="h-4 w-4" /> Import</button>
           <button type="button" onClick={exportCurrentBuild} className="theme-command-button"><FileCode2 className="h-4 w-4" /> Copy code</button>
+          <button type="button" onClick={exportChatCode} className="theme-command-button"><Clipboard className="h-4 w-4" /> Copy Chat Code</button>
           <button type="button" onClick={shareCurrentBuild} className="theme-command-button"><Link2 className="h-4 w-4" /> Share link</button>
           <button type="button" onClick={saveCurrentBuild} className="theme-command-button is-primary"><Save className="h-4 w-4" /> {editingBuildId ? "Update" : "Save"}</button>
         </div>
