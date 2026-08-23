@@ -72,6 +72,14 @@ export async function uploadRawLogToDpsReport(
   if (!res.ok || data.error) {
     throw new Error(data.error || `dps.report upload failed (${res.status}).`);
   }
+  // dps.report's "permalink" field is a full URL (https://dps.report/<id>),
+  // but every other permalink field in Entropy treats it as a bare id
+  // (share links, in-app dps.report links). Normalize once here so
+  // there is exactly one place that has to know about this quirk.
+  if (typeof data.permalink === "string") {
+    const bareId = parseDpsReportPermalink(data.permalink);
+    if (bareId) data.permalink = bareId;
+  }
   return data;
 }
 
