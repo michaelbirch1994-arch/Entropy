@@ -37,7 +37,7 @@ import CompareView from "./views/CompareView";
 import IntelligenceDebugView from "./views/IntelligenceDebugView";
 import AxiForgeLabView from "./views/AxiForgeLabView";
 import { downloadReportArtifact } from "./lib/shareReportArtifact";
-import { buildEntropyShareLink } from "./lib/shareLinks";
+import { buildEntropyShareLink, getReportPermalinks } from "./lib/shareLinks";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
 import { Activity, CircleAlert as AlertCircle, FlaskConical, Link2, MessageCircle, RefreshCw, Send, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
@@ -242,7 +242,7 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
 
 
 type DiscordShareStatus = "idle" | "missing" | "sending" | "sent" | "failed" | "saved" | "cleared";
-type ExportStatus = "idle" | "copied" | "downloaded" | "failed";
+type ExportStatus = "idle" | "copied" | "copied-partial" | "downloaded" | "no-link" | "failed";
 
 
 
@@ -306,15 +306,17 @@ function ReportShell() {
     if (!report) return;
 
     try {
+      const permalinks = getReportPermalinks(report);
+      const totalFights = report.stats?.fightBreakdown?.length ?? 0;
       const viewerLink = buildEntropyShareLink(report);
       if (viewerLink && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(viewerLink);
-        flashExportStatus("copied");
+        flashExportStatus(totalFights > 0 && permalinks.length < totalFights ? "copied-partial" : "copied");
         return;
       }
 
       downloadReportArtifact(report);
-      flashExportStatus("downloaded");
+      flashExportStatus(permalinks.length === 0 ? "no-link" : "downloaded");
     } catch {
       try {
         downloadReportArtifact(report);
@@ -372,7 +374,7 @@ function ReportShell() {
 
 
   const exportLabel =
-    exportStatus === "copied" ? "Viewer link copied" : exportStatus === "downloaded" ? "Report saved" : exportStatus === "failed" ? "Export failed" : "Export";
+    exportStatus === "copied" ? "Viewer link copied" : exportStatus === "copied-partial" ? "Link copied (partial)" : exportStatus === "downloaded" ? "Report saved" : exportStatus === "no-link" ? "No dps.report link" : exportStatus === "failed" ? "Export failed" : "Export";
   const discordLabel =
     discordStatus === "sending" ? "Sending" : discordStatus === "sent" ? "Sent" : discordStatus === "failed" ? "Failed" : discordStatus === "saved" ? "Saved" : "Discord";
   const viewIcon = VIEW_ICONS[activeView] ?? <Activity className="w-4 h-4" />;
@@ -462,7 +464,7 @@ function ReportShell() {
                 </button>
                 <button
                   onClick={handleExportReport}
-                  title="Copy a short Entropy viewer link when dps.report permalinks exist; otherwise save a portable Entropy report artifact for web hosting."
+                  title="Copy a live Entropy viewer link that reloads these fights from their dps.report permalinks — works for any fight imported as a raw .zevtc/.evtc file or pasted dps.report link. Falls back to a local report file when no permalinks are available."
                   className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
                 >
                   <Link2 className="w-3 h-3" />
@@ -492,7 +494,7 @@ function ReportShell() {
                   <button
                     type="button"
                     onClick={handleExportReport}
-                    title="Copy a short Entropy viewer link when dps.report permalinks exist; otherwise save a portable Entropy report artifact for web hosting."
+                    title="Copy a live Entropy viewer link that reloads these fights from their dps.report permalinks — works for any fight imported as a raw .zevtc/.evtc file or pasted dps.report link. Falls back to a local report file when no permalinks are available."
                     className={`theme-status-pill flex items-center gap-1.5 px-2.5 py-1.5 transition-colors hover:brightness-125 cursor-pointer ${
                       source === "upload"
                         ? "text-amber-400 border-amber-500/30 bg-amber-500/5"

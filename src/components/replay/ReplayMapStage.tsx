@@ -107,7 +107,7 @@ function ReplayMapStage({
             if (!visible) return null;
             const width = data.map!.width;
             const height = data.map!.height;
-            return <image key={`${image.url}-${index}`} href={image.url} x={image.x} y={image.y} width={width} height={height} opacity={0.9} preserveAspectRatio="none" transform={`translate(0 ${2 * image.y + height}) scale(1 -1)`} />;
+            return <image key={`${image.url}-${index}`} href={image.url} x={image.x} y={image.y} width={width} height={height} opacity={0.9} preserveAspectRatio="none" />;
           })}
 
           {showMechanics && (data.mechanics ?? []).filter((mechanic) => Math.abs(mechanic.t - timestampMs) <= 1500 && mechanic.account).map((mechanic, index) => {
