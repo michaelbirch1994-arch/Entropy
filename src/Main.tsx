@@ -15,6 +15,7 @@ import "./Styles/ObsidianGold.css";
 import "./Styles/BlackGoldFinish.css";
 import "./Styles/BlackGoldRefinement.css";
 import "./Styles/RoyalPolish.css";
+import "./Styles/ObsidianGoldPass8.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -23,4 +24,3 @@ createRoot(document.getElementById("root")!).render(
     </ThemeProvider>
   </StrictMode>
 );
-
