@@ -76,9 +76,46 @@
   color: var(--theme-accentStrong);
 }
 
+/* Intelligence severity colors remain semantic. Only the generic active filter
+   treatment is interaction chrome and should use Entropy gold. */
+.theme-main[data-workspace-tone="extras"] button[class*="border-sky-300/40"][class*="bg-sky-400/[0.12]"][class*="text-sky-200"] {
+  border-color: color-mix(in srgb, var(--theme-accent) 36%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 10%, transparent);
+  color: var(--theme-accentStrong);
+  box-shadow: 0 0 22px -14px color-mix(in srgb, var(--theme-accent) 72%, transparent);
+}
+
+/* The Discord settings modal is application chrome, not a violet workspace.
+   Keep delivery/error success semantics intact; normalize only container,
+   focus, and action treatments. */
+.theme-modal[class*="border-violet-400/20"] {
+  border-color: var(--theme-borderStrong);
+  background: color-mix(in srgb, var(--theme-surfaceElevated) 96%, transparent);
+}
+
+.theme-modal input[class*="focus:border-violet-400/40"]:focus {
+  border-color: color-mix(in srgb, var(--theme-accent) 48%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 10%, transparent);
+}
+
+.theme-modal button[class*="border-violet-400/20"][class*="bg-violet-500/[0.08]"],
+.theme-modal button[class*="border-amber-400/20"][class*="bg-amber-500/[0.08]"] {
+  border-color: color-mix(in srgb, var(--theme-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 8%, transparent);
+  color: var(--theme-accentStrong);
+}
+
+.theme-modal button[class*="border-violet-400/20"][class*="bg-violet-500/[0.08]"]:hover,
+.theme-modal button[class*="border-amber-400/20"][class*="bg-amber-500/[0.08]"]:hover {
+  background: color-mix(in srgb, var(--theme-accent) 14%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .theme-main[data-workspace-tone="combat"] button,
-  .theme-main[data-workspace-tone="combat"] input {
+  .theme-main[data-workspace-tone="combat"] input,
+  .theme-main[data-workspace-tone="extras"] button,
+  .theme-modal button,
+  .theme-modal input {
     transition: none !important;
   }
 }
