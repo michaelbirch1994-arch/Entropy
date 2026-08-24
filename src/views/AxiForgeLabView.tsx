@@ -466,6 +466,7 @@ function SquadWorkspace({
   onCreate,
   onChange,
   onCopyCode,
+  onShareCode,
 }: {
   composition: BuilderComposition | null;
   builds: SavedBuilderBuild[];
@@ -474,6 +475,7 @@ function SquadWorkspace({
   onCreate: () => void;
   onChange: (composition: BuilderComposition) => void;
   onCopyCode: () => void;
+    onShareCode: () => void;
 }) {
   if (!composition) {
     return (
@@ -498,6 +500,7 @@ function SquadWorkspace({
           </div>
           <div className="theme-builder-squad-readout"><strong>{assigned}</strong><span>assigned</span></div>
           <button type="button" className="theme-command-button" onClick={onCopyCode} disabled={!assigned}><Clipboard className="h-4 w-4" /> Copy squad code</button>
+                    <button type="button" className="theme-command-button" onClick={onShareCode} disabled={!assigned}><Link2 className="h-4 w-4" /> Share squad link</button>
         </div>
         <div className="theme-builder-party-stack">
           {composition.parties.map((party, partyIndex) => (
@@ -835,6 +838,10 @@ export default function AxiForgeLabView() {
     const sharedCode = parseAxiForgeShareQuery(window.location.search);
     if (!sharedCode) return;
     const result = decodeAxiForgeCode(sharedCode);
+    if (result.ok && result.value && result.kind === "comp") {
+    hydrateSharedComposition(result.value);
+    return;
+    }
     if (!result.ok || !result.value || result.kind !== "build") {
       setNotice({ tone: "error", message: result.error ?? "This share link could not be read." });
       clearAxiForgeShareQuery();
@@ -1102,7 +1109,25 @@ export default function AxiForgeLabView() {
     return createSavedBuild(state, code);
   }
 
-  async function importAxiCode() {
+  async function hydrateSharedComposition(value: unknown) {
+    const decoded = value as { name?: string; gameMode?: string; builds?: unknown[]; partyLines?: Array<{ capacity?: number; slots?: unknown[] }>; failedBuildCount?: number };
+    const importedBuilds = await Promise.all((decoded.builds ?? []).map((entry, index) => hydrateImportedBuild(entry, `Imported ${index + 1}`)));
+    const fingerprint = (entry: unknown) => JSON.stringify(entry);
+    const sourceByFingerprint = new Map((decoded.builds ?? []).map((entry, index) => [fingerprint(entry), importedBuilds[index]?.id ?? null]));
+    const composition = createComposition(decoded.name || "Shared Squad");
+    composition.gameMode = decoded.gameMode === "pve" ? "pve" : "wvw";
+    composition.parties = (decoded.partyLines ?? []).map((line, index) => ({
+    id: createBuilderId(),
+    name: `Subgroup ${index + 1}`,
+    slots: Array.from({ length: Math.max(1, Math.min(10, line.capacity ?? 5)) }, (_, slotIndex) => sourceByFingerprint.get(fingerprint(line.slots?.[slotIndex])) ?? null),
+    }));
+    setWorkspace((current) => ({ ...current, builds: [...importedBuilds, ...current.builds], compositions: [composition, ...current.compositions], activeCompositionId: composition.id }));
+    setActiveTab("squad");
+    setNotice({ tone: decoded.failedBuildCount ? "warning" : "success", message: decoded.failedBuildCount ? `Squad imported; ${decoded.failedBuildCount} build payloads could not be read.` : "Loaded a shared squad. This is your own local copy - edit it or save it to keep it." });
+    clearAxiForgeShareQuery();
+    }
+    
+    async function importAxiCode() {
     const result = decodeAxiForgeCode(importCode);
     if (!result.ok || !result.value) {
       setNotice({ tone: "error", message: result.error ?? "Unsupported AxiCode." });
@@ -1196,7 +1221,40 @@ export default function AxiForgeLabView() {
     await copyText(code, "Squad AxiCode copied.");
   }
 
-  const skillGroups = useMemo(() => ({ Heal: professionSkills.filter((skill) => skill.slot === "Heal"), Utility: professionSkills.filter((skill) => skill.slot === "Utility"), Elite: professionSkills.filter((skill) => skill.slot === "Elite") }), [professionSkills]);
+  async function shareSquad() {
+    if (!activeComposition) return;
+    const referencedIds = new Set(activeComposition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id)));
+    const decodedBuilds: Record<string, unknown> = {};
+    for (const id of referencedIds) {
+    const saved = workspace.builds.find((build) => build.id === id);
+    const result = saved ? decodeAxiForgeCode(saved.shareCode) : null;
+    if (!result?.ok || !result.value) {
+    setNotice({ tone: "error", message: "One assigned build has no valid saved AxiCode. Open and save that build first." });
+    return;
+    }
+    const state = builderFromAxiBuild(result.value, saved?.state);
+    const specIds = state.specializationIds.filter((value): value is number => Boolean(value));
+    const specs = await fetchGw2Specializations(specIds);
+    const traits = await fetchGw2Traits(specs.flatMap((spec) => spec.major_traits));
+    const bySpec = new Map<number, Gw2Trait[]>();
+    traits.forEach((trait) => bySpec.set(trait.specialization, [...(bySpec.get(trait.specialization) ?? []), trait]));
+    decodedBuilds[id] = buildAxiShape(state, new Map(specs.map((spec) => [spec.id, spec])), bySpec, new Map());
+    }
+    const code = encodeAxiForgeCompCode({ name: activeComposition.name, gameMode: activeComposition.gameMode, partyLines: activeComposition.parties.map((party) => ({ capacity: party.slots.length, slots: party.slots.filter((id): id is string => Boolean(id)) })) }, decodedBuilds);
+    if (!code) {
+    setNotice({ tone: "error", message: "Squad code could not be created." });
+    return;
+    }
+    setExportCode(code);
+    const url = buildAxiForgeShareUrl(code);
+    if (url.length > 7500) {
+    setNotice({ tone: "warning", message: 'This squad is too large for a share link. Use "Copy squad code" and share the AxiCode text instead.' });
+    return;
+    }
+    await copyText(url, "Squad share link copied.");
+    }
+    
+    const skillGroups = useMemo(() => ({ Heal: professionSkills.filter((skill) => skill.slot === "Heal"), Utility: professionSkills.filter((skill) => skill.slot === "Utility"), Elite: professionSkills.filter((skill) => skill.slot === "Elite") }), [professionSkills]);
   const engineerKitOptions = useMemo(
     () => professionSkills.filter((skill) => skill.name.toLowerCase().includes("kit")),
     [professionSkills],
@@ -1253,7 +1311,7 @@ export default function AxiForgeLabView() {
       )}
 
       {activeTab === "library" && <BuildLibrary builds={workspace.builds} onLoad={loadBuild} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} onShare={(code) => copyText(buildAxiForgeShareUrl(code), "Share link copied.")} />}
-      {activeTab === "squad" && <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} onCreate={createSquad} onChange={updateComposition} onCopyCode={exportSquad} />}
+      {activeTab === "squad" && <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} onCreate={createSquad} onChange={updateComposition} onCopyCode={exportSquad} onShareCode={shareSquad} />}
 
       {activeTab === "build" && (
         <div className="theme-builder-layout">
