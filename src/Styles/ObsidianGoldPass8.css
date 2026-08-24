@@ -1,0 +1,84 @@
+/* Obsidian Gold Pass 8 acceptance corrections.
+   Loaded after the established finish layers so late Replay additions cannot
+   reintroduce legacy workspace chrome. Presentation only. */
+
+/* Replay Focus Mode and evidence-target framing are product chrome. */
+.theme-main[data-workspace-tone="combat"] div[class*="sticky"][class*="border-sky-400/20"][class*="bg-[#050b12]/95"] {
+  border-color: color-mix(in srgb, var(--theme-accent) 24%, transparent);
+  background: color-mix(in srgb, var(--theme-surfaceInset) 95%, transparent);
+}
+
+.theme-main[data-workspace-tone="combat"] div[class*="sticky"][class*="border-sky-400/20"] div[class*="text-sky-300"],
+.theme-main[data-workspace-tone="combat"] div[class*="sticky"][class*="border-sky-400/20"] button[class*="text-sky-200"] {
+  color: var(--theme-accentStrong);
+}
+
+.theme-main[data-workspace-tone="combat"] div[class*="sticky"][class*="border-sky-400/20"] button[class*="border-sky-300/25"] {
+  border-color: color-mix(in srgb, var(--theme-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 8%, transparent);
+}
+
+.theme-main[data-workspace-tone="combat"] div[class*="rounded-2xl"][class*="border-sky-400/25"][class*="bg-sky-500/[0.06]"] {
+  border-color: color-mix(in srgb, var(--theme-accent) 32%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 6%, var(--theme-surface));
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--theme-accentStrong) 58%, transparent);
+}
+
+.theme-main[data-workspace-tone="combat"] div[class*="rounded-2xl"][class*="border-sky-400/25"] div[class*="text-sky-300"],
+.theme-main[data-workspace-tone="combat"] div[class*="rounded-2xl"][class*="border-sky-400/25"] button[class*="text-sky-200"] {
+  color: var(--theme-accentStrong);
+}
+
+.theme-main[data-workspace-tone="combat"] div[class*="rounded-2xl"][class*="border-sky-400/25"] button[class*="border-sky-400/25"] {
+  border-color: color-mix(in srgb, var(--theme-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 7%, transparent);
+}
+
+/* Replay layer/focus toggles and timeline are interaction, not squad semantics. */
+.theme-main[data-workspace-tone="combat"] button[class*="border-sky-500/30"][class*="bg-sky-500/5"],
+.theme-main[data-workspace-tone="combat"] button[class*="border-sky-500/30"][class*="bg-sky-500/10"],
+.theme-main[data-workspace-tone="combat"] button[class*="border-sky-400/20"][class*="bg-sky-400/[0.055]"],
+.theme-main[data-workspace-tone="combat"] button[class*="border-sky-400/35"][class*="bg-sky-500/10"] {
+  border-color: color-mix(in srgb, var(--theme-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 7%, transparent);
+  color: var(--theme-accentStrong);
+}
+
+.theme-main[data-workspace-tone="combat"] input[class*="accent-sky-400"] {
+  accent-color: var(--theme-accentStrong);
+}
+
+.theme-main[data-workspace-tone="combat"] div[class*="border-sky-400/35"][class*="bg-sky-500/[0.07]"] {
+  border-color: color-mix(in srgb, var(--theme-accent) 34%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 7%, var(--theme-surface));
+}
+
+.theme-main[data-workspace-tone="combat"] span[class*="border-sky-400/25"][class*="bg-sky-500/[0.08]"] {
+  border-color: color-mix(in srgb, var(--theme-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 8%, transparent);
+  color: var(--theme-accentStrong);
+}
+
+/* Intel participant is Entropy interpretation; squad/enemy legend colors remain semantic. */
+.theme-main[data-workspace-tone="combat"] span[class*="border-sky-300"] {
+  border-color: var(--theme-accentStrong);
+}
+
+/* Standalone export is utility chrome, not an amber warning state. */
+.theme-main[data-workspace-tone="combat"] button[class*="border-amber-500/30"][class*="bg-amber-500/10"] {
+  border-color: var(--theme-borderStrong);
+  background: var(--theme-surface);
+  color: var(--theme-textMuted);
+}
+
+.theme-main[data-workspace-tone="combat"] button[class*="border-amber-500/30"][class*="bg-amber-500/10"]:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 28%, transparent);
+  color: var(--theme-accentStrong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-main[data-workspace-tone="combat"] button,
+  .theme-main[data-workspace-tone="combat"] input {
+    transition: none !important;
+  }
+}
