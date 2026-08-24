@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { encodeBuildChatCode, type ChatCodeCatalog } from "../gw2/chatCode";
+import { decodeBuildChatCode, encodeBuildChatCode, professionFromBuildChatCode, type ChatCodeCatalog } from "../gw2/chatCode";
 import { createEmptyBuilder } from "../axiforge/builderModel";
 
 // Decode a produced chat code back into its raw byte sequence so tests can
 // assert against byte layouts computed directly from the wiki spec
 // (https://wiki.guildwars2.com/wiki/Chat_link_format#Build_template_link),
-// independent of any Entropy-side decoder (there isn't one yet -- see
-// chatCode.ts's file header for why import is out of scope for this pass).
+// independent of the Entropy-side decoder.
 function decodeToBytes(code: string): number[] {
   expect(code.startsWith("[&")).toBe(true);
   expect(code.endsWith("]")).toBe(true);
@@ -97,5 +96,36 @@ describe("encodeBuildChatCode", () => {
   it("returns null for an unrecognized profession id", () => {
     const state = createEmptyBuilder("NotAProfession");
     expect(encodeBuildChatCode(state, emptyCatalog())).toBeNull();
+  });
+});
+
+describe("decodeBuildChatCode", () => {
+  it("round-trips profession, traits, skills, underwater skills, pets, and legends", () => {
+    const state = createEmptyBuilder("Ranger");
+    state.specializationIds = [5, 25, 55];
+    state.traitChoices = [[1, 2, 3], [3, 1, 2], [2, 3, 1]];
+    state.healSkillId = 101;
+    state.utilitySkillIds = [102, 103, 104];
+    state.eliteSkillId = 105;
+    state.underwaterSkills = { healSkillId: 106, utilitySkillIds: [107, 108, 109], eliteSkillId: 110 };
+    state.selectedPets = { terrestrial1: 12, terrestrial2: 13, aquatic1: 14, aquatic2: 15 };
+    const palette = new Map(Array.from({ length: 10 }, (_, index) => [101 + index, 201 + index]));
+    const code = encodeBuildChatCode(state, { skillPaletteById: palette, legendCodeById: new Map() })!;
+    const decoded = decodeBuildChatCode(code, {
+      skillIdByPalette: new Map([...palette].map(([skill, paletteId]) => [paletteId, skill])),
+      legendIdByCode: new Map(),
+    });
+    expect(professionFromBuildChatCode(code)).toBe("Ranger");
+    expect(decoded.specializationIds).toEqual(state.specializationIds);
+    expect(decoded.traitChoices).toEqual(state.traitChoices);
+    expect(decoded.healSkillId).toBe(101);
+    expect(decoded.utilitySkillIds).toEqual([102, 103, 104]);
+    expect(decoded.eliteSkillId).toBe(105);
+    expect(decoded.underwaterSkills).toEqual(state.underwaterSkills);
+    expect(decoded.selectedPets).toEqual(state.selectedPets);
+  });
+
+  it("rejects non-build chat links", () => {
+    expect(() => professionFromBuildChatCode("[&AAE=]")).toThrow(/not a GW2 build template/i);
   });
 });

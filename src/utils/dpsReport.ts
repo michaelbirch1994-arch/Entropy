@@ -29,9 +29,108 @@ export interface DpsReportUploadResult {
   error?: string;
 }
 
+export type DpsReportUploadErrorCode =
+  | "cancelled"
+  | "network"
+  | "rate-limited"
+  | "service"
+  | "invalid-response";
+
+export class DpsReportUploadError extends Error {
+  readonly code: DpsReportUploadErrorCode;
+  readonly status?: number;
+
+  constructor(message: string, code: DpsReportUploadErrorCode, status?: number) {
+    super(message);
+    this.name = "DpsReportUploadError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
 const UPLOAD_ENDPOINT =
   "https://dps.report/uploadContent?json=1&generator=ei&detailedwvw=true";
 const JSON_ENDPOINT = "https://dps.report/getJson";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function responseErrorMessage(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (!isRecord(value)) return null;
+  for (const key of ["message", "error", "detail"]) {
+    const candidate = value[key];
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+  return null;
+}
+
+/**
+ * Validates and normalizes the successful JSON returned by dps.report.
+ * A 200 response without a usable permalink is not a successful Entropy
+ * import because the resulting report could never be shared again.
+ */
+export function parseDpsReportUploadResponse(value: unknown): DpsReportUploadResult {
+  if (!isRecord(value)) {
+    throw new DpsReportUploadError(
+      "dps.report returned an invalid upload response (expected an object).",
+      "invalid-response",
+    );
+  }
+
+  if (value.error) {
+    const reportedError = responseErrorMessage(value.error)
+      ?? responseErrorMessage(value)
+      ?? "dps.report rejected the upload.";
+    throw new DpsReportUploadError(reportedError, "service");
+  }
+
+  const rawPermalink =
+    typeof value.permalink === "string" ? value.permalink.trim() : "";
+  const rawId = typeof value.id === "string" ? value.id.trim() : "";
+  const permalink = parseDpsReportPermalink(rawPermalink || rawId);
+
+  if (!permalink) {
+    throw new DpsReportUploadError(
+      "dps.report did not return a usable share link for this log. The upload was not added; try the file again in a moment.",
+      "invalid-response",
+    );
+  }
+
+  return {
+    ...(value as Omit<DpsReportUploadResult, "id" | "permalink">),
+    id: rawId || permalink,
+    permalink,
+  };
+}
+
+function retryDelayMs(response: Response, attempt: number): number {
+  const retryAfter = response.headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1000, 10_000);
+  }
+  return 750 * 2 ** attempt;
+}
+
+function waitForRetry(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DpsReportUploadError("Upload cancelled.", "cancelled"));
+      return;
+    }
+    const timer = globalThis.setTimeout(resolve, milliseconds);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        globalThis.clearTimeout(timer);
+        reject(new DpsReportUploadError("Upload cancelled.", "cancelled"));
+      },
+      { once: true },
+    );
+  });
+}
 
 /** Accepts .evtc/.zevtc/.evtc.zip files. */
 export function isRawLogFile(file: File): boolean {
@@ -48,39 +147,48 @@ export async function uploadRawLogToDpsReport(
   file: File,
   signal?: AbortSignal,
 ): Promise<DpsReportUploadResult> {
-  const form = new FormData();
-  form.append("file", file, file.name);
+  const maxAttempts = 3;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const form = new FormData();
+    form.append("file", file, file.name);
 
-  let res: Response;
-  try {
-    res = await fetch(UPLOAD_ENDPOINT, { method: "POST", body: form, signal });
-  } catch (e) {
-    throw new Error(
-      e instanceof Error && e.name === "AbortError"
-        ? "Upload cancelled."
-        : `Could not reach dps.report (${e instanceof Error ? e.message : "network error"}).`,
-    );
+    let res: Response;
+    try {
+      res = await fetch(UPLOAD_ENDPOINT, { method: "POST", body: form, signal });
+    } catch (e) {
+      throw new DpsReportUploadError(
+        e instanceof Error && e.name === "AbortError"
+          ? "Upload cancelled."
+          : `Could not reach dps.report (${e instanceof Error ? e.message : "network error"}).`,
+        e instanceof Error && e.name === "AbortError" ? "cancelled" : "network",
+      );
+    }
+
+    let data: unknown;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
+
+    const retryable = res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504;
+    if (!res.ok) {
+      if (retryable && attempt < maxAttempts - 1) {
+        await waitForRetry(retryDelayMs(res, attempt), signal);
+        continue;
+      }
+      const detail = responseErrorMessage(data);
+      const message =
+        res.status === 429
+          ? "dps.report is rate-limiting uploads. Wait a moment and retry this log."
+          : detail || `dps.report upload failed (${res.status}).`;
+      throw new DpsReportUploadError(message, res.status === 429 ? "rate-limited" : "service", res.status);
+    }
+
+    return parseDpsReportUploadResponse(data);
   }
 
-  let data: DpsReportUploadResult;
-  try {
-    data = await res.json();
-  } catch {
-    throw new Error(`dps.report returned an unexpected response (${res.status}).`);
-  }
-
-  if (!res.ok || data.error) {
-    throw new Error(data.error || `dps.report upload failed (${res.status}).`);
-  }
-  // dps.report's "permalink" field is a full URL (https://dps.report/<id>),
-  // but every other permalink field in Entropy treats it as a bare id
-  // (share links, in-app dps.report links). Normalize once here so
-  // there is exactly one place that has to know about this quirk.
-  if (typeof data.permalink === "string") {
-    const bareId = parseDpsReportPermalink(data.permalink);
-    if (bareId) data.permalink = bareId;
-  }
-  return data;
+  throw new DpsReportUploadError("dps.report upload failed after retrying.", "service");
 }
 
 /** Fetches the full Elite Insights JSON for a permalink already known to dps.report. */
@@ -89,7 +197,16 @@ export async function fetchDpsReportJson(permalink: string, signal?: AbortSignal
   if (!res.ok) {
     throw new Error(`Failed to fetch parsed log from dps.report (${res.status}).`);
   }
-  return res.json();
+  let value: unknown;
+  try {
+    value = await res.json();
+  } catch {
+    throw new Error("dps.report returned invalid parsed-log JSON.");
+  }
+  if (!isRecord(value)) {
+    throw new Error("dps.report returned an invalid parsed log.");
+  }
+  return value;
 }
 
 /**

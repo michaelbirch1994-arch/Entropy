@@ -65,6 +65,7 @@ import {
   fetchGw2LegendCodes,
 } from "../lib/gw2/gw2Api";
 import { encodeBuildChatCode, type ChatCodeCatalog } from "../lib/gw2/chatCode";
+import { importGw2SkillsBuild, validateGw2SkillsEditorUrl } from "../lib/gw2/gw2SkillsImport";
 import {
   availableProfessionWeapons,
   isTwoHandedWeapon,
@@ -132,6 +133,15 @@ function kindLabel(kind: AxiForgeDecodeResult["kind"]): string {
   if (kind === "build") return "Build code detected";
   if (kind === "comp") return "Squad code detected";
   return "Waiting for AxiCode";
+}
+
+function isGw2SkillsInput(value: string): boolean {
+  try {
+    validateGw2SkillsEditorUrl(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function selectedItemIcon(selected: BuilderSummaryItem): string | undefined {
@@ -822,6 +832,7 @@ export default function AxiForgeLabView() {
   const [importCode, setImportCode] = useState("");
   const [exportCode, setExportCode] = useState("");
   const [importOpen, setImportOpen] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [boonCache, setBoonCache] = useState<Record<string, BoonCoverageEntry[]>>({});
   const [boonComputing, setBoonComputing] = useState(false);
@@ -890,6 +901,7 @@ export default function AxiForgeLabView() {
     return next;
   }, [builder, selectedProfession]);
   const detectedKind = useMemo(() => detectAxiForgeCodeKind(importCode), [importCode]);
+  const gw2SkillsInput = useMemo(() => isGw2SkillsInput(importCode), [importCode]);
   const activeComposition = workspace.compositions.find((composition) => composition.id === workspace.activeCompositionId) ?? null;
 
   useEffect(() => {
@@ -1160,6 +1172,34 @@ export default function AxiForgeLabView() {
     setNotice({ tone: decoded.failedBuildCount ? "warning" : "success", message: decoded.failedBuildCount ? `Squad imported; ${decoded.failedBuildCount} build payloads could not be read.` : "Squad and its builds imported into the local workspace." });
   }
 
+  async function importBuildInput() {
+    if (!gw2SkillsInput) {
+      await importAxiCode();
+      return;
+    }
+    setImportBusy(true);
+    try {
+      const result = await importGw2SkillsBuild(importCode, {
+        itemStatNames: itemStats.map((stat) => stat.name),
+        legends,
+      });
+      updateBuilder(result.state);
+      setEditingBuildId(null);
+      setActiveTab("build");
+      setImportOpen(false);
+      setNotice({
+        tone: result.warnings.length ? "warning" : "success",
+        message: result.warnings.length
+          ? `Build imported. ${result.warnings.join(" ")}`
+          : "gw2skills build imported with traits, skills, equipment, and consumables.",
+      });
+    } catch (error) {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : "The gw2skills build could not be imported." });
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
   function loadBuild(build: SavedBuilderBuild) {
     updateBuilder(cloneBuilder(build.state));
     setEditingBuildId(build.id);
@@ -1297,8 +1337,8 @@ export default function AxiForgeLabView() {
 
       {importOpen && (
         <section className="theme-builder-import-rack">
-          <div><FieldLabel>Paste an AxiForge build or squad code</FieldLabel><textarea value={importCode} onChange={(event) => setImportCode(event.target.value)} placeholder="<AxiForge:...>" spellCheck={false} /></div>
-          <div className="theme-builder-import-actions"><span className={detectedKind === "unknown" ? "" : "is-ready"}>{kindLabel(detectedKind)}</span><button type="button" onClick={() => { setImportCode(""); setImportOpen(false); }}><Eraser className="h-4 w-4" /> Clear</button><button type="button" onClick={importAxiCode} disabled={detectedKind === "unknown"}><Download className="h-4 w-4" /> Import code</button></div>
+          <div><FieldLabel>Paste an Entropy code or gw2skills.net build URL</FieldLabel><textarea value={importCode} onChange={(event) => setImportCode(event.target.value)} placeholder="<AxiForge:...> or https://en.gw2skills.net/editor/?..." spellCheck={false} /></div>
+          <div className="theme-builder-import-actions"><span className={detectedKind === "unknown" && !gw2SkillsInput ? "" : "is-ready"}>{gw2SkillsInput ? "gw2skills build detected" : kindLabel(detectedKind)}</span><button type="button" onClick={() => { setImportCode(""); setImportOpen(false); }}><Eraser className="h-4 w-4" /> Clear</button><button type="button" onClick={importBuildInput} disabled={importBusy || (detectedKind === "unknown" && !gw2SkillsInput)}>{importBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Import</button></div>
         </section>
       )}
 
@@ -1503,6 +1543,22 @@ export default function AxiForgeLabView() {
                   <SearchableChoiceField id="builder-foods" label="Food" value={builder.equipment.food} choices={BUILDER_FOOD_LABELS} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, food: value } }))} placeholder="Search supported food" />
                   <SearchableChoiceField id="builder-utilities" label="Utility" value={builder.equipment.utility} choices={BUILDER_UTILITY_LABELS} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, utility: value } }))} placeholder="Search supported utilities" />
                   <SearchableItemChoiceField id="builder-enrichment" label="Enrichment" valueId={builder.equipment.enrichment} choices={BUILDER_ENRICHMENT_CHOICES} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, enrichment: value } }))} placeholder="Search supported enrichments" /><EquipmentItemSummary values={[builder.equipment.enrichment]} items={equipmentItems} />
+                  {Object.keys(builder.equipment.infusions).length > 0 && (
+                    <div>
+                      <FieldLabel>Imported infusions</FieldLabel>
+                      <div className="theme-builder-item-summary">
+                        {Object.entries(builder.equipment.infusions).map(([slot, value]) => {
+                          const values = (Array.isArray(value) ? value : [value]).filter(Boolean);
+                          return (
+                            <div key={slot}>
+                              <Sparkles className="h-4 w-4" aria-hidden="true" />
+                              <span><strong>{slot}</strong><small>{values.join(" · ")}</small></span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>
