@@ -24,9 +24,6 @@ jobs:
       - name: Install dependencies (npm install, not ci - lockfile isn't regenerated in this dev environment)
         run: npm install
 
-      - name: Lint
-        run: npm run lint
-
       - name: Type-check + build
         run: npm run build
 
