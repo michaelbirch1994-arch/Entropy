@@ -1,14 +1,12 @@
-// GW2 in-game chat-code (build template, header byte 0x0D) EXPORT-only encoder.
+// GW2 in-game chat-code (build template, header byte 0x0D) encoder/decoder.
 //
 // Spec: https://wiki.guildwars2.com/wiki/Chat_link_format#Build_template_link
 // (read and verified live before writing this — every byte offset, bit
 // layout, and worked example below traces back to that page).
 //
 // Scope, deliberately narrow (see shareable-builder-plan.md Phase D):
-// - Export only. Entropy build -> chat code. Decoding a chat code back into
-//   a build is a separate, harder problem (chat codes use internal "skill
-//   palette" ids resolvable only via a live GW2 API profession-detail call,
-//   not the API skill ids Entropy stores) and is out of scope for this pass.
+// - Import requires the caller to provide the live skill-palette mapping;
+//   chat codes do not carry the official /v2/skills ids Entropy stores.
 // - Chat codes carry build info (profession, specs/traits, skills, pets/
 //   legends) losslessly, but NOT gear/rune/sigil/stat detail at all — that
 //   is AxiCode's job (see axiForgeAdapter.ts). Do not treat this as a
@@ -62,6 +60,114 @@ export interface ChatCodeCatalog {
   legendCodeById: Map<string, number>;
 }
 
+export interface ChatCodeDecodeCatalog {
+  /** Internal skill palette id -> official GW2 API skill id. */
+  skillIdByPalette: Map<number, number>;
+  /** Revenant legend numeric chat-code id -> /v2/legends string id. */
+  legendIdByCode: Map<number, string>;
+}
+
+const PROFESSION_BY_CHAT_CODE = new Map(
+  Object.entries(CHAT_CODE_PROFESSION_IDS).map(([profession, code]) => [code, profession]),
+);
+
+function fromBase64(value: string): Uint8Array {
+  const normalized = value.trim().replace(/^\[&/, "").replace(/\]$/, "");
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) throw new Error("Invalid GW2 build chat code.");
+  if (typeof atob === "function") {
+    const binary = atob(normalized);
+    return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  }
+  return Uint8Array.from(Buffer.from(normalized, "base64"));
+}
+
+function uint16(bytes: Uint8Array, offset: number): number {
+  return (bytes[offset] ?? 0) | ((bytes[offset + 1] ?? 0) << 8);
+}
+
+function decodeTraitChoices(value: number): [number, number, number] {
+  return [value & 0x3, (value >> 2) & 0x3, (value >> 4) & 0x3];
+}
+
+/** Returns the profession without requiring any live API catalog. */
+export function professionFromBuildChatCode(code: string): string {
+  const bytes = fromBase64(code);
+  if (bytes[0] !== 0x0d) throw new Error("This is not a GW2 build template chat code.");
+  const profession = PROFESSION_BY_CHAT_CODE.get(bytes[1] ?? 0);
+  if (!profession) throw new Error("The GW2 build code uses an unknown profession.");
+  return profession;
+}
+
+/** Decode the build-template fields which GW2 chat codes actually carry. */
+export function decodeBuildChatCode(code: string, catalog: ChatCodeDecodeCatalog): EntropyBuilderState {
+  const bytes = fromBase64(code);
+  if (bytes.length < 44 || bytes[0] !== 0x0d) throw new Error("Invalid GW2 build template chat code.");
+  const professionId = PROFESSION_BY_CHAT_CODE.get(bytes[1] ?? 0);
+  if (!professionId) throw new Error("The GW2 build code uses an unknown profession.");
+
+  const builder: EntropyBuilderState = {
+    name: "Imported GW2 Build",
+    role: "",
+    tags: [],
+    notes: "",
+    professionId,
+    gameMode: "wvw",
+    specializationIds: [bytes[2] || null, bytes[4] || null, bytes[6] || null],
+    traitChoices: [decodeTraitChoices(bytes[3]), decodeTraitChoices(bytes[5]), decodeTraitChoices(bytes[7])],
+    healSkillId: catalog.skillIdByPalette.get(uint16(bytes, 8)) ?? null,
+    utilitySkillIds: [
+      catalog.skillIdByPalette.get(uint16(bytes, 12)) ?? null,
+      catalog.skillIdByPalette.get(uint16(bytes, 16)) ?? null,
+      catalog.skillIdByPalette.get(uint16(bytes, 20)) ?? null,
+    ],
+    eliteSkillId: catalog.skillIdByPalette.get(uint16(bytes, 24)) ?? null,
+    underwaterSkills: {
+      healSkillId: catalog.skillIdByPalette.get(uint16(bytes, 10)) ?? null,
+      utilitySkillIds: [
+        catalog.skillIdByPalette.get(uint16(bytes, 14)) ?? null,
+        catalog.skillIdByPalette.get(uint16(bytes, 18)) ?? null,
+        catalog.skillIdByPalette.get(uint16(bytes, 22)) ?? null,
+      ],
+      eliteSkillId: catalog.skillIdByPalette.get(uint16(bytes, 26)) ?? null,
+    },
+    equipment: {
+      statPackage: "",
+      slots: {},
+      weapons: { mainhand1: "", offhand1: "", mainhand2: "", offhand2: "", aquatic1: "", aquatic2: "" },
+      runes: { head: "", shoulders: "", chest: "", hands: "", legs: "", feet: "" },
+      sigils: { mainhand1: [], offhand1: [], mainhand2: [], offhand2: [], aquatic1: [], aquatic2: [] },
+      infusions: {},
+      relic: "",
+      food: "",
+      utility: "",
+      enrichment: "",
+    },
+    selectedLegends: ["", ""],
+    selectedUnderwaterLegends: ["", ""],
+    selectedPets: { terrestrial1: 0, terrestrial2: 0, aquatic1: 0, aquatic2: 0 },
+    activeAttunement: "",
+    activeAttunement2: "",
+    activeKit: 0,
+    activeWeaponSet: 1,
+    allianceTacticsForm: 0,
+    antiquaryArtifacts: { f2: 0, f3: 0, f4: 0 },
+  };
+
+  if (professionId === "Ranger") {
+    builder.selectedPets = {
+      terrestrial1: bytes[28] ?? 0,
+      terrestrial2: bytes[29] ?? 0,
+      aquatic1: bytes[30] ?? 0,
+      aquatic2: bytes[31] ?? 0,
+    };
+  } else if (professionId === "Revenant") {
+    builder.selectedLegends = [catalog.legendIdByCode.get(bytes[28] ?? 0) ?? "", catalog.legendIdByCode.get(bytes[29] ?? 0) ?? ""];
+    builder.selectedUnderwaterLegends = [catalog.legendIdByCode.get(bytes[30] ?? 0) ?? "", catalog.legendIdByCode.get(bytes[31] ?? 0) ?? ""];
+  }
+
+  return builder;
+}
+
 function paletteBytes(skillId: number | null, catalog: ChatCodeCatalog): [number, number] {
   const palette = skillId ? catalog.skillPaletteById.get(skillId) ?? 0 : 0;
   return [palette & 0xff, (palette >> 8) & 0xff];
@@ -112,7 +218,7 @@ export function encodeBuildChatCode(builder: EntropyBuilderState, catalog: ChatC
   ];
   for (const skillId of skillSlots) bytes.push(...paletteBytes(skillId, catalog));
 
-  const professionSpecific = new Array<number>(16).fill(0);
+  const professionSpecific = Array.from({ length: 16 }, () => 0);
   if (builder.professionId === "Ranger") {
     professionSpecific[0] = builder.selectedPets.terrestrial1 & 0xff;
     professionSpecific[1] = builder.selectedPets.terrestrial2 & 0xff;

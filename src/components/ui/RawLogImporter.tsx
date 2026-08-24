@@ -71,6 +71,8 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
   const folderHandleRef = useRef<any>(null);
   const seenKeysRef = useRef<Set<string>>(loadSeenFileKeys());
   const scanningRef = useRef(false);
+  const uploadChainRef = useRef<Promise<void>>(Promise.resolve());
+  const queueSequenceRef = useRef(0);
 
   function updateItem(key: string, patch: Partial<QueueItem>) {
     setQueue((prev) => prev.map((i) => (i.key === key ? { ...i, ...patch } : i)));
@@ -127,9 +129,8 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
     }
   }
 
-  async function processFile(file: File) {
-    const key = `${file.name}-${file.size}-${Date.now()}`;
-    setQueue((prev) => [{ key, label: file.name, status: "uploading" }, ...prev]);
+  async function processFile(file: File, key: string) {
+    updateItem(key, { status: "uploading", errorMsg: undefined });
     try {
       const uploaded = await uploadRawLogToDpsReport(file);
       updateItem(key, { status: "fetching" });
@@ -137,6 +138,24 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
       updateItem(key, { status: "done", summary: summarizeRawFight(json, uploaded.permalink), raw: json });
     } catch (e) {
       updateItem(key, { status: "error", errorMsg: e instanceof Error ? e.message : "Upload failed" });
+    }
+  }
+
+  function enqueueFiles(files: File[]) {
+    if (files.length === 0) return;
+    const queued = files.map((file) => ({
+      file,
+      item: {
+        key: `${file.name}-${file.size}-${Date.now()}-${queueSequenceRef.current++}`,
+        label: file.name,
+        status: "pending" as const,
+      },
+    }));
+    setQueue((prev) => [...queued.map(({ item }) => item).reverse(), ...prev]);
+    for (const { file, item } of queued) {
+      uploadChainRef.current = uploadChainRef.current
+        .then(() => processFile(file, item.key))
+        .catch(() => undefined);
     }
   }
 
@@ -160,9 +179,9 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
       const fresh = found.filter((f) => !seenKeysRef.current.has(fileKey(f)));
       for (const f of fresh) {
         seenKeysRef.current.add(fileKey(f));
-        void processFile(f.file);
         setAutoImportedCount((n) => n + 1);
       }
+      enqueueFiles(fresh.map((entry) => entry.file));
       if (fresh.length > 0) saveSeenFileKeys(seenKeysRef.current);
       setLastScanAt(new Date());
       setFolderStatus("watching");
@@ -254,7 +273,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
     const valid: File[] = [];
     const invalid: string[] = [];
     Array.from(files).forEach((f) => (isRawLogFile(f) ? valid.push(f) : invalid.push(f.name)));
-    valid.forEach((f) => void processFile(f));
+    enqueueFiles(valid);
     if (invalid.length > 0) {
       setLinkError(`Skipped non-log file${invalid.length > 1 ? "s" : ""}: ${invalid.join(", ")}`);
     }
@@ -529,6 +548,8 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                       )}
                       {item.status === "uploading" || item.status === "fetching" ? (
                         <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin flex-shrink-0" />
+                      ) : item.status === "pending" ? (
+                        <UploadCloud className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
                       ) : item.status === "done" ? (
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                       ) : (
@@ -538,6 +559,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                         <p className="text-xs font-semibold text-slate-200 truncate">
                           {item.summary?.fightName ?? item.label}
                         </p>
+                        {item.status === "pending" && <p className="text-[10px] text-slate-500">Queued for dps.report...</p>}
                         {item.status === "uploading" && <p className="text-[10px] text-slate-500">Uploading to dps.report...</p>}
                         {item.status === "fetching" && <p className="text-[10px] text-slate-500">Fetching parsed log...</p>}
                         {item.status === "error" && <p className="text-[10px] text-rose-400">{item.errorMsg}</p>}
@@ -549,6 +571,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                             <span className={item.summary.success ? "text-emerald-400" : "text-rose-400"}>
                               {item.summary.success ? "Success" : "Failed"}
                             </span>
+                            {item.summary.permalink ? ` - ${item.summary.permalink}` : ""}
                           </p>
                         )}
                       </div>
