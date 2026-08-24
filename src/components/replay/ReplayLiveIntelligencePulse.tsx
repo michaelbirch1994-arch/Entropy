@@ -106,11 +106,11 @@ function ReplayLiveIntelligencePulse({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <div className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${active ? "border-theme-accent/35 bg-theme-accent/10 text-theme-accent-strong" : "border-theme-border bg-theme-surface-inset text-theme-accent"}`}>
+          <div className={`relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${active ? "border-theme-accent/35 bg-theme-accent/10 text-theme-accent-strong" : "border-theme-border bg-theme-surface-inset text-theme-muted"}`}>
             <BrainCircuit className="relative h-3.5 w-3.5" />
           </div>
           <div className="min-w-0">
-            <div className="text-[9px] font-black uppercase tracking-[0.18em] text-theme-accent-strong">Entropy live intelligence</div>
+            <div className={`text-[9px] font-black uppercase tracking-[0.18em] ${active ? "text-theme-accent-strong" : "text-theme-text/80"}`}>Entropy live intelligence</div>
             <div className="truncate text-[10px] text-theme-muted">
               {alignedEvent
                 ? "Critical evidence aligns with the current playhead."
@@ -134,7 +134,7 @@ function ReplayLiveIntelligencePulse({
         </div>
         <div className="relative h-6" aria-label={`${fightAnchors.length} Intelligence events across this fight`}>
           <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-theme-border" />
-          <div className="absolute bottom-0 top-0 w-px bg-theme-accent-strong/80 shadow-[0_0_8px_color-mix(in_srgb,var(--theme-accent)_45%,transparent)]" style={{ left: `${playheadPct}%` }} aria-hidden="true" />
+          <div className={`absolute bottom-0 top-0 w-px ${active ? "bg-theme-accent-strong/80 shadow-[0_0_8px_color-mix(in_srgb,var(--theme-accent)_45%,transparent)]" : "bg-theme-muted/45"}`} style={{ left: `${playheadPct}%` }} aria-hidden="true" />
           {fightAnchors.map((anchor) => {
             const pct = fight.data.durationMs > 0
               ? Math.max(0, Math.min(100, (anchor.timestampMs / fight.data.durationMs) * 100))
