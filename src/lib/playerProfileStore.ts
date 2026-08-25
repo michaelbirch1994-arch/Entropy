@@ -6,6 +6,7 @@
 // nights - a career page, not just a screenshot of one fight.
 
 import type { WvWReport } from "../types/report";
+import { aggregateReportPlayersForProfiles } from "./profileReportAggregation";
 
 const DB_NAME = "entropy-player-profiles";
 const STORE = "profiles";
@@ -131,52 +132,7 @@ export async function recordReportIntoProfiles(report: WvWReport): Promise<void>
   const reportWon: boolean | null = s.wins > s.losses ? true : s.wins < s.losses ? false : null;
   const now = Date.now();
 
-  const byAccount = new Map<string, {
-    profession: string;
-    damage: number;
-    dps: number;
-    downContrib: number;
-    healing: number;
-    barrier: number;
-    cleanses: number;
-    strips: number;
-    logsJoined: number;
-  }>();
-
-  function ensure(account: string, profession: string) {
-    let e = byAccount.get(account);
-    if (!e) {
-      e = { profession, damage: 0, dps: 0, downContrib: 0, healing: 0, barrier: 0, cleanses: 0, strips: 0, logsJoined: 0 };
-      byAccount.set(account, e);
-    }
-    return e;
-  }
-
-  for (const p of s.offensePlayers ?? []) {
-    if (!p.account || p.account === "Unknown") continue;
-    const e = ensure(p.account, p.profession);
-    e.damage += p.offenseTotals?.damage ?? 0;
-    e.downContrib += p.offenseTotals?.downContribution ?? 0;
-    const secs = (p.totalFightMs ?? 0) / 1000;
-    e.dps = Math.max(e.dps, secs > 0 ? (p.offenseTotals?.damage ?? 0) / secs : 0);
-  }
-  for (const p of s.healingPlayers ?? []) {
-    if (!p.account || p.account === "Unknown") continue;
-    const e = ensure(p.account, p.profession);
-    e.healing += p.healingTotals?.healing ?? 0;
-    e.barrier += p.healingTotals?.barrier ?? 0;
-  }
-  for (const p of s.supportPlayers ?? []) {
-    if (!p.account || p.account === "Unknown") continue;
-    const e = ensure(p.account, p.profession);
-    e.cleanses += p.supportTotals?.condiCleanse ?? 0;
-    e.strips += p.supportTotals?.boonStrips ?? 0;
-  }
-  for (const p of s.generalPlayers ?? []) {
-    if (!p.account || p.account === "Unknown") continue;
-    const e = ensure(p.account, p.profession);
-    e.logsJoined = Math.max(e.logsJoined, p.logsJoined ?? 0);
-  }
+  const byAccount = aggregateReportPlayersForProfiles(s);
 
   if (byAccount.size === 0) return;
 
