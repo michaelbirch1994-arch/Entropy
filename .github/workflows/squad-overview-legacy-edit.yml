@@ -1,0 +1,58 @@
+name: Squad overview legacy compatibility one-shot edit
+
+on:
+  push:
+    branches:
+      - feature/squad-overview-build-swap-attribution
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/squad-overview-build-swap-attribution
+          fetch-depth: 0
+
+      - name: Wire Squad Stats to normalized overview rows
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/views/SquadStatsView.tsx')
+          text = path.read_text(encoding='utf-8')
+
+          import_anchor = 'import BoundedDataRegion from "../components/ui/BoundedDataRegion";\n'
+          import_line = 'import { buildSquadOverviewRows } from "../lib/squadOverviewAggregation";\n'
+          if import_line not in text:
+              if import_anchor not in text:
+                  raise SystemExit('Import anchor not found')
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+          start_marker = '  const squadOverviewRows = (() => {\n'
+          end_marker = '  const toggleOverviewSort = (key: SquadOverviewSortKey) => {\n'
+          start = text.find(start_marker)
+          end = text.find(end_marker)
+          if start < 0 or end < 0 or end <= start:
+              raise SystemExit(f'Overview block markers not found: start={start}, end={end}')
+
+          replacement = '  const squadOverviewRows = buildSquadOverviewRows(s, scope, allyScope);\n'
+          text = text[:start] + replacement + text[end:]
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit view change and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/squad-overview-legacy-edit.yml
+          git add src/views/SquadStatsView.tsx src/lib/squadOverviewAggregation.ts src/lib/__tests__/squadOverviewAggregation.test.ts
+          git diff --cached --check
+          git commit -m "Normalize legacy build-swap Squad Stats rows"
+          git push origin HEAD:feature/squad-overview-build-swap-attribution
