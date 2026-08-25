@@ -1,0 +1,24 @@
+name: Trigger v0.2.77 guarded release
+
+on:
+  push:
+    branches:
+      - ops/trigger-v0.2.77-release
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch guarded cut-release workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run cut-release.yml \
+            --repo "${{ github.repository }}" \
+            --ref main \
+            -f version=0.2.77 \
+            -f confirm=RELEASE
