@@ -255,8 +255,8 @@ export async function fetchDpsReportJson(permalink: string, signal?: AbortSignal
 /**
  * Extracts a dps.report permalink id from anything a user might paste:
  * a bare id ("yAFl-20260720-192325_wvw"), a viewer URL on any dps.report
- * service domain, or a getJson URL. Returns null if nothing recognizable is
- * found.
+ * service domain, a generated wvw.report URL, or a getJson URL. Returns null
+ * if nothing recognizable is found.
  */
 export function parseDpsReportPermalink(input: string): string | null {
   const trimmed = input.trim();
@@ -264,7 +264,8 @@ export function parseDpsReportPermalink(input: string): string | null {
 
   try {
     const url = new URL(trimmed);
-    if (!/(^|\.)dps\.report$/i.test(url.hostname)) return null;
+    const hostname = url.hostname.toLowerCase();
+    if (!/(^|\.)dps\.report$/i.test(hostname) && hostname !== "wvw.report") return null;
 
     const existing = url.searchParams.get("permalink");
     if (existing) return existing;
