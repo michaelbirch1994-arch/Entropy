@@ -10,7 +10,7 @@ function legacySplitStats(): ReportStats {
         account: "Player.1234",
         profession: "Guardian",
         professionList: ["Guardian"],
-        offenseTotals: { damage: 1200, damageAll: 1400, downContribution: 40 } as any,
+        offenseTotals: { damage: 1200, damageAll: 1400, downContribution: 40, downed: 2, killed: 1 } as any,
         offenseRateWeights: {},
         totalFightMs: 60000,
       },
@@ -18,7 +18,7 @@ function legacySplitStats(): ReportStats {
         account: "Player.1234",
         profession: "Necromancer",
         professionList: ["Necromancer"],
-        offenseTotals: { damage: 1800, damageAll: 2000, downContribution: 60 } as any,
+        offenseTotals: { damage: 1800, damageAll: 2000, downContribution: 60, downed: 3, killed: 2 } as any,
         offenseRateWeights: {},
         totalFightMs: 40000,
       },
@@ -101,7 +101,7 @@ function legacySplitStats(): ReportStats {
 }
 
 describe("buildSquadOverviewRows", () => {
-  it("collapses legacy profession-split rows into one account without repeating support totals", () => {
+  it("collapses legacy profession-split rows into one account without repeating support or pressure totals", () => {
     const rows = buildSquadOverviewRows(legacySplitStats(), "players", "all");
 
     expect(rows).toHaveLength(1);
@@ -110,6 +110,9 @@ describe("buildSquadOverviewRows", () => {
       profession: "Guardian",
       damage: 3000,
       downContribution: 100,
+      enemyDowns: 5,
+      kills: 3,
+      totalFightMs: 100000,
       healing: 3000,
       cleanses: 7,
       strips: 10,
@@ -133,6 +136,10 @@ describe("buildSquadOverviewRows", () => {
     const [row] = buildSquadOverviewRows(stats, "players", "squad");
     expect(row.damage).toBe(1200);
     expect(row.dps).toBe(20);
+    expect(row.downContribution).toBe(40);
+    expect(row.enemyDowns).toBe(2);
+    expect(row.kills).toBe(1);
+    expect(row.totalFightMs).toBe(60000);
     expect(row.healing).toBe(900);
     expect(row.cleanses).toBe(2);
     expect(row.strips).toBe(3);
