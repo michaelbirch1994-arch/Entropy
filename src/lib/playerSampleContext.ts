@@ -24,8 +24,9 @@ function safeNonNegative(value: number | undefined): number {
 
 /**
  * Resolves one consistent participation/sample description for player tables.
- * New reports use the account-level GeneralPlayer row. Older reports can still
- * supply a view-specific fallback without pretending missing coverage is zero.
+ * New reports use one account-level GeneralPlayer row. Older saved reports can
+ * still contain one row per profession after a build swap, so combine every
+ * matching slice instead of silently keeping the first one.
  */
 export function resolvePlayerSampleContext(
   rows: PlayerSampleSource[] | undefined,
@@ -33,16 +34,23 @@ export function resolvePlayerSampleContext(
   account: string,
   fallback: PlayerSampleFallback = {},
 ): PlayerSampleContextData {
-  const source = rows?.find((row) => row.account === account);
+  const sources = rows?.filter((row) => row.account === account) ?? [];
+  const hasSource = sources.length > 0;
+  const hasSourceFights = sources.some((row) => Number.isFinite(row.logsJoined));
   const hasFallbackFights = Number.isFinite(fallback.fights);
-  const known = Boolean(source) || hasFallbackFights;
-  const fights = Math.floor(safeNonNegative(source?.logsJoined ?? fallback.fights));
-  const safeTotal = Math.max(fights, Math.floor(safeNonNegative(totalFights)));
-  const activeMs = safeNonNegative(
-    source?.squadActiveMs
-      || source?.totalFightMs
-      || fallback.activeMs,
-  );
+  const known = hasSource || hasFallbackFights;
+  const safeTotal = Math.floor(safeNonNegative(totalFights));
+
+  const sourceFights = sources.reduce((sum, row) => sum + safeNonNegative(row.logsJoined), 0);
+  const fights = hasSourceFights
+    ? Math.min(safeTotal, Math.floor(sourceFights))
+    : Math.min(safeTotal, Math.floor(safeNonNegative(fallback.fights)));
+
+  const sourceActiveMs = sources.reduce((sum, row) => {
+    const squadActiveMs = safeNonNegative(row.squadActiveMs);
+    return sum + (squadActiveMs > 0 ? squadActiveMs : safeNonNegative(row.totalFightMs));
+  }, 0);
+  const activeMs = sourceActiveMs > 0 ? sourceActiveMs : safeNonNegative(fallback.activeMs);
 
   return {
     fights,
