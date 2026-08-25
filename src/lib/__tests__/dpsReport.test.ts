@@ -27,32 +27,41 @@ describe("dps.report upload responses", () => {
     });
   });
 
+  it("accepts a generated report when dps.report also returns a warning", () => {
+    expect(
+      parseDpsReportUploadResponse({
+        id: "abc_123",
+        permalink: "https://b.dps.report/abc_123",
+        error: "Parser emitted a non-fatal warning",
+      }),
+    ).toMatchObject({
+      id: "abc_123",
+      permalink: "abc_123",
+      error: "Parser emitted a non-fatal warning",
+    });
+  });
+
   it("rejects a nominally successful response with no reusable share id", () => {
     expect(() => parseDpsReportUploadResponse({ uploadTime: 123 })).toThrowError(
       /did not return a usable share link/i,
     );
   });
 
-  it("surfaces service-provided errors", () => {
+  it("surfaces service-provided errors when no report was generated", () => {
     expect(() => parseDpsReportUploadResponse({ error: "Parser unavailable" })).toThrowError(
       new DpsReportUploadError("Parser unavailable", "service"),
     );
   });
 
-  it("surfaces boolean error responses with a service message", () => {
+  it("surfaces boolean error responses with a service message when no report was generated", () => {
     expect(() => parseDpsReportUploadResponse({ error: true, message: "Upload rejected" })).toThrowError(
       /upload rejected/i,
     );
   });
 
-  it("never accepts a truthy service error even when no detail is provided", () => {
-    expect(() => parseDpsReportUploadResponse({ error: true, permalink: "abc_123" })).toThrowError(
-      /rejected the upload/i,
-    );
-  });
-
-  it("extracts permalink ids from common dps.report URL forms", () => {
+  it("extracts permalink ids from common dps.report service URL forms", () => {
     expect(parseDpsReportPermalink("https://dps.report/abc-123_wvw")).toBe("abc-123_wvw");
+    expect(parseDpsReportPermalink("https://b.dps.report/abc-123_wvw")).toBe("abc-123_wvw");
     expect(parseDpsReportPermalink("https://dps.report/getJson?permalink=abc-123_wvw")).toBe("abc-123_wvw");
   });
 });

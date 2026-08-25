@@ -2,20 +2,15 @@
 //
 // dps.report exposes two relevant endpoints, both CORS-enabled so they can
 // be called directly from a browser with no backend server involved:
-//   - POST https://dps.report/uploadContent  — accepts a raw .evtc/.zevtc
-//     file, runs it through Elite Insights server-side, and returns a
-//     permalink. This is how Entropy avoids needing the native EI parser
-//     (a compiled .NET tool) to run locally or in a browser at all.
-//   - GET  https://dps.report/getJson?permalink=... — returns the full
-//     Elite Insights JSON for an already-uploaded (or externally shared)
-//     log.
+//   - POST /uploadContent  — accepts a raw .evtc/.zevtc file, runs it through
+//     Elite Insights server-side, and returns a permalink.
+//   - GET  /getJson?permalink=... — returns the full Elite Insights JSON for
+//     an already-uploaded (or externally shared) log.
 //
-// Both endpoints return a single fight's raw EI JSON — the same shape as
-// what you'd get from running Elite Insights locally on one .zevtc file.
-// This is NOT the aggregated multi-fight report.json that Entropy's main
-// viewer renders; it's the raw input Entropy's aggregation pipeline
-// consumes. See RawFightSummary / summarizeRawFight for what Entropy does
-// with it today (a lightweight per-fight summary, not a full dashboard).
+// dps.report documents multiple service domains because their front-door
+// networks can behave differently by region. Entropy prefers dps.report and
+// falls back to the documented HTTPS alternate b.dps.report when the primary
+// service cannot provide a usable response.
 
 export interface DpsReportUploadResult {
   id: string;
@@ -48,9 +43,15 @@ export class DpsReportUploadError extends Error {
   }
 }
 
-const UPLOAD_ENDPOINT =
-  "https://dps.report/uploadContent?json=1&generator=ei&detailedwvw=true";
-const JSON_ENDPOINT = "https://dps.report/getJson";
+const SERVICE_BASES = ["https://dps.report", "https://b.dps.report"] as const;
+
+function uploadEndpoint(base: string): string {
+  return `${base}/uploadContent?json=1&generator=ei&detailedwvw=true`;
+}
+
+function jsonEndpoint(base: string): string {
+  return `${base}/getJson`;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -67,9 +68,12 @@ function responseErrorMessage(value: unknown): string | null {
 }
 
 /**
- * Validates and normalizes the successful JSON returned by dps.report.
- * A 200 response without a usable permalink is not a successful Entropy
- * import because the resulting report could never be shared again.
+ * Validates and normalizes the JSON returned by dps.report.
+ *
+ * dps.report explicitly documents that `error` may contain a message even
+ * when a report was still generated. A reusable permalink therefore takes
+ * precedence over that warning. Entropy still rejects every response that
+ * lacks both a usable permalink and a usable report id.
  */
 export function parseDpsReportUploadResponse(value: unknown): DpsReportUploadResult {
   if (!isRecord(value)) {
@@ -79,6 +83,19 @@ export function parseDpsReportUploadResponse(value: unknown): DpsReportUploadRes
     );
   }
 
+  const rawPermalink =
+    typeof value.permalink === "string" ? value.permalink.trim() : "";
+  const rawId = typeof value.id === "string" ? value.id.trim() : "";
+  const permalink = parseDpsReportPermalink(rawPermalink || rawId);
+
+  if (permalink) {
+    return {
+      ...(value as Omit<DpsReportUploadResult, "id" | "permalink">),
+      id: rawId || permalink,
+      permalink,
+    };
+  }
+
   if (value.error) {
     const reportedError = responseErrorMessage(value.error)
       ?? responseErrorMessage(value)
@@ -86,23 +103,10 @@ export function parseDpsReportUploadResponse(value: unknown): DpsReportUploadRes
     throw new DpsReportUploadError(reportedError, "service");
   }
 
-  const rawPermalink =
-    typeof value.permalink === "string" ? value.permalink.trim() : "";
-  const rawId = typeof value.id === "string" ? value.id.trim() : "";
-  const permalink = parseDpsReportPermalink(rawPermalink || rawId);
-
-  if (!permalink) {
-    throw new DpsReportUploadError(
-      "dps.report did not return a usable share link for this log. The upload was not added; try the file again in a moment.",
-      "invalid-response",
-    );
-  }
-
-  return {
-    ...(value as Omit<DpsReportUploadResult, "id" | "permalink">),
-    id: rawId || permalink,
-    permalink,
-  };
+  throw new DpsReportUploadError(
+    "dps.report did not return a usable share link for this log. The upload was not added; try the file again in a moment.",
+    "invalid-response",
+  );
 }
 
 function retryDelayMs(response: Response, attempt: number): number {
@@ -138,12 +142,8 @@ export function isRawLogFile(file: File): boolean {
   return name.endsWith(".zevtc") || name.endsWith(".evtc") || name.endsWith(".evtc.zip");
 }
 
-/**
- * Uploads a raw combat log file to dps.report for parsing. Throws with a
- * human-readable message on failure (network error, dps.report-reported
- * error, or a non-OK HTTP status).
- */
-export async function uploadRawLogToDpsReport(
+async function uploadRawLogToService(
+  base: string,
   file: File,
   signal?: AbortSignal,
 ): Promise<DpsReportUploadResult> {
@@ -154,12 +154,12 @@ export async function uploadRawLogToDpsReport(
 
     let res: Response;
     try {
-      res = await fetch(UPLOAD_ENDPOINT, { method: "POST", body: form, signal });
+      res = await fetch(uploadEndpoint(base), { method: "POST", body: form, signal });
     } catch (e) {
       throw new DpsReportUploadError(
         e instanceof Error && e.name === "AbortError"
           ? "Upload cancelled."
-          : `Could not reach dps.report (${e instanceof Error ? e.message : "network error"}).`,
+          : `Could not reach ${new URL(base).hostname} (${e instanceof Error ? e.message : "network error"}).`,
         e instanceof Error && e.name === "AbortError" ? "cancelled" : "network",
       );
     }
@@ -191,29 +191,72 @@ export async function uploadRawLogToDpsReport(
   throw new DpsReportUploadError("dps.report upload failed after retrying.", "service");
 }
 
+/**
+ * Uploads a raw combat log file to dps.report for parsing. Entropy tries the
+ * primary HTTPS service first and then the API-documented HTTPS alternate if
+ * the primary network/service returns no usable report. Rate limits and user
+ * cancellation are not bypassed through the alternate domain.
+ */
+export async function uploadRawLogToDpsReport(
+  file: File,
+  signal?: AbortSignal,
+): Promise<DpsReportUploadResult> {
+  let lastError: DpsReportUploadError | null = null;
+
+  for (const base of SERVICE_BASES) {
+    try {
+      return await uploadRawLogToService(base, file, signal);
+    } catch (error) {
+      if (!(error instanceof DpsReportUploadError)) throw error;
+      if (error.code === "cancelled" || error.code === "rate-limited") throw error;
+      lastError = error;
+    }
+  }
+
+  throw lastError ?? new DpsReportUploadError("dps.report upload failed.", "service");
+}
+
 /** Fetches the full Elite Insights JSON for a permalink already known to dps.report. */
 export async function fetchDpsReportJson(permalink: string, signal?: AbortSignal): Promise<any> {
-  const res = await fetch(`${JSON_ENDPOINT}?permalink=${encodeURIComponent(permalink)}`, { signal });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch parsed log from dps.report (${res.status}).`);
+  let lastMessage = "Failed to fetch parsed log from dps.report.";
+
+  for (const base of SERVICE_BASES) {
+    let res: Response;
+    try {
+      res = await fetch(`${jsonEndpoint(base)}?permalink=${encodeURIComponent(permalink)}`, { signal });
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") throw error;
+      lastMessage = `Could not reach ${new URL(base).hostname}.`;
+      continue;
+    }
+
+    if (!res.ok) {
+      lastMessage = `Failed to fetch parsed log from ${new URL(base).hostname} (${res.status}).`;
+      continue;
+    }
+
+    let value: unknown;
+    try {
+      value = await res.json();
+    } catch {
+      lastMessage = `${new URL(base).hostname} returned invalid parsed-log JSON.`;
+      continue;
+    }
+    if (!isRecord(value)) {
+      lastMessage = `${new URL(base).hostname} returned an invalid parsed log.`;
+      continue;
+    }
+    return value;
   }
-  let value: unknown;
-  try {
-    value = await res.json();
-  } catch {
-    throw new Error("dps.report returned invalid parsed-log JSON.");
-  }
-  if (!isRecord(value)) {
-    throw new Error("dps.report returned an invalid parsed log.");
-  }
-  return value;
+
+  throw new Error(lastMessage);
 }
 
 /**
  * Extracts a dps.report permalink id from anything a user might paste:
- * a bare id ("yAFl-20260720-192325_wvw"), a viewer URL
- * ("https://dps.report/yAFl-..." or ".../w.report/yAFl-..."), or a
- * getJson URL. Returns null if nothing recognizable is found.
+ * a bare id ("yAFl-20260720-192325_wvw"), a viewer URL on any dps.report
+ * service domain, or a getJson URL. Returns null if nothing recognizable is
+ * found.
  */
 export function parseDpsReportPermalink(input: string): string | null {
   const trimmed = input.trim();
