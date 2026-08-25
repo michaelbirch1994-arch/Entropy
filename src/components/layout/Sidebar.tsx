@@ -70,7 +70,7 @@ const MENU: NavSection[] = [
     items: [
       { id: "squad-stats", label: "Squad Stats", keywords: ["kill pressure", "healing effectiveness", "tag distance"] },
       { id: "roster", label: "Roster Intel", keywords: ["attendance", "raid roster"] },
-      { id: "commander-stats", label: "Commander Stats", keywords: ["tag", "lead"] },
+      { id: "commander-stats", label: "Commander Stats & Highlights", keywords: ["tag", "lead", "highlights", "moments"] },
       { id: "player-profiles", label: "Player Profiles", keywords: ["career", "history"] },
     ],
   },
@@ -96,7 +96,6 @@ const MENU: NavSection[] = [
     tone: "combat",
     icon: <Film className="w-4 h-4" />,
     items: [
-      { id: "highlights", label: "Highlights" },
       { id: "dps-graph", label: "DPS Graph" },
       { id: "fight-replay", label: "Fight Replay" },
       { id: "mechanics", label: "Mechanics Timeline" },

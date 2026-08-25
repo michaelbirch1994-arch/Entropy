@@ -15,7 +15,7 @@ import TopSkillsView from "./views/TopSkillsView";
 import BuffsView from "./views/BuffsView";
 import ClassesView from "./views/ClassesView";
 import MapDistributionView from "./views/MapDistributionView";
-import CommanderStatsView from "./views/CommanderStatsView";
+import CommanderStatsHighlightsView from "./views/CommanderStatsHighlightsView";
 import SquadStatsView from "./views/SquadStatsView";
 import CompositionView from "./views/CompositionView";
 import OffensiveView from "./views/OffensiveView";
@@ -31,7 +31,6 @@ import DeathRecapView from "./views/DeathRecapView";
 import BuffGenerationView from "./views/BuffGenerationView";
 import ConditionsView from "./views/ConditionsView";
 import PartyBoonsView from "./views/PartyBoonsView";
-import HighlightsView from "./views/HighlightsView";
 import ArchiveView from "./views/ArchiveView";
 import CompareView from "./views/CompareView";
 import IntelligenceDebugView from "./views/IntelligenceDebugView";
@@ -68,7 +67,7 @@ const VIEW_TITLES: Record<string, string> = {
   buffs: "Buffs",
   classes: "Classes",
   "map-distribution": "Map Distribution",
-  "commander-stats": "Commander Stats",
+  "commander-stats": "Commander Stats & Highlights",
   "squad-stats": "Squad Stats",
   composition: "Composition",
   offensive: "Offensive Stats",
@@ -84,7 +83,7 @@ const VIEW_TITLES: Record<string, string> = {
   "buff-generation": "Buff Generation",
   "conditions": "Conditions",
   "party-boons": "Party Boons",
-  highlights: "Highlights",
+  highlights: "Commander Stats & Highlights",
   archive: "Report Archive",
   compare: "Compare Reports",
   intelligence: "Intelligence",
@@ -104,7 +103,7 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "buffs": return <BuffsView />;
     case "classes": return <ClassesView />;
     case "map-distribution": return <MapDistributionView />;
-    case "commander-stats": return <CommanderStatsView />;
+    case "commander-stats": return <CommanderStatsHighlightsView key="commander-stats" initialTab="stats" />;
     case "squad-stats": return <SquadStatsView />;
     case "composition": return <CompositionView />;
     case "offensive": return <OffensiveView />;
@@ -120,7 +119,7 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "buff-generation": return <BuffGenerationView />;
     case "conditions": return <ConditionsView />;
     case "party-boons": return <PartyBoonsView />;
-    case "highlights": return <HighlightsView />;
+    case "highlights": return <CommanderStatsHighlightsView key="highlights" initialTab="highlights" />;
     case "archive": return <ArchiveView />;
     case "compare": return <CompareView />;
     case "intelligence": return <IntelligenceDebugView />;

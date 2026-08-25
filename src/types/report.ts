@@ -431,6 +431,10 @@ export interface CommanderRow {
     avgEnemySize: number;
     kills: number;
     downs: number;
+    /** Squad enemy kills recorded in fights led by this commander. */
+    squadKills?: number;
+    /** Squad enemy downs recorded in fights led by this commander. */
+    squadDowns?: number;
     commanderDowns: number;
     commanderDeaths: number;
     alliesDown: number;
@@ -440,6 +444,8 @@ export interface CommanderRow {
     damageTakenPerMinute: number;
     incomingBarrierAbsorbed: number;
     incomingBarrierAbsorbedPerMinute?: number;
+    /** Zero-based report fight indices led by this commander. */
+    fightIndices?: number[];
 }
 
 export interface RoleFactor {
@@ -693,6 +699,8 @@ export interface FightHighlight {
   account?: string;
     profession?: string;
     value?: number;
+    valueFormat?: "number" | "percent";
+    valueLabel?: string;
 }
 
 export interface TopHealingSource {

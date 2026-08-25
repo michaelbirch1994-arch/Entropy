@@ -21,6 +21,8 @@ import { buildReportFromFights } from "../../lib/buildReportFromFights";
 import { useReport } from "../../store/ReportContext";
 import RawFightViewer from "./RawFightViewer";
 import FightReplay from "./FightReplay";
+import { createAsyncTaskPool, type AsyncTaskPool } from "../../lib/asyncTaskPool";
+import { BULK_PROCESS_CONCURRENCY } from "../../lib/bridge-metrics/constants";
 import {
   isFolderWatchSupported,
   pickLogFolder,
@@ -38,10 +40,11 @@ const AUTO_IMPORT_POLL_MS = 20000;
 interface QueueItem {
   key: string;
   label: string;
-  status: "pending" | "uploading" | "fetching" | "done" | "error";
+  status: "pending" | "uploading" | "fetching" | "done" | "error" | "cancelled";
   summary?: RawFightSummary;
   raw?: RawFightLog;
   errorMsg?: string;
+  sourcePermalink?: string;
 }
 
 export default function RawLogImporter({ cinematic = false }: { cinematic?: boolean }) {
@@ -73,6 +76,10 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
   const scanningRef = useRef(false);
   const uploadChainRef = useRef<Promise<void>>(Promise.resolve());
   const queueSequenceRef = useRef(0);
+  const filesRef = useRef(new Map<string, File>());
+  const controllersRef = useRef(new Map<string, AbortController>());
+  const fetchPoolRef = useRef<AsyncTaskPool | null>(null);
+  if (!fetchPoolRef.current) fetchPoolRef.current = createAsyncTaskPool(BULK_PROCESS_CONCURRENCY);
 
   function updateItem(key: string, patch: Partial<QueueItem>) {
     setQueue((prev) => prev.map((i) => (i.key === key ? { ...i, ...patch } : i)));
@@ -110,6 +117,9 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
   }
 
   const doneItems = queue.filter((i) => i.status === "done" && i.summary && i.raw);
+  const settledCount = queue.filter((i) => i.status === "done" || i.status === "error" || i.status === "cancelled").length;
+  const activeCount = queue.filter((i) => i.status === "uploading" || i.status === "fetching").length;
+  const queueProgress = queue.length > 0 ? Math.round((settledCount / queue.length) * 100) : 0;
 
   async function handleCombineAll() {
     await combineFights(doneItems);
@@ -129,16 +139,59 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
     }
   }
 
-  async function processFile(file: File, key: string) {
+  function attemptIsCurrent(key: string, controller: AbortController) {
+    return controllersRef.current.get(key) === controller;
+  }
+
+  function finishAttempt(key: string, controller: AbortController) {
+    if (attemptIsCurrent(key, controller)) controllersRef.current.delete(key);
+  }
+
+  function errorMessage(error: unknown, fallback: string) {
+    return error instanceof Error ? error.message : fallback;
+  }
+
+  function scheduleFetch(permalink: string, key: string, controller: AbortController) {
+    void fetchPoolRef.current?.add(async () => {
+      if (controller.signal.aborted || !attemptIsCurrent(key, controller)) return;
+      updateItem(key, { status: "fetching", sourcePermalink: permalink });
+      try {
+        const json = await fetchDpsReportJson(permalink, controller.signal);
+        if (!attemptIsCurrent(key, controller)) return;
+        updateItem(key, { status: "done", summary: summarizeRawFight(json, permalink), raw: json });
+      } catch (error) {
+        if (!attemptIsCurrent(key, controller)) return;
+        updateItem(key, controller.signal.aborted
+          ? { status: "cancelled", errorMsg: "Import cancelled." }
+          : { status: "error", errorMsg: errorMessage(error, "Failed to load parsed log.") });
+      } finally {
+        finishAttempt(key, controller);
+      }
+    }).catch(() => undefined);
+  }
+
+  async function uploadFile(file: File, key: string, controller: AbortController) {
+    if (controller.signal.aborted || !attemptIsCurrent(key, controller)) return;
     updateItem(key, { status: "uploading", errorMsg: undefined });
     try {
-      const uploaded = await uploadRawLogToDpsReport(file);
-      updateItem(key, { status: "fetching" });
-      const json = await fetchDpsReportJson(uploaded.permalink);
-      updateItem(key, { status: "done", summary: summarizeRawFight(json, uploaded.permalink), raw: json });
-    } catch (e) {
-      updateItem(key, { status: "error", errorMsg: e instanceof Error ? e.message : "Upload failed" });
+      const uploaded = await uploadRawLogToDpsReport(file, controller.signal);
+      if (!attemptIsCurrent(key, controller)) return;
+      scheduleFetch(uploaded.permalink, key, controller);
+    } catch (error) {
+      if (!attemptIsCurrent(key, controller)) return;
+      updateItem(key, controller.signal.aborted
+        ? { status: "cancelled", errorMsg: "Import cancelled." }
+        : { status: "error", errorMsg: errorMessage(error, "Upload failed.") });
+      finishAttempt(key, controller);
     }
+  }
+
+  function scheduleUpload(file: File, key: string) {
+    const controller = new AbortController();
+    controllersRef.current.set(key, controller);
+    uploadChainRef.current = uploadChainRef.current
+      .then(() => uploadFile(file, key, controller))
+      .catch(() => undefined);
   }
 
   function enqueueFiles(files: File[]) {
@@ -151,22 +204,46 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
         status: "pending" as const,
       },
     }));
+    queued.forEach(({ file, item }) => filesRef.current.set(item.key, file));
     setQueue((prev) => [...queued.map(({ item }) => item).reverse(), ...prev]);
-    for (const { file, item } of queued) {
-      uploadChainRef.current = uploadChainRef.current
-        .then(() => processFile(file, item.key))
-        .catch(() => undefined);
-    }
+    for (const { file, item } of queued) scheduleUpload(file, item.key);
   }
 
-  async function processPermalink(permalink: string, label: string) {
+  function processPermalink(permalink: string, label: string) {
     const key = `${permalink}-${Date.now()}`;
-    setQueue((prev) => [{ key, label, status: "fetching" }, ...prev]);
-    try {
-      const json = await fetchDpsReportJson(permalink);
-      updateItem(key, { status: "done", summary: summarizeRawFight(json, permalink), raw: json });
-    } catch (e) {
-      updateItem(key, { status: "error", errorMsg: e instanceof Error ? e.message : "Failed to load" });
+    const controller = new AbortController();
+    controllersRef.current.set(key, controller);
+    setQueue((prev) => [{ key, label, status: "fetching", sourcePermalink: permalink }, ...prev]);
+    scheduleFetch(permalink, key, controller);
+  }
+
+  function cancelItem(item: QueueItem) {
+    controllersRef.current.get(item.key)?.abort();
+    controllersRef.current.delete(item.key);
+    updateItem(item.key, { status: "cancelled", errorMsg: "Import cancelled." });
+  }
+
+  function retryItem(item: QueueItem) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(item.key);
+      return next;
+    });
+    updateItem(item.key, {
+      status: "pending",
+      errorMsg: undefined,
+      summary: undefined,
+      raw: undefined,
+    });
+    if (item.sourcePermalink) {
+      const controller = new AbortController();
+      controllersRef.current.set(item.key, controller);
+      scheduleFetch(item.sourcePermalink, item.key, controller);
+      return;
+    }
+    const file = filesRef.current.get(item.key);
+    if (file) {
+      scheduleUpload(file, item.key);
     }
   }
 
@@ -260,6 +337,11 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => () => {
+    controllersRef.current.forEach((controller) => controller.abort());
+    controllersRef.current.clear();
+  }, []);
+
   // Poll for new files while actively watching a connected folder.
   useEffect(() => {
     if (folderStatus !== "watching") return;
@@ -292,7 +374,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
       return;
     }
     setLinkError(null);
-    void processPermalink(permalink, permalink);
+    processPermalink(permalink, permalink);
     setLinkValue("");
   }
 
@@ -473,6 +555,20 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
 
           {queue.length > 0 && (
             <>
+              <div className="border border-theme-border bg-black/25 px-3.5 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-black uppercase text-theme-text">Batch progress</p>
+                    <p className="mt-0.5 text-[10px] text-theme-muted">
+                      {settledCount} of {queue.length} finished{activeCount > 0 ? ` - ${activeCount} active` : ""}
+                    </p>
+                  </div>
+                  <span className="font-mono text-sm font-black text-theme-accent-strong">{queueProgress}%</span>
+                </div>
+                <div className="mt-2 h-1.5 overflow-hidden bg-theme-surface-inset" aria-hidden="true">
+                  <div className="h-full bg-theme-accent transition-[width] duration-300" style={{ width: `${queueProgress}%` }} />
+                </div>
+              </div>
               {doneItems.length >= 2 && (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] px-3 py-2.5">
                   <div>
@@ -552,6 +648,8 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                         <UploadCloud className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
                       ) : item.status === "done" ? (
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                      ) : item.status === "cancelled" ? (
+                        <X className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
                       ) : (
                         <AlertCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
                       )}
@@ -563,6 +661,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                         {item.status === "uploading" && <p className="text-[10px] text-slate-500">Uploading to dps.report...</p>}
                         {item.status === "fetching" && <p className="text-[10px] text-slate-500">Fetching parsed log...</p>}
                         {item.status === "error" && <p className="text-[10px] text-rose-400">{item.errorMsg}</p>}
+                        {item.status === "cancelled" && <p className="text-[10px] text-slate-500">{item.errorMsg}</p>}
                         {item.status === "done" && item.summary && (
                           <p className="text-[10px] text-slate-500 font-mono">
                             {item.summary.duration} - {item.summary.squadSize} in squad
@@ -618,6 +717,28 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                           </a>
                         )}
                       </div>
+                    )}
+                    {(item.status === "pending" || item.status === "uploading" || item.status === "fetching") && (
+                      <button
+                        type="button"
+                        onClick={() => cancelItem(item)}
+                        title={`Cancel ${item.label}`}
+                        aria-label={`Cancel ${item.label}`}
+                        className="flex-shrink-0 text-slate-500 transition-colors hover:text-rose-400"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                    {(item.status === "error" || item.status === "cancelled") && (filesRef.current.has(item.key) || item.sourcePermalink) && (
+                      <button
+                        type="button"
+                        onClick={() => retryItem(item)}
+                        title={`Retry ${item.label}`}
+                        aria-label={`Retry ${item.label}`}
+                        className="flex-shrink-0 text-slate-500 transition-colors hover:text-theme-accent-strong"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </button>
                     )}
                   </li>
                 );

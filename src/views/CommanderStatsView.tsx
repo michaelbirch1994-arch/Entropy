@@ -1,147 +1,204 @@
-import { useState } from "react";
-import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
-import StatCard from "../components/ui/StatCard";
-import { fmtNum, fmtFixed, fmtDur, profChip } from "../utils/format";
-import { Activity, Clock, Crown, Gauge, Shield, Swords, Target, Skull, Users } from "lucide-react";
-import type { CommanderRow } from "../types/report";
+import { fmtDur, fmtFixed, fmtNum, profChip } from "../utils/format";
+import type { CommanderRow, FightRow } from "../types/report";
+import {
+  Activity,
+  ArrowUpRight,
+  Clock,
+  Crown,
+  Gauge,
+  Shield,
+  Swords,
+  Target,
+  Users,
+} from "lucide-react";
+import { useView } from "../store/ViewContext";
 
 function ratio(numerator: number, denominator: number) {
-  return denominator > 0 ? numerator / denominator : numerator;
+  return denominator > 0 ? numerator / denominator : 0;
 }
 
-export default function CommanderStatsView() {
-  const { report } = useReport();
-  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
-  if (!report) return null;
-  const s = report.stats;
-  const rows = s.commanderStats?.rows ?? [];
+function metricValue(value: number | null, digits = 2, suffix = "") {
+  return value === null ? "—" : `${fmtFixed(value, digits)}${suffix}`;
+}
 
-  if (rows.length === 0) {
-    return (
-      <div className="space-y-5 animate-view pb-12">
-        <Panel title="Commander Stats" icon={<Crown className="w-4 h-4" />}>
-          <div className="border-l-2 border-theme-focus bg-black/25 px-4 py-8 text-sm text-slate-400">
-            No commander identity was recorded for this report.
-            <p className="mt-2 text-[11px] text-slate-600">Entropy will not infer a tag from squad performance. Import logs containing commander metadata to populate this view.</p>
-          </div>
-        </Panel>
-      </div>
-    );
-  }
+interface CommanderStatsViewProps {
+  commander: CommanderRow;
+  fightBreakdown: FightRow[];
+}
 
-  const commander = rows.find((row) => row.account === selectedAccount) ?? rows[0];
-  const downConversion = ratio(commander.kills, commander.downs);
-  const commanderSurvival = Math.max(0, 1 - ratio(commander.commanderDeaths, commander.fights));
-  const forceRatio = ratio(commander.avgEnemySize, commander.avgSquadSize);
-  const allyTrade = ratio(commander.alliesDead, commander.kills);
-  // Elite Insights only tracks deaths per player (defenses.deadCount); kill
-  // credit on a kill event is squad-wide, so there is no way to isolate "the
-  // commander's own kills" from combat-log data. commander.kills/alliesDead is
-  // therefore always a squad-wide trade ratio for fights this commander led,
-  // not the commander's personal K/D - recomputed here (rather than trusting
-  // a possibly-stale precomputed field) and labeled "Squad KDR" accordingly.
-  const squadKdr = ratio(commander.kills, commander.alliesDead);
+export default function CommanderStatsView({ commander, fightBreakdown }: CommanderStatsViewProps) {
+  const { setActiveView } = useView();
+  const hasSquadOutcomes = typeof commander.squadKills === "number" && typeof commander.squadDowns === "number";
+  const squadKills = commander.squadKills ?? 0;
+  const squadDowns = commander.squadDowns ?? 0;
+  const squadKdr = hasSquadOutcomes ? ratio(squadKills, commander.alliesDead) : null;
+  const downConversion = hasSquadOutcomes ? ratio(squadKills, squadKills + squadDowns) * 100 : null;
+  const forceRatio = commander.avgSquadSize > 0 ? commander.avgEnemySize / commander.avgSquadSize : null;
+  const tagDeathsPerFight = ratio(commander.commanderDeaths, commander.fights);
   const classifiedFights = commander.wins + commander.losses;
   const unclassifiedFights = commander.unclassified ?? Math.max(0, commander.fights - classifiedFights);
-  const reviewCues = buildReviewCues(commander, downConversion, commanderSurvival, forceRatio);
+  const ledFights = (commander.fightIndices ?? [])
+    .map((fightIndex) => ({ fightIndex, fight: fightBreakdown[fightIndex] }))
+    .filter((entry): entry is { fightIndex: number; fight: FightRow } => Boolean(entry.fight));
+
+  function openFight(fightIndex: number) {
+    const fight = fightBreakdown[fightIndex];
+    localStorage.setItem("entropy.selectedFightIndex", String(fightIndex));
+    if (fight?.id) localStorage.setItem("entropy.selectedFightId", fight.id);
+    setActiveView("squad-stats");
+  }
 
   return (
-    <div className="theme-view-layout space-y-5 animate-view pb-12">
-      {rows.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar" role="group" aria-label="Select commander">
-          {rows.map((row) => (
-            <button key={row.account} type="button" aria-pressed={row.account === commander.account} onClick={() => setSelectedAccount(row.account)} className={`theme-filter-chip min-w-max border px-3 py-2 text-xs font-black ${row.account === commander.account ? "border-theme-focus bg-theme-accentDim text-theme-accentStrong" : "border-theme-border text-theme-muted"}`}>
-              {row.characterNames[0] || row.account}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <section className="theme-commander-hero grid gap-5 xl:grid-cols-[1.4fr_0.6fr]">
-        <div className="theme-selected-fight border border-theme-focus bg-black/45 p-6">
+    <div className="theme-view-layout space-y-5">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="theme-selected-fight border border-theme-focus bg-black/45 p-5 md:p-6">
           <div className="flex flex-wrap items-start gap-4">
-            <div className="theme-commander-emblem grid h-14 w-14 place-items-center border border-theme-focus bg-theme-accentDim">
-              <Crown className="h-7 w-7 text-theme-accentStrong" />
+            <div className="theme-commander-emblem grid h-12 w-12 shrink-0 place-items-center border border-theme-focus bg-theme-accentDim">
+              <Crown className="h-6 w-6 text-theme-accentStrong" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-[10px] font-black uppercase tracking-[0.26em] text-theme-accentStrong">Command dossier</div>
-              <h2 className="mt-1 truncate text-2xl font-black uppercase text-slate-100">{commander.characterNames.join(", ") || commander.account}</h2>
+              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-theme-accentStrong">Commander</div>
+              <h2 className="mt-1 text-xl font-black uppercase text-slate-100 md:text-2xl">
+                {commander.characterNames.join(", ") || commander.account}
+              </h2>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <span className={`border px-2 py-0.5 text-[10px] font-bold ${profChip(commander.profession)}`}>{commander.profession}</span>
-                <span className="font-mono text-[11px] text-slate-500">{commander.account}</span>
+                <span className="break-all font-mono text-[11px] text-slate-500">{commander.account}</span>
               </div>
             </div>
-            <div className="border-l-2 border-theme-focus pl-5 text-right">
-              <div className="font-mono text-4xl font-black text-theme-accentStrong">{classifiedFights > 0 ? `${fmtFixed(commander.winRatePct, 0)}%` : "—"}</div>
-              <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">classified win rate</div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 border-y border-theme-border md:grid-cols-4">
+            <SummaryCell icon={<Swords className="h-3.5 w-3.5" />} label="Led fights" value={fmtNum(commander.fights)} />
+            <SummaryCell icon={<Clock className="h-3.5 w-3.5" />} label="Duration" value={fmtDur(commander.totalDurationMs)} />
+            <SummaryCell icon={<Users className="h-3.5 w-3.5" />} label="Avg squad" value={fmtFixed(commander.avgSquadSize, 1)} />
+            <SummaryCell icon={<Target className="h-3.5 w-3.5" />} label="Avg enemy" value={fmtFixed(commander.avgEnemySize, 1)} />
+          </div>
+        </div>
+
+        <div className="border border-theme-border bg-black/30 p-5">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-theme-accentStrong">
+            <Activity className="h-4 w-4" /> Outcome coverage
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <OutcomeStat label="Wins" value={commander.wins} tone="text-emerald-300" />
+            <OutcomeStat label="Losses" value={commander.losses} tone="text-rose-300" />
+            <OutcomeStat label="Unclassified" value={unclassifiedFights} tone="text-slate-200" />
+          </div>
+          <div className="mt-4 border-l-2 border-theme-focus pl-3">
+            <div className="font-mono text-2xl font-black text-theme-accentStrong">
+              {classifiedFights > 0 ? `${fmtFixed(commander.winRatePct, 0)}%` : "—"}
             </div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-            <StatCard label="Fights" value={fmtNum(commander.fights)} icon={<Swords className="h-3.5 w-3.5 text-theme-accentStrong" />} accent="text-theme-accentStrong" />
-            <StatCard label="Wins" value={fmtNum(commander.wins)} icon={<Target className="h-3.5 w-3.5 text-emerald-400" />} accent="text-emerald-300" />
-            <StatCard label="Unclassified" value={fmtNum(unclassifiedFights)} icon={<Skull className="h-3.5 w-3.5 text-slate-400" />} accent="text-slate-300" sub={classifiedFights > 0 ? `${commander.wins}W / ${commander.losses}L classified` : "WvW result not inferred"} />
-            <StatCard label="Squad KDR" value={fmtFixed(squadKdr, 2)} icon={<Gauge className="h-3.5 w-3.5 text-amber-400" />} accent="text-amber-300" sub="Squad kills / allied deaths while this commander led" />
-            <StatCard label="Kills" value={fmtNum(commander.kills)} icon={<Swords className="h-3.5 w-3.5 text-emerald-400" />} accent="text-emerald-300" />
-            <StatCard label="Duration" value={fmtDur(commander.totalDurationMs)} icon={<Clock className="h-3.5 w-3.5 text-slate-400" />} accent="text-slate-300" />
-          </div>
-        </div>
-
-        <div className="theme-command-readout border border-theme-border bg-black/35 p-5">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-theme-accentStrong"><Activity className="h-4 w-4" /> Review cues</div>
-          <div className="mt-4 grid gap-3">
-            {reviewCues.map((cue) => <div key={cue.label} className="border-l-2 border-theme-focus bg-black/25 px-3 py-2"><div className="text-xs font-black text-slate-200">{cue.label}</div><div className="mt-1 text-[11px] leading-5 text-slate-500">{cue.detail}</div></div>)}
+            <div className="mt-1 text-[10px] font-bold uppercase text-theme-muted">Classified win rate</div>
+            {classifiedFights === 0 && <p className="mt-2 text-[10px] leading-4 text-theme-muted">No fight outcome was inferred.</p>}
           </div>
         </div>
       </section>
 
-      <section className="theme-commander-metrics grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <CommandMetric icon={<Target className="h-4 w-4" />} label="Down conversion" value={`${fmtFixed(downConversion * 100, 0)}%`} detail={`${commander.kills} kills from ${commander.downs} downs`} tone="text-emerald-300" />
-        <CommandMetric icon={<Shield className="h-4 w-4" />} label="Tag survival" value={`${fmtFixed(commanderSurvival * 100, 0)}%`} detail={`${commander.commanderDeaths} commander deaths across ${commander.fights} fights`} tone="text-slate-100" />
-        <CommandMetric icon={<Users className="h-4 w-4" />} label="Enemy force ratio" value={`${fmtFixed(forceRatio, 2)}x`} detail={`${fmtFixed(commander.avgSquadSize, 1)} squad vs ${fmtFixed(commander.avgEnemySize, 1)} enemy average`} tone="text-orange-300" />
-        <CommandMetric icon={<Skull className="h-4 w-4" />} label="Ally deaths per kill" value={fmtFixed(allyTrade, 2)} detail={`${commander.alliesDead} allied deaths against ${commander.kills} kills`} tone="text-rose-300" />
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <CommandMetric
+          icon={<Gauge className="h-4 w-4" />}
+          label="Squad KDR"
+          value={metricValue(squadKdr)}
+          detail={hasSquadOutcomes ? `${squadKills} enemy kills / ${commander.alliesDead} allied deaths` : "Unavailable in this older report"}
+        />
+        <CommandMetric
+          icon={<Target className="h-4 w-4" />}
+          label="Down conversion"
+          value={metricValue(downConversion, 0, "%")}
+          detail={hasSquadOutcomes ? `${squadKills} kills from ${squadKills + squadDowns} recorded enemy down states` : "Unavailable in this older report"}
+        />
+        <CommandMetric
+          icon={<Shield className="h-4 w-4" />}
+          label="Tag deaths / fight"
+          value={fmtFixed(tagDeathsPerFight, 2)}
+          detail={`${commander.commanderDeaths} recorded tag deaths across ${commander.fights} fights`}
+        />
+        <CommandMetric
+          icon={<Users className="h-4 w-4" />}
+          label="Enemy force ratio"
+          value={metricValue(forceRatio, 2, "x")}
+          detail={`${fmtFixed(commander.avgSquadSize, 1)} squad vs ${fmtFixed(commander.avgEnemySize, 1)} enemy average`}
+        />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[0.72fr_1.28fr]">
-        <Panel title="Engagement Record" icon={<Swords className="h-4 w-4" />}>
-          <div className="grid grid-cols-2 gap-3">
-            <Detail label="Average squad" value={fmtFixed(commander.avgSquadSize, 1)} />
-            <Detail label="Average enemy" value={fmtFixed(commander.avgEnemySize, 1)} />
-            <Detail label="Enemy downs" value={fmtNum(commander.downs)} color="text-amber-300" />
-            <Detail label="Enemy kills" value={fmtNum(commander.kills)} color="text-emerald-300" />
-            <Detail label="Allies down" value={fmtNum(commander.alliesDown)} color="text-orange-300" />
-            <Detail label="Allies dead" value={fmtNum(commander.alliesDead)} color="text-rose-300" />
+      <section className="grid gap-5 xl:grid-cols-2">
+        <Panel title="Engagement Totals" icon={<Swords className="h-4 w-4" />}>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Detail label="Enemy kills" value={hasSquadOutcomes ? fmtNum(squadKills) : "—"} color="text-emerald-300" />
+            <Detail label="Enemy downs" value={hasSquadOutcomes ? fmtNum(squadDowns) : "—"} color="text-amber-300" />
+            <Detail label="Allied downs" value={fmtNum(commander.alliesDown)} color="text-orange-300" />
+            <Detail label="Allied deaths" value={fmtNum(commander.alliesDead)} color="text-rose-300" />
           </div>
         </Panel>
 
-        <Panel title="Survivability Evidence" icon={<Shield className="h-4 w-4" />}>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Detail label="Damage taken" value={fmtNum(commander.damageTaken)} color="text-rose-300" />
-            <Detail label="Damage / minute" value={fmtNum(commander.damageTakenPerMinute)} color="text-orange-300" />
-            <Detail label="Barrier absorbed" value={fmtNum(commander.incomingBarrierAbsorbed)} color="text-amber-300" />
-            <Detail label="Barrier / minute" value={fmtNum(commander.incomingBarrierAbsorbedPerMinute ?? 0)} color="text-amber-300" />
+        <Panel title="Tag Survivability" icon={<Shield className="h-4 w-4" />}>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Detail label="Tag downs" value={fmtNum(commander.commanderDowns)} />
+            <Detail label="Tag deaths" value={fmtNum(commander.commanderDeaths)} color="text-rose-300" />
+            <Detail label="Damage / min" value={fmtNum(commander.damageTakenPerMinute)} color="text-orange-300" />
+            <Detail label="Barrier / min" value={fmtNum(commander.incomingBarrierAbsorbedPerMinute ?? 0)} color="text-amber-300" />
           </div>
-          <div className="mt-4 border-l-2 border-theme-border px-3 py-2 text-xs leading-5 text-slate-500">Push timing, tag movement, and squad response after a tag death require timestamped commander-position evidence that is not yet stored in the report contract. Entropy leaves those panels unavailable instead of estimating them.</div>
         </Panel>
       </section>
+
+      {ledFights.length > 0 && (
+        <Panel title="Led Fight Ledger" icon={<Activity className="h-4 w-4" />}>
+          <div className="divide-y divide-theme-border">
+            {ledFights.map(({ fightIndex, fight }) => (
+              <button
+                key={`${fight.id}:${fightIndex}`}
+                type="button"
+                onClick={() => openFight(fightIndex)}
+                className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left transition-colors hover:bg-white/[0.025] sm:grid-cols-[minmax(0,1.4fr)_7rem_8rem_5rem_auto] sm:px-2"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-black text-theme-text">{fight.label} · {fight.fullLabel}</span>
+                  <span className="mt-1 block text-[10px] text-theme-muted">{fight.mapName}</span>
+                </span>
+                <LedgerValue label="Force" value={`${fight.squadCount}v${fight.enemyCount}`} />
+                <LedgerValue label="Enemy D / K" value={`${fight.enemyDowns} / ${fight.enemyDeaths}`} className="hidden sm:block" />
+                <LedgerValue label="Duration" value={fight.duration} className="hidden sm:block" />
+                <span className="inline-flex h-8 w-8 items-center justify-center border border-theme-border text-theme-muted transition-colors hover:text-theme-accentStrong">
+                  <ArrowUpRight className="h-4 w-4" />
+                </span>
+              </button>
+            ))}
+          </div>
+        </Panel>
+      )}
     </div>
   );
 }
 
-function buildReviewCues(commander: CommanderRow, conversion: number, survival: number, forceRatio: number) {
-  return [
-    { label: conversion >= 0.65 ? "Strong down conversion" : "Conversion review", detail: `${fmtFixed(conversion * 100, 0)}% of recorded enemy downs converted into kills.` },
-    { label: survival >= 0.85 ? "Tag remained available" : "Tag survival review", detail: `${fmtFixed(survival * 100, 0)}% fight-level survival based on recorded commander deaths.` },
-    { label: forceRatio > 1.15 ? "Frequent numerical pressure" : "Comparable force sizes", detail: `Average enemy-to-squad force ratio was ${fmtFixed(forceRatio, 2)}x.` },
-    { label: "Evidence boundary", detail: `${commander.fights} fights contribute to this commander aggregate; outcome and unrecorded movement behavior are not inferred.` },
-  ];
+function SummaryCell({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="min-w-0 border-theme-border px-2 py-3 first:pl-0 md:border-r md:px-4 md:last:border-r-0">
+      <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-theme-muted">{icon}{label}</div>
+      <div className="mt-1 truncate font-mono text-lg font-black text-theme-text">{value}</div>
+    </div>
+  );
 }
 
-function CommandMetric({ icon, label, value, detail, tone }: { icon: React.ReactNode; label: string; value: string; detail: string; tone: string }) {
-  return <div className="theme-dossier-metric border-l-2 border-theme-focus bg-black/35 p-4"><div className="flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-wider text-slate-500"><span>{label}</span>{icon}</div><div className={`mt-3 font-mono text-2xl font-black ${tone}`}>{value}</div><div className="mt-1 text-[10px] leading-4 text-slate-500">{detail}</div></div>;
+function OutcomeStat({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return <div><div className={`font-mono text-xl font-black ${tone}`}>{fmtNum(value)}</div><div className="mt-1 text-[9px] font-bold uppercase text-theme-muted">{label}</div></div>;
+}
+
+function CommandMetric({ icon, label, value, detail }: { icon: React.ReactNode; label: string; value: string; detail: string }) {
+  return (
+    <div className="theme-dossier-metric min-h-32 border-l-2 border-theme-focus bg-black/35 p-4">
+      <div className="flex items-center justify-between gap-3 text-[10px] font-black uppercase text-theme-muted"><span>{label}</span>{icon}</div>
+      <div className="mt-3 font-mono text-2xl font-black text-theme-accentStrong">{value}</div>
+      <div className="mt-1 text-[10px] leading-4 text-theme-muted">{detail}</div>
+    </div>
+  );
 }
 
 function Detail({ label, value, color = "text-slate-200" }: { label: string; value: string; color?: string }) {
-  return <div className="theme-dossier-metric border-l-2 border-theme-border bg-black/25 px-3 py-2"><div className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</div><div className={`font-mono text-sm font-black ${color}`}>{value}</div></div>;
+  return <div className="theme-dossier-metric border-l-2 border-theme-border bg-black/25 px-3 py-2"><div className="mb-0.5 text-[10px] font-bold uppercase text-theme-muted">{label}</div><div className={`font-mono text-sm font-black ${color}`}>{value}</div></div>;
+}
+
+function LedgerValue({ label, value, className = "" }: { label: string; value: string; className?: string }) {
+  return <span className={className}><span className="block text-[9px] font-bold uppercase text-theme-muted sm:hidden">{label}</span><span className="font-mono text-[11px] font-black text-theme-text">{value}</span></span>;
 }
