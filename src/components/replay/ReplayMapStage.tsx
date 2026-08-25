@@ -35,6 +35,10 @@ function playerMarkerRadius(isCommander: boolean, down: boolean, markerUnit: num
   return (down ? baseRadius + 2 : baseRadius) * markerUnit;
 }
 
+export function replayActorTransform(x: number, y: number): string {
+  return `translate(${x} ${y})`;
+}
+
 interface ReplayMapStageProps {
   data: ReplayData;
   timestampMs: number;
@@ -60,8 +64,14 @@ interface ReplayMapStageProps {
  * The animated SVG is deliberately isolated from the surrounding evidence
  * workspace. Replay still paints at its bounded visual cadence, while drawer,
  * narrative, and control-state updates do not rebuild every marker.
+ *
+ * Moving actors use one stable group transform. Child circles, images,
+ * labels, and clip paths remain in actor-local coordinates instead of having
+ * every SVG geometry attribute rewritten on every frame. This keeps the
+ * current frame visually identical while avoiding retained/duplicated paint
+ * artifacts in embedded WebViews when many actors move at once.
  */
-function ReplayMapStage({
+export function ReplayMapStage({
   data,
   timestampMs,
   viewBox,
@@ -87,7 +97,7 @@ function ReplayMapStage({
     <div className="overflow-hidden rounded-xl border border-slate-700/80 bg-black/70 shadow-[inset_0_0_50px_rgba(0,0,0,0.55)]">
       <svg
         ref={svgRef}
-          preserveAspectRatio="xMidYMid slice"
+        preserveAspectRatio="xMidYMid slice"
         viewBox={viewBox}
         className={focusMode ? "h-[clamp(520px,60vh,760px)] w-full select-none touch-none" : "h-[420px] w-full select-none touch-none xl:h-[520px] 2xl:h-[600px]"}
         style={{ cursor: dragging ? "grabbing" : "grab" }}
@@ -115,7 +125,11 @@ function ReplayMapStage({
             const point = owner ? interpolatePosition(owner.points, timestampMs) : null;
             if (!point) return null;
             const age = Math.abs(mechanic.t - timestampMs) / 1500;
-            return <circle key={`mechanic-${mechanic.t}-${index}`} cx={point.x} cy={point.y} r={(10 + age * 14) * markerUnit} fill="none" stroke="#fb7185" strokeWidth={2 * markerUnit} opacity={0.7 * (1 - age)} />;
+            return (
+              <g key={`mechanic-${mechanic.t}-${index}`} transform={replayActorTransform(point.x, point.y)}>
+                <circle cx={0} cy={0} r={(10 + age * 14) * markerUnit} fill="none" stroke="#fb7185" strokeWidth={2 * markerUnit} opacity={0.7 * (1 - age)} />
+              </g>
+            );
           })}
 
           {showCasts && data.players.map((player) => {
@@ -124,53 +138,32 @@ function ReplayMapStage({
             const point = interpolatePosition(player.points, timestampMs);
             if (!point) return null;
             const age = Math.min(...recent.map((cast) => Math.abs(cast.t - timestampMs))) / 600;
-            return <circle key={`cast-${player.account}`} cx={point.x} cy={point.y} r={(5 + age * 8) * markerUnit} fill="none" stroke="#fbbf24" strokeWidth={1.5 * markerUnit} opacity={0.6 * (1 - age)} />;
-          })}
-
-          {showFacing && data.enemies.map((enemy) => {
-            if (isInInterval(enemy.deadIntervals, timestampMs)) return null;
-            const point = interpolatePosition(enemy.points, timestampMs);
-            const angle = interpolateFacing(enemy.facings ?? [], timestampMs);
-            if (!point || angle == null) return null;
-            const end = facingLineEnd(point.x, point.y, 10 * markerUnit, angle);
-            return <line key={`enemy-facing-${enemy.id}`} x1={point.x} y1={point.y} x2={end.x2} y2={end.y2} stroke="#fb7185" strokeWidth={1.2 * markerUnit} opacity={0.7} />;
+            return (
+              <g key={`cast-${player.account}`} transform={replayActorTransform(point.x, point.y)}>
+                <circle cx={0} cy={0} r={(5 + age * 8) * markerUnit} fill="none" stroke="#fbbf24" strokeWidth={1.5 * markerUnit} opacity={0.6 * (1 - age)} />
+              </g>
+            );
           })}
 
           {data.enemies.map((enemy) => {
             const point = interpolatePosition(enemy.points, timestampMs);
             if (!point || isInInterval(enemy.deadIntervals, timestampMs)) return null;
             const down = isInInterval(enemy.downIntervals, timestampMs);
+            const angle = showFacing ? interpolateFacing(enemy.facings ?? [], timestampMs) : null;
+            const facingEnd = angle == null ? null : facingLineEnd(0, 0, 10 * markerUnit, angle);
             return (
-              <circle key={enemy.id} cx={point.x} cy={point.y} r={(down ? 7.5 : 5.4) * markerUnit} fill="#ef4444" fillOpacity={down ? 0.28 : 0.88} stroke={down ? "#fecdd3" : "#7f1d1d"} strokeWidth={1.7 * markerUnit}>
-                <title>{`${enemy.name}${down ? " — downed" : ""}`}</title>
-              </circle>
+              <g key={enemy.id} transform={replayActorTransform(point.x, point.y)}>
+                {facingEnd && (
+                  <line x1={0} y1={0} x2={facingEnd.x2} y2={facingEnd.y2} stroke="#fb7185" strokeWidth={1.2 * markerUnit} opacity={0.7} />
+                )}
+                <circle cx={0} cy={0} r={(down ? 7.5 : 5.4) * markerUnit} fill="#ef4444" fillOpacity={down ? 0.28 : 0.88} stroke={down ? "#fecdd3" : "#7f1d1d"} strokeWidth={1.7 * markerUnit}>
+                  <title>{`${enemy.name}${down ? " — downed" : ""}`}</title>
+                </circle>
+              </g>
             );
           })}
 
-          {showFacing && data.players.map((player) => {
-            if (isInInterval(player.deadIntervals, timestampMs)) return null;
-            const point = interpolatePosition(player.points, timestampMs);
-            const angle = interpolateFacing(player.facings ?? [], timestampMs);
-            if (!point || angle == null) return null;
-            const down = isInInterval(player.downIntervals, timestampMs);
-            const startRadius = playerMarkerRadius(player.isCommander, down, markerUnit);
-            const arrow = facingArrow(point.x, point.y, startRadius, 7 * markerUnit, angle);
-            return (
-              <line
-                key={`player-facing-${player.account}`}
-                x1={arrow.x1}
-                y1={arrow.y1}
-                x2={arrow.x2}
-                y2={arrow.y2}
-                stroke="#ffffff"
-                strokeWidth={1.3 * markerUnit}
-                opacity={0.9}
-                markerEnd="url(#replay-facing-arrow)"
-              />
-            );
-          })}
-
-          {data.players.map((player) => {
+          {data.players.map((player, playerIndex) => {
             const point = interpolatePosition(player.points, timestampMs);
             if (!point || isInInterval(player.deadIntervals, timestampMs)) return null;
             const down = isInInterval(player.downIntervals, timestampMs);
@@ -179,34 +172,53 @@ function ReplayMapStage({
             const baseRadius = player.isCommander ? 10.5 : 7.5;
             const iconRadius = playerMarkerRadius(player.isCommander, down, markerUnit);
             const iconSrc = classIconSrc(player.profession);
-            const clipId = `replay-icon-clip-${player.account.replace(/[^a-zA-Z0-9]/g, "")}`;
+            const clipId = `replay-icon-clip-${playerIndex}-${player.account.replace(/[^a-zA-Z0-9]/g, "")}`;
             const intelInnerRadius = (baseRadius + 3.5) * markerUnit;
             const intelOuterRadius = (baseRadius + 6.5) * markerUnit;
             const outlineColor = down ? "#fb7185" : "#ffffff";
+            const angle = showFacing ? interpolateFacing(player.facings ?? [], timestampMs) : null;
+            const facing = angle == null ? null : facingArrow(0, 0, iconRadius, 7 * markerUnit, angle);
             return (
-              <g key={player.account} onClick={(event) => { event.stopPropagation(); onSelectPlayer(player.account); }} className="cursor-pointer">
+              <g
+                key={`${player.account}-${playerIndex}`}
+                transform={replayActorTransform(point.x, point.y)}
+                onClick={(event) => { event.stopPropagation(); onSelectPlayer(player.account); }}
+                className="cursor-pointer"
+              >
                 <title>{`${player.name} · ${player.profession}${player.isCommander ? " · commander" : ""}${down ? " · downed" : ""}${intelligenceParticipant ? " · Intelligence event participant" : ""}`}</title>
+                {facing && (
+                  <line
+                    x1={facing.x1}
+                    y1={facing.y1}
+                    x2={facing.x2}
+                    y2={facing.y2}
+                    stroke="#ffffff"
+                    strokeWidth={1.3 * markerUnit}
+                    opacity={0.9}
+                    markerEnd="url(#replay-facing-arrow)"
+                  />
+                )}
                 {intelligenceParticipant && (
-                  <circle cx={point.x} cy={point.y} r={intelInnerRadius} fill="none" stroke="#7dd3fc" strokeWidth={1.4 * markerUnit} opacity={selected ? 0.45 : 0.72} pointerEvents="none">
+                  <circle cx={0} cy={0} r={intelInnerRadius} fill="none" stroke="#7dd3fc" strokeWidth={1.4 * markerUnit} opacity={selected ? 0.45 : 0.72} pointerEvents="none">
                     <animate attributeName="r" values={`${intelInnerRadius};${intelOuterRadius};${intelInnerRadius}`} dur="1.8s" repeatCount="indefinite" />
                     <animate attributeName="opacity" values={selected ? "0.28;0.5;0.28" : "0.48;0.86;0.48"} dur="1.8s" repeatCount="indefinite" />
                   </circle>
                 )}
-                {selected && <circle cx={point.x} cy={point.y} r={(baseRadius + 7) * markerUnit} fill="none" stroke="#fbbf24" strokeWidth={2 * markerUnit} opacity={0.95} />}
-                {player.isCommander && <circle cx={point.x} cy={point.y} r={(baseRadius + 3) * markerUnit} fill="none" stroke="#f59e0b" strokeWidth={2 * markerUnit} opacity={0.95} />}
+                {selected && <circle cx={0} cy={0} r={(baseRadius + 7) * markerUnit} fill="none" stroke="#fbbf24" strokeWidth={2 * markerUnit} opacity={0.95} />}
+                {player.isCommander && <circle cx={0} cy={0} r={(baseRadius + 3) * markerUnit} fill="none" stroke="#f59e0b" strokeWidth={2 * markerUnit} opacity={0.95} />}
                 {iconSrc ? (
                   <>
                     <clipPath id={clipId}>
-                      <circle cx={point.x} cy={point.y} r={iconRadius} />
+                      <circle cx={0} cy={0} r={iconRadius} />
                     </clipPath>
-                    <image href={iconSrc} x={point.x - iconRadius} y={point.y - iconRadius} width={iconRadius * 2} height={iconRadius * 2} clipPath={`url(#${clipId})`} preserveAspectRatio="xMidYMid slice" opacity={down ? 0.55 : 1} />
-                    <circle cx={point.x} cy={point.y} r={iconRadius} fill="none" stroke={outlineColor} strokeWidth={1 * markerUnit} />
+                    <image href={iconSrc} x={-iconRadius} y={-iconRadius} width={iconRadius * 2} height={iconRadius * 2} clipPath={`url(#${clipId})`} preserveAspectRatio="xMidYMid slice" opacity={down ? 0.55 : 1} />
+                    <circle cx={0} cy={0} r={iconRadius} fill="none" stroke={outlineColor} strokeWidth={1 * markerUnit} />
                   </>
                 ) : (
-                  <circle cx={point.x} cy={point.y} r={iconRadius} fill={player.inSquad ? "#475569" : "#334155"} fillOpacity={down ? 0.35 : 0.95} stroke={outlineColor} strokeWidth={1 * markerUnit} />
+                  <circle cx={0} cy={0} r={iconRadius} fill={player.inSquad ? "#475569" : "#334155"} fillOpacity={down ? 0.35 : 0.95} stroke={outlineColor} strokeWidth={1 * markerUnit} />
                 )}
                 {(selected || player.isCommander) && (
-                  <text x={point.x} y={point.y - (baseRadius + 6) * markerUnit} textAnchor="middle" fontSize={9 * markerUnit} fontWeight="800" fill={selected ? "#fef3c7" : "#e2e8f0"} stroke="#020617" strokeWidth={2.5 * markerUnit} paintOrder="stroke">{shortName(player.name)}</text>
+                  <text x={0} y={-(baseRadius + 6) * markerUnit} textAnchor="middle" fontSize={9 * markerUnit} fontWeight="800" fill={selected ? "#fef3c7" : "#e2e8f0"} stroke="#020617" strokeWidth={2.5 * markerUnit} paintOrder="stroke">{shortName(player.name)}</text>
                 )}
               </g>
             );
