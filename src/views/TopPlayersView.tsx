@@ -10,6 +10,7 @@ import type { DefensePlayer, HealingPlayer, LeaderboardEntry, OffensePlayer, Pla
 import { fmtCompact, fmtDur, fmtNum, profChip, profStyle } from "../utils/format";
 import { getSampleReliability, sampleReliabilityClasses } from "../lib/sampleReliability";
 import { buildNormalizedTopPlayerSources, mergePlayerSkillBreakdownsForAccount, normalizeTopPlayersLeaderboard } from "../lib/topPlayersNormalization";
+import { buildNormalizedTopPlayerSourceLeaderboards } from "../lib/topPlayerSourceLeaderboards";
 import { ChevronDown, ChevronUp, Trophy, Swords, Heart, Shield, Zap, Droplet, Target, Wind } from "lucide-react";
 
 type MetricKey =
@@ -329,8 +330,8 @@ export default function TopPlayersView() {
   }, [navigationTarget]);
 
   if (!report) return null;
-  const lb = report.stats.leaderboards;
   const normalizedSources = buildNormalizedTopPlayerSources(report.stats);
+  const lb = buildNormalizedTopPlayerSourceLeaderboards(report.stats, normalizedSources);
   const entries: LeaderboardEntry[] = normalizeTopPlayersLeaderboard(report.stats, metric, normalizedSources);
   const active = METRICS.find((m) => m.key === metric)!;
   const maxValue = entries.length ? entries[0].value : 1;
