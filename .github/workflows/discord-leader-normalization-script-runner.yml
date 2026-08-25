@@ -1,0 +1,33 @@
+name: Discord legacy leader normalization script runner
+
+on:
+  push:
+    branches:
+      - feature/discord-legacy-leaders
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/discord-legacy-leaders
+          fetch-depth: 0
+
+      - name: Apply edit
+        run: python scripts/apply-discord-legacy-leaders.py
+
+      - name: Commit result
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/discord-leader-normalization-script-runner.yml scripts/apply-discord-legacy-leaders.py
+          git add src/utils/discordWebhook.ts
+          git diff --cached --check
+          git commit -m "Normalize legacy Discord report leaders"
+          git push origin HEAD:feature/discord-legacy-leaders
