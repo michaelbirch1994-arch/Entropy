@@ -298,7 +298,31 @@ export default function SquadStatsView() {
   const splitCount = distanceRows.filter((player) => player.avg > 1200).length;
   const tightCount = distanceRows.filter((player) => player.avg <= 600).length;
   const pressureLeader = topPressureRows[0];
-  const squadOverviewRows = buildSquadOverviewRows(s, scope, allyScope);
+  const squadOverviewRows = (() => {
+    const rows = buildSquadOverviewRows(s, scope, allyScope);
+    if (!overviewSort) return rows.sort((a, b) => b.damage - a.damage || a.account.localeCompare(b.account)).slice(0, 25);
+    const dir = overviewSort.dir === "asc" ? 1 : -1;
+    return rows
+      .sort((a, b) => {
+        if (overviewSort.key === "player") return a.account.localeCompare(b.account) * dir;
+        if (overviewSort.key === "class") return a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account);
+        const valueFor = (row: typeof rows[number]) => {
+          switch (overviewSort.key) {
+            case "damage": return row.damage;
+            case "dps": return row.dps;
+            case "downContribution": return row.downContribution;
+            case "healing": return row.healing;
+            case "cleanses": return row.cleanses;
+            case "strips": return row.strips;
+            case "combat": return row.combatMs;
+            case "participation": return row.participation;
+            default: return 0;
+          }
+        };
+        return (valueFor(a) - valueFor(b)) * dir || a.account.localeCompare(b.account);
+      })
+      .slice(0, 25);
+  })();
   const toggleOverviewSort = (key: SquadOverviewSortKey) => {
     setOverviewSort((prev) => {
       if (!prev || prev.key !== key) return { key, dir: "desc" };
