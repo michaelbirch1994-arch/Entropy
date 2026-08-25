@@ -144,6 +144,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
             savedAt: Date.now(),
             report: data,
           });
+          void recordReportIntoProfiles(data);
           return;
         }
 
@@ -182,6 +183,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
             savedAt: Date.now(),
             report: data,
           });
+          void recordReportIntoProfiles(data);
           return;
         }
 
