@@ -88,7 +88,7 @@ const MENU: NavSection[] = [
       { id: "buffs", label: "Buffs", keywords: ["uptime", "boons", "conditions", "stability"] },
       { id: "buff-generation", label: "Buff Generation", keywords: ["boon generation", "cleanse", "stability", "quickness"] },
       { id: "party-boons", label: "Party Boons", keywords: ["subgroup", "party", "group boons"] },
-        { id: "conditions", label: "Conditions", keywords: ["debuff", "bleed", "burning", "cripple", "weakness", "vulnerability", "condi damage"] },
+      { id: "conditions", label: "Conditions", keywords: ["debuff", "bleed", "burning", "cripple", "weakness", "vulnerability", "condi damage"] },
     ],
   },
   {
@@ -104,13 +104,30 @@ const MENU: NavSection[] = [
     ],
   },
   {
-    title: "EXTRAS",
+    title: "INTELLIGENCE",
     tone: "extras",
-    icon: <Star className="w-4 h-4" />,
+    icon: <Sparkles className="w-4 h-4" />,
+    flat: true,
     items: [
       { id: "intelligence", label: "Intelligence", keywords: ["ml", "predictive", "findings"] },
+    ],
+  },
+  {
+    title: "ARCHIVE",
+    tone: "extras",
+    icon: <Archive className="w-4 h-4" />,
+    flat: true,
+    items: [
       { id: "archive", label: "Report Archive", keywords: ["history", "saved"] },
       { id: "compare", label: "Compare Reports", keywords: ["diff", "reports"] },
+    ],
+  },
+  {
+    title: "TOOLS",
+    tone: "extras",
+    icon: <FlaskConical className="w-4 h-4" />,
+    flat: true,
+    items: [
       { id: "axiforge-lab", label: "Entropy Builder", keywords: ["builder", "build editor", "tools"] },
     ],
   },
