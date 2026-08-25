@@ -62,7 +62,7 @@ export default function DefensiveView() {
 
     // healingTotals/supportTotals are sparse Record<string, number> maps - a
     // player who never did a given thing this session (e.g. zero barrier from
-    // a pure-DPS build) has no key for it all (`undefined`, not 0), so an
+    // a pure-DPS build) has no key for it at all (`undefined`, not 0), so an
     // unguarded `a + p.x` turns the whole reduce into NaN the moment it hits
     // one. `?? 0` guards every field the same way `damageTaken` already was.
     const totalCleanses = supportPlayers.reduce((a, p) => a + (p.supportTotals.condiCleanse ?? 0), 0);
