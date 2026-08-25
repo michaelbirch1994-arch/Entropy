@@ -169,7 +169,7 @@ function legacySplitStats(): ReportStats {
         barrier: [],
       },
     },
-  } as ReportStats;
+  } as unknown as ReportStats;
 }
 
 describe("Top Players legacy normalization", () => {
