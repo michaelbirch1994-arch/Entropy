@@ -60,7 +60,7 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label, onOpen }: {
         type="button"
         onClick={() => onOpen(card)}
         aria-label={`View ${card.account} in Top Players`}
-        className={`w-full cursor-pointer rounded-xl p-2 text-left transition-colors hover:bg-slate-800/35 focus:outline-none focus:ring-2 focus:ring-amber-500/40 ${medal === "bronze" ? "border-l border-slate-800/60 pl-4" : ""}`}
+        className={`w-full cursor-pointer rounded-xl bg-transparent p-2 text-left transition-colors hover:bg-theme-accent/[0.04] focus:outline-none focus:ring-2 focus:ring-theme-accent-strong/40 ${medal === "bronze" ? "border-l border-theme-accent/15 pl-4" : ""}`}
       >
         <span className={`text-[10px] font-black uppercase tracking-wider ${medal === "silver" ? "text-slate-300" : "text-amber-600"} block mb-1`}>
           {medal === "silver" ? "Silver" : "Bronze"}
