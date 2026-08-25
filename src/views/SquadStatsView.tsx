@@ -14,7 +14,7 @@ import type { HealingPlayer, HealingCoverage, OffensePlayer, TopBarrierSource, T
 import { buildHealingFightDrilldowns } from "../lib/squadStatsDrilldowns";
 import DistanceToTagPanel, { resolveDistanceToTagResult } from "../components/squad/DistanceToTagPanel";
 import BoundedDataRegion from "../components/ui/BoundedDataRegion";
-import { buildSquadOverviewRows } from "../lib/squadOverviewAggregation";
+import { buildSquadOverviewRows, type SquadOverviewRow } from "../lib/squadOverviewAggregation";
 
 type SquadOverviewSortKey = "player" | "class" | "damage" | "dps" | "downContribution" | "healing" | "cleanses" | "strips" | "combat" | "participation";
 
@@ -78,18 +78,14 @@ function sortPressureSkills(skills: TopSkill[]) {
   return [...skills].sort((a, b) => pressureSkillScore(b) - pressureSkillScore(a) || (b.damage ?? 0) - (a.damage ?? 0));
 }
 
-function buildPressureRows(players: OffensePlayer[], scope: ReturnType<typeof useDamageScope>["scope"]) {
+function buildPressureRows(players: Array<Pick<SquadOverviewRow, "account" | "profession" | "damage" | "dps" | "downContribution" | "enemyDowns" | "kills">>) {
   const base = players.map((p) => {
-    const damage = pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll);
-    const downContribution = p.offenseTotals.downContribution ?? 0;
-    const enemyDowns = p.offenseTotals.downed ?? 0;
-    const kills = p.offenseTotals.killed ?? 0;
-    const dps = safeDiv(damage, p.totalFightMs / 1000);
+    const { account, profession, damage, dps, downContribution, enemyDowns, kills } = p;
     // Kill Pressure is intentionally not "total damage." It rewards damage
     // that helps force downs/kills, with a smaller baseline for sustained
     // player-vs-player pressure so finishers do not erase the setup work.
     const pressureRaw = downContribution + enemyDowns * 50000 + kills * 80000 + damage * 0.05;
-    return { account: p.account, profession: p.profession, damage, dps, downContribution, enemyDowns, kills, pressureRaw };
+    return { account, profession, damage, dps, downContribution, enemyDowns, kills, pressureRaw };
   }).sort((a, b) => b.pressureRaw - a.pressureRaw);
   // Kill Pressure is this player's share of the SQUAD total pressure, not
   // normalized against the top player - otherwise the leader always shows
@@ -244,13 +240,14 @@ export default function SquadStatsView() {
   const totalCleanses = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.condiCleanse ?? 0), 0);
   const totalStrips = s.supportPlayers.reduce((a, p) => a + (p.supportTotals.boonStrips ?? 0), 0);
 
-  const topDps = [...s.offensePlayers]
-    .map((p) => ({ account: p.account, profession: p.profession, dps: pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll) / (p.totalFightMs / 1000) }))
+  const squadAccountRows = buildSquadOverviewRows(s, scope, allyScope);
+  const topDps = [...squadAccountRows]
+    .map((p) => ({ account: p.account, profession: p.profession, dps: p.dps }))
     .sort((a, b) => b.dps - a.dps)
     .slice(0, 10);
 
   const chartData = topDps.map((p) => ({ name: p.account.split(".")[0], DPS: Math.round(p.dps), profession: p.profession }));
-  const pressureRows = buildPressureRows(s.offensePlayers, scope);
+  const pressureRows = buildPressureRows(squadAccountRows);
   const topPressureRows = pressureRows.slice(0, 8);
   const pressureChartRaw = s.fightBreakdown.slice(0, 40).map((fight, index) => {
     const raw = (fight.totalOutgoingDamage ?? 0) * 0.05 + (fight.enemyDowns ?? 0) * 50000 + (fight.enemyDeaths ?? 0) * 80000;
@@ -299,7 +296,7 @@ export default function SquadStatsView() {
   const tightCount = distanceRows.filter((player) => player.avg <= 600).length;
   const pressureLeader = topPressureRows[0];
   const squadOverviewRows = (() => {
-    const rows = buildSquadOverviewRows(s, scope, allyScope);
+    const rows = [...squadAccountRows];
     if (!overviewSort) return rows.sort((a, b) => b.damage - a.damage || a.account.localeCompare(b.account)).slice(0, 25);
     const dir = overviewSort.dir === "asc" ? 1 : -1;
     return rows
