@@ -15,6 +15,9 @@ This split keeps the web app fast and shareable without forcing browser/Vercel r
 - The app can now import both raw `report.json` and wrapped `.entropy-report.json` artifacts.
 - Hosted viewer URLs can now load `?permalinks=...` dps.report collections or `?artifact=...` / `?reportUrl=...` / `?url=...` externally hosted Entropy report artifacts.
 - The artifact schema is versioned as `entropy.report-artifact.v1`.
+- A public Vercel Blob store is connected to the canonical `entropy-um58` project for production and preview deployments.
+- The first `Share to Web` slice is implemented with a server-side owner key, explicit public-sharing consent, random unlisted Blob URLs, and a 100 MB artifact limit.
+- Hosted runtime acceptance is still required before this slice is considered complete. No paid Vercel capacity is part of the plan.
 
 ## Recommended hosting shape
 
@@ -33,8 +36,8 @@ Vercel Entropy Viewer
   powers Discord links
 
 Storage
-  stores compressed report artifacts
-  returns short report ids
+  stores report artifact blobs
+  returns random unlisted artifact URLs
 ```
 
 ## Storage recommendation
@@ -45,6 +48,13 @@ Best first production path:
 2. Keep reports unlisted by default.
 3. Use random ids or content hashes for URLs.
 4. Add expiry/delete controls before making this broadly public.
+
+Current free-plan guardrails:
+
+- The upload token endpoint rejects anonymous requests and accepts only Entropy report artifact paths.
+- Upload tokens expire after 10 minutes and cannot overwrite an existing artifact.
+- Vercel Blob Hobby stops at its free limits instead of creating an approved paid commitment. Current included limits are 1 GB stored, 2,000 uploads, 10,000 uncached reads, and 10 GB transfer.
+- The owner key is a deployment secret. It is never bundled into the web or desktop application.
 
 Best long-term platform path:
 
@@ -63,9 +73,8 @@ Best long-term platform path:
 
 ## Next implementation slices
 
-1. Add hosted artifact upload behind a feature flag.
-2. Add a `Share to Web` button that uploads and returns a short URL.
-3. Make Discord webhook include the short hosted report URL.
-4. Add privacy toggles before upload: full names, account names, guild tags, enemy names.
-5. Add cleanup controls for hosted reports.
-6. Split the hosted viewer bundle so heavy desktop-only/builder-only surfaces lazy-load.
+1. Complete hosted preview acceptance for upload authorization, Blob delivery, returned viewer links, and owner-key rejection.
+2. Make Discord webhook include the hosted report URL when one exists.
+3. Add privacy controls before upload: full names, account names, guild tags, and enemy names.
+4. Add expiry and delete controls for hosted reports.
+5. Split the hosted viewer bundle so heavy desktop-only and Builder-only surfaces lazy-load.

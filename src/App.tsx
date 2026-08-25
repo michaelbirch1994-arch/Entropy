@@ -39,9 +39,10 @@ import AxiForgeLabView from "./views/AxiForgeLabView";
 import { downloadReportArtifact } from "./lib/shareReportArtifact";
 import { buildEntropyShareLink, getReportPermalinks } from "./lib/shareLinks";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
-import { Activity, CircleAlert as AlertCircle, FlaskConical, Link2, MessageCircle, RefreshCw, Send, Upload, X } from "lucide-react";
+import { Activity, CircleAlert as AlertCircle, CloudUpload, FlaskConical, Link2, MessageCircle, RefreshCw, Send, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
+import HostedReportShareModal from "./components/ui/HostedReportShareModal";
 import RawLogImporter from "./components/ui/RawLogImporter";
 import EntropyWordmarkReveal from "./components/ui/EntropyWordmarkReveal";
 import UpdateToast from "./components/ui/UpdateToast";
@@ -257,6 +258,7 @@ function ReportShell() {
   const [discordWebhookUrl, setDiscordWebhookUrl] = useState(() => loadDiscordWebhookUrl());
   const [discordDraftUrl, setDiscordDraftUrl] = useState(() => loadDiscordWebhookUrl());
   const [discordOpen, setDiscordOpen] = useState(false);
+  const [hostedShareOpen, setHostedShareOpen] = useState(false);
   const [discordStatus, setDiscordStatus] = useState<DiscordShareStatus>("idle");
   const [discordError, setDiscordError] = useState("");
   const { activeView, setActiveView } = useView(); function handleSetActiveView(view: string) { setAtHome(false); setActiveView(view); }
@@ -471,6 +473,15 @@ function ReportShell() {
                   {exportLabel}
                 </button>
                 <button
+                  type="button"
+                  onClick={() => setHostedShareOpen(true)}
+                  title="Upload this report as a public, unlisted Entropy web report."
+                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
+                >
+                  <CloudUpload className="h-3 w-3" />
+                  Share to Web
+                </button>
+                <button
                   onClick={() => handleShareToDiscord()}
                   title="Post a compact Entropy summary embed to your saved Discord webhook."
                   className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5 disabled:opacity-60"
@@ -522,6 +533,8 @@ function ReportShell() {
             </div>
           </header>
         )}
+
+        {hostedShareOpen && report && <HostedReportShareModal report={report} onClose={() => setHostedShareOpen(false)} />}
 
         {discordOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
