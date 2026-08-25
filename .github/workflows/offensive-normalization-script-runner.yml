@@ -1,0 +1,33 @@
+name: Offensive legacy normalization script runner
+
+on:
+  push:
+    branches:
+      - feature/offensive-legacy-normalization
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/offensive-legacy-normalization
+          fetch-depth: 0
+
+      - name: Apply edit
+        run: python scripts/apply-offensive-legacy-normalization.py
+
+      - name: Commit result
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/offensive-normalization-script-runner.yml scripts/apply-offensive-legacy-normalization.py
+          git add src/views/OffensiveView.tsx
+          git diff --cached --check
+          git commit -m "Normalize legacy Offensive Stats rows"
+          git push origin HEAD:feature/offensive-legacy-normalization
