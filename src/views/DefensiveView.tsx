@@ -82,6 +82,9 @@ export default function DefensiveView() {
     );
     const totalDamageTaken = defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageTaken ?? 0), 0);
     const totalMitigatedDamage = damageMitigationPlayers.reduce((a, p) => a + (p.mitigationTotals.totalMitigation ?? 0), 0);
+    const hasEstimatedMitigation = damageMitigationPlayers.some(
+      (p) => p.mitigationTotals.isEstimated && (p.mitigationTotals.totalMitigation ?? 0) > 0,
+    );
     const totalBlocks = defensePlayers.reduce(
       (a, p) => a + ((mitigationByAccount.get(`${p.account}::${p.profession}`) ?? mitigationByAccount.get(p.account))?.mitigationTotals.blocked ?? p.defenseTotals.blockedCount ?? 0),
       0
@@ -111,6 +114,7 @@ export default function DefensiveView() {
       totalBarrier,
       totalDamageTaken,
       totalMitigatedDamage,
+      hasEstimatedMitigation,
       totalBlocks,
       totalBarrierAbsorbed,
       healingActiveSec,
@@ -280,7 +284,13 @@ export default function DefensiveView() {
         <StatCard label={lbl("Total Healing")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalHealing, totals.healingActiveSec))} icon={<Heart className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
         <StatCard label={lbl("Total Barrier")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrier, totals.healingActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
         <StatCard label={lbl("Barrier Absorbed")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrierAbsorbed, totals.defenseActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-amber-300" />} accent="text-amber-300" />
-        <StatCard label={lbl("Mitigated Damage")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalMitigatedDamage, totals.mitigationActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-slate-300" />} accent="text-slate-100" />
+        <StatCard
+          label={lbl("Mitigated Damage")}
+          value={`${totals.hasEstimatedMitigation ? "~" : ""}${fmtStat(pickStatsDisplayValue(mode, totals.totalMitigatedDamage, totals.mitigationActiveSec))}`}
+          sub={totals.hasEstimatedMitigation ? "Includes estimated avoided damage where exact EI mitigation was unavailable." : "Exact avoided damage from EI mitigation data."}
+          icon={<Shield className="w-3.5 h-3.5 text-slate-300" />}
+          accent="text-slate-100"
+        />
         <StatCard label={lbl("Cleanses")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalCleanses, totals.supportActiveSec))} icon={<Droplet className="w-3.5 h-3.5 text-emerald-300" />} accent="text-emerald-300" />
         <StatCard label={lbl("Boon Strips")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalStrips, totals.supportActiveSec))} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
         <StatCard label={lbl("Resurrects")} value={fmtStatN(pickStatsDisplayValue(mode, totals.totalRes, totals.supportActiveSec))} icon={<Wind className="w-3.5 h-3.5 text-emerald-300" />} accent="text-emerald-300" />
@@ -447,7 +457,7 @@ export default function DefensiveView() {
                   <SortHeader label="Condi Dmg" k="condiDamage" align="right" />
                   <SortHeader label="Hits" k="hits" align="right" />
                   <SortHeader label="Barrier Absorbed" k="barrierAbsorbed" align="right" title="Damage absorbed by barrier" />
-                  <SortHeader label="Mitigated Dmg" k="mitigatedDamage" align="right" title="Damage prevented by blocks, evades, misses, invulnerability, interrupts, and glancing hits" />
+                  <SortHeader label="Mitigated Dmg" k="mitigatedDamage" align="right" title="Damage prevented by blocks, evades, misses, invulnerability, interrupts, and glancing hits. A leading ~ marks an estimate." />
                   <SortHeader label="Blocks" k="blocks" align="right" title="Blocked incoming hits" />
                   <SortHeader label="Dodges" k="dodges" align="right" title="Number of dodges" />
                   <SortHeader label="Invulned" k="invulned" align="right" title="Number of times was invulnerable to damage" />
@@ -460,6 +470,8 @@ export default function DefensiveView() {
               <tbody className="divide-y divide-slate-800/30 font-mono">
                 {defenseRows.map((p, i) => {
                   const mitigation = (mitigationByAccount.get(`${p.account}::${p.profession}`) ?? mitigationByAccount.get(p.account))?.mitigationTotals;
+                  const mitigationValue = perPlayer(mitigation?.totalMitigation ?? 0, p.totalFightMs);
+                  const estimatedMitigation = Boolean(mitigation?.isEstimated && (mitigation?.totalMitigation ?? 0) > 0);
                   return (
                     <tr key={p.account} className="hover:bg-white/[0.025] transition-colors">
                       <td className={`p-2.5 font-bold ${i < 3 ? "text-amber-400" : "text-slate-500"}`}>{i + 1}</td>
@@ -471,7 +483,12 @@ export default function DefensiveView() {
                       <td className="p-2.5 text-right text-amber-300">{perPlayer(p.defenseTotals.conditionDamageTaken ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-slate-400">{perPlayerN(p.defenseTotals.damageTakenCount ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-amber-400">{perPlayer(p.defenseTotals.damageBarrier ?? 0, p.totalFightMs)}</td>
-                      <td className="p-2.5 text-right text-slate-100">{perPlayer(mitigation?.totalMitigation ?? 0, p.totalFightMs)}</td>
+                      <td
+                        className="p-2.5 text-right text-slate-100"
+                        title={estimatedMitigation ? "Estimated from avoided hit counts and observed enemy skill damage because exact EI mitigation was unavailable." : "Exact EI avoided-damage value."}
+                      >
+                        {estimatedMitigation ? `~${mitigationValue}` : mitigationValue}
+                      </td>
                       <td className="p-2.5 text-right text-slate-300">{perPlayerN(mitigation?.blocked ?? p.defenseTotals.blockedCount ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-slate-300">{perPlayerN(p.defenseTotals.dodgeCount ?? 0, p.totalFightMs)}</td>
                       <td className="p-2.5 text-right text-slate-300">{perPlayerN(p.defenseTotals.invulnedCount ?? 0, p.totalFightMs)}</td>
