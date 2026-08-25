@@ -10,6 +10,7 @@ import type { OffensePlayer } from "../types/report";
 import { resolvePlayerSampleContext, type PlayerSampleContextData } from "../lib/playerSampleContext";
 import { rateByActiveMs } from "../lib/playerRate";
 import { hasNonPlayerObjectiveDamage, nonPlayerObjectiveDamage } from "../lib/offenseColumns";
+import { normalizeOffensePlayers } from "../lib/offensivePlayerNormalization";
 import {
   BarChart,
   Bar,
@@ -142,12 +143,10 @@ export default function OffensiveView() {
 
   const rows = useMemo<Row[]>(() => {
     if (!report) return [];
-    // Dedupe by account before mapping - offensePlayers can contain duplicate
-    // entries for the same account (e.g. a build swap mid-report), which is
-    // easy to miss in the default damage-sorted order but becomes obvious once
-    // sorting by another column scatters the duplicates apart. Mirrors the
-    // same account-dedupe fix applied in BuffsView.
-    const players = Array.from(new Map(report.stats.offensePlayers.map((pl) => [pl.account, pl])).values());
+    // Modern reports already contain one offense row per account. Archived
+    // reports can still contain profession-split slices after a build swap;
+    // recombine those slices so totals and hit-rate denominators stay complete.
+    const players = normalizeOffensePlayers(report.stats.offensePlayers);
     return players.map((p) => {
       const secs = p.totalFightMs / 1000;
       const sample = resolvePlayerSampleContext(
