@@ -1,5 +1,3 @@
-import { pickAllyScopeValue, type AllyScope } from "../store/AllyScopeContext";
-import { pickDamageScopeValue, type DamageScope } from "../store/DamageScopeContext";
 import type {
   HealingCoverage,
   HealingPlayer,
@@ -7,6 +5,9 @@ import type {
   ReportStats,
   SupportTotals,
 } from "../types/report";
+
+type DamageScope = "players" | "all";
+type AllyScope = "squad" | "all";
 
 export interface SquadOverviewRow {
   account: string;
@@ -22,6 +23,16 @@ export interface SquadOverviewRow {
   combatMs: number;
   logs: number;
   participation: number;
+}
+
+function pickDamage(scope: DamageScope, playersValue: number | undefined, allValue: number | undefined): number {
+  if (scope === "all" && typeof allValue === "number") return allValue;
+  return playersValue ?? 0;
+}
+
+function pickHealing(scope: AllyScope, allValue: number | undefined, squadValue: number | undefined): number {
+  if (scope === "squad" && typeof squadValue === "number") return squadValue;
+  return allValue ?? 0;
 }
 
 function sumNumericRecords<T extends object>(rows: T[]): T {
@@ -87,7 +98,7 @@ export function buildSquadOverviewRows(
   const healingByAccount = groupByAccount(stats.healingPlayers ?? []);
   const supportByAccount = groupByAccount(stats.supportPlayers ?? []);
   const generalByAccount = groupByAccount(stats.generalPlayers ?? []);
-  const attendanceByAccount = new Map((stats.attendanceData ?? []).map((row) => [row.account, row]));
+  const attendanceByAccount = groupByAccount(stats.attendanceData ?? []);
 
   return Array.from(offenseByAccount.entries()).map(([account, offenseRows]) => {
     const primaryOffense = [...offenseRows].sort((a, b) => (b.totalFightMs ?? 0) - (a.totalFightMs ?? 0))[0];
@@ -96,7 +107,7 @@ export function buildSquadOverviewRows(
     );
     const totalFightMs = offenseRows.reduce((sum, row) => sum + (row.totalFightMs ?? 0), 0);
     const damage = offenseRows.reduce(
-      (sum, row) => sum + pickDamageScopeValue(damageScope, row.offenseTotals.damage, row.offenseTotals.damageAll),
+      (sum, row) => sum + pickDamage(damageScope, row.offenseTotals.damage, row.offenseTotals.damageAll),
       0,
     );
     const downContribution = offenseRows.reduce(
@@ -107,23 +118,23 @@ export function buildSquadOverviewRows(
     const healingRows = healingByAccount.get(account) ?? [];
     const heal = mergeHealingPlayers(healingRows);
     const healing = heal
-      ? pickAllyScopeValue(allyScope, heal.healingTotals.healing, heal.healingTotals.squadHealing)
+      ? pickHealing(allyScope, heal.healingTotals.healing, heal.healingTotals.squadHealing)
       : 0;
 
     const supportRows = supportByAccount.get(account) ?? [];
     const supportTotals = sumNumericRecords(supportRows.map((row) => row.supportTotals)) as SupportTotals;
 
     const generalRows = generalByAccount.get(account) ?? [];
-    const attendance = attendanceByAccount.get(account);
+    const attendanceRows = attendanceByAccount.get(account) ?? [];
+    const attendanceCombatMs = attendanceRows.reduce((sum, row) => sum + (row.combatTimeMs ?? 0), 0);
     const fallbackCombatMs = generalRows.reduce(
       (sum, row) => sum + (row.squadActiveMs ?? row.totalFightMs ?? 0),
       0,
     );
-    const combatMs = (attendance?.combatTimeMs ?? 0) > 0 ? attendance!.combatTimeMs : fallbackCombatMs;
-    const logs = Math.min(
-      stats.total,
-      generalRows.reduce((sum, row) => sum + (row.logsJoined ?? 0), 0),
-    );
+    const combatMs = attendanceCombatMs > 0 ? attendanceCombatMs : fallbackCombatMs;
+    const generalLogs = generalRows.reduce((sum, row) => sum + (row.logsJoined ?? 0), 0);
+    const supportLogs = supportRows.reduce((sum, row) => sum + (row.logsJoined ?? 0), 0);
+    const logs = Math.min(stats.total, generalLogs > 0 ? generalLogs : supportLogs);
     const participation = stats.total > 0 ? Math.min(1, logs / stats.total) : 0;
 
     return {
