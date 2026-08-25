@@ -1,0 +1,30 @@
+name: Top Players test cast runner
+
+on:
+  push:
+    branches:
+      - feature/top-players-legacy-normalization
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/top-players-legacy-normalization
+          fetch-depth: 0
+      - name: Apply fix
+        run: python scripts/fix-top-players-test-cast.py
+      - name: Commit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm scripts/fix-top-players-test-cast.py .github/workflows/top-players-test-cast-runner.yml
+          git add src/lib/__tests__/topPlayersNormalization.test.ts
+          git diff --cached --check
+          git commit -m "Fix Top Players regression fixture typing"
+          git push origin HEAD:feature/top-players-legacy-normalization
