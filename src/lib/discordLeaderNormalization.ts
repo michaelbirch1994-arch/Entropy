@@ -41,6 +41,7 @@ function normalizedSavedLeader(
 function fallbackSourceLeader(
   metric: TopPlayersMetricKey,
   normalizedSources: Map<string, NormalizedTopPlayerSources>,
+  totalFights: number,
 ): LeaderboardEntry | undefined {
   const entries: Omit<LeaderboardEntry, "rank">[] = [];
 
@@ -62,7 +63,7 @@ function fallbackSourceLeader(
       professionList: primary.professionList ?? [],
       value,
       count: Math.min(
-        stats.total,
+        Math.max(0, Number(totalFights) || 0),
         sources.general?.logsJoined ?? sources.support?.logsJoined ?? 0,
       ),
     });
@@ -77,7 +78,7 @@ export function resolveDiscordReportLeaders(stats: ReportStats): DiscordReportLe
   const normalizedSources = buildNormalizedTopPlayerSources(stats);
   const resolve = (metric: TopPlayersMetricKey, aliases: string[] = []) =>
     normalizedSavedLeader(stats, metric, aliases, normalizedSources)
-      ?? fallbackSourceLeader(metric, normalizedSources);
+      ?? fallbackSourceLeader(metric, normalizedSources, stats.total);
 
   return {
     damage: resolve("damage", ["damageAll"]),
