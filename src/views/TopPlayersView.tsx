@@ -9,6 +9,7 @@ import ProfessionIcon from "../components/ui/ProfessionIcon";
 import type { DefensePlayer, HealingPlayer, LeaderboardEntry, OffensePlayer, PlayerSkillBreakdown, SupportPlayer } from "../types/report";
 import { fmtCompact, fmtDur, fmtNum, profChip, profStyle } from "../utils/format";
 import { getSampleReliability, sampleReliabilityClasses } from "../lib/sampleReliability";
+import { buildNormalizedTopPlayerSources, mergePlayerSkillBreakdownsForAccount, normalizeTopPlayersLeaderboard } from "../lib/topPlayersNormalization";
 import { ChevronDown, ChevronUp, Trophy, Swords, Heart, Shield, Zap, Droplet, Target, Wind } from "lucide-react";
 
 type MetricKey =
@@ -102,11 +103,6 @@ function rows(...items: Array<SourceRow | null>) {
 
 function findLeaderboardValue(leaderboards: Record<string, LeaderboardEntry[]>, key: string, account: string) {
   return leaderboards[key]?.find((entry) => entry.account === account)?.value ?? 0;
-}
-
-function findPlayerSkillBreakdown(reportBreakdowns: Record<string, PlayerSkillBreakdown> | undefined, entry: LeaderboardEntry) {
-  if (!reportBreakdowns) return undefined;
-  return reportBreakdowns[`${entry.account}::${entry.profession}`] ?? reportBreakdowns[entry.account];
 }
 
 function buildPlayerSourceBreakdown({
@@ -334,11 +330,11 @@ export default function TopPlayersView() {
 
   if (!report) return null;
   const lb = report.stats.leaderboards;
-  const entries: LeaderboardEntry[] = lb[metric] ?? [];
+  const normalizedSources = buildNormalizedTopPlayerSources(report.stats);
+  const entries: LeaderboardEntry[] = normalizeTopPlayersLeaderboard(report.stats, metric, normalizedSources);
   const active = METRICS.find((m) => m.key === metric)!;
   const maxValue = entries.length ? entries[0].value : 1;
   const snapshotKey = leaderboardSnapshotKey(metric, entries);
-  const sampleByAccount = new Map(report.stats.generalPlayers.map((player) => [player.account, player]));
   const totalFights = report.stats.total;
 
   return (
@@ -405,24 +401,29 @@ export default function TopPlayersView() {
                 glowClass={METRIC_GLOW[metric]}
                 unit={active.unit}
                 sample={{
-                  fights: sampleByAccount.get(entry.account)?.logsJoined ?? entry.count,
+                  fights: normalizedSources.get(entry.account)?.general?.logsJoined ?? entry.count,
                   totalFights,
-                  combatTimeMs: sampleByAccount.get(entry.account)?.squadActiveMs
-                    ?? sampleByAccount.get(entry.account)?.totalFightMs
+                  combatTimeMs: normalizedSources.get(entry.account)?.general?.squadActiveMs
+                    ?? normalizedSources.get(entry.account)?.general?.totalFightMs
                     ?? 0,
                 }}
                 expanded={expandedCard === `${metric}:${entry.account}`}
                 onToggle={() => setExpandedCard((current) => current === `${metric}:${entry.account}` ? null : `${metric}:${entry.account}`)}
                 breakdown={buildPlayerSourceBreakdown({
                   account: entry.account,
-                  offense: report.stats.offensePlayers.find((player) => player.account === entry.account),
-                  healing: report.stats.healingPlayers.find((player) => player.account === entry.account),
-                  support: report.stats.supportPlayers.find((player) => player.account === entry.account),
-                  defense: report.stats.defensePlayers.find((player) => player.account === entry.account),
+                  offense: normalizedSources.get(entry.account)?.offense,
+                  healing: normalizedSources.get(entry.account)?.healing,
+                  support: normalizedSources.get(entry.account)?.support,
+                  defense: normalizedSources.get(entry.account)?.defense,
                   leaderboards: lb,
                   damageScope,
                   allyScope,
-                  skillBreakdown: findPlayerSkillBreakdown(report.stats.playerSkillBreakdowns, entry),
+                  skillBreakdown: mergePlayerSkillBreakdownsForAccount(
+                    report.stats.playerSkillBreakdowns,
+                    entry.account,
+                    entry.profession,
+                    entry.professionList,
+                  ),
                 })}
               />
             ))}
