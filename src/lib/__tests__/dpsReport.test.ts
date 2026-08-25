@@ -1,9 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DpsReportUploadError,
+  fetchDpsReportJson,
   parseDpsReportPermalink,
   parseDpsReportUploadResponse,
+  uploadRawLogToDpsReport,
 } from "../../utils/dpsReport";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("dps.report upload responses", () => {
   it("normalizes a full permalink URL and preserves response metadata", () => {
@@ -83,5 +89,25 @@ describe("dps.report upload responses", () => {
     expect(parseDpsReportPermalink("https://wvw.report/abc-123_wvw")).toBe("abc-123_wvw");
     expect(parseDpsReportPermalink("https://dps.report/getJson?permalink=abc-123_wvw")).toBe("abc-123_wvw");
     expect(parseDpsReportPermalink("https://wvw.report.example/abc-123_wvw")).toBeNull();
+  });
+
+  it("times out a stalled upload so the batch can continue", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+    }));
+
+    await expect(uploadRawLogToDpsReport(new File(["log"], "fight.zevtc"), undefined, 5)).rejects.toMatchObject({
+      code: "timeout",
+    });
+  });
+
+  it("times out a stalled parsed-log retrieval", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+    }));
+
+    await expect(fetchDpsReportJson("abc-123_wvw", undefined, 5)).rejects.toMatchObject({
+      code: "timeout",
+    });
   });
 });

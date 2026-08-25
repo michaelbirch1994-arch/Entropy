@@ -400,6 +400,48 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  }
            });
 
+           it('keeps MVP down contribution as an absolute value, never a percent', () => {
+                 const raw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const player = (raw.players ?? []).find((entry: any) => !entry.notInSquad) as any;
+                 expect(player).toBeTruthy();
+                 player.statsAll = player.statsAll ?? [{}];
+                 player.statsAll[0] = { ...(player.statsAll[0] ?? {}), downContribution: 9_999_999 };
+
+                 const synthetic = buildReportFromFights([{ summary: summarizeRawFight(raw), raw }]);
+                 const mvp = synthetic.stats.fightHighlights?.find((highlight) => highlight.id === 'mvp-moment');
+                 expect(mvp).toBeTruthy();
+                 expect(mvp?.value).toBe(9_999_999);
+                 expect(mvp?.valueFormat).toBe('number');
+                 expect(mvp?.description).toContain('9,999,999 down contribution');
+                 expect(mvp?.description).not.toContain('%');
+           });
+
+           it('uses canonical fight totals and target counts for commander squad metrics', () => {
+                 const raw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const commander = (raw.players ?? []).find((entry: any) => !entry.notInSquad) as any;
+                 expect(commander).toBeTruthy();
+                 commander.hasCommanderTag = true;
+                 const aggregateTarget = (raw as any).targets?.[0];
+                 expect(aggregateTarget).toBeTruthy();
+                 (raw as any).targets = [
+                         aggregateTarget,
+                         { ...aggregateTarget, name: 'Enemy Player One', isFake: false },
+                         { ...aggregateTarget, name: 'Enemy Player Two', isFake: false },
+                 ];
+
+                 const synthetic = buildReportFromFights([{ summary: summarizeRawFight(raw), raw }]);
+                 const row = synthetic.stats.commanderStats.rows[0];
+                 const fightRow = synthetic.stats.fightBreakdown[0];
+                 expect(row).toBeTruthy();
+                 expect(row.fightIndices).toEqual([0]);
+                 expect(row.avgEnemySize).toBe(2);
+                 expect(fightRow.enemyCount).toBe(2);
+                 expect(row.squadKills).toBe(fightRow.enemyDeaths);
+                 expect(row.squadDowns).toBe(fightRow.enemyDowns);
+                 expect(row.alliesDown).toBe(fightRow.alliesDown);
+                 expect(row.alliesDead).toBe(fightRow.alliesDead);
+           });
+
            // Regression guard for the survivalSupport wiring bug caught in pre-push
            // review: buildReportFromFights was passing computeAllIncomingHealing the
            // { details } wrapper instead of .details, so every call silently returned

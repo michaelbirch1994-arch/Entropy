@@ -12,6 +12,11 @@
 // falls back to the documented HTTPS alternate b.dps.report when the primary
 // service cannot provide a usable response.
 
+import {
+  DPS_REPORT_FETCH_TIMEOUT_MS,
+  DPS_REPORT_UPLOAD_TIMEOUT_MS,
+} from "../lib/bridge-metrics/constants";
+
 export interface DpsReportUploadResult {
   id: string;
   permalink: string;
@@ -26,6 +31,7 @@ export interface DpsReportUploadResult {
 
 export type DpsReportUploadErrorCode =
   | "cancelled"
+  | "timeout"
   | "network"
   | "rate-limited"
   | "service"
@@ -44,6 +50,29 @@ export class DpsReportUploadError extends Error {
 }
 
 const SERVICE_BASES = ["https://dps.report", "https://b.dps.report"] as const;
+
+function createTimedSignal(externalSignal: AbortSignal | undefined, timeoutMs: number) {
+  const controller = new AbortController();
+  let timedOut = false;
+  const abortFromCaller = () => controller.abort();
+
+  if (externalSignal?.aborted) abortFromCaller();
+  else externalSignal?.addEventListener("abort", abortFromCaller, { once: true });
+
+  const timer = globalThis.setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, Math.max(1, timeoutMs));
+
+  return {
+    signal: controller.signal,
+    didTimeOut: () => timedOut,
+    cleanup: () => {
+      globalThis.clearTimeout(timer);
+      externalSignal?.removeEventListener("abort", abortFromCaller);
+    },
+  };
+}
 
 function uploadEndpoint(base: string): string {
   return `${base}/uploadContent?json=1&generator=ei&detailedwvw=true`;
@@ -200,56 +229,90 @@ async function uploadRawLogToService(
 export async function uploadRawLogToDpsReport(
   file: File,
   signal?: AbortSignal,
+  timeoutMs = DPS_REPORT_UPLOAD_TIMEOUT_MS,
 ): Promise<DpsReportUploadResult> {
-  let lastError: DpsReportUploadError | null = null;
+  const timed = createTimedSignal(signal, timeoutMs);
+  try {
+    let lastError: DpsReportUploadError | null = null;
 
-  for (const base of SERVICE_BASES) {
-    try {
-      return await uploadRawLogToService(base, file, signal);
-    } catch (error) {
-      if (!(error instanceof DpsReportUploadError)) throw error;
-      if (error.code === "cancelled" || error.code === "rate-limited") throw error;
-      lastError = error;
+    for (const base of SERVICE_BASES) {
+      try {
+        return await uploadRawLogToService(base, file, timed.signal);
+      } catch (error) {
+        if (!(error instanceof DpsReportUploadError)) throw error;
+        if (error.code === "cancelled" || error.code === "rate-limited") throw error;
+        lastError = error;
+      }
     }
-  }
 
-  throw lastError ?? new DpsReportUploadError("dps.report upload failed.", "service");
+    throw lastError ?? new DpsReportUploadError("dps.report upload failed.", "service");
+  } catch (error) {
+    if (timed.didTimeOut()) {
+      throw new DpsReportUploadError(
+        "dps.report did not finish this upload in time. The remaining batch continued; retry this log when the service is responsive.",
+        "timeout",
+      );
+    }
+    throw error;
+  } finally {
+    timed.cleanup();
+  }
 }
 
 /** Fetches the full Elite Insights JSON for a permalink already known to dps.report. */
-export async function fetchDpsReportJson(permalink: string, signal?: AbortSignal): Promise<any> {
-  let lastMessage = "Failed to fetch parsed log from dps.report.";
+export async function fetchDpsReportJson(
+  permalink: string,
+  signal?: AbortSignal,
+  timeoutMs = DPS_REPORT_FETCH_TIMEOUT_MS,
+): Promise<any> {
+  const timed = createTimedSignal(signal, timeoutMs);
+  try {
+    let lastMessage = "Failed to fetch parsed log from dps.report.";
 
-  for (const base of SERVICE_BASES) {
-    let res: Response;
-    try {
-      res = await fetch(`${jsonEndpoint(base)}?permalink=${encodeURIComponent(permalink)}`, { signal });
-    } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") throw error;
-      lastMessage = `Could not reach ${new URL(base).hostname}.`;
-      continue;
+    for (const base of SERVICE_BASES) {
+      let res: Response;
+      try {
+        res = await fetch(`${jsonEndpoint(base)}?permalink=${encodeURIComponent(permalink)}`, { signal: timed.signal });
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") throw error;
+        lastMessage = `Could not reach ${new URL(base).hostname}.`;
+        continue;
+      }
+
+      if (!res.ok) {
+        lastMessage = `Failed to fetch parsed log from ${new URL(base).hostname} (${res.status}).`;
+        continue;
+      }
+
+      let value: unknown;
+      try {
+        value = await res.json();
+      } catch {
+        lastMessage = `${new URL(base).hostname} returned invalid parsed-log JSON.`;
+        continue;
+      }
+      if (!isRecord(value)) {
+        lastMessage = `${new URL(base).hostname} returned an invalid parsed log.`;
+        continue;
+      }
+      return value;
     }
 
-    if (!res.ok) {
-      lastMessage = `Failed to fetch parsed log from ${new URL(base).hostname} (${res.status}).`;
-      continue;
+    throw new Error(lastMessage);
+  } catch (error) {
+    if (timed.didTimeOut()) {
+      throw new DpsReportUploadError(
+        "The parsed dps.report log took too long to return. The remaining batch continued; retry this log in a moment.",
+        "timeout",
+      );
     }
-
-    let value: unknown;
-    try {
-      value = await res.json();
-    } catch {
-      lastMessage = `${new URL(base).hostname} returned invalid parsed-log JSON.`;
-      continue;
+    if (signal?.aborted) {
+      throw new DpsReportUploadError("Import cancelled.", "cancelled");
     }
-    if (!isRecord(value)) {
-      lastMessage = `${new URL(base).hostname} returned an invalid parsed log.`;
-      continue;
-    }
-    return value;
+    throw error;
+  } finally {
+    timed.cleanup();
   }
-
-  throw new Error(lastMessage);
 }
 
 /**

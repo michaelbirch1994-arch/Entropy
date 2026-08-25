@@ -8,7 +8,7 @@
 // table, commander stats, boon generation tables/leaderboards, map/timeline
 // data. These require additional Entropy-native ingestion and UI passes.
 
-import { computePlayerAggregation, type PlayerStats } from './bridge-metrics/computePlayerAggregation';
+import { computePlayerAggregation, getFightDownsDeaths, type PlayerStats } from './bridge-metrics/computePlayerAggregation';
 import type { HealingCoverage, PlayerSkillBreakdown, PlayerSkillSource } from '../types/report';
 import { computeAllIncomingHealing, type IncomingHealingBreakdown } from './bridge-metrics/incomingHealing';
 import { normalizeDeathEvents } from './combat/normalizeDeaths';
@@ -1519,10 +1519,15 @@ function computeDeathRecaps(fights: FightInput[]): DeathRecapEntry[] {
 // Field provenance (confirmed against EI's JsonPlayer / JsonGameplayStatsAll
 // / JsonDefensesAll doxygen docs):
 // - player.statsAll[phase].killed / .downed - enemies killed/downed by this player.
-// - player.statsAll[phase].downContribution - % of the squad's total down
-//   contribution attributed to this player (0-100), used for MVP Moment.
+// - player.statsAll[phase].downContribution - EI's absolute damage contribution
+//   against downed enemies, used for MVP Moment.
 // - player.defenses[phase].downCount / .deadCount - how many times this
 //   player themselves went down/died.
+function enemyPlayerCount(raw: Record<string, unknown>): number {
+    const targets = Array.isArray(raw.targets) ? raw.targets as Array<{ isFake?: boolean }> : [];
+    return targets.filter((target) => !target.isFake).length;
+}
+
 function computeFightHighlights(fights: FightInput[]): FightHighlight[] {
     type RawPlayer = {
           account?: string;
@@ -1537,19 +1542,10 @@ function computeFightHighlights(fights: FightInput[]): FightHighlight[] {
         const players = (raw.players ?? []) as RawPlayer[];
         const squad = players.filter((p) => !p.notInSquad);
 
-                                  let alliesDown = 0;
-        let alliesDead = 0;
-        let enemyKills = 0;
-        let enemyDowns = 0;
         let topDownContrib = { account: '', profession: '', value: 0 };
 
                                   for (const p of squad) {
-                                          const def = p.defenses?.[0];
                                           const stats = p.statsAll?.[0];
-                                          alliesDown += Number(def?.downCount) || 0;
-                                          alliesDead += Number(def?.deadCount) || 0;
-                                          enemyKills += Number(stats?.killed) || 0;
-                                          enemyDowns += Number(stats?.downed) || 0;
                                           const dc = Number(stats?.downContribution) || 0;
                                           if (dc > topDownContrib.value) {
                                                     topDownContrib = { account: p.account || 'Unknown', profession: p.profession || 'Unknown', value: dc };
@@ -1559,7 +1555,12 @@ function computeFightHighlights(fights: FightInput[]): FightHighlight[] {
                                   const durationMs = Number(raw.durationMS) || 0;
         const success = getFightOutcome(raw);
         const squadCount = squad.length;
-        const enemyCount = Math.max(players.length - squadCount, 0);
+        const enemyCount = enemyPlayerCount(raw);
+        const downsDeaths = getFightDownsDeaths(raw);
+        const alliesDown = Math.max(0, downsDeaths.squadDownsDeaths - downsDeaths.squadDeaths);
+        const alliesDead = downsDeaths.squadDeaths;
+        const enemyKills = downsDeaths.enemyDeaths;
+        const enemyDowns = Math.max(0, downsDeaths.enemyDownsDeaths - downsDeaths.enemyDeaths);
         const fightName = f.summary.fightName || `Fight ${i + 1}`;
         const timestamp = Date.parse((raw.timeStartStd as string) ?? '') || 0;
         const kdr = alliesDead > 0 ? enemyKills / alliesDead : enemyKills > 0 ? Infinity : 0;
@@ -1641,16 +1642,18 @@ function computeFightHighlights(fights: FightInput[]): FightHighlight[] {
   const mvpCandidates = perFight.filter((f) => f.topDownContrib.value > 0);
     if (mvpCandidates.length > 0) {
           const best = mvpCandidates.reduce((a, b) => (b.topDownContrib.value > a.topDownContrib.value ? b : a));
-          highlights.push({
+                  highlights.push({
                   id: 'mvp-moment',
                   title: 'MVP Moment',
-                  description: `${best.topDownContrib.account} put up ${best.topDownContrib.value.toFixed(1)}% of the squad's down contribution in ${best.fightName} - the single best individual performance of the night.`,
+                  description: `${best.topDownContrib.account} recorded ${Math.round(best.topDownContrib.value).toLocaleString('en-US')} down contribution in ${best.fightName}.`,
                   fightName: best.fightName,
                   fightIndex: best.i,
                   timestamp: best.timestamp,
                   account: best.topDownContrib.account,
                   profession: best.topDownContrib.profession,
                   value: best.topDownContrib.value,
+                  valueFormat: 'number',
+                  valueLabel: 'down contribution',
           });
     }
 
@@ -1775,24 +1778,24 @@ function computeCommanderStats(fights: FightInput[]): CommanderRow[] {
         account: string; names: Set<string>; professions: Set<string>;
         fights: number; wins: number; losses: number; unclassified: number; durationMs: number;
         squadSizeAccum: number; enemyAccum: number;
-        kills: number; downs: number; cmdDowns: number; cmdDeaths: number;
+        kills: number; downs: number; squadKills: number; squadDowns: number; cmdDowns: number; cmdDeaths: number;
         alliesDown: number; alliesDead: number; damageTaken: number; barrier: number;
+        fightIndices: number[];
   }
     const byAccount = new Map<string, Acc>();
 
-  for (const f of fights) {
+  for (const [fightIndex, f] of fights.entries()) {
         const raw = f.raw as Record<string, unknown>;
         const players = (raw.players ?? []) as RawP[];
         const squad = players.filter((p) => !p.notInSquad);
-        const enemyCount = Math.max(players.length - squad.length, 0);
+        const enemyCount = enemyPlayerCount(raw);
         const durationMs = Number(raw.durationMS) || 0;
         const isWin = getFightOutcome(raw);
-
-      let alliesDown = 0, alliesDead = 0;
-        for (const p of squad) {
-                alliesDown += Number(p.defenses?.[0]?.downCount) || 0;
-                alliesDead += Number(p.defenses?.[0]?.deadCount) || 0;
-        }
+        const downsDeaths = getFightDownsDeaths(raw);
+        const alliesDown = Math.max(0, downsDeaths.squadDownsDeaths - downsDeaths.squadDeaths);
+        const alliesDead = downsDeaths.squadDeaths;
+        const squadKills = downsDeaths.enemyDeaths;
+        const squadDowns = Math.max(0, downsDeaths.enemyDownsDeaths - downsDeaths.enemyDeaths);
 
       for (const p of squad) {
               if (!p.hasCommanderTag) continue;
@@ -1803,8 +1806,9 @@ function computeCommanderStats(fights: FightInput[]): CommanderRow[] {
                         a = {
                                     account, names: new Set(), professions: new Set(),
                                     fights: 0, wins: 0, losses: 0, unclassified: 0, durationMs: 0, squadSizeAccum: 0, enemyAccum: 0,
-                                    kills: 0, downs: 0, cmdDowns: 0, cmdDeaths: 0,
+                                    kills: 0, downs: 0, squadKills: 0, squadDowns: 0, cmdDowns: 0, cmdDeaths: 0,
                                     alliesDown: 0, alliesDead: 0, damageTaken: 0, barrier: 0,
+                                    fightIndices: [],
                         };
                         byAccount.set(account, a);
               }
@@ -1819,12 +1823,15 @@ function computeCommanderStats(fights: FightInput[]): CommanderRow[] {
               a.enemyAccum += enemyCount;
               a.kills += Number(p.statsAll?.[0]?.killed) || 0;
               a.downs += Number(p.statsAll?.[0]?.downed) || 0;
+              a.squadKills += squadKills;
+              a.squadDowns += squadDowns;
               a.cmdDowns += Number(p.defenses?.[0]?.downCount) || 0;
               a.cmdDeaths += Number(p.defenses?.[0]?.deadCount) || 0;
               a.damageTaken += Number(p.defenses?.[0]?.damageTaken) || 0;
               a.barrier += Number(p.defenses?.[0]?.damageBarrier) || 0;
               a.alliesDown += alliesDown;
               a.alliesDead += alliesDead;
+              a.fightIndices.push(fightIndex);
       }
   }
 
@@ -1847,6 +1854,8 @@ function computeCommanderStats(fights: FightInput[]): CommanderRow[] {
                         avgEnemySize: a.fights > 0 ? Math.round(a.enemyAccum / a.fights) : 0,
                         kills: a.kills,
                         downs: a.downs,
+                        squadKills: a.squadKills,
+                        squadDowns: a.squadDowns,
                         commanderDowns: a.cmdDowns,
                         commanderDeaths: a.cmdDeaths,
                         alliesDown: a.alliesDown,
@@ -1856,6 +1865,7 @@ function computeCommanderStats(fights: FightInput[]): CommanderRow[] {
                         damageTakenPerMinute: mins > 0 ? a.damageTaken / mins : 0,
                         incomingBarrierAbsorbed: a.barrier,
                         incomingBarrierAbsorbedPerMinute: mins > 0 ? a.barrier / mins : 0,
+                        fightIndices: a.fightIndices,
               };
       })
       .sort((x, y) => y.fights - x.fights || y.winRatePct - x.winRatePct);
@@ -1895,9 +1905,13 @@ function computeFightTables(fights: FightInput[]): {
         const players = (raw.players ?? []) as RawP[];
         const squad = players.filter((p) => !p.notInSquad && !p.friendlyNPC);
         const allies = players.filter((p) => !p.notInSquad || p.friendlyNPC);
-        const enemyCount = Math.max(players.length - squad.length, 0);
+        const enemyCount = enemyPlayerCount(raw);
 
-                     let alliesDown = 0, alliesDead = 0, enemyKills = 0, enemyDowns = 0;
+        const downsDeaths = getFightDownsDeaths(raw);
+        const alliesDown = Math.max(0, downsDeaths.squadDownsDeaths - downsDeaths.squadDeaths);
+        const alliesDead = downsDeaths.squadDeaths;
+        const enemyKills = downsDeaths.enemyDeaths;
+        const enemyDowns = Math.max(0, downsDeaths.enemyDownsDeaths - downsDeaths.enemyDeaths);
         let outDamage = 0, inDamage = 0, outHealing = 0, outBarrier = 0, outStrips = 0, inBarrier = 0;
         const squadClassCountsFight: Record<string, number> = {};
         const sumPhaseArray = (rows: any[] | undefined, field: string) =>
@@ -1907,13 +1921,8 @@ function computeFightTables(fights: FightInput[]): {
 
                      for (const p of squad) {
                              const def = p.defenses?.[0];
-                             const st = p.statsAll?.[0];
-                             alliesDown += Number(def?.downCount) || 0;
-                             alliesDead += Number(def?.deadCount) || 0;
                              inDamage += Number(def?.damageTaken) || 0;
                              inBarrier += Number(def?.damageBarrier) || 0;
-                             enemyKills += Number(st?.killed) || 0;
-                             enemyDowns += Number(st?.downed) || 0;
                              outDamage += (p.totalDamageDist?.[0] ?? []).reduce((sum, entry) => sum + (Number(entry?.totalDamage) || 0), 0);
                              outStrips += Number(p.support?.[0]?.boonStrips) || 0;
                              // Prefer the direct phase total when EI provides it. Fall back to the
