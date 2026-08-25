@@ -102,7 +102,7 @@ This sequence incorporates the current full-app screenshot audit, the Intelligen
   - [x] Pass 5: make restrained gold the Intelligence selection/evidence language while preserving severity, side, profession, boon, condition, and combat-status colors.
   - [x] Pass 6: quiet Replay chrome and use gold for playhead/evidence focus only; do not touch Replay geometry, coordinate, interpolation, identity, timing, or evidence logic.
   - [x] Pass 7: complete contrast, keyboard focus, reduced-motion, tooltip, chart, disabled, hover, and selected-state review.
-  - [~] Pass 8: the production build and hosted-web shell have passed consistency inspection; final acceptance across every major workspace still needs representative multi-fight data.
+  - [~] Pass 8: native representative multi-fight acceptance passed for Overview, Fight Breakdown, Intelligence, Archive, and Fight Replay, including neutral Replay Intelligence idle styling and restrained gold active focus. Hosted-web representative-data coverage and the remaining full workspace matrix are still pending.
 - [x] Give Fight Replay enemies stable instance identities, reject implausible position jumps, keep markers screen-sized, and re-center zoom on the commander/squad.
 - [x] Replace the Scorched Earth presentation layer with a graphite mechanical command theme, workspace-aware cyan/emerald/amber/rose/violet signals, brighter chart series, and metric-aware neon underglows on player cards.
 - [x] Improve accent foreground contrast and define explicit theme foreground tokens. The shared theme now exposes dark on-accent/on-warning/on-danger colors and high-contrast focus treatment.
