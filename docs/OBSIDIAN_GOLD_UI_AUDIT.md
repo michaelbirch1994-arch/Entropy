@@ -216,7 +216,7 @@ Profession, boon, condition, and chart-series colors remain in their existing da
 
 ### Pass 8 — consistency
 
-- [~] Inspect all major workspaces on desktop and hosted web with representative multi-fight data. Native desktop acceptance passed for Overview, Fight Breakdown, Intelligence, Archive, and Fight Replay using representative multi-fight intake. Replay Intelligence remained neutral while idle and used restrained gold only for active focus/evidence. Hosted-web representative-data coverage and the remaining full workspace matrix are still required before final acceptance.
+- [x] Inspect all major workspaces on desktop and hosted web with representative multi-fight data. Desktop acceptance covered Overview, Squad Stats, Top Players, Fight Replay, Intelligence, Archive, Compare, and Builder. Hosted acceptance used the same six-fight permalink collection across both protected Vercel previews, with the full representative workspace matrix on one preview and Overview, Fight Replay, cross-view return, and Builder critical paths repeated on the second. Replay Intelligence remained neutral while idle and used restrained gold only for active focus/evidence. Both previews had no page-level overflow or browser-console errors, and the mobile samples remained within the viewport.
 - [x] Verify that remaining theme-layer colors communicate interaction, data, profession, side, status, icon identity, or chart differentiation.
 - [x] Retain compatibility selectors only inside the documented migration layer; no second theme provider was introduced.
 

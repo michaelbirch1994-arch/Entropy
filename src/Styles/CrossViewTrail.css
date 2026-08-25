@@ -1,6 +1,13 @@
 /* Cross-view continuity for deliberate drill-down navigation.
    This appears only when a view was opened with a navigation target. */
 .theme-cross-view-trail {
+  /* The trail is a ViewProvider sibling of the themed app shell. */
+  --theme-surfaceInset: var(--entropy-bg-deep);
+  --theme-borderStrong: var(--entropy-border);
+  --theme-text: var(--entropy-text-primary);
+  --theme-textMuted: var(--entropy-text-secondary);
+  --theme-accent: var(--entropy-gold);
+  --theme-accentStrong: var(--entropy-gold-bright);
   position: fixed;
   left: max(6rem, env(safe-area-inset-left));
   bottom: max(1rem, env(safe-area-inset-bottom));

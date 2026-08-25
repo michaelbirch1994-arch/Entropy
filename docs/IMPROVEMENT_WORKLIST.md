@@ -94,7 +94,7 @@ This sequence incorporates the current full-app screenshot audit, the Intelligen
 
 ## P2 — Visual polish
 
-- [~] Consolidate Entropy around the Obsidian Gold visual system without creating a second theme engine.
+- [x] Consolidate Entropy around the Obsidian Gold visual system without creating a second theme engine.
   - [x] Complete the Pass 1 color/theme architecture audit in `docs/OBSIDIAN_GOLD_UI_AUDIT.md`; no visual or behavior changes are included in the audit slice.
   - [x] Pass 2: complete and centralize semantic surface, hierarchy, interaction, focus, friendly/enemy, healing, and barrier tokens while keeping CSS fallbacks synchronized.
   - [x] Pass 3: convert the application shell, sidebar, navigation, header, and shared cards; remove decorative workspace-specific cyan/green/amber/rose/violet accent overrides.
@@ -102,7 +102,7 @@ This sequence incorporates the current full-app screenshot audit, the Intelligen
   - [x] Pass 5: make restrained gold the Intelligence selection/evidence language while preserving severity, side, profession, boon, condition, and combat-status colors.
   - [x] Pass 6: quiet Replay chrome and use gold for playhead/evidence focus only; do not touch Replay geometry, coordinate, interpolation, identity, timing, or evidence logic.
   - [x] Pass 7: complete contrast, keyboard focus, reduced-motion, tooltip, chart, disabled, hover, and selected-state review.
-  - [~] Pass 8: native representative multi-fight acceptance passed for Overview, Fight Breakdown, Intelligence, Archive, and Fight Replay, including neutral Replay Intelligence idle styling and restrained gold active focus. Hosted-web representative-data coverage and the remaining full workspace matrix are still pending.
+  - [x] Pass 8: desktop and hosted representative multi-fight acceptance passed across Overview, Squad Stats, Top Players, Fight Replay, Intelligence, Archive, Compare, and Builder. The same six-fight permalink collection passed on both protected Vercel previews. Replay Intelligence remained neutral while idle and used restrained gold only for active focus/evidence, and the corrected cross-view return trail resolved to the Obsidian Gold accent tokens on both deployments.
 - [x] Give Fight Replay enemies stable instance identities, reject implausible position jumps, keep markers screen-sized, and re-center zoom on the commander/squad.
 - [x] Replace the Scorched Earth presentation layer with a graphite mechanical command theme, workspace-aware cyan/emerald/amber/rose/violet signals, brighter chart series, and metric-aware neon underglows on player cards.
 - [x] Improve accent foreground contrast and define explicit theme foreground tokens. The shared theme now exposes dark on-accent/on-warning/on-danger colors and high-contrast focus treatment.
@@ -132,7 +132,7 @@ This sequence incorporates the current full-app screenshot audit, the Intelligen
   - Respect reduced-motion preferences.
   - Never animate chart values or report rows in a way that implies changing data.
   - [x] Prevent live Replay evidence changes from changing the map/page height or jerking the playhead.
-- [ ] Complete a visual acceptance matrix for Overview, Squad/Roster, Performance, Combat Log, Intelligence, Archive/Compare, and Entropy Builder in desktop and hosted-web builds.
+- [x] Complete a visual acceptance matrix for Overview, Squad/Roster, Performance, Combat Log, Intelligence, Archive/Compare, and Entropy Builder in desktop and hosted-web builds.
 
 ## P1 — Intelligence nervous system across evidence views
 
