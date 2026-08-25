@@ -1,6 +1,6 @@
 # Entropy Obsidian Gold UI Audit
 
-Status: Passes 1–7 complete; Pass 8 implementation verification complete, representative multi-fight visual acceptance pending
+Status: Passes 1–7 complete; Pass 8 native representative-data acceptance complete for the audited workspaces, hosted-web matrix pending
 
 This document defines the presentation boundary for the Obsidian Gold consolidation. Pass 1 intentionally changes no visual styling, report data, Replay geometry, metrics, normalization, scoring, or evidence behavior.
 
@@ -216,7 +216,7 @@ Profession, boon, condition, and chart-series colors remain in their existing da
 
 ### Pass 8 — consistency
 
-- [~] Inspect all major workspaces on desktop and hosted web with representative multi-fight data. The production build and hosted-web shell were inspected; a representative multi-fight report is still required for final visual acceptance across every workspace.
+- [~] Inspect all major workspaces on desktop and hosted web with representative multi-fight data. Native desktop acceptance passed for Overview, Fight Breakdown, Intelligence, Archive, and Fight Replay using representative multi-fight intake. Replay Intelligence remained neutral while idle and used restrained gold only for active focus/evidence. Hosted-web representative-data coverage and the remaining full workspace matrix are still required before final acceptance.
 - [x] Verify that remaining theme-layer colors communicate interaction, data, profession, side, status, icon identity, or chart differentiation.
 - [x] Retain compatibility selectors only inside the documented migration layer; no second theme provider was introduced.
 
