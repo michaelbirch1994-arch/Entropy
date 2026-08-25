@@ -23,6 +23,7 @@ import {
 } from "../utils/chartTheme";
 import PlayerSampleCell from "../components/ui/PlayerSampleCell";
 import { resolvePlayerSampleContext } from "../lib/playerSampleContext";
+import { normalizeConditionPlayers } from "../lib/conditionPlayerNormalization";
 import type { ConditionPlayer } from "../types/report";
 
 const TABS = ["Damage", "Control"] as const;
@@ -81,7 +82,10 @@ export default function ConditionsView() {
   const [selectedName, setSelectedName] = useState<string | null>(null);
   const [sort, setSort] = useState<SortState>(null);
 
-  const conditionPlayers: ConditionPlayer[] = report?.stats.conditionPlayers ?? [];
+  const conditionPlayers: ConditionPlayer[] = useMemo(
+    () => normalizeConditionPlayers(report?.stats.conditionPlayers, report?.stats.total ?? 0),
+    [report],
+  );
 
   const summaryByName = useMemo(() => {
     const map = new Map<string, ConditionSummary>();
