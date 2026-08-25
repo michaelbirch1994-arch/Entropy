@@ -9,20 +9,13 @@ import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 import PlayerSampleCell from "../components/ui/PlayerSampleCell";
 import { resolvePlayerSampleContext } from "../lib/playerSampleContext";
+import { normalizeDefensivePlayerRows } from "../lib/defensivePlayerNormalization";
 
 type Tab = "defense" | "support" | "healing";
 type DefensiveSortKey =
   | "player" | "class" | "sample" | "cleanses" | "strips" | "stunBreaks" | "resurrects" | "logs"
   | "healing" | "squadHealing" | "barrier" | "downedHealing"
   | "damageTaken" | "powerDamage" | "condiDamage" | "hits" | "barrierAbsorbed" | "mitigatedDamage" | "blocks" | "dodges" | "invulned" | "interrupted" | "stripsTaken" | "downs" | "deaths";
-
-// s.*Players arrays can contain duplicate entries for the same account (e.g.
-// a build swap mid-report), which is easy to miss in the default sort order
-// but becomes obvious once a column sort scatters the duplicates apart -
-// mirrors the same account-dedupe fix applied in BuffsView/OffensiveView.
-function dedupeByAccount<T extends { account: string }>(rows: T[]): T[] {
-  return Array.from(new Map(rows.map((r) => [r.account, r])).values());
-}
 
 function metricSortValue(value: number, activeMs: number | undefined, perSecond: boolean): number {
   if (!perSecond) return value;
@@ -39,13 +32,11 @@ export default function DefensiveView() {
   const s = report?.stats;
   const isPerSecond = mode === "perSecond";
 
-  // Deduped once here so every summary card, MVP list, and sortable table
-  // built from these derives from a single row per player instead of
-  // silently double-counting totals or rendering the same player twice.
-  const supportPlayers = useMemo(() => dedupeByAccount(s?.supportPlayers ?? []), [s]);
-  const healingPlayers = useMemo(() => dedupeByAccount(s?.healingPlayers ?? []), [s]);
-  const defensePlayers = useMemo(() => dedupeByAccount(s?.defensePlayers ?? []), [s]);
-  const damageMitigationPlayers = useMemo(() => dedupeByAccount(s?.damageMitigationPlayers ?? []), [s]);
+  // Normalize archived profession-split rows once so every summary, MVP, and
+  // sortable table uses the complete account contribution. Modern reports
+  // already contain one row per account and pass through unchanged.
+  const normalizedPlayers = useMemo(() => normalizeDefensivePlayerRows(s), [s]);
+  const { supportPlayers, healingPlayers, defensePlayers, damageMitigationPlayers } = normalizedPlayers;
 
   const mitigationByAccount = useMemo(() => {
     const rows = damageMitigationPlayers;
