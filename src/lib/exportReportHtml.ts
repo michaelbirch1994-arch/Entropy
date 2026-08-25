@@ -4,6 +4,7 @@
 // summary snapshot (MVPs, squad totals, per-player breakdown), not a full
 // re-implementation of every view in the app.
 import type { WvWReport } from "../types/report";
+import { aggregateReportPlayersForProfiles } from "./profileReportAggregation";
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -20,42 +21,12 @@ export function buildReportHtmlExport(report: WvWReport): string {
   const s = report.stats;
   const meta = report.meta;
 
-  const totalsByAccount = new Map<
-    string,
-    { profession: string; damage: number; downContrib: number; healing: number; barrier: number; cleanses: number; strips: number; fights: number }
-  >();
-  function ensure(account: string, profession: string) {
-    let e = totalsByAccount.get(account);
-    if (!e) {
-      e = { profession, damage: 0, downContrib: 0, healing: 0, barrier: 0, cleanses: 0, strips: 0, fights: 0 };
-      totalsByAccount.set(account, e);
-    }
-    return e;
-  }
-  (s.generalPlayers ?? []).forEach((p) => {
-    const e = ensure(p.account, p.profession);
-    e.fights = p.logsJoined ?? 0;
-  });
-  (s.offensePlayers ?? []).forEach((p) => {
-    const e = ensure(p.account, p.profession);
-    e.damage += p.offenseTotals?.damage ?? 0;
-    e.downContrib += p.offenseTotals?.downContribution ?? 0;
-  });
-  (s.healingPlayers ?? []).forEach((p) => {
-    const e = ensure(p.account, p.profession);
-    e.healing += p.healingTotals?.healing ?? 0;
-    e.barrier += p.healingTotals?.barrier ?? 0;
-  });
-  (s.supportPlayers ?? []).forEach((p) => {
-    const e = ensure(p.account, p.profession);
-    e.cleanses += p.supportTotals?.condiCleanse ?? 0;
-    e.strips += p.supportTotals?.boonStrips ?? 0;
-  });
+  const totalsByAccount = aggregateReportPlayersForProfiles(s);
 
   const playerRows = Array.from(totalsByAccount.entries())
     .sort((a, b) => b[1].damage - a[1].damage)
     .map(
-      ([account, e]) => `<tr><td>${esc(account)}</td><td>${esc(e.profession)}</td><td class="num">${e.fights}</td><td class="num dmg">${compact(e.damage)}</td><td class="num heal">${compact(e.healing)}</td><td class="num">${compact(e.barrier)}</td><td class="num">${compact(e.downContrib)}</td><td class="num">${e.cleanses}</td><td class="num">${e.strips}</td></tr>`,
+      ([account, e]) => `<tr><td>${esc(account)}</td><td>${esc(e.profession)}</td><td class="num">${e.logsJoined}</td><td class="num dmg">${compact(e.damage)}</td><td class="num heal">${compact(e.healing)}</td><td class="num">${compact(e.barrier)}</td><td class="num">${compact(e.downContrib)}</td><td class="num">${e.cleanses}</td><td class="num">${e.strips}</td></tr>`,
     )
     .join("\n");
 
