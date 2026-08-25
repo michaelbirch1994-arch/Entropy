@@ -14,6 +14,7 @@ import type { HealingPlayer, HealingCoverage, OffensePlayer, TopBarrierSource, T
 import { buildHealingFightDrilldowns } from "../lib/squadStatsDrilldowns";
 import DistanceToTagPanel, { resolveDistanceToTagResult } from "../components/squad/DistanceToTagPanel";
 import BoundedDataRegion from "../components/ui/BoundedDataRegion";
+import { buildSquadOverviewRows } from "../lib/squadOverviewAggregation";
 
 type SquadOverviewSortKey = "player" | "class" | "damage" | "dps" | "downContribution" | "healing" | "cleanses" | "strips" | "combat" | "participation";
 
@@ -298,35 +299,7 @@ export default function SquadStatsView() {
   const tightCount = distanceRows.filter((player) => player.avg <= 600).length;
   const pressureLeader = topPressureRows[0];
   const squadOverviewRows = (() => {
-    const healingByAccount = new Map(s.healingPlayers.map((player) => [player.account, player]));
-    const supportByAccount = new Map(s.supportPlayers.map((player) => [player.account, player]));
-    const generalByAccount = new Map(s.generalPlayers.map((player) => [player.account, player]));
-    const attendanceByAccount = new Map(s.attendanceData.map((player) => [player.account, player]));
-    const rows = s.offensePlayers.map((p) => {
-      const heal = healingByAccount.get(p.account);
-      const sup = supportByAccount.get(p.account);
-      const general = generalByAccount.get(p.account);
-      const attendance = attendanceByAccount.get(p.account);
-      const damage = pickDamageScopeValue(scope, p.offenseTotals.damage, p.offenseTotals.damageAll);
-      const dps = safeDiv(damage, p.totalFightMs / 1000);
-      const logs = general?.logsJoined ?? 0;
-      const combatMs = general?.squadActiveMs ?? attendance?.combatTimeMs ?? 0;
-      const participation = Math.min(1, safeDiv(logs, s.total));
-      return {
-        account: p.account,
-        profession: p.profession,
-        damage,
-        dps,
-        downContribution: p.offenseTotals.downContribution ?? 0,
-        heal,
-        healing: heal ? pickAllyScopeValue(allyScope, heal.healingTotals.healing, heal.healingTotals.squadHealing) : 0,
-        cleanses: sup?.supportTotals.condiCleanse ?? 0,
-        strips: sup?.supportTotals.boonStrips ?? 0,
-        combatMs,
-        logs,
-        participation,
-      };
-    });
+    const rows = buildSquadOverviewRows(s, scope, allyScope);
     if (!overviewSort) return rows.sort((a, b) => b.damage - a.damage || a.account.localeCompare(b.account)).slice(0, 25);
     const dir = overviewSort.dir === "asc" ? 1 : -1;
     return rows
