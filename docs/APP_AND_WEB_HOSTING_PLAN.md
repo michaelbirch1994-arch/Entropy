@@ -17,7 +17,8 @@ This split keeps the web app fast and shareable without forcing browser/Vercel r
 - The artifact schema is versioned as `entropy.report-artifact.v1`.
 - A public Vercel Blob store is connected to the canonical `entropy-um58` project for production and preview deployments.
 - The first `Share to Web` slice is implemented with a server-side owner key, explicit public-sharing consent, random unlisted Blob URLs, and a 100 MB artifact limit.
-- Hosted runtime acceptance is still required before this slice is considered complete. No paid Vercel capacity is part of the plan.
+- Hosted runtime acceptance passed on the free preview for pull request #218. A 2.59 MB six-fight artifact uploaded and reopened with exact `5 / 13 / 17 / 22` down/death totals; an invalid owner key returned `401`, and the deployment recorded no runtime errors.
+- No paid Vercel capacity is part of the plan.
 
 ## Recommended hosting shape
 
@@ -73,8 +74,7 @@ Best long-term platform path:
 
 ## Next implementation slices
 
-1. Complete hosted preview acceptance for upload authorization, Blob delivery, returned viewer links, and owner-key rejection.
-2. Make Discord webhook include the hosted report URL when one exists.
-3. Add privacy controls before upload: full names, account names, guild tags, and enemy names.
-4. Add expiry and delete controls for hosted reports.
-5. Split the hosted viewer bundle so heavy desktop-only and Builder-only surfaces lazy-load.
+1. Make Discord webhook include the hosted report URL when one exists.
+2. Add privacy controls before upload: full names, account names, guild tags, and enemy names.
+3. Add expiry and delete controls for hosted reports.
+4. Split the hosted viewer bundle so heavy desktop-only and Builder-only surfaces lazy-load.
