@@ -1,0 +1,33 @@
+name: Top Players source leaderboard script runner
+
+on:
+  push:
+    branches:
+      - feature/top-players-source-leaderboards
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/top-players-source-leaderboards
+          fetch-depth: 0
+
+      - name: Apply edit
+        run: python scripts/apply-top-player-source-leaderboards.py
+
+      - name: Commit result
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/top-player-source-leaderboards-script-runner.yml scripts/apply-top-player-source-leaderboards.py
+          git add src/views/TopPlayersView.tsx
+          git diff --cached --check
+          git commit -m "Normalize Top Players Stability and Dodges sources"
+          git push origin HEAD:feature/top-players-source-leaderboards
