@@ -1,5 +1,6 @@
 import type { WvWReport } from "../types/report";
 import { fmtCompact, fmtFixed, fmtNum } from "./format";
+import { resolveDiscordReportLeaders } from "../lib/discordLeaderNormalization";
 
 const DISCORD_WEBHOOK_STORAGE_KEY = "entropy.discordWebhookUrl";
 
@@ -97,8 +98,10 @@ function reportUrlField(viewerUrl?: string | null) {
 export function buildDiscordReportPayload(report: WvWReport, viewerUrl?: string | null) {
   const stats = report.stats;
   const leaderboards = stats.leaderboards ?? {};
-  const offenseLeader = leaderboards.damage?.[0] ?? leaderboards.damageAll?.[0];
+  const normalizedLeaders = resolveDiscordReportLeaders(stats);
+  const offenseLeader = normalizedLeaders.damage ?? leaderboards.damage?.[0] ?? leaderboards.damageAll?.[0];
   const downLeader =
+    normalizedLeaders.downContrib ??
     leaderboards.downContrib?.[0] ??
     leaderboards.downContribution?.[0] ??
     stats.maxDownContrib ??
@@ -109,8 +112,9 @@ export function buildDiscordReportPayload(report: WvWReport, viewerUrl?: string 
         value: player.offenseTotals?.downContribution ?? 0,
       }))
       .sort((a, b) => b.value - a.value)[0];
-  const healingLeader = leaderboards.healing?.[0];
+  const healingLeader = normalizedLeaders.healing ?? leaderboards.healing?.[0];
   const stripLeader =
+    normalizedLeaders.strips ??
     leaderboards.strips?.[0] ??
     leaderboards.boonStrips?.[0] ??
     stats.maxStrips ??
