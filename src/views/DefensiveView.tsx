@@ -16,6 +16,10 @@ type DefensiveSortKey =
   | "healing" | "squadHealing" | "barrier" | "downedHealing"
   | "damageTaken" | "powerDamage" | "condiDamage" | "hits" | "barrierAbsorbed" | "mitigatedDamage" | "blocks" | "dodges" | "invulned" | "interrupted" | "stripsTaken" | "downs" | "deaths";
 
+// s.*Players arrays can contain duplicate entries for the same account (e.g.
+// a build swap mid-report), which is easy to miss in the default sort order
+// but becomes obvious once a column sort scatters the duplicates apart -
+// mirrors the same account-dedupe fix applied in BuffsView/OffensiveView.
 function dedupeByAccount<T extends { account: string }>(rows: T[]): T[] {
   return Array.from(new Map(rows.map((r) => [r.account, r])).values());
 }
@@ -35,6 +39,9 @@ export default function DefensiveView() {
   const s = report?.stats;
   const isPerSecond = mode === "perSecond";
 
+  // Deduped once here so every summary card, MVP list, and sortable table
+  // built from these derives from a single row per player instead of
+  // silently double-counting totals or rendering the same player twice.
   const supportPlayers = useMemo(() => dedupeByAccount(s?.supportPlayers ?? []), [s]);
   const healingPlayers = useMemo(() => dedupeByAccount(s?.healingPlayers ?? []), [s]);
   const defensePlayers = useMemo(() => dedupeByAccount(s?.defensePlayers ?? []), [s]);
@@ -53,9 +60,18 @@ export default function DefensiveView() {
   const totals = useMemo(() => {
     if (!s) return null;
 
+    // healingTotals/supportTotals are sparse Record<string, number> maps - a
+    // player who never did a given thing this session (e.g. zero barrier from
+    // a pure-DPS build) has no key for it all (`undefined`, not 0), so an
+    // unguarded `a + p.x` turns the whole reduce into NaN the moment it hits
+    // one. `?? 0` guards every field the same way `damageTaken` already was.
     const totalCleanses = supportPlayers.reduce((a, p) => a + (p.supportTotals.condiCleanse ?? 0), 0);
     const totalStrips = supportPlayers.reduce((a, p) => a + (p.supportTotals.boonStrips ?? 0), 0);
     const totalRes = supportPlayers.reduce((a, p) => a + (p.supportTotals.resurrects ?? 0), 0);
+    // Healing/Barrier respect the Squad Only / All Allies toggle - EI already
+    // splits each player's healing/barrier into an all-allies total and a
+    // squad-only subset (healingTotals.healing vs .squadHealing, same for
+    // barrier), so this just picks which of that existing pair to sum.
     const totalHealing = healingPlayers.reduce(
       (a, p) => a + pickAllyScopeValue(allyScope, p.healingTotals.healing, p.healingTotals.squadHealing),
       0
@@ -73,8 +89,18 @@ export default function DefensiveView() {
       (a, p) => a + ((mitigationByAccount.get(`${p.account}::${p.profession}`) ?? mitigationByAccount.get(p.account))?.mitigationTotals.blocked ?? p.defenseTotals.blockedCount ?? 0),
       0
     );
+    // Barrier absorbed (damageBarrier) is an incoming/defensive stat - damage
+    // that never landed because a barrier ate it - distinct from "Total
+    // Barrier" above (barrier the player *generated* for others). Both are
+    // effectively healing in the sense that they're HP the squad didn't lose,
+    // so surface this one alongside Total Healing/Total Barrier too.
     const totalBarrierAbsorbed = defensePlayers.reduce((a, p) => a + (p.defenseTotals.damageBarrier ?? 0), 0);
 
+    // Per Second mode divides each total by the combined active seconds of the
+    // players behind it, rather than a single fight duration - a multi-fight
+    // report has players joining/leaving at different times, so this is the
+    // same "how fast was this actually happening" idea as DPS, generalized to
+    // every summary card instead of just damage.
     const healingActiveSec = healingPlayers.reduce((a, p) => a + (p.activeMs ?? 0), 0) / 1000;
     const supportActiveSec = supportPlayers.reduce((a, p) => a + (p.activeMs ?? 0), 0) / 1000;
     const defenseActiveSec = defensePlayers.reduce((a, p) => a + (Number(p.totalFightMs) || 0), 0) / 1000;
@@ -208,6 +234,9 @@ export default function DefensiveView() {
 
   if (!report || !s || !totals) return null;
 
+  // Per-player cells divide by that player's own active combat time, not the
+  // squad-wide total the summary cards use - otherwise a "/s" column would be
+  // rating everyone against the whole squad's clock.
   const perPlayer = (v: number, activeMs: number | undefined) => {
     if (!isPerSecond) return fmtCompact(v);
     const secs = (activeMs ?? 0) / 1000;
@@ -250,6 +279,7 @@ export default function DefensiveView() {
 
   return (
     <div className="space-y-5 animate-view pb-12">
+      {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-9 gap-4">
         <StatCard label={lbl("Total Healing")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalHealing, totals.healingActiveSec))} icon={<Heart className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
         <StatCard label={lbl("Total Barrier")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrier, totals.healingActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
@@ -268,6 +298,7 @@ export default function DefensiveView() {
         <StatCard label={lbl("Damage Taken")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalDamageTaken, totals.defenseActiveSec))} icon={<Target className="w-3.5 h-3.5 text-rose-400" />} accent="text-rose-400" />
       </div>
 
+      {/* Tabs */}
       <div className="flex items-center gap-2">
         {([
           { k: "support", l: "Support" },
@@ -345,12 +376,26 @@ export default function DefensiveView() {
                     </div>
                   </div>
                   <div className="mt-3 grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
-                    <div><div>Heal</div><div className="font-mono text-[12px] text-emerald-400">{fmtCompact(p.healing)}</div></div>
-                    <div><div>Barrier</div><div className="font-mono text-[12px] text-amber-400">{fmtCompact(p.barrier)}</div></div>
-                    <div><div>Downed</div><div className="font-mono text-[12px] text-emerald-300">{fmtCompact(p.downedHealing)}</div></div>
-                    <div><div>Life</div><div className="font-mono text-[12px] text-emerald-200">{fmtCompact(p.lifeSiphon)}</div></div>
+                    <div>
+                      <div>Heal</div>
+                      <div className="font-mono text-[12px] text-emerald-400">{fmtCompact(p.healing)}</div>
+                    </div>
+                    <div>
+                      <div>Barrier</div>
+                      <div className="font-mono text-[12px] text-amber-400">{fmtCompact(p.barrier)}</div>
+                    </div>
+                    <div>
+                      <div>Downed</div>
+                      <div className="font-mono text-[12px] text-emerald-300">{fmtCompact(p.downedHealing)}</div>
+                    </div>
+                    <div>
+                      <div>Life</div>
+                      <div className="font-mono text-[12px] text-emerald-200">{fmtCompact(p.lifeSiphon)}</div>
+                    </div>
                   </div>
-                  <div className="mt-3 border-t border-theme-border/50 pt-2"><PlayerSampleCell sample={p.sample} /></div>
+                  <div className="mt-3 border-t border-theme-border/50 pt-2">
+                    <PlayerSampleCell sample={p.sample} />
+                  </div>
                 </div>
               ))}
             </div>
