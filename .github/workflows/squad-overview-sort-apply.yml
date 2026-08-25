@@ -1,0 +1,70 @@
+name: Squad overview sort one-shot edit
+
+on:
+  push:
+    branches:
+      - feature/squad-overview-build-swap-attribution
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/squad-overview-build-swap-attribution
+          fetch-depth: 0
+
+      - name: Restore roster sorting around normalized rows
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/views/SquadStatsView.tsx')
+          text = path.read_text(encoding='utf-8')
+          old = '  const squadOverviewRows = buildSquadOverviewRows(s, scope, allyScope);\n'
+          new = '''  const squadOverviewRows = (() => {
+            const rows = buildSquadOverviewRows(s, scope, allyScope);
+            if (!overviewSort) return rows.sort((a, b) => b.damage - a.damage || a.account.localeCompare(b.account)).slice(0, 25);
+            const dir = overviewSort.dir === "asc" ? 1 : -1;
+            return rows
+              .sort((a, b) => {
+                if (overviewSort.key === "player") return a.account.localeCompare(b.account) * dir;
+                if (overviewSort.key === "class") return a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account);
+                const valueFor = (row: typeof rows[number]) => {
+                  switch (overviewSort.key) {
+                    case "damage": return row.damage;
+                    case "dps": return row.dps;
+                    case "downContribution": return row.downContribution;
+                    case "healing": return row.healing;
+                    case "cleanses": return row.cleanses;
+                    case "strips": return row.strips;
+                    case "combat": return row.combatMs;
+                    case "participation": return row.participation;
+                    default: return 0;
+                  }
+                };
+                return (valueFor(a) - valueFor(b)) * dir || a.account.localeCompare(b.account);
+              })
+              .slice(0, 25);
+          })();
+'''
+          if text.count(old) != 1:
+              raise SystemExit('Expected exactly one normalized roster rows line')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Commit result and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/squad-overview-sort-apply.yml
+          git add src/views/SquadStatsView.tsx
+          git diff --cached --check
+          git commit -m "Preserve Squad Stats roster sorting"
+          git push origin HEAD:feature/squad-overview-build-swap-attribution
