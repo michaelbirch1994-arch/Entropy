@@ -41,6 +41,24 @@ describe("dps.report upload responses", () => {
     });
   });
 
+  it("accepts the wvw.report permalink host currently returned for WvW uploads", () => {
+    expect(
+      parseDpsReportUploadResponse({
+        id: "abc-20260812",
+        permalink: "https://wvw.report/abc-20260812_wvw",
+        uploadTime: 123,
+        encounter: { success: true },
+        report: { detailed: true },
+        error: null,
+        userToken: "redacted",
+      }),
+    ).toMatchObject({
+      id: "abc-20260812",
+      permalink: "abc-20260812_wvw",
+      uploadTime: 123,
+    });
+  });
+
   it("rejects a nominally successful response with no reusable share id", () => {
     expect(() => parseDpsReportUploadResponse({ uploadTime: 123 })).toThrowError(
       /did not return a usable share link/i,
@@ -62,6 +80,8 @@ describe("dps.report upload responses", () => {
   it("extracts permalink ids from common dps.report service URL forms", () => {
     expect(parseDpsReportPermalink("https://dps.report/abc-123_wvw")).toBe("abc-123_wvw");
     expect(parseDpsReportPermalink("https://b.dps.report/abc-123_wvw")).toBe("abc-123_wvw");
+    expect(parseDpsReportPermalink("https://wvw.report/abc-123_wvw")).toBe("abc-123_wvw");
     expect(parseDpsReportPermalink("https://dps.report/getJson?permalink=abc-123_wvw")).toBe("abc-123_wvw");
+    expect(parseDpsReportPermalink("https://wvw.report.example/abc-123_wvw")).toBeNull();
   });
 });
