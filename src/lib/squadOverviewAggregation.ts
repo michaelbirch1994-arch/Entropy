@@ -16,6 +16,9 @@ export interface SquadOverviewRow {
   damage: number;
   dps: number;
   downContribution: number;
+  enemyDowns: number;
+  kills: number;
+  totalFightMs: number;
   heal?: HealingPlayer;
   healing: number;
   cleanses: number;
@@ -114,6 +117,14 @@ export function buildSquadOverviewRows(
       (sum, row) => sum + (row.offenseTotals.downContribution ?? 0),
       0,
     );
+    const enemyDowns = offenseRows.reduce(
+      (sum, row) => sum + (row.offenseTotals.downed ?? 0),
+      0,
+    );
+    const kills = offenseRows.reduce(
+      (sum, row) => sum + (row.offenseTotals.killed ?? 0),
+      0,
+    );
 
     const healingRows = healingByAccount.get(account) ?? [];
     const heal = mergeHealingPlayers(healingRows);
@@ -144,6 +155,9 @@ export function buildSquadOverviewRows(
       damage,
       dps: totalFightMs > 0 ? damage / (totalFightMs / 1000) : 0,
       downContribution,
+      enemyDowns,
+      kills,
+      totalFightMs,
       heal,
       healing,
       cleanses: supportTotals.condiCleanse ?? 0,
