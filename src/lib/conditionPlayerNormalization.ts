@@ -52,14 +52,14 @@ function mergeConditionEntries(entries: Array<PlayerConditionEntry | undefined>)
     merged.applications += Number(entry.applications) || 0;
     merged.damage += Number(entry.damage) || 0;
     if (!merged.icon && entry.icon) merged.icon = entry.icon;
-    if (Number.isFinite(entry.applicationsFromBuffs)) {
-      merged.applicationsFromBuffs = (merged.applicationsFromBuffs ?? 0) + Number(entry.applicationsFromBuffs);
+    if (typeof entry.applicationsFromBuffs === "number" && Number.isFinite(entry.applicationsFromBuffs)) {
+      merged.applicationsFromBuffs = (merged.applicationsFromBuffs ?? 0) + entry.applicationsFromBuffs;
     }
-    if (Number.isFinite(entry.applicationsFromBuffsActive)) {
-      merged.applicationsFromBuffsActive = (merged.applicationsFromBuffsActive ?? 0) + Number(entry.applicationsFromBuffsActive);
+    if (typeof entry.applicationsFromBuffsActive === "number" && Number.isFinite(entry.applicationsFromBuffsActive)) {
+      merged.applicationsFromBuffsActive = (merged.applicationsFromBuffsActive ?? 0) + entry.applicationsFromBuffsActive;
     }
-    if (Number.isFinite(entry.uptimeMs)) {
-      merged.uptimeMs = (merged.uptimeMs ?? 0) + Number(entry.uptimeMs);
+    if (typeof entry.uptimeMs === "number" && Number.isFinite(entry.uptimeMs)) {
+      merged.uptimeMs = (merged.uptimeMs ?? 0) + entry.uptimeMs;
     }
   }
 
