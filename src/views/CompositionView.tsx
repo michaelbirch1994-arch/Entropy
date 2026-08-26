@@ -1,204 +1,130 @@
 import { useMemo, useState } from "react";
-import { useReport } from "../store/ReportContext";
+import { ArrowDownLeft, ArrowUpRight, Eye, Layers, Scale, Users } from "lucide-react";
+import BoundedDataRegion from "../components/ui/BoundedDataRegion";
+import ClassIcon from "../components/ui/ClassIcon";
 import Panel from "../components/ui/Panel";
-import { profStyle, fmtNum } from "../utils/format";
-import type { ClassSlice } from "../types/report";
-import { Layers, Users, Scale } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE } from "../utils/chartTheme";
-
-type DeltaSortKey = "name" | "squadCount" | "enemyCount" | "deltaPct";
-type DeltaSortState = { key: DeltaSortKey; dir: "asc" | "desc" } | null;
+import { buildCompositionComparison } from "../lib/compositionInsights";
+import { useReport } from "../store/ReportContext";
+import { fmtNum, profStyle } from "../utils/format";
 
 export default function CompositionView() {
   const { report } = useReport();
-  if (!report) return null;
-  const s = report.stats;
-  const squadTotal = s.squadClassData.reduce((a, c) => a + c.value, 0);
-  const enemyTotal = s.enemyClassData.reduce((a, c) => a + c.value, 0);
+  const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
+  const squadData = report?.stats.squadClassData ?? [];
+  const enemyData = report?.stats.enemyClassData ?? [];
+  const comparisonRows = useMemo(() => buildCompositionComparison(squadData, enemyData), [enemyData, squadData]);
 
-  const squadChart = s.squadClassData
-    .slice()
-    .sort((a, b) => b.value - a.value)
-    .map((c) => ({ name: c.name, count: c.value, fill: c.color }));
+  if (!report) return null;
+
+  const squadTotal = squadData.reduce((sum, row) => sum + row.value, 0);
+  const enemyTotal = enemyData.reduce((sum, row) => sum + row.value, 0);
+  const selected = comparisonRows.find((row) => row.name === selectedProfession) ?? comparisonRows[0] ?? null;
+  const squadCore = [...comparisonRows].sort((a, b) => b.squadPct - a.squadPct).slice(0, 3);
+  const enemyHeavy = comparisonRows.filter((row) => row.deltaPct >= 2).slice(0, 3);
+  const squadHeavy = comparisonRows.filter((row) => row.deltaPct <= -2).slice(0, 3);
 
   return (
-    <div className="space-y-5 animate-view pb-12">
-      <Panel title="Squad Composition" icon={<Users className="w-4 h-4" />} action={`${squadTotal} total slots`}>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={squadChart} margin={{ top: 8, right: 16, left: 0, bottom: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-              <XAxis
-                dataKey="name"
-                tick={{ fill: "var(--entropy-text-secondary)", fontSize: 10 }}
-                stroke="rgba(255,255,255,0.10)"
-                angle={-35}
-                textAnchor="end"
-                height={60}
-                interval={0}
-              />
-              <YAxis tick={{ fill: "var(--entropy-text-muted)", fontSize: 10 }} stroke="rgba(255,255,255,0.10)" />
-              <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
-              <Bar dataKey="count" name="Slots" radius={[4, 4, 0, 0]} barSize={28}>
-                {squadChart.map((c) => (
-                  <Cell key={c.name} fill={c.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+    <div className="space-y-5 animate-view pb-10">
+      <section className="theme-role-coverage grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <ReadoutMetric icon={<Users className="h-4 w-4" />} label="Squad profiles" value={fmtNum(squadTotal)} detail="tracked roster" />
+        <ReadoutMetric icon={<Eye className="h-4 w-4" />} label="Enemy observations" value={fmtNum(enemyTotal)} detail={`${report.stats.total} fights`} />
+        <ReadoutMetric icon={<ArrowUpRight className="h-4 w-4" />} label="Enemy lean" value={enemyHeavy[0]?.name ?? "None"} detail={enemyHeavy[0] ? `${enemyHeavy[0].deltaPct.toFixed(1)} share pts` : "within 2 points"} tone="text-rose-300" />
+        <ReadoutMetric icon={<ArrowDownLeft className="h-4 w-4" />} label="Squad lean" value={squadHeavy[0]?.name ?? "None"} detail={squadHeavy[0] ? `${Math.abs(squadHeavy[0].deltaPct).toFixed(1)} share pts` : "within 2 points"} tone="text-amber-300" />
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+        <Panel
+          title="Composition Comparison"
+          subtitle="Shares are normalized within each side. Squad values are tracked roster profiles; enemy values are target observations accumulated across fights."
+          icon={<Scale className="h-4 w-4" />}
+          action={`${comparisonRows.length} professions`}
+          bodyClassName="p-0"
+        >
+          <div className="hidden grid-cols-[minmax(7rem,1fr)_4.5rem_4.5rem_3.5rem] gap-2 border-b border-theme-border/50 px-4 py-2 text-[9px] font-black uppercase tracking-wider text-theme-muted sm:grid lg:grid-cols-[minmax(8rem,1fr)_minmax(8rem,1.2fr)_minmax(8rem,1.2fr)_5.5rem] lg:gap-3">
+            <span>Profession</span><span>Squad share</span><span>Enemy share</span><span className="text-right">Difference</span>
+          </div>
+          <BoundedDataRegion label={`Composition comparison, ${comparisonRows.length} professions`} itemCount={comparisonRows.length} maxHeightClass="max-h-[31rem]" className="divide-y divide-theme-border/30">
+            {comparisonRows.map((row) => {
+              const active = selected?.name === row.name;
+              const deltaTone = row.deltaPct >= 2 ? "text-rose-300" : row.deltaPct <= -2 ? "text-amber-300" : "text-theme-muted";
+              return (
+                <button
+                  key={row.name}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setSelectedProfession(row.name)}
+                  className={`block w-full px-4 py-2.5 text-left transition-colors sm:grid sm:grid-cols-[minmax(7rem,1fr)_4.5rem_4.5rem_3.5rem] sm:items-center sm:gap-2 lg:grid-cols-[minmax(8rem,1fr)_minmax(8rem,1.2fr)_minmax(8rem,1.2fr)_5.5rem] lg:gap-3 ${active ? "bg-theme-accent/[0.07] shadow-[inset_2px_0_0_var(--theme-accent)]" : "hover:bg-theme-surface-elevated/55"}`}
+                >
+                  <span className="flex min-w-0 items-center justify-between gap-2 text-xs font-bold text-theme-text sm:justify-start">
+                    <span className="flex min-w-0 items-center gap-2"><ClassIcon name={row.name} size="sm" /><span className="truncate">{row.name}</span></span>
+                    <span className={`shrink-0 font-mono text-[10px] font-black sm:hidden ${deltaTone}`}>{mobileDifference(row.deltaPct)}</span>
+                  </span>
+                  <span className="mt-2 grid grid-cols-2 gap-4 sm:contents">
+                    <ShareBar label="Squad" value={row.squadPct} count={row.squadCount} color={row.color} />
+                    <ShareBar label="Enemy" value={row.enemyPct} count={row.enemyCount} color={row.color} />
+                  </span>
+                  <span className={`hidden text-right font-mono text-xs font-black sm:block ${deltaTone}`}>{row.deltaPct > 0 ? "+" : ""}{row.deltaPct.toFixed(1)}</span>
+                </button>
+              );
+            })}
+          </BoundedDataRegion>
+        </Panel>
+
+        <div className="space-y-5">
+          <Panel title={selected?.name ?? "Profession Readout"} icon={<Layers className="h-4 w-4" />}>
+            {selected ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 border-b border-theme-border/50 pb-4">
+                  <div className={`grid h-11 w-11 place-items-center border ${profStyle(selected.name).border} ${profStyle(selected.name).bg}`}><ClassIcon name={selected.name} /></div>
+                  <div><div className="text-lg font-black uppercase text-theme-text">{selected.name}</div><div className="text-[10px] uppercase text-theme-muted">selected profession</div></div>
+                </div>
+                <div className="grid grid-cols-2 gap-x-5 gap-y-3">
+                  <CompactValue label="Squad" value={`${selected.squadPct.toFixed(1)}%`} detail={`${selected.squadCount} profiles`} />
+                  <CompactValue label="Enemy" value={`${selected.enemyPct.toFixed(1)}%`} detail={`${selected.enemyCount} observations`} />
+                </div>
+                <div className={`border-l-2 px-3 py-2 ${selected.deltaPct >= 2 ? "border-rose-400/50 bg-rose-500/[0.06]" : selected.deltaPct <= -2 ? "border-amber-400/50 bg-amber-500/[0.06]" : "border-theme-border bg-theme-surface-inset/50"}`}>
+                  <div className="text-[10px] font-black uppercase text-theme-muted">Field read</div>
+                  <div className="mt-1 text-sm font-bold text-theme-text">{compositionRead(selected.deltaPct)}</div>
+                </div>
+              </div>
+            ) : <p className="text-xs text-theme-muted">No profession data is available.</p>}
+          </Panel>
+
+          <Panel title="Session Shape" icon={<Layers className="h-4 w-4" />}>
+            <ReadoutGroup label="Squad core" rows={squadCore} mode="squad" />
+            <ReadoutGroup label="Enemy-heavy" rows={enemyHeavy} mode="enemy" className="mt-4 border-t border-theme-border/50 pt-4" />
+            <ReadoutGroup label="Squad-heavy" rows={squadHeavy} mode="squadDelta" className="mt-4 border-t border-theme-border/50 pt-4" />
+          </Panel>
         </div>
-      </Panel>
-
-      <CompositionDeltaPanel squadData={s.squadClassData} squadTotal={squadTotal} enemyData={s.enemyClassData} enemyTotal={enemyTotal} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <ClassDetailPanel title="Squad Classes" data={s.squadClassData} total={squadTotal} />
-        <ClassDetailPanel title="Enemy Classes" data={s.enemyClassData} total={enemyTotal} />
-      </div>
+      </section>
     </div>
   );
 }
 
-function CompositionDeltaPanel({
-  squadData,
-  squadTotal,
-  enemyData,
-  enemyTotal,
-}: {
-  squadData: ClassSlice[];
-  squadTotal: number;
-  enemyData: ClassSlice[];
-  enemyTotal: number;
-}) {
-  const [sort, setSort] = useState<DeltaSortState>(null);
-  const squadByName = new Map(squadData.map((c) => [c.name, c.value]));
-  const enemyByName = new Map(enemyData.map((c) => [c.name, c.value]));
-  const names = Array.from(new Set([...squadByName.keys(), ...enemyByName.keys()]));
-
-  const rows = useMemo(() => {
-    const base = names
-      .map((name) => {
-        const squadCount = squadByName.get(name) || 0;
-        const enemyCount = enemyByName.get(name) || 0;
-        const squadPct = squadTotal > 0 ? (squadCount / squadTotal) * 100 : 0;
-        const enemyPct = enemyTotal > 0 ? (enemyCount / enemyTotal) * 100 : 0;
-        return { name, squadCount, enemyCount, deltaPct: enemyPct - squadPct };
-      })
-      .sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct) || a.name.localeCompare(b.name));
-    if (!sort) return base;
-    const dir = sort.dir === "asc" ? 1 : -1;
-    return base.sort((a, b) => {
-      if (sort.key === "name") return a.name.localeCompare(b.name) * dir;
-      return (a[sort.key] - b[sort.key]) * dir || a.name.localeCompare(b.name);
-    });
-  }, [enemyTotal, names, enemyByName, sort, squadByName, squadTotal]);
-
-  const toggleSort = (key: DeltaSortKey) => {
-    setSort((prev) => {
-      if (!prev || prev.key !== key) return { key, dir: "desc" };
-      if (prev.dir === "desc") return { key, dir: "asc" };
-      return null;
-    });
-  };
-
-  const sortLabel = (key: DeltaSortKey) => (!sort || sort.key !== key ? "SORT" : sort.dir === "desc" ? "DESC" : "ASC");
-
-  const SortHeader = ({ label, k, align = "left" }: { label: string; k: DeltaSortKey; align?: "left" | "right" }) => (
-    <th className={`p-2.5 ${align === "right" ? "text-right" : ""}`}>
-      <button
-        type="button"
-        onClick={() => toggleSort(k)}
-        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
-          align === "right" ? "justify-end" : ""
-        } ${sort?.key === k ? "text-theme-accent-strong" : "text-theme-muted hover:text-theme-text"}`}
-      >
-        {label} <span className="text-[8px] opacity-70">{sortLabel(k)}</span>
-      </button>
-    </th>
-  );
-
-  return (
-    <Panel
-      title="Squad vs. Enemy Composition"
-      subtitle="Which classes the enemy is running more or less of than us, by share of each side's roster - the read that actually says something about what to expect."
-      icon={<Scale className="w-4 h-4" />}
-      bodyClassName="p-0"
-    >
-      <div className="overflow-x-auto custom-scrollbar">
-        <table className="w-full text-left text-xs">
-          <thead>
-            <tr className="text-[10px] text-theme-muted uppercase font-bold tracking-wider border-b border-theme-border/50">
-              <SortHeader label="Class" k="name" />
-              <SortHeader label="Squad" k="squadCount" align="right" />
-              <SortHeader label="Enemy" k="enemyCount" align="right" />
-              <SortHeader label="Delta (share)" k="deltaPct" align="right" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-theme-border/30 font-mono">
-            {rows.map((r) => {
-              const st = profStyle(r.name);
-              const heavy = Math.abs(r.deltaPct) >= 5;
-              const enemyHeavier = r.deltaPct > 0;
-              return (
-                <tr key={r.name} className="transition-colors hover:bg-theme-surface-elevated/55">
-                  <td className="p-2.5">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2.5 h-2.5 rounded-sm ${st.dot} flex-shrink-0`} />
-                      <span className="text-theme-text/85 font-semibold">{r.name}</span>
-                    </div>
-                  </td>
-                  <td className="p-2.5 text-right text-amber-400">{fmtNum(r.squadCount)}</td>
-                  <td className="p-2.5 text-right text-rose-400">{fmtNum(r.enemyCount)}</td>
-                  <td className="p-2.5 text-right">
-                    <span
-                      className={`font-bold ${
-                        !heavy ? "text-theme-muted" : enemyHeavier ? "text-rose-400" : "text-amber-400"
-                      }`}
-                    >
-                      {r.deltaPct > 0 ? "+" : ""}
-                      {r.deltaPct.toFixed(1)}%
-                      {heavy && (enemyHeavier ? " (enemy-heavy)" : " (squad-heavy)")}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </Panel>
-  );
+function ShareBar({ label, value, count, color }: { label: string; value: number; count: number; color: string }) {
+  return <span className="flex items-center justify-between gap-2 sm:grid sm:grid-cols-1 lg:grid-cols-[1fr_4.5rem]"><span className="text-[9px] font-black uppercase text-theme-muted sm:hidden">{label}</span><span className="hidden h-2 bg-theme-surface-inset lg:block"><span className="block h-full" style={{ width: `${Math.max(0, Math.min(100, value))}%`, backgroundColor: color }} /></span><span className="whitespace-nowrap text-right font-mono text-[10px] text-theme-muted">{value.toFixed(1)}% · {fmtNum(count)}</span></span>;
 }
 
-function ClassDetailPanel({ title, data, total }: { title: string; data: ClassSlice[]; total: number }) {
-  return (
-    <Panel title={title} icon={<Layers className="w-4 h-4" />}>
-      <div className="space-y-2">
-        {data
-          .slice()
-          .sort((a, b) => b.value - a.value)
-          .map((c) => {
-            const pct = total > 0 ? (c.value / total) * 100 : 0;
-            const st = profStyle(c.name);
-            return (
-              <div key={c.name} className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-sm ${st.dot} flex-shrink-0`} />
-                <span className="text-xs font-semibold text-theme-text/80 w-28 flex-shrink-0">{c.name}</span>
-                <div className="flex-1 h-5 bg-theme-surface-inset rounded overflow-hidden">
-                  <div
-                    className="h-full rounded transition-all duration-500 flex items-center justify-end pr-2"
-                    style={{ width: `${Math.max(pct, 3)}%`, backgroundColor: c.color }}
-                  >
-                    {pct > 8 && <span className="text-[10px] font-bold text-black/70">{c.value}</span>}
-                  </div>
-                </div>
-                <span className="text-xs font-mono text-theme-text/75 w-10 text-right">{fmtNum(c.value)}</span>
-                <span className="text-[10px] font-mono text-theme-muted w-12 text-right">{pct.toFixed(1)}%</span>
-              </div>
-            );
-          })}
-      </div>
-    </Panel>
-  );
+function ReadoutMetric({ icon, label, value, detail, tone = "text-theme-accent-strong" }: { icon: React.ReactNode; label: string; value: string; detail: string; tone?: string }) {
+  return <div className="theme-dossier-metric flex min-h-20 items-center justify-between gap-3 border-l-2 border-theme-accent/30 bg-theme-surface-inset/55 px-4 py-3"><div className="min-w-0"><div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-wider text-theme-muted">{icon}{label}</div><div className={`mt-1 truncate text-lg font-black ${tone}`}>{value}</div></div><span className="max-w-24 text-right text-[9px] uppercase leading-4 text-theme-muted">{detail}</span></div>;
+}
+
+function CompactValue({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return <div><div className="text-[9px] font-black uppercase text-theme-muted">{label}</div><div className="mt-1 font-mono text-xl font-black text-theme-text">{value}</div><div className="text-[9px] text-theme-muted">{detail}</div></div>;
+}
+
+function compositionRead(deltaPct: number) {
+  if (deltaPct >= 2) return `Enemy fielded this ${deltaPct.toFixed(1)} share points more often.`;
+  if (deltaPct <= -2) return `Squad fielded this ${Math.abs(deltaPct).toFixed(1)} share points more often.`;
+  return "Squad and enemy shares were broadly similar.";
+}
+
+function mobileDifference(deltaPct: number) {
+  if (deltaPct >= 2) return `Enemy +${deltaPct.toFixed(1)}`;
+  if (deltaPct <= -2) return `Squad +${Math.abs(deltaPct).toFixed(1)}`;
+  return "Even";
+}
+
+function ReadoutGroup({ label, rows, mode, className = "" }: { label: string; rows: ReturnType<typeof buildCompositionComparison>; mode: "squad" | "enemy" | "squadDelta"; className?: string }) {
+  return <div className={className}><div className="text-[9px] font-black uppercase tracking-wider text-theme-muted">{label}</div><div className="mt-2 space-y-2">{rows.length ? rows.map((row) => <div key={row.name} className="flex items-center justify-between gap-3 text-xs"><span className="flex min-w-0 items-center gap-2 font-bold text-theme-text/85"><ClassIcon name={row.name} size="sm" /><span className="truncate">{row.name}</span></span><span className="font-mono text-[10px] text-theme-muted">{mode === "squad" ? `${row.squadPct.toFixed(1)}%` : mode === "enemy" ? `+${row.deltaPct.toFixed(1)} pts` : `${Math.abs(row.deltaPct).toFixed(1)} pts`}</span></div>) : <div className="text-xs text-theme-muted">No material difference.</div>}</div></div>;
 }

@@ -1,229 +1,139 @@
 import { useMemo, useState } from "react";
-import { useReport } from "../store/ReportContext";
-import Panel from "../components/ui/Panel";
-import { profStyle } from "../utils/format";
-import type { ClassSlice } from "../types/report";
-import { Activity, Layers, ShieldCheck, Swords, Users } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE } from "../utils/chartTheme";
-import ClassIcon from "../components/ui/ClassIcon";
+import { Activity, AlertTriangle, Layers, Search, ShieldCheck, Swords, Users } from "lucide-react";
 import BoundedDataRegion from "../components/ui/BoundedDataRegion";
+import ClassIcon from "../components/ui/ClassIcon";
+import Panel from "../components/ui/Panel";
+import { buildCompositionComparison, summarizeProfessionPresence } from "../lib/compositionInsights";
+import { useReport } from "../store/ReportContext";
+import { profStyle } from "../utils/format";
 
-type RoleSortKey = "account" | "profession" | "role" | "supportScore" | "confidenceScore";
-type RoleSortState = { key: RoleSortKey; dir: "asc" | "desc" } | null;
-
-function ClassList({ data, total, selected, onSelect }: { data: ClassSlice[]; total: number; selected: string | null; onSelect: (name: string) => void }) {
-  return (
-    <div className="space-y-2">
-      {data.map((c) => {
-        const pct = total > 0 ? (c.value / total) * 100 : 0;
-        const s = profStyle(c.name);
-        return (
-          <button key={c.name} type="button" aria-pressed={selected === c.name} onClick={() => onSelect(c.name)} className={`flex w-full items-center gap-3 border-l-2 px-2 py-1 text-left transition ${selected === c.name ? "border-theme-accent bg-theme-accent/[0.07]" : "border-transparent hover:border-theme-accent/20 hover:bg-theme-surface-elevated/50"}`}>
-            <div className={`h-6 w-6 rounded-md border ${s.border} ${s.bg} flex flex-shrink-0 items-center justify-center`}>
-              <ClassIcon name={c.name} size="sm" />
-            </div>
-            <span className="text-xs font-semibold text-theme-text/80 w-28 flex-shrink-0">{c.name}</span>
-            <div className="flex-1 h-5 bg-theme-surface-inset rounded overflow-hidden">
-              <div
-                className="h-full rounded transition-all duration-500 flex items-center justify-end pr-2"
-                style={{ width: `${Math.max(pct, 3)}%`, backgroundColor: c.color }}
-              >
-                {pct > 10 && <span className="text-[10px] font-bold text-black/70">{c.value}</span>}
-              </div>
-            </div>
-            <span className="text-xs font-mono text-theme-text/75 w-10 text-right">{c.value}</span>
-            <span className="text-[10px] font-mono text-theme-muted w-12 text-right">{pct.toFixed(1)}%</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+type RoleFilter = "all" | "support" | "damage" | "review";
 
 export default function ClassesView() {
   const { report } = useReport();
-  const [roleSort, setRoleSort] = useState<RoleSortState>(null);
   const [selectedProfession, setSelectedProfession] = useState<string | null>(null);
-  const s = report?.stats;
-  const roleRows = useMemo(() => {
-    const base = [...(s?.roleClassifications ?? [])].sort((a, b) => a.account.localeCompare(b.account));
-    if (!roleSort) return base;
-    const dir = roleSort.dir === "asc" ? 1 : -1;
-    return base.sort((a, b) => {
-      if (roleSort.key === "account") return a.account.localeCompare(b.account) * dir;
-      if (roleSort.key === "profession") return a.profession.localeCompare(b.profession) * dir || a.account.localeCompare(b.account);
-      if (roleSort.key === "role") return a.role.localeCompare(b.role) * dir || a.account.localeCompare(b.account);
-      return (a[roleSort.key] - b[roleSort.key]) * dir || a.account.localeCompare(b.account);
-    });
-  }, [s?.roleClassifications, roleSort]);
-
-  const toggleRoleSort = (key: RoleSortKey) => {
-    setRoleSort((prev) => {
-      if (!prev || prev.key !== key) return { key, dir: "desc" };
-      if (prev.dir === "desc") return { key, dir: "asc" };
-      return null;
-    });
-  };
-
-  const roleSortLabel = (key: RoleSortKey) => (!roleSort || roleSort.key !== key ? "SORT" : roleSort.dir === "desc" ? "DESC" : "ASC");
-
-  const RoleSortHeader = ({ label, k, align = "left" }: { label: string; k: RoleSortKey; align?: "left" | "right" }) => (
-    <th className={`px-2 py-2 ${align === "right" ? "text-right" : ""}`}>
-      <button
-        type="button"
-        onClick={() => toggleRoleSort(k)}
-        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
-          align === "right" ? "justify-end" : ""
-        } ${roleSort?.key === k ? "text-theme-accent-strong" : "text-theme-muted hover:text-theme-text"}`}
-      >
-        {label} <span className="text-[8px] opacity-70">{roleSortLabel(k)}</span>
-      </button>
-    </th>
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [roleQuery, setRoleQuery] = useState("");
+  const stats = report?.stats;
+  const squadData = stats?.squadClassData ?? [];
+  const enemyData = stats?.enemyClassData ?? [];
+  const comparisonRows = useMemo(() => buildCompositionComparison(squadData, enemyData), [enemyData, squadData]);
+  const allRoleRows = useMemo(
+    () => [...(stats?.roleClassifications ?? [])].sort((a, b) => a.confidenceScore - b.confidenceScore || a.account.localeCompare(b.account)),
+    [stats?.roleClassifications],
   );
 
-  if (!report || !s) return null;
-  const squadTotal = s.squadClassData.reduce((a, c) => a + c.value, 0);
-  const enemyTotal = s.enemyClassData.reduce((a, c) => a + c.value, 0);
-  const selectedName = selectedProfession ?? s.squadClassData[0]?.name ?? s.enemyClassData[0]?.name ?? null;
-  const selectedPlayers = selectedName ? roleRows.filter((row) => row.profession === selectedName || row.professionList?.includes(selectedName)) : [];
-  const selectedSquadCount = s.squadClassData.find((row) => row.name === selectedName)?.value ?? 0;
-  const selectedEnemyCount = s.enemyClassData.find((row) => row.name === selectedName)?.value ?? 0;
-  const fightPresence = selectedName ? s.fightBreakdown.map((fight, index) => ({
+  if (!report || !stats) return null;
+
+  const selectedName = selectedProfession ?? squadData[0]?.name ?? comparisonRows[0]?.name ?? null;
+  const selected = comparisonRows.find((row) => row.name === selectedName) ?? null;
+  const selectedPlayers = selectedName
+    ? allRoleRows.filter((row) => row.profession === selectedName || row.professionList?.includes(selectedName))
+    : [];
+  const presence = summarizeProfessionPresence(stats.fightBreakdown, selectedName);
+  const fightPresence = selectedName ? stats.fightBreakdown.map((fight, index) => ({
     label: fight.label || `F${index + 1}`,
     count: fight.squadClassCountsFight?.[selectedName] ?? 0,
-    isWin: fight.isWin,
   })) : [];
   const maxFightPresence = Math.max(1, ...fightPresence.map((fight) => fight.count));
-  const supportCount = (s.roleClassifications ?? []).filter((row) => row.role === "support").length;
-  const damageCount = (s.roleClassifications ?? []).filter((row) => row.role === "damage").length;
-  const highConfidenceCount = (s.roleClassifications ?? []).filter((row) => row.confidenceScore >= 0.75).length;
+  const supportCount = allRoleRows.filter((row) => row.role === "support").length;
+  const damageCount = allRoleRows.filter((row) => row.role === "damage").length;
+  const highConfidenceCount = allRoleRows.filter((row) => row.confidenceScore >= 0.75).length;
+  const reviewCount = allRoleRows.filter((row) => row.confidenceScore < 0.5).length;
+  const supportRatio = allRoleRows.length > 0 ? (supportCount / allRoleRows.length) * 100 : 0;
+  const normalizedQuery = roleQuery.trim().toLowerCase();
+  const filteredRoleRows = allRoleRows.filter((row) => {
+    const matchesFilter = roleFilter === "all" || row.role === roleFilter || (roleFilter === "review" && row.confidenceScore < 0.5);
+    const matchesQuery = !normalizedQuery || row.account.toLowerCase().includes(normalizedQuery) || row.profession.toLowerCase().includes(normalizedQuery);
+    return matchesFilter && matchesQuery;
+  });
+  const professionIndex = [...comparisonRows].sort((a, b) => b.squadCount - a.squadCount || b.enemyCount - a.enemyCount || a.name.localeCompare(b.name));
 
   return (
-    <div className="space-y-5 animate-view pb-12">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <Panel title="Squad Composition" icon={<Users className="w-4 h-4" />} action={`${squadTotal} slots`}>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="w-full md:w-1/2 h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={s.squadClassData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={2}>
-                    {s.squadClassData.map((c) => (
-                      <Cell key={c.name} fill={c.color} stroke="var(--entropy-surface-1)" strokeWidth={2} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="w-full md:w-1/2">
-              <ClassList data={s.squadClassData} total={squadTotal} selected={selectedName} onSelect={setSelectedProfession} />
-            </div>
-          </div>
-        </Panel>
+    <div className="space-y-5 animate-view pb-10">
+      <section className="theme-role-coverage grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <RoleMetric icon={<ShieldCheck className="h-4 w-4" />} label="Support" value={String(supportCount)} detail={`${supportRatio.toFixed(0)}% of roster`} tone="text-emerald-300" />
+        <RoleMetric icon={<Swords className="h-4 w-4" />} label="Damage" value={String(damageCount)} detail={`${Math.max(0, 100 - supportRatio).toFixed(0)}% of roster`} tone="text-orange-300" />
+        <RoleMetric icon={<Users className="h-4 w-4" />} label="High confidence" value={String(highConfidenceCount)} detail="75% or higher" />
+        <RoleMetric icon={<AlertTriangle className="h-4 w-4" />} label="Needs review" value={String(reviewCount)} detail="below 50% confidence" tone={reviewCount > 0 ? "text-amber-300" : "text-emerald-300"} />
+      </section>
 
-        <Panel title="Enemy Composition" icon={<Layers className="w-4 h-4" />} action={`${enemyTotal} slots`}>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="w-full md:w-1/2 h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={s.enemyClassData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={2}>
-                    {s.enemyClassData.map((c) => (
-                      <Cell key={c.name} fill={c.color} stroke="var(--entropy-surface-1)" strokeWidth={2} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="w-full md:w-1/2">
-              <ClassList data={s.enemyClassData} total={enemyTotal} selected={selectedName} onSelect={setSelectedProfession} />
-            </div>
-          </div>
-        </Panel>
-      </div>
-
-      <section className="theme-class-dossier grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
-        <div className="theme-selected-fight border border-theme-accent/25 bg-theme-surface/90 p-5 shadow-[inset_2px_0_0_var(--theme-accent)]">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.24em] text-theme-accent-strong">Profession dossier</div>
-              <h3 className="mt-1 text-xl font-black uppercase text-theme-text">{selectedName ?? "No profession selected"}</h3>
-              <p className="mt-2 text-xs text-theme-muted">Select any profession in either composition list to inspect roster roles and fight presence.</p>
-            </div>
-            <div className="flex gap-2 text-center">
-              <div className="border-l-2 border-amber-400/40 bg-theme-surface-inset/60 px-4 py-2"><div className="font-mono text-xl font-black text-amber-300">{selectedSquadCount}</div><div className="text-[9px] uppercase text-theme-muted">squad</div></div>
-              <div className="border-l-2 border-rose-400/40 bg-theme-surface-inset/60 px-4 py-2"><div className="font-mono text-xl font-black text-rose-300">{selectedEnemyCount}</div><div className="text-[9px] uppercase text-theme-muted">enemy</div></div>
-            </div>
-          </div>
-          <div className="mt-5 grid gap-2 md:grid-cols-2">
-            {selectedPlayers.length ? selectedPlayers.map((player) => (
-              <div key={player.account} className="theme-roster-strip grid grid-cols-[1fr_auto] gap-3 border border-theme-border/70 bg-theme-surface-inset/55 px-3 py-2">
-                <div><div className="truncate text-xs font-bold text-theme-text">{player.account}</div><div className="mt-1 text-[10px] uppercase text-theme-muted">{player.role} · {player.factors.slice(0, 2).map((factor) => factor.metric).join(", ") || "classification evidence unavailable"}</div></div>
-                <div className="font-mono text-xs font-black text-theme-accent-strong">{Math.round(player.confidenceScore * 100)}%</div>
-              </div>
-            )) : <div className="border-l-2 border-theme-border px-3 py-2 text-xs text-theme-muted">No classified squad player is attached to this profession.</div>}
-          </div>
-        </div>
-
-        <div className="theme-comparison-slab border border-theme-border bg-theme-surface-inset/60 p-5">
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-theme-accent-strong"><Activity className="h-4 w-4" /> Fight presence</div>
-          <BoundedDataRegion label={`${selectedName ?? "Selected profession"} fight presence, ${fightPresence.length} fights`} itemCount={fightPresence.length} maxHeightClass="max-h-72" className="mt-4 grid gap-2 pr-1">
-            {fightPresence.map((fight) => (
-              <div key={fight.label} className="grid grid-cols-[2.5rem_1fr_1.5rem] items-center gap-2 text-[10px]">
-                <span className="font-mono text-theme-muted">{fight.label}</span>
-                <div className="h-2 bg-theme-surface"><div className={`h-full ${fight.isWin === true ? "bg-emerald-400" : fight.isWin === false ? "bg-rose-400" : "bg-theme-accent"}`} style={{ width: `${(fight.count / maxFightPresence) * 100}%` }} /></div>
-                <span className="text-right font-mono font-black text-theme-text/80">{fight.count}</span>
-              </div>
-            ))}
+      <section className="grid gap-5 xl:grid-cols-[0.72fr_1.28fr]">
+        <Panel title="Profession Index" icon={<Layers className="h-4 w-4" />} action={`${professionIndex.length} professions`} bodyClassName="p-0">
+          <div className="grid grid-cols-[1fr_3rem_4rem] gap-2 border-b border-theme-border/50 px-4 py-2 text-[9px] font-black uppercase tracking-wider text-theme-muted"><span>Profession</span><span className="text-right">Squad</span><span className="text-right">Enemy obs.</span></div>
+          <BoundedDataRegion label={`Profession index, ${professionIndex.length} professions`} itemCount={professionIndex.length} maxHeightClass="max-h-[31rem]" className="divide-y divide-theme-border/30">
+            {professionIndex.map((row) => {
+              const active = selectedName === row.name;
+              return <button key={row.name} type="button" aria-pressed={active} onClick={() => setSelectedProfession(row.name)} className={`grid w-full grid-cols-[1fr_3rem_4rem] items-center gap-2 px-4 py-2.5 text-left transition-colors ${active ? "bg-theme-accent/[0.07] shadow-[inset_2px_0_0_var(--theme-accent)]" : "hover:bg-theme-surface-elevated/55"}`}>
+                <span className="flex min-w-0 items-center gap-2 text-xs font-bold text-theme-text"><ClassIcon name={row.name} size="sm" /><span className="truncate">{row.name}</span></span>
+                <span className="text-right font-mono text-xs text-amber-300">{row.squadCount}</span>
+                <span className="text-right font-mono text-xs text-rose-300">{row.enemyCount}</span>
+              </button>;
+            })}
           </BoundedDataRegion>
-        </div>
+        </Panel>
+
+        <Panel title={selectedName ?? "Profession Coverage"} icon={<Activity className="h-4 w-4" />} action={selected ? `${selected.squadCount} squad · ${selected.enemyCount} enemy obs.` : undefined}>
+          {selectedName ? <div className="space-y-5">
+            <div className="grid items-center gap-4 border-b border-theme-border/50 pb-4 md:grid-cols-[auto_1fr_auto]">
+              <div className={`grid h-12 w-12 place-items-center border ${profStyle(selectedName).border} ${profStyle(selectedName).bg}`}><ClassIcon name={selectedName} /></div>
+              <div><div className="text-xl font-black uppercase text-theme-text">{selectedName}</div><div className="mt-1 text-xs text-theme-muted">Present in {presence.fightsPresent} of {presence.totalFights} fights; absent from {presence.fightsAbsent}.</div></div>
+              <div className="grid grid-cols-2 gap-5 text-right"><CompactValue label="Average" value={presence.averagePerFight.toFixed(1)} /><CompactValue label="Peak" value={String(presence.peakCount)} /></div>
+            </div>
+
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div>
+                <div className="mb-2 flex items-center justify-between text-[9px] font-black uppercase tracking-wider text-theme-muted"><span>Tracked roster</span><span>{selectedPlayers.length} classified</span></div>
+                <BoundedDataRegion label={`${selectedName} classified roster, ${selectedPlayers.length} players`} itemCount={selectedPlayers.length} maxHeightClass="max-h-64" className="divide-y divide-theme-border/30 border-y border-theme-border/40">
+                  {selectedPlayers.length ? selectedPlayers.map((player) => <div key={player.account} className="grid grid-cols-[1fr_auto] gap-3 px-2 py-2.5">
+                    <div className="min-w-0"><div className="truncate text-xs font-bold text-theme-text">{player.account}</div><div className="mt-1 truncate text-[9px] uppercase text-theme-muted">{player.role} · {player.factors.slice(0, 2).map((factor) => factor.metric).join(", ") || "limited evidence"}</div></div>
+                    <span className={`font-mono text-xs font-black ${player.confidenceScore < 0.5 ? "text-amber-300" : "text-theme-accent-strong"}`}>{Math.round(player.confidenceScore * 100)}%</span>
+                  </div>) : <div className="px-2 py-4 text-xs text-theme-muted">No classified squad player is attached to this profession.</div>}
+                </BoundedDataRegion>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between text-[9px] font-black uppercase tracking-wider text-theme-muted"><span>Fight coverage</span><span>{presence.coveragePct.toFixed(0)}%</span></div>
+                <BoundedDataRegion label={`${selectedName} fight coverage, ${fightPresence.length} fights`} itemCount={fightPresence.length} maxHeightClass="max-h-64" className="divide-y divide-theme-border/30 border-y border-theme-border/40">
+                  {fightPresence.map((fight) => <div key={fight.label} className="grid grid-cols-[2.75rem_1fr_1.5rem] items-center gap-2 px-2 py-2 text-[10px]">
+                    <span className="font-mono text-theme-muted">{fight.label}</span>
+                    <span className="h-2 bg-theme-surface-inset"><span className="block h-full bg-theme-accent" style={{ width: `${(fight.count / maxFightPresence) * 100}%` }} /></span>
+                    <span className="text-right font-mono font-black text-theme-text/80">{fight.count}</span>
+                  </div>)}
+                </BoundedDataRegion>
+              </div>
+            </div>
+          </div> : <p className="text-xs text-theme-muted">No profession data is available.</p>}
+        </Panel>
       </section>
 
-      <section className="theme-role-coverage grid gap-3 sm:grid-cols-3">
-        <CoverageMetric icon={<ShieldCheck className="h-4 w-4" />} label="Support classifications" value={supportCount} tone="text-emerald-300" />
-        <CoverageMetric icon={<Swords className="h-4 w-4" />} label="Damage classifications" value={damageCount} tone="text-orange-300" />
-        <CoverageMetric icon={<Users className="h-4 w-4" />} label="High-confidence roles" value={highConfidenceCount} tone="text-theme-accent-strong" />
-      </section>
-
-      <Panel title="Role Classifications" icon={<Users className="w-4 h-4" />}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="text-[10px] text-theme-muted uppercase font-bold tracking-wider border-b border-theme-border/50">
-                <RoleSortHeader label="Player" k="account" />
-                <RoleSortHeader label="Class" k="profession" />
-                <RoleSortHeader label="Role" k="role" />
-                <RoleSortHeader label="Score" k="supportScore" align="right" />
-                <RoleSortHeader label="Confidence" k="confidenceScore" align="right" />
-                <th className="px-2 py-2">Key Factors</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-theme-border/30 font-mono">
-              {roleRows.slice(0, 20).map((r) => {
-                const roleColor =
-                  r.role === "support" ? "text-emerald-400 bg-emerald-950/40 border-emerald-500/30"
-                  : r.role === "damage" ? "text-orange-400 bg-orange-950/40 border-orange-500/30"
-                  : "text-theme-muted bg-theme-surface-inset border-theme-border";
-                return (
-                  <tr key={r.account} className="hover:bg-theme-surface-elevated/55 transition-colors">
-                    <td className="px-2 py-2 text-theme-text font-semibold">{r.account}</td>
-                    <td className="px-2 py-2 text-theme-muted">{r.profession}</td>
-                    <td className="px-2 py-2"><span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${roleColor} uppercase`}>{r.role}</span></td>
-                    <td className="px-2 py-2 text-right text-theme-text/80">{r.supportScore.toFixed(1)}</td>
-                    <td className="px-2 py-2 text-right text-theme-muted">{(r.confidenceScore * 100).toFixed(0)}%</td>
-                    <td className="px-2 py-2 text-[10px] text-theme-muted">{r.factors.slice(0, 2).map((f) => f.metric).join(", ")}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      <Panel title="Role Confidence Review" subtitle={reviewCount > 0 ? `${reviewCount} classifications are below 50% confidence and are surfaced first for review.` : "Every role classification is at least 50% confidence."} icon={<Users className="h-4 w-4" />} action={`${filteredRoleRows.length} shown`} bodyClassName="p-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-theme-border/50 px-4 py-3">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter role classifications">
+            {(["all", "support", "damage", "review"] as RoleFilter[]).map((filter) => <button key={filter} type="button" aria-pressed={roleFilter === filter} onClick={() => setRoleFilter(filter)} className={`border px-3 py-1.5 text-[9px] font-black uppercase tracking-wider transition-colors ${roleFilter === filter ? "border-theme-accent/40 bg-theme-accent/10 text-theme-accent-strong" : "border-theme-border text-theme-muted hover:border-theme-accent/25 hover:text-theme-text"}`}>{filter}</button>)}
+          </div>
+          <label className="flex h-8 min-w-56 items-center gap-2 border border-theme-border bg-theme-surface-inset px-3 text-theme-muted focus-within:border-theme-accent/40"><Search className="h-3.5 w-3.5" /><input value={roleQuery} onChange={(event) => setRoleQuery(event.target.value)} placeholder="Player or profession" className="min-w-0 flex-1 bg-transparent text-xs text-theme-text outline-none placeholder:text-theme-muted" /></label>
         </div>
+        <div className="grid grid-cols-[1fr_4rem] gap-3 border-b border-theme-border/50 px-4 py-2 text-[9px] font-black uppercase tracking-wider text-theme-muted lg:grid-cols-[minmax(10rem,1.4fr)_minmax(7rem,0.8fr)_5rem_5rem_minmax(10rem,1fr)]"><span>Player</span><span className="hidden lg:block">Profession</span><span className="hidden lg:block">Role</span><span className="text-right">Confidence</span><span className="hidden lg:block">Evidence</span></div>
+        <BoundedDataRegion label={`Role confidence review, ${filteredRoleRows.length} players`} itemCount={filteredRoleRows.length} maxHeightClass="max-h-[26rem]" className="divide-y divide-theme-border/30">
+          {filteredRoleRows.map((row) => <button key={row.account} type="button" onClick={() => setSelectedProfession(row.profession)} className="grid w-full grid-cols-[1fr_4rem] items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-theme-surface-elevated/55 lg:grid-cols-[minmax(10rem,1.4fr)_minmax(7rem,0.8fr)_5rem_5rem_minmax(10rem,1fr)]">
+            <span className="min-w-0"><span className="block truncate text-xs font-bold text-theme-text">{row.account}</span><span className="mt-1 block truncate text-[9px] uppercase text-theme-muted lg:hidden">{row.profession} · {row.role}</span></span>
+            <span className="hidden min-w-0 items-center gap-2 text-xs text-theme-muted lg:flex"><ClassIcon name={row.profession} size="sm" /><span className="truncate">{row.profession}</span></span>
+            <span className={`hidden text-[9px] font-black uppercase lg:block ${row.role === "support" ? "text-emerald-300" : "text-orange-300"}`}>{row.role}</span>
+            <span className={`text-right font-mono text-xs font-black ${row.confidenceScore < 0.5 ? "text-amber-300" : "text-theme-text/80"}`}>{Math.round(row.confidenceScore * 100)}%</span>
+            <span className="hidden truncate text-[10px] text-theme-muted lg:block">{row.factors.slice(0, 2).map((factor) => factor.metric).join(", ") || "Limited evidence"}</span>
+          </button>)}
+          {filteredRoleRows.length === 0 && <div className="px-4 py-8 text-center text-xs text-theme-muted">No role classifications match this filter.</div>}
+        </BoundedDataRegion>
       </Panel>
     </div>
   );
 }
 
-function CoverageMetric({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number; tone: string }) {
-  return <div className="theme-dossier-metric flex items-center justify-between border-l-2 border-theme-accent/30 bg-theme-surface-inset/55 px-4 py-3"><div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-theme-muted">{icon}{label}</div><div className={`font-mono text-2xl font-black ${tone}`}>{value}</div></div>;
+function RoleMetric({ icon, label, value, detail, tone = "text-theme-accent-strong" }: { icon: React.ReactNode; label: string; value: string; detail: string; tone?: string }) {
+  return <div className="theme-dossier-metric flex min-h-20 items-center justify-between gap-3 border-l-2 border-theme-accent/30 bg-theme-surface-inset/55 px-4 py-3"><div><div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-wider text-theme-muted">{icon}{label}</div><div className={`mt-1 font-mono text-2xl font-black ${tone}`}>{value}</div></div><span className="max-w-24 text-right text-[9px] uppercase leading-4 text-theme-muted">{detail}</span></div>;
+}
+
+function CompactValue({ label, value }: { label: string; value: string }) {
+  return <div><div className="text-[9px] font-black uppercase text-theme-muted">{label}</div><div className="mt-1 font-mono text-xl font-black text-theme-text">{value}</div></div>;
 }
