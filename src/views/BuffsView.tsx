@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
-import { profChip, relativeStackColor } from "../utils/format";
+import { relativeStackColor } from "../utils/format";
 import Panel from "../components/ui/Panel";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import { Sparkles } from "lucide-react";
 import type { BoonUptimeData } from "../types/report";
 import { BUFF_TAB_ORDER } from "../lib/bridge-metrics/boonGeneration";
@@ -175,9 +176,7 @@ export default function BuffsView() {
                     {row.account}
                   </td>
                   <td className="px-2 py-2.5">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(row.profession)}`}>
-                      {row.profession}
-                    </span>
+                    <ProfessionIdentity profession={row.profession} />
                   </td>
                   <td className="px-2 py-2.5 text-right">
                     <PlayerSampleCell sample={row.sample} />

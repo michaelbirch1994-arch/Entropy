@@ -1,5 +1,6 @@
 import Panel from "../components/ui/Panel";
-import { fmtDur, fmtFixed, fmtNum, profChip } from "../utils/format";
+import { fmtDur, fmtFixed, fmtNum } from "../utils/format";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import type { CommanderRow, FightRow } from "../types/report";
 import {
   Activity,
@@ -63,7 +64,7 @@ export default function CommanderStatsView({ commander, fightBreakdown }: Comman
                 {commander.characterNames.join(", ") || commander.account}
               </h2>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className={`border px-2 py-0.5 text-[10px] font-bold ${profChip(commander.profession)}`}>{commander.profession}</span>
+                <ProfessionIdentity profession={commander.profession} />
                 <span className="break-all font-mono text-[11px] text-slate-500">{commander.account}</span>
               </div>
             </div>

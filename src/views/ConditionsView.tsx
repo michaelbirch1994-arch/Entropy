@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
-import ProfessionIcon from "../components/ui/ProfessionIcon";
-import { fmtCompact, fmtNum, profChip } from "../utils/format";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
+import { fmtCompact, fmtNum } from "../utils/format";
 import { NON_DAMAGING_CONDITIONS, getDefaultConditionIcon } from "../lib/bridge-metrics/conditionsMetrics";
 import { Skull } from "lucide-react";
 import {
@@ -51,12 +51,7 @@ function metricForTab(entry: { applications: number; damage: number }, tab: Tab)
 }
 
 function ClassCell({ profession }: { profession: string }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(profession)}`}>
-      <ProfessionIcon profession={profession} className="w-3.5 h-3.5 shrink-0" />
-      {profession}
-    </span>
-  );
+  return <ProfessionIdentity profession={profession} />;
 }
 
 function ConditionIconTick(props: any) {

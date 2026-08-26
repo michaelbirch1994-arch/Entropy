@@ -1,5 +1,5 @@
 
-import { getPlayerCleanses, getPlayerStrips, getPlayerOutgoingInterrupts, getPlayerDamageTaken, getPlayerBreakbarDamage, getPlayerBlocked, getPlayerEvaded, getPlayerMissed, getTargetStatTotal, resolveCommanderDistance, getVindicatorDodgeCasts, getPlayerDamage, getPlayerDps, getPlayerConditionDamage, getPlayerPowerDamage } from './dashboardMetrics';
+import { getPlayerCleanses, getPlayerStrips, getPlayerOutgoingInterrupts, getPlayerDamageTaken, getPlayerBreakbarDamage, getPlayerBlocked, getPlayerEvaded, getPlayerMissed, getTargetStatTotal, resolveCommanderDistance, getPlayerDodges, getVindicatorDodgeCasts, getPlayerDamage, getPlayerDps, getPlayerConditionDamage, getPlayerPowerDamage } from './dashboardMetrics';
 import { applySquadStabilityGeneration as applyStabilityGeneration, computeDownContribution as getPlayerDownContribution, computeSquadHealing as getPlayerSquadHealing, computeSquadBarrier as getPlayerSquadBarrier, computeOutgoingCrowdControl as getPlayerOutgoingCrowdControl } from './combatMetrics';
 import type { Player } from './dpsReportTypes';
 import type { DisruptionMethod } from './metricsSettings';
@@ -726,7 +726,7 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
                                     s.stackedLogCount++;
                     }
                     if (p.defenses?.[0]) {
-                                    s.dodges += (p.defenses[0].dodgeCount || 0) + getVindicatorDodgeCasts(p);
+                                    s.dodges += getPlayerDodges(p);
                                     s.downs += p.defenses[0].downCount || 0;
                                     s.deaths += p.defenses[0].deadCount || 0;
                     }
@@ -935,6 +935,10 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
                                                                                             : Number((p.defenses![0] as any)[m.field!] ?? 0);
                                                                     if (Number.isFinite(val)) s.defenseTotals[m.id] = (s.defenseTotals[m.id] || 0) + val;
                                                 });
+                                                const vindicatorDodges = getVindicatorDodgeCasts(p);
+                                                if (vindicatorDodges > 0) {
+                                                                    s.defenseTotals.dodgeCount = (s.defenseTotals.dodgeCount || 0) + vindicatorDodges;
+                                                }
                                 }
                     if (p.support?.[0]) {
                                     SUPPORT_METRICS.forEach(m => {

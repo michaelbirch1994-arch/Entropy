@@ -1,7 +1,7 @@
 import type { GeneralPlayer, LeaderboardEntry } from "../../types/report";
 import { getSampleReliability, sampleReliabilityClasses } from "../../lib/sampleReliability";
-import { fmtCompact, fmtDur, fmtNum, profChip, profStyle } from "../../utils/format";
-import ClassIcon from "./ClassIcon";
+import { fmtCompact, fmtDur, fmtNum, profStyle } from "../../utils/format";
+import ProfessionIdentity from "./ProfessionIdentity";
 
 interface LeaderboardTableProps {
   entries: LeaderboardEntry[];
@@ -55,10 +55,7 @@ export default function LeaderboardTable({ entries, metricLabel, compact = false
                 <td className={`px-2 py-2 font-bold ${e.rank <= 3 ? "text-theme-accent-strong" : "text-theme-muted"}`}>{e.rank}</td>
                 <td className="theme-table-player px-2 py-2 text-theme-text font-semibold whitespace-nowrap">{e.account}</td>
                 <td className="px-2 py-2">
-                  <span className={`theme-profession-chip inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(e.profession)}`}>
-                    <ClassIcon name={e.profession} size="xs" />
-                    {e.profession}
-                  </span>
+                  <ProfessionIdentity profession={e.profession} />
                 </td>
                 <td className="theme-table-value px-2 py-2 text-right text-theme-text font-bold whitespace-nowrap tabular-nums">
                   {compact ? fmtCompact(e.value) : fmtNum(e.value)}

@@ -11,8 +11,9 @@ import {
   currentMvpStreak,
   type PlayerProfile,
 } from "../lib/playerProfileStore";
-import { fmtCompact, fmtFixedGrouped, fmtNum, profChip } from "../utils/format";
+import { fmtCompact, fmtFixedGrouped, fmtNum } from "../utils/format";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { CHART_COLORS, TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE } from "../utils/chartTheme";
 
@@ -204,10 +205,7 @@ export default function PlayerProfilesView() {
                         <td className="p-2.5 text-theme-text font-semibold whitespace-nowrap">{p.account}</td>
                         <td className="p-2.5">
                           {main ? (
-                            <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(main)}`}>
-                              <ProfessionIcon profession={main} className="w-3.5 h-3.5" />
-                              {main}
-                            </span>
+                            <ProfessionIdentity profession={main} />
                           ) : (
                             "—"
                           )}
@@ -338,12 +336,9 @@ export default function PlayerProfilesView() {
               {Object.entries(selectedProfile.classCounts)
                 .sort((a, b) => b[1] - a[1])
                 .map(([cls, count]) => (
-                  <span
-                    key={cls}
-                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold border ${profChip(cls)}`}
-                  >
-                    <ProfessionIcon profession={cls} className="w-3.5 h-3.5" />
-                    {cls} <span className="opacity-70">×{count}</span>
+                  <span key={cls} className="inline-flex items-center gap-1.5">
+                    <ProfessionIdentity profession={cls} />
+                    <span className="text-[10px] font-bold text-theme-muted">x{count}</span>
                   </span>
                 ))}
             </div>

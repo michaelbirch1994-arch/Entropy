@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
-import { fmtNum, fmtDur, profChip, profStyle } from "../utils/format";
+import { fmtNum, fmtDur, profStyle } from "../utils/format";
 import { Users, Clock, Heart, Eye } from "lucide-react";
-import ProfessionIcon from "../components/ui/ProfessionIcon";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 
 type SortKey = "account" | "characters" | "classes" | "combat" | "squad" | "uptime";
 type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
@@ -90,10 +90,7 @@ export default function RosterView() {
   );
 
   const PlayerClassChip = ({ profession }: { profession: string }) => (
-    <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(profession)}`}>
-      <ProfessionIcon profession={profession} className="h-3.5 w-3.5 shrink-0" />
-      {profession}
-    </span>
+    <ProfessionIdentity profession={profession} />
   );
 
   return (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getPlayerConditionDamage, getPlayerPowerDamage } from "../bridge-metrics/dashboardMetrics";
+import { getPlayerConditionDamage, getPlayerDodges, getPlayerPowerDamage, getVindicatorDodgeCasts, VINDICATOR_DODGE_SKILL_ID } from "../bridge-metrics/dashboardMetrics";
 
 describe("dashboard damage splits", () => {
   it("sums condition and power damage across player targets", () => {
@@ -23,5 +23,26 @@ describe("dashboard damage splits", () => {
 
     expect(getPlayerConditionDamage(player)).toBe(2500);
     expect(getPlayerPowerDamage(player)).toBe(7500);
+  });
+});
+
+describe("dashboard dodge totals", () => {
+  it("recovers Vindicator Death Drop casts as dodges", () => {
+    const player = {
+      defenses: [{ dodgeCount: 0 }],
+      rotation: [{ id: VINDICATOR_DODGE_SKILL_ID, skills: [{}, {}, {}] }],
+    } as any;
+
+    expect(getVindicatorDodgeCasts(player)).toBe(3);
+    expect(getPlayerDodges(player)).toBe(3);
+  });
+
+  it("adds recovered Vindicator dodges to any raw dodge count", () => {
+    const player = {
+      defenses: [{ dodgeCount: 2 }],
+      rotation: [{ id: VINDICATOR_DODGE_SKILL_ID, skills: [{}, {}, {}] }],
+    } as any;
+
+    expect(getPlayerDodges(player)).toBe(5);
   });
 });

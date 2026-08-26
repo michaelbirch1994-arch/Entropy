@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
-import { profChip } from "../utils/format";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import { Activity, Clock, Repeat2, Search } from "lucide-react";
 import PlayerSampleCell from "../components/ui/PlayerSampleCell";
 import BoundedDataRegion from "../components/ui/BoundedDataRegion";
@@ -173,9 +173,7 @@ export default function RotationsView() {
                     <span className={`truncate text-[11px] font-semibold ${isActive ? "text-theme-accentStrong" : "text-slate-300"}`}>
                       {p.account}
                     </span>
-                    <span className={`px-1 py-0 rounded text-[9px] font-bold border w-fit ${profChip(p.profession)}`}>
-                      {p.profession}
-                    </span>
+                    <ProfessionIdentity profession={p.profession} size="sm" className="mt-0.5 w-fit" />
                     {sample && reliability ? (
                       <span className="mt-0.5 truncate text-[9px] text-theme-muted" title={reliability.detail}>
                         {sample.fights}/{sample.totalFights} fights · <span className={`rounded-full border px-1 py-px ${sampleReliabilityClasses(reliability.level)}`}>{reliability.label}</span>
@@ -227,9 +225,7 @@ export default function RotationsView() {
           icon={<Clock className="w-3.5 h-3.5" />}
           action={
             <div className="flex items-center gap-3">
-              <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(activePlayer.profession)}`}>
-                {activePlayer.profession}
-              </span>
+              <ProfessionIdentity profession={activePlayer.profession} />
               {activeSample && <PlayerSampleCell sample={activeSample} />}
             </div>
           }

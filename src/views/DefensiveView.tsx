@@ -2,11 +2,11 @@ import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
-import { fmtNum, fmtCompact, fmtFixed, profChip } from "../utils/format";
+import { fmtNum, fmtCompact, fmtFixed } from "../utils/format";
 import { Shield, Heart, Droplet, Zap, Wind, Target } from "lucide-react";
 import { useStatsDisplay, pickStatsDisplayValue } from "../store/StatsDisplayContext";
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
-import ProfessionIcon from "../components/ui/ProfessionIcon";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import PlayerSampleCell from "../components/ui/PlayerSampleCell";
 import { resolvePlayerSampleContext } from "../lib/playerSampleContext";
 import { normalizeDefensivePlayerRows } from "../lib/defensivePlayerNormalization";
@@ -262,10 +262,7 @@ export default function DefensiveView() {
   );
 
   const ClassCell = ({ profession }: { profession: string }) => (
-    <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(profession)}`}>
-      <ProfessionIcon profession={profession} className="w-3.5 h-3.5 shrink-0" />
-      {profession}
-    </span>
+    <ProfessionIdentity profession={profession} />
   );
 
   return (

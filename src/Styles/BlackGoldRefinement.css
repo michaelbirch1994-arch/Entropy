@@ -476,6 +476,14 @@
     0 40px 88px -54px rgba(0, 0, 0, 1) !important;
 }
 
+.theme-main[data-workspace-tone="overview"] :is(.theme-player-card-head, .theme-player-card-body),
+.theme-main[data-workspace-tone="squad"] :is(.theme-player-card-head, .theme-player-card-body),
+.theme-main[data-workspace-tone="performance"] :is(.theme-player-card-head, .theme-player-card-body) {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
 @media (max-width: 800px) {
   .theme-cinematic-stage::before {
     top: 22%;

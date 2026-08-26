@@ -5,7 +5,8 @@ import { useStatsDisplay } from "../store/StatsDisplayContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
 import PlayerSampleCell from "../components/ui/PlayerSampleCell";
-import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped, profChip } from "../utils/format";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
+import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped } from "../utils/format";
 import type { OffensePlayer } from "../types/report";
 import { resolvePlayerSampleContext, type PlayerSampleContextData } from "../lib/playerSampleContext";
 import { rateByActiveMs } from "../lib/playerRate";
@@ -357,9 +358,7 @@ export default function OffensiveView() {
                     {/* Player */}
                     <td className="p-2.5">
                       <div className="flex items-center gap-2">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(p.profession)}`}>
-                          {p.profession}
-                        </span>
+                        <ProfessionIdentity profession={p.profession} />
                         <span className="text-slate-200 font-semibold whitespace-nowrap">{p.account}</span>
                       </div>
                     </td>
