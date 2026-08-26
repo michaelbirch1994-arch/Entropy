@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useReport } from "../store/ReportContext";
 import { fmtCompact, fmtNum } from "../utils/format";
 import type { TopSkill, TopHealingSource } from "../types/report";
@@ -191,57 +192,6 @@ function SkillSampleContext({
   );
 }
 
-function PerFightRange({ sample, label }: { sample: SkillSample; label: string }) {
-  if (sample.fightCount === undefined || sample.fightCount <= 0) return null;
-  const maxContext = fightContextLabel(sample.perFightMaxContext);
-  const average = sample.perFightAverage ?? 0;
-  const peak = sample.perFightMax ?? 0;
-  const spikeRatio = average > 0 ? peak / average : 0;
-  const isSpikeHeavy = (sample.fightCount ?? 0) >= 3 && spikeRatio >= 2.5;
-  return (
-    <div className="mt-2 rounded-lg border border-theme-border/70 bg-theme-surface-inset/55 p-2">
-      <div className="grid grid-cols-3 gap-2 text-center">
-      <div>
-        <div className="text-[8px] uppercase tracking-wider text-theme-faint">Min {label}</div>
-        <div className="mt-0.5 font-bold text-theme-muted">{fmtCompact(sample.perFightMin ?? 0)}</div>
-      </div>
-      <div>
-        <div className="text-[8px] uppercase tracking-wider text-theme-faint">Avg {label}</div>
-        <div className="mt-0.5 font-bold text-theme-text">{fmtCompact(sample.perFightAverage ?? 0)}</div>
-      </div>
-      <div>
-        <div className="text-[8px] uppercase tracking-wider text-theme-faint">Max {label}</div>
-        <div className="mt-0.5 font-bold text-amber-300">{fmtCompact(sample.perFightMax ?? 0)}</div>
-      </div>
-      </div>
-      {maxContext && (
-        <div className="mt-2 border-t border-theme-border/60 pt-2 text-[10px] text-theme-muted">
-          Peak fight: <span className="font-bold text-amber-300">{maxContext}</span>
-        </div>
-      )}
-      {isSpikeHeavy && (
-        <div
-          className="mt-2 rounded-md border border-amber-400/20 bg-amber-500/[0.06] px-2 py-1.5 text-[10px] text-amber-200/90"
-          title="The best fight is much higher than this source's average fight, so judge the total with the sample and average beside it."
-        >
-          Spike-heavy source: peak is {spikeRatio.toFixed(1)}× its average fight.
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ActiveRateLine({ label, value, activeMs }: { label: string; value: number; activeMs: number | undefined }) {
-  const rate = perActiveMinute(value, activeMs);
-  if (!rate) return null;
-  return (
-    <div className="mt-2 flex items-center justify-between rounded-lg border border-theme-accent/15 bg-theme-accent/[0.035] px-2 py-1.5">
-      <span className="text-theme-muted">{label}</span>
-      <span className="font-bold text-theme-accent-strong">{rate}</span>
-    </div>
-  );
-}
-
 function ExtremeHitLine({ label, hit, tone }: { label: string; hit: ExtremeContext; tone: string }) {
   const context = fightContextLabel(hit);
   return (
@@ -258,6 +208,70 @@ function ExtremeHitLine({ label, hit, tone }: { label: string; hit: ExtremeConte
         </div>
       )}
     </div>
+  );
+}
+
+function ExpandedMetricTile({ label, value, tone = "text-theme-text" }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className="rounded-lg border border-theme-border/70 bg-theme-surface-inset/65 px-3 py-2">
+      <div className="text-[8px] font-black uppercase tracking-[0.18em] text-theme-faint">{label}</div>
+      <div className={`mt-1 font-mono text-sm font-black ${tone}`}>{value}</div>
+    </div>
+  );
+}
+
+function SkillExpandedPanel({
+  biggestHitLabel,
+  biggestHit,
+  biggestHitTone,
+  rateLabel,
+  totalValue,
+  activeMs,
+  sample,
+  rangeLabel,
+}: {
+  biggestHitLabel: string;
+  biggestHit?: ExtremeContext;
+  biggestHitTone: string;
+  rateLabel: string;
+  totalValue: number;
+  activeMs?: number;
+  sample: SkillSample;
+  rangeLabel: string;
+}) {
+  const rate = perActiveMinute(totalValue, activeMs);
+  const maxContext = fightContextLabel(sample.perFightMaxContext);
+
+  return (
+    <motion.div
+      key="expanded-skill-detail"
+      initial={{ height: 0, opacity: 0, y: -8 }}
+      animate={{ height: "auto", opacity: 1, y: 0 }}
+      exit={{ height: 0, opacity: 0, y: -8 }}
+      transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+      className="overflow-hidden"
+    >
+      <div className="mt-3 border-t border-theme-border/60 pt-3 text-[10px] font-mono">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <ExpandedMetricTile label={`Min ${rangeLabel}`} value={fmtCompact(sample.perFightMin ?? 0)} />
+          <ExpandedMetricTile label={`Avg ${rangeLabel}`} value={fmtCompact(sample.perFightAverage ?? 0)} />
+          <ExpandedMetricTile label={`Max ${rangeLabel}`} value={fmtCompact(sample.perFightMax ?? 0)} tone="text-amber-300" />
+        </div>
+
+        <div className="mt-3 rounded-xl border border-theme-border/70 bg-theme-surface-inset/50 p-3">
+          {biggestHit ? (
+            <ExtremeHitLine label={biggestHitLabel} hit={biggestHit} tone={biggestHitTone} />
+          ) : (
+            <span className="text-theme-faint">No single-hit data available</span>
+          )}
+        </div>
+
+        <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+          {rate && <ExpandedMetricTile label={rateLabel} value={rate} tone="text-theme-accent-strong" />}
+          {maxContext && <ExpandedMetricTile label="Peak Fight" value={maxContext} tone="text-amber-300" />}
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -507,17 +521,20 @@ export default function TopSkillsView() {
                       />
                     </div>
                   </div>
-                {expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}` && (
-                  <div className="mt-3 pt-3 border-t border-theme-border/60 text-[10px] font-mono">
-                    {hs.biggestHit ? (
-                      <ExtremeHitLine label="Biggest single heal" hit={hs.biggestHit} tone="text-emerald-400" />
-                    ) : (
-                      <span className="text-theme-faint">No single-hit data available</span>
-                    )}
-                    <ActiveRateLine label="Healing rate by contributor active time" value={hs.healing} activeMs={hs.activeMs} />
-                    <PerFightRange sample={hs} label="healing" />
-                  </div>
-                )}
+                <AnimatePresence initial={false}>
+                  {expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}` && (
+                    <SkillExpandedPanel
+                      biggestHitLabel="Biggest single heal"
+                      biggestHit={hs.biggestHit ?? undefined}
+                      biggestHitTone="text-emerald-400"
+                      rateLabel="Healing / active min"
+                      totalValue={hs.healing}
+                      activeMs={hs.activeMs}
+                      sample={hs}
+                      rangeLabel="healing"
+                    />
+                  )}
+                </AnimatePresence>
                 </button>
               );
             })}
@@ -666,25 +683,20 @@ export default function TopSkillsView() {
                   </div>
                 )}
               </div>
-                {expandedKey === `${tab}:${sk.id}` && (
-                  <div className="mt-3 pt-3 border-t border-theme-border/60 text-[10px] font-mono">
-                    {sk.biggestHit ? (
-                      <ExtremeHitLine
-                        label={tab === "incoming" ? "Biggest single hit taken" : "Biggest single hit"}
-                        hit={sk.biggestHit}
-                        tone="text-amber-400"
-                      />
-                    ) : (
-                      <span className="text-theme-faint">No single-hit data available</span>
-                    )}
-                    <ActiveRateLine
-                      label={tab === "incoming" ? "Damage taken by affected active time" : "Damage by contributor active time"}
-                      value={sk.damage}
+                <AnimatePresence initial={false}>
+                  {expandedKey === `${tab}:${sk.id}` && (
+                    <SkillExpandedPanel
+                      biggestHitLabel={tab === "incoming" ? "Biggest single hit taken" : "Biggest single hit"}
+                      biggestHit={sk.biggestHit ?? undefined}
+                      biggestHitTone="text-amber-400"
+                      rateLabel={tab === "incoming" ? "Damage taken / active min" : "Damage / active min"}
+                      totalValue={sk.damage}
                       activeMs={sk.activeMs}
+                      sample={sk}
+                      rangeLabel="damage"
                     />
-                    <PerFightRange sample={sk} label="damage" />
-                  </div>
-                )}
+                  )}
+                </AnimatePresence>
             </button>
           );
         })}
