@@ -2,6 +2,7 @@ import { memo } from "react";
 import { Activity, Crosshair, Shield, Swords, Users } from "lucide-react";
 import type { ReplayData, ReplayEffectTrack, ReplayPlayerTrack } from "../../lib/parseReplayData";
 import { distanceBetween, interpolatePosition, isInInterval } from "../../lib/parseReplayData";
+import ProfessionIdentity from "../ui/ProfessionIdentity";
 
 const CONTROL_EFFECT_NAMES = new Set([
   "fear",
@@ -126,9 +127,7 @@ function ReplayTacticalStatePanel({
           <div className="mt-1 truncate text-sm font-black text-slate-100">{player.name}</div>
           <div className="truncate text-[10px] text-slate-500">{player.account}</div>
         </div>
-        <span className="shrink-0 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-bold text-slate-300">
-          {player.profession}
-        </span>
+        <ProfessionIdentity profession={player.profession} size="sm" className="shrink-0" />
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
