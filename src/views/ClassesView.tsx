@@ -5,7 +5,6 @@ import ClassIcon from "../components/ui/ClassIcon";
 import Panel from "../components/ui/Panel";
 import { buildCompositionComparison, summarizeProfessionPresence } from "../lib/compositionInsights";
 import { useReport } from "../store/ReportContext";
-import { profStyle } from "../utils/format";
 
 type RoleFilter = "all" | "support" | "damage" | "review";
 
@@ -76,7 +75,7 @@ export default function ClassesView() {
         <Panel title={selectedName ?? "Profession Coverage"} icon={<Activity className="h-4 w-4" />} action={selected ? `${selected.squadCount} squad · ${selected.enemyCount} enemy obs.` : undefined}>
           {selectedName ? <div className="space-y-5">
             <div className="grid items-center gap-4 border-b border-theme-border/50 pb-4 md:grid-cols-[auto_1fr_auto]">
-              <div className={`grid h-12 w-12 place-items-center border ${profStyle(selectedName).border} ${profStyle(selectedName).bg}`}><ClassIcon name={selectedName} /></div>
+              <div className="grid h-12 w-12 place-items-center overflow-visible"><ClassIcon name={selectedName} size="lg" /></div>
               <div><div className="text-xl font-black uppercase text-theme-text">{selectedName}</div><div className="mt-1 text-xs text-theme-muted">Present in {presence.fightsPresent} of {presence.totalFights} fights; absent from {presence.fightsAbsent}.</div></div>
               <div className="grid grid-cols-2 gap-5 text-right"><CompactValue label="Average" value={presence.averagePerFight.toFixed(1)} /><CompactValue label="Peak" value={String(presence.peakCount)} /></div>
             </div>

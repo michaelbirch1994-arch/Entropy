@@ -123,7 +123,7 @@ export function profStyle(profession: string) {
 
 export function profChip(profession: string): string {
     const s = profStyle(profession);
-    return `theme-profession-chip ${s.bg} ${s.text} ${s.border}`;
+    return `theme-profession-chip bg-transparent ${s.text} border-transparent`;
 }
 
 export function profIcon(profession: string): string {

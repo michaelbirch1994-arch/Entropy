@@ -1,12 +1,13 @@
 import { motion } from "framer-motion";
 import { useReport } from "../store/ReportContext";
-import { fmtCompact, fmtNum, fmtFixed, fmtFixedGrouped, profChip } from "../utils/format";
+import { fmtCompact, fmtNum, fmtFixed, fmtFixedGrouped } from "../utils/format";
 import type { MvpCard, MvpTopStat } from "../types/report";
 import { Swords, Shield, Crown, Activity, Droplet, Zap, Target, Flame } from "lucide-react";
 import { generateFightRecap } from "../lib/generateFightRecap";
 import RecapPanel from "../components/ui/RecapPanel";
 import SynergyPanel from "../components/ui/SynergyPanel";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import { useView } from "../store/ViewContext";
 
 const ACCENT_STYLES = {
@@ -117,10 +118,7 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label, onOpen }: {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-black text-slate-100">{mvp.account}</h3>
-                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold border ${profChip(mvp.profession)}`}>
-                  <ProfessionIcon profession={mvp.profession} className="h-5 w-5" />
-                  {mvp.profession}
-                </span>
+                <ProfessionIdentity profession={mvp.profession} />
               </div>
               {mvp.reason && (
                 <div className={`${a.reason} text-xs font-semibold mt-1 italic`}>&#9733; "{mvp.reason}"</div>

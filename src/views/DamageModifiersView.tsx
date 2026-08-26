@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
-import { profChip, fmtNum, fmtCompact } from "../utils/format";
+import { fmtNum, fmtCompact } from "../utils/format";
 import Panel from "../components/ui/Panel";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import { Percent, CircleCheck, Sparkles } from "lucide-react";
 import type { DamageModifierColumn } from "../types/report";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -264,9 +265,7 @@ export default function DamageModifiersView() {
                 const pct = Math.round((v.damage / total) * 100);
                 return (
                   <div key={`${row.account}-${row.profession}`} className="flex items-center gap-3">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(row.profession)} shrink-0`}>
-                      {row.profession}
-                    </span>
+                    <ProfessionIdentity profession={row.profession} className="shrink-0" />
                     <span className="text-xs font-semibold text-slate-200 w-32 truncate shrink-0">{row.account}</span>
                     <div className="flex-1 h-2 rounded-full bg-slate-800/60 overflow-hidden">
                       <div className="h-full bg-amber-500/70" style={{ width: `${Math.max(2, pct)}%` }} />
@@ -379,9 +378,7 @@ export default function DamageModifiersView() {
                     {row.account}
                   </td>
                   <td className="px-2 py-2.5">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(row.profession)}`}>
-                      {row.profession}
-                    </span>
+                    <ProfessionIdentity profession={row.profession} />
                   </td>
                   <td className="px-2 py-2.5 text-right">
                     <PlayerSampleCell sample={sampleFor(row)} />

@@ -5,7 +5,7 @@ import ClassIcon from "../components/ui/ClassIcon";
 import Panel from "../components/ui/Panel";
 import { buildCompositionComparison } from "../lib/compositionInsights";
 import { useReport } from "../store/ReportContext";
-import { fmtNum, profStyle } from "../utils/format";
+import { fmtNum } from "../utils/format";
 
 export default function CompositionView() {
   const { report } = useReport();
@@ -75,7 +75,7 @@ export default function CompositionView() {
             {selected ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-3 border-b border-theme-border/50 pb-4">
-                  <div className={`grid h-11 w-11 place-items-center border ${profStyle(selected.name).border} ${profStyle(selected.name).bg}`}><ClassIcon name={selected.name} /></div>
+                  <div className="grid h-11 w-11 place-items-center overflow-visible"><ClassIcon name={selected.name} size="lg" /></div>
                   <div><div className="text-lg font-black uppercase text-theme-text">{selected.name}</div><div className="text-[10px] uppercase text-theme-muted">selected profession</div></div>
                 </div>
                 <div className="grid grid-cols-2 gap-x-5 gap-y-3">

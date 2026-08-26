@@ -3,7 +3,8 @@ import { useReport } from "../store/ReportContext";
 import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
 import BoundedDataRegion from "../components/ui/BoundedDataRegion";
-import { fmtCompact, profChip } from "../utils/format";
+import { fmtCompact } from "../utils/format";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import type { DeathRecapEntry, DeathRecapHit } from "../types/report";
 import { Skull, ArrowDown, Swords, ShieldAlert, Film, BrainCircuit } from "lucide-react";
 import {
@@ -95,9 +96,7 @@ function DeathCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-bold text-slate-100">{entry.account}</span>
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(entry.profession)}`}>
-              {entry.profession}
-            </span>
+            <ProfessionIdentity profession={entry.profession} />
             {focused && (
               <span className="rounded-full border border-theme-focus bg-theme-accentDim px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-theme-accentStrong">
                 Intelligence evidence

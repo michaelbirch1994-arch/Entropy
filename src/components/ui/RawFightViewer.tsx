@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { X, Swords, Users, Shield, Crosshair, ExternalLink } from "lucide-react";
 import { extractFightPlayers, type RawFightLog, type RawFightSummary } from "../../types/rawFight";
-import { fmtCompact, profChip } from "../../utils/format";
+import { fmtCompact } from "../../utils/format";
 import StatCard from "./StatCard";
 import Panel from "./Panel";
-import ClassIcon from "./ClassIcon";
+import ProfessionIdentity from "./ProfessionIdentity";
 
 type SortKey = "dps" | "damage" | "damageTaken" | "downCount" | "deadCount" | "cleanses" | "strips" | "resurrects";
 
@@ -151,10 +151,7 @@ export default function RawFightViewer({ summary, log, onClose }: RawFightViewer
                         )}
                       </td>
                       <td className="px-3 py-2">
-                        <span className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold border ${profChip(p.profession)}`}>
-                          <ClassIcon name={p.profession} size="xs" />
-                          {p.profession}
-                        </span>
+                        <ProfessionIdentity profession={p.profession} />
                       </td>
                       <td className="px-3 py-2 text-center text-slate-500">{p.group || "-"}</td>
                       <td className="px-3 py-2 text-right text-slate-100 font-bold">{fmtCompact(p.dps)}</td>

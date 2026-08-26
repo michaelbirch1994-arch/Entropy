@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
-import ProfessionIcon from "../components/ui/ProfessionIcon";
-import { profChip } from "../utils/format";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import { getBoonMetricValue, BUFF_TAB_ORDER } from "../lib/bridge-metrics/boonGeneration";
 import { Users, Sparkles } from "lucide-react";
 
@@ -165,9 +164,7 @@ export default function PartyBoonsView() {
                           <tr key={account} className="border-t border-slate-800/40 hover:bg-white/[0.02] transition-colors">
                             <td className="p-2 sticky left-0 bg-[#0a0e1f]/95">
                               <div className="flex items-center gap-2">
-                                <span className={`inline-flex items-center rounded border pt-0.5 pr-0.5 pb-0.5 pl-1 ${profChip(meta?.profession ?? "Unknown")}`}>
-                                  <ProfessionIcon profession={meta?.profession ?? "Unknown"} className="h-3.5 w-3.5 shrink-0" />
-                                </span>
+                                <ProfessionIdentity profession={meta?.profession ?? "Unknown"} />
                                 <span className="truncate text-slate-200 font-semibold">{meta?.characterName ?? account}</span>
                               </div>
                             </td>
