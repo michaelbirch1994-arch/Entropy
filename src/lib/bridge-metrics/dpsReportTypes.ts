@@ -162,6 +162,10 @@ export interface Player {
 export interface StatsAll {
         dps: number;
         damage: number;
+        condiDps?: number;
+        condiDamage?: number;
+        powerDps?: number;
+        powerDamage?: number;
         breakbarDamage: number;
         downContribution?: number; // Added back as optional
     stackDist?: number;
@@ -244,6 +248,7 @@ export interface TotalDamageDist {
         min: number;
         max: number;
         downContribution?: number;
+        indirectDamage?: boolean;
 }
 
 export interface TotalDamageTaken {

@@ -11,11 +11,12 @@ import { fmtCompact, fmtDur, fmtNum, profChip, profStyle } from "../utils/format
 import { getSampleReliability, sampleReliabilityClasses } from "../lib/sampleReliability";
 import { buildNormalizedTopPlayerSources, mergePlayerSkillBreakdownsForAccount, normalizeTopPlayersLeaderboard } from "../lib/topPlayersNormalization";
 import { buildNormalizedTopPlayerSourceLeaderboards } from "../lib/topPlayerSourceLeaderboards";
-import { ChevronDown, ChevronUp, Trophy, Swords, Heart, Shield, Zap, Droplet, Target, Wind } from "lucide-react";
+import { ChevronDown, ChevronUp, Trophy, Swords, Heart, Shield, Zap, Droplet, Target, Wind, Flame } from "lucide-react";
 
 type MetricKey =
   | "dps"
   | "damage"
+  | "condiDamage"
   | "downContrib"
   | "healing"
   | "barrier"
@@ -30,6 +31,7 @@ type MetricKey =
 const METRICS: { key: MetricKey; label: string; icon: typeof Trophy; unit?: string }[] = [
   { key: "dps", label: "DPS", icon: Swords, unit: "" },
   { key: "damage", label: "Total Damage", icon: Swords },
+  { key: "condiDamage", label: "Condition Damage", icon: Flame },
   { key: "downContrib", label: "Down Contribution", icon: Trophy },
   { key: "healing", label: "Healing", icon: Heart },
   { key: "barrier", label: "Barrier", icon: Shield },
@@ -45,6 +47,7 @@ const METRICS: { key: MetricKey; label: string; icon: typeof Trophy; unit?: stri
 const METRIC_GLOW: Record<MetricKey, string> = {
   dps: "neon-offense",
   damage: "neon-offense",
+  condiDamage: "neon-offense",
   downContrib: "neon-offense",
   healing: "neon-healing",
   barrier: "neon-barrier",
@@ -132,6 +135,12 @@ function buildPlayerSourceBreakdown({
   const supportTotals = support?.supportTotals;
   const defenseTotals = defense?.defenseTotals;
   const damage = pickDamageScopeValue(damageScope, offenseTotals?.damage, offenseTotals?.damageAll);
+  const recordedConditionDamage = pickDamageScopeValue(damageScope, offenseTotals?.conditionDamage, offenseTotals?.conditionDamageAll);
+  const conditionDamage = recordedConditionDamage || findLeaderboardValue(leaderboards, "condiDamage", account);
+  const powerDamage = pickDamageScopeValue(damageScope, offenseTotals?.powerDamage, offenseTotals?.powerDamageAll);
+  const conditionShare = damage > 0 && recordedConditionDamage > 0 && recordedConditionDamage <= damage
+    ? (recordedConditionDamage / damage) * 100
+    : null;
   const healingTotal = pickAllyScopeValue(allyScope, healingTotals?.healing, healingTotals?.squadHealing);
   const barrierTotal = pickAllyScopeValue(allyScope, healingTotals?.barrier, healingTotals?.squadBarrier);
 
@@ -139,6 +148,8 @@ function buildPlayerSourceBreakdown({
     damage: rows(
       ...(skillBreakdown?.damage.slice(0, 5).map((skill) => positiveRow(skill.name, skill.value, "bg-orange-400", skill.icon, skill.hits)) ?? []),
       positiveRow("Total damage", damage, "bg-orange-400"),
+      positiveRow(conditionShare === null ? "Condition damage" : `Condition damage (${conditionShare.toFixed(1)}%)`, conditionDamage, "bg-purple-400"),
+      positiveRow("Power damage", powerDamage, "bg-orange-300"),
       positiveRow("Direct damage", offenseTotals?.directDmg, "bg-amber-400"),
       positiveRow("Critical damage", offenseTotals?.criticalDmg, "bg-yellow-300"),
       positiveRow("Down contribution", offenseTotals?.downContribution, "bg-amber-400"),

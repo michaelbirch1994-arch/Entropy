@@ -1,5 +1,5 @@
 
-import { getPlayerCleanses, getPlayerStrips, getPlayerOutgoingInterrupts, getPlayerDamageTaken, getPlayerBreakbarDamage, getPlayerBlocked, getPlayerEvaded, getPlayerMissed, getTargetStatTotal, resolveCommanderDistance, getVindicatorDodgeCasts, getPlayerDamage, getPlayerDps } from './dashboardMetrics';
+import { getPlayerCleanses, getPlayerStrips, getPlayerOutgoingInterrupts, getPlayerDamageTaken, getPlayerBreakbarDamage, getPlayerBlocked, getPlayerEvaded, getPlayerMissed, getTargetStatTotal, resolveCommanderDistance, getVindicatorDodgeCasts, getPlayerDamage, getPlayerDps, getPlayerConditionDamage, getPlayerPowerDamage } from './dashboardMetrics';
 import { applySquadStabilityGeneration as applyStabilityGeneration, computeDownContribution as getPlayerDownContribution, computeSquadHealing as getPlayerSquadHealing, computeSquadBarrier as getPlayerSquadBarrier, computeOutgoingCrowdControl as getPlayerOutgoingCrowdControl } from './combatMetrics';
 import type { Player } from './dpsReportTypes';
 import type { DisruptionMethod } from './metricsSettings';
@@ -1070,6 +1070,10 @@ export const ingestLogPlayerData = (log: any, acc: PlayerAggregationAccumulators
                                 if (dpsAll) {
                                                 s.offenseTotals.damageAll = (s.offenseTotals.damageAll || 0) + (dpsAll.damage || 0);
                                                 s.offenseTotals.damage = (s.offenseTotals.damage || 0) - (dpsAll.damage || 0) + getPlayerDamage(p);
+                                                s.offenseTotals.conditionDamageAll = (s.offenseTotals.conditionDamageAll || 0) + Number(p.dpsAll?.[0]?.condiDamage || 0);
+                                                s.offenseTotals.powerDamageAll = (s.offenseTotals.powerDamageAll || 0) + Number(p.dpsAll?.[0]?.powerDamage || 0);
+                                                s.offenseTotals.conditionDamage = (s.offenseTotals.conditionDamage || 0) + getPlayerConditionDamage(p);
+                                                s.offenseTotals.powerDamage = (s.offenseTotals.powerDamage || 0) + getPlayerPowerDamage(p);
                                 }
                     // Use computeDownContribution for offenseTotals.downContribution — it falls back to
                                 // totalDamageDist when EI uses the aggregate "Enemy Players" target (which zeroes statsTargets.downContribution)

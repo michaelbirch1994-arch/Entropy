@@ -91,6 +91,14 @@ export interface OffenseTotals {
     damage: number;
     /** Raw all-inclusive damage (EI's "All" column) including siege/NPC/gate hits - only populated for reports built after the sitewide All/Players toggle was added. */
   damageAll?: number;
+    /** Outgoing condition damage against the selected player-target scope. */
+  conditionDamage?: number;
+    /** Outgoing strike/power damage against the selected player-target scope. */
+  powerDamage?: number;
+    /** All-target condition damage, including non-player objectives when EI exposes it. */
+  conditionDamageAll?: number;
+    /** All-target strike/power damage, including non-player objectives when EI exposes it. */
+  powerDamageAll?: number;
     directDmg: number;
     connectedDamageCount: number;
     connectedDirectDamageCount: number;
