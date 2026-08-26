@@ -165,11 +165,20 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
   return (
     <div className="theme-cinematic-landing">
       <div className="theme-cinematic-scanline" aria-hidden="true" />
+      <div className="theme-grand-veil" aria-hidden="true" />
+      <div className="theme-grand-starfield" aria-hidden="true">
+        {Array.from({ length: 24 }, (_, index) => <span key={index} />)}
+      </div>
+      <div className="theme-grand-regalia" aria-hidden="true">
+        {Array.from({ length: 12 }, (_, index) => <span key={index} />)}
+      </div>
 
       <section className="theme-cinematic-stage" aria-labelledby="entropy-landing-title">
         <div className="theme-royal-aperture" aria-hidden="true">
           <span className="theme-royal-aperture-ring theme-royal-aperture-ring-outer" />
           <span className="theme-royal-aperture-ring theme-royal-aperture-ring-inner" />
+          <span className="theme-grand-aperture-ring" />
+          <span className="theme-grand-aperture-cross" />
           <span className="theme-royal-aperture-crown" />
           <span className="theme-royal-aperture-beam" />
         </div>
@@ -191,6 +200,12 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
           <p className="theme-cinematic-support">
             Turn raw WvW combat records into evidence without changing the fight beneath the numbers.
           </p>
+
+          <div className="theme-grand-edict" aria-label="Entropy operating posture">
+            <span>Precision</span>
+            <span>Tempo</span>
+            <span>Dominion</span>
+          </div>
 
           <div className="theme-cinematic-readouts" aria-label="Supported analysis workflow">
             <div><span>01</span><strong>Raw logs</strong></div>
