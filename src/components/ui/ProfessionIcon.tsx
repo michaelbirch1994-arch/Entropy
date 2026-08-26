@@ -2,7 +2,7 @@ import ClassIcon from "./ClassIcon";
 
 export default function ProfessionIcon({
   profession,
-  className = "w-4 h-4",
+  className = "h-5 w-5",
 }: {
   profession: string;
   className?: string;

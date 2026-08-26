@@ -4,11 +4,11 @@ import { classIconSrc } from "../../data/classIconAssets";
 type ClassIconSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 const SIZE_CLASS: Record<ClassIconSize, string> = {
-  xs: "h-3.5 w-3.5",
-  sm: "h-4 w-4",
-  md: "h-6 w-6",
-  lg: "h-8 w-8",
-  xl: "h-12 w-12",
+  xs: "h-4 w-4",
+  sm: "h-5 w-5",
+  md: "h-7 w-7",
+  lg: "h-9 w-9",
+  xl: "h-14 w-14",
 };
 
 export default function ClassIcon({

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useReport } from "../store/ReportContext";
 import { useDamageScope, pickDamageScopeValue } from "../store/DamageScopeContext";
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
@@ -7,7 +8,7 @@ import Panel from "../components/ui/Panel";
 import LeaderboardTable from "../components/ui/LeaderboardTable";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 import type { DefensePlayer, HealingPlayer, LeaderboardEntry, OffensePlayer, PlayerSkillBreakdown, SupportPlayer } from "../types/report";
-import { fmtCompact, fmtDur, fmtNum, profChip, profStyle } from "../utils/format";
+import { fmtCompact, fmtDur, fmtNum, profStyle } from "../utils/format";
 import { getSampleReliability, sampleReliabilityClasses } from "../lib/sampleReliability";
 import { buildNormalizedTopPlayerSources, mergePlayerSkillBreakdownsForAccount, normalizeTopPlayersLeaderboard } from "../lib/topPlayersNormalization";
 import { buildNormalizedTopPlayerSourceLeaderboards } from "../lib/topPlayerSourceLeaderboards";
@@ -262,8 +263,8 @@ function PlayerMetricCard({
     >
       <div className="theme-player-card-head flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border ${profChip(entry.profession)}`}>
-            <ProfessionIcon profession={entry.profession} className="h-6 w-6" />
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-visible">
+            <ProfessionIcon profession={entry.profession} className="h-9 w-9" />
           </div>
           <div className="min-w-0">
             <div className="truncate text-sm font-bold text-theme-text">{entry.account}</div>
@@ -310,15 +311,26 @@ function PlayerMetricCard({
         <span>{expanded ? "Hide source breakdown" : "Show source breakdown"}</span>
         {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
       </div>
-      {expanded && (
-        <div className="mt-3 grid grid-cols-1 gap-3">
-          <SourceGroup title="Damage pressure" rows={breakdown.damage} />
-          <SourceGroup title="Healing sources" rows={breakdown.healing} />
-          <SourceGroup title="Barrier sources" rows={breakdown.barrier} />
-          <SourceGroup title="Support / control" rows={breakdown.support} />
-          <SourceGroup title="Defense context" rows={breakdown.defense} />
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            key="source-breakdown"
+            initial={{ height: 0, opacity: 0, y: -8 }}
+            animate={{ height: "auto", opacity: 1, y: 0 }}
+            exit={{ height: 0, opacity: 0, y: -8 }}
+            transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="mt-3 grid grid-cols-1 gap-3">
+              <SourceGroup title="Damage pressure" rows={breakdown.damage} />
+              <SourceGroup title="Healing sources" rows={breakdown.healing} />
+              <SourceGroup title="Barrier sources" rows={breakdown.barrier} />
+              <SourceGroup title="Support / control" rows={breakdown.support} />
+              <SourceGroup title="Defense context" rows={breakdown.defense} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </button>
   );
 }
@@ -381,7 +393,7 @@ export default function TopPlayersView() {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-bold text-theme-text truncate">{e.account}</div>
                 <div className="mt-1 flex items-center gap-1.5 text-[10px] text-theme-muted font-mono">
-                  <ProfessionIcon profession={e.profession} className="h-3.5 w-3.5" />
+                  <ProfessionIcon profession={e.profession} className="h-5 w-5" />
                   {e.profession}
                 </div>
                 <div className="theme-podium-value text-lg font-black font-mono mt-1">

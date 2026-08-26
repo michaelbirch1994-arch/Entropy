@@ -66,7 +66,7 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label, onOpen }: {
           {medal === "silver" ? "Silver" : "Bronze"}
         </span>
         <div className="flex items-center gap-2 mb-2">
-          <div className={`w-5 h-5 rounded-sm flex items-center justify-center border overflow-hidden p-0.5 ${profChip(card.profession)}`}>
+          <div className="flex h-7 w-7 items-center justify-center overflow-visible">
             <ProfessionIcon profession={card.profession} className="w-full h-full" />
           </div>
           <div>
@@ -118,7 +118,7 @@ function MvpBlock({ mvp, silver, bronze, accent = "amber", label, onOpen }: {
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-black text-slate-100">{mvp.account}</h3>
                 <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold border ${profChip(mvp.profession)}`}>
-                  <ProfessionIcon profession={mvp.profession} className="h-3.5 w-3.5" />
+                  <ProfessionIcon profession={mvp.profession} className="h-5 w-5" />
                   {mvp.profession}
                 </span>
               </div>
@@ -162,14 +162,14 @@ export default function OverviewView() {
   };
 
   const perSecCards = [
-    { metric: "downContrib", label: "Down Contrib /s", value: fmtFixedGrouped(perSec(s.maxDownContrib)), icon: <Flame className="w-3.5 h-3.5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, glow: "neon-offense" },
-    { metric: "healing", label: "Healing /s", value: fmtFixedGrouped(perSec(s.maxHealing)), icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, glow: "neon-healing" },
-    { metric: "barrier", label: "Barrier /s", value: fmtFixedGrouped(perSec(s.maxBarrier)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, glow: "neon-barrier" },
-    { metric: "cleanses", label: "Cleanses /s", value: fmtFixedGrouped(perSec(s.maxCleanses)), icon: <Droplet className="w-3.5 h-3.5 text-amber-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, glow: "neon-barrier" },
-    { metric: "strips", label: "Strips /s", value: fmtFixedGrouped(perSec(s.maxStrips)), icon: <Zap className="w-3.5 h-3.5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, glow: "neon-control" },
-    { metric: "stability", label: "Stability Gen /s", value: fmtFixedGrouped(perSec(s.maxStab)), icon: <Shield className="w-3.5 h-3.5 text-amber-400" />, player: s.maxStab.player, count: s.maxStab.count, glow: "neon-control" },
-    { metric: "cc", label: "CC /s", value: fmtFixedGrouped(perSec(s.maxCC)), icon: <Target className="w-3.5 h-3.5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, glow: "neon-control" },
-    { metric: "interrupts", label: "Interrupts /s", value: fmtFixedGrouped(perSec(s.maxInterrupts)), icon: <Zap className="w-3.5 h-3.5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, glow: "neon-control" },
+    { metric: "downContrib", label: "Down Contrib /s", value: fmtFixedGrouped(perSec(s.maxDownContrib)), icon: <Flame className="h-5 w-5 text-rose-400" />, player: s.maxDownContrib.player, count: s.maxDownContrib.count, glow: "neon-offense" },
+    { metric: "healing", label: "Healing /s", value: fmtFixedGrouped(perSec(s.maxHealing)), icon: <Activity className="h-5 w-5 text-emerald-400" />, player: s.maxHealing.player, count: s.maxHealing.count, glow: "neon-healing" },
+    { metric: "barrier", label: "Barrier /s", value: fmtFixedGrouped(perSec(s.maxBarrier)), icon: <Shield className="h-5 w-5 text-amber-400" />, player: s.maxBarrier.player, count: s.maxBarrier.count, glow: "neon-barrier" },
+    { metric: "cleanses", label: "Cleanses /s", value: fmtFixedGrouped(perSec(s.maxCleanses)), icon: <Droplet className="h-5 w-5 text-amber-400" />, player: s.maxCleanses.player, count: s.maxCleanses.count, glow: "neon-barrier" },
+    { metric: "strips", label: "Strips /s", value: fmtFixedGrouped(perSec(s.maxStrips)), icon: <Zap className="h-5 w-5 text-orange-400" />, player: s.maxStrips.player, count: s.maxStrips.count, glow: "neon-control" },
+    { metric: "stability", label: "Stability Gen /s", value: fmtFixedGrouped(perSec(s.maxStab)), icon: <Shield className="h-5 w-5 text-amber-400" />, player: s.maxStab.player, count: s.maxStab.count, glow: "neon-control" },
+    { metric: "cc", label: "CC /s", value: fmtFixedGrouped(perSec(s.maxCC)), icon: <Target className="h-5 w-5 text-rose-400" />, player: s.maxCC.player, count: s.maxCC.count, glow: "neon-control" },
+    { metric: "interrupts", label: "Interrupts /s", value: fmtFixedGrouped(perSec(s.maxInterrupts)), icon: <Zap className="h-5 w-5 text-amber-500" />, player: s.maxInterrupts.player, count: s.maxInterrupts.count, glow: "neon-control" },
   ];
 
   const recap = generateFightRecap(s);
