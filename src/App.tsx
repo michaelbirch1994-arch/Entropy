@@ -43,7 +43,6 @@ import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
 import HostedReportShareModal from "./components/ui/HostedReportShareModal";
 import RawLogImporter from "./components/ui/RawLogImporter";
-import EntropyWordmarkReveal from "./components/ui/EntropyWordmarkReveal";
 import UpdateToast from "./components/ui/UpdateToast";
 import { useAutoUpdater } from "./utils/useAutoUpdater";
 import {
@@ -165,47 +164,43 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
   return (
     <div className="theme-cinematic-landing">
       <div className="theme-cinematic-scanline" aria-hidden="true" />
-      <div className="theme-grand-veil" aria-hidden="true" />
-      <div className="theme-grand-starfield" aria-hidden="true">
-        {Array.from({ length: 24 }, (_, index) => <span key={index} />)}
+      <div className="theme-sanctum-sigils" aria-hidden="true">
+        {Array.from({ length: 7 }, (_, index) => <span key={index}><i /></span>)}
       </div>
-      <div className="theme-grand-regalia" aria-hidden="true">
-        {Array.from({ length: 12 }, (_, index) => <span key={index} />)}
+      <div className="theme-signal-field" aria-hidden="true">
+        {Array.from({ length: 48 }, (_, index) => (
+          <span
+            key={index}
+            style={{
+              height: `${18 + ((index * 29) % 54)}%`,
+              animationDelay: `${-((index * 0.11) % 3.6)}s`,
+            }}
+          />
+        ))}
+        <i />
       </div>
 
       <section className="theme-cinematic-stage" aria-labelledby="entropy-landing-title">
-        <div className="theme-royal-aperture" aria-hidden="true">
-          <span className="theme-royal-aperture-ring theme-royal-aperture-ring-outer" />
-          <span className="theme-royal-aperture-ring theme-royal-aperture-ring-inner" />
-          <span className="theme-grand-aperture-ring" />
-          <span className="theme-grand-aperture-cross" />
-          <span className="theme-royal-aperture-crown" />
-          <span className="theme-royal-aperture-beam" />
-        </div>
-
         <div className="theme-cinematic-copy">
           <div className="theme-cinematic-kicker">
             <span className="theme-cinematic-signal" aria-hidden="true" />
             WvW command intelligence
           </div>
 
-          <div className="theme-cinematic-mark" aria-hidden="true">
-            <EntropyLogo size={42} />
+          <div className="theme-signal-lockup">
+            <div className="theme-cinematic-mark" aria-hidden="true">
+              <EntropyLogo size={48} />
+            </div>
+            <h1 id="entropy-landing-title" className="theme-cinematic-wordmark" data-wordmark="ENTROPY">
+              Entropy
+            </h1>
           </div>
-
-          <EntropyWordmarkReveal id="entropy-landing-title" className="entropy-wordmark theme-cinematic-wordmark" />
           <p className="theme-cinematic-declaration">
             Read the fight. Find the break. Command the next push.
           </p>
           <p className="theme-cinematic-support">
             Turn raw WvW combat records into evidence without changing the fight beneath the numbers.
           </p>
-
-          <div className="theme-grand-edict" aria-label="Entropy operating posture">
-            <span>Precision</span>
-            <span>Tempo</span>
-            <span>Dominion</span>
-          </div>
 
           <div className="theme-cinematic-readouts" aria-label="Supported analysis workflow">
             <div><span>01</span><strong>Raw logs</strong></div>
