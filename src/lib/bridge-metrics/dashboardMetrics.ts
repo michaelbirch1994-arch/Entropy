@@ -14,15 +14,17 @@ const sumDpsTargetsField = (player: Player, field: string): number | null => {
     const dpsTargets = (player as any).dpsTargets;
     if (!Array.isArray(dpsTargets) || dpsTargets.length === 0) return null;
     let total = 0;
-    let sawEntry = false;
+    let sawValue = false;
     for (const phasesArr of dpsTargets) {
         const entry = phasesArr && phasesArr[0];
         if (!entry) continue;
-        sawEntry = true;
         const v = Number((entry as any)[field]);
-        if (Number.isFinite(v)) total += v;
+        if (Number.isFinite(v)) {
+            sawValue = true;
+            total += v;
+        }
     }
-    return sawEntry ? total : null;
+    return sawValue ? total : null;
 };
 
 export const getPlayerDamage = (player: Player) =>
@@ -30,6 +32,12 @@ export const getPlayerDamage = (player: Player) =>
 
 export const getPlayerDps = (player: Player) =>
     sumDpsTargetsField(player, 'dps') ?? (player.dpsAll?.[0]?.dps || 0);
+
+export const getPlayerConditionDamage = (player: Player) =>
+    sumDpsTargetsField(player, 'condiDamage') ?? (player.dpsAll?.[0]?.condiDamage || 0);
+
+export const getPlayerPowerDamage = (player: Player) =>
+    sumDpsTargetsField(player, 'powerDamage') ?? (player.dpsAll?.[0]?.powerDamage || 0);
 
 export const getPlayerCleanses = (player: Player) =>
     (player.support?.[0]?.condiCleanse || 0) + (player.support?.[0]?.condiCleanseSelf || 0);

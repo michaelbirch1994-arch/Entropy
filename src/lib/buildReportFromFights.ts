@@ -302,7 +302,7 @@ function getVal(s: PlayerStats, k: string): number {
       case 'misses': return s.misses;
       case 'deaths': return s.deaths;
       case 'downsTaken': return s.downs;
-      case 'condiDamage': return Object.values(s.outgoingConditions).reduce((sum: number, c: any) => sum + (Number(c?.damage) || 0), 0);
+      case 'condiDamage': return Number(s.offenseTotals.conditionDamage || 0) || Object.values(s.outgoingConditions).reduce((sum: number, c: any) => sum + (Number(c?.damage) || 0), 0);
       default: return 0;
     }
 }
@@ -322,6 +322,8 @@ function addNaturalFortitudeDamageToPlayer(stat: PlayerStats, damage: number, hi
     stat.offenseTotals.damage = Number(stat.offenseTotals.damage || 0) + damage;
     stat.offenseTotals.damageAll = Number(stat.offenseTotals.damageAll || 0) + damage;
     stat.offenseTotals.directDmg = Number(stat.offenseTotals.directDmg || 0) + damage;
+    stat.offenseTotals.powerDamage = Number(stat.offenseTotals.powerDamage || 0) + damage;
+    stat.offenseTotals.powerDamageAll = Number(stat.offenseTotals.powerDamageAll || 0) + damage;
     stat.offenseTotals.connectedDamageCount = Number(stat.offenseTotals.connectedDamageCount || 0) + hits;
     stat.dps = stat.totalFightMs > 0 ? stat.damage / (stat.totalFightMs / 1000) : 0;
     stat.dpsAll = stat.totalFightMs > 0 ? stat.damageAll / (stat.totalFightMs / 1000) : 0;

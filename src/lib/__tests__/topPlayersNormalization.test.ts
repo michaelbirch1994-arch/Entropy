@@ -246,4 +246,39 @@ describe("Top Players legacy normalization", () => {
     });
     expect(normalizeTopPlayersLeaderboard(stats, "dps", sources)[0]).toMatchObject({ value: 20, rank: 1 });
   });
+
+  it("builds a condition-damage leaderboard from legacy condition rows when the saved leaderboard is absent", () => {
+    const stats = legacySplitStats();
+    stats.conditionPlayers = [
+      {
+        account: "Player.1234",
+        profession: "Guardian",
+        professionList: ["Guardian", "Necromancer"],
+        totalFightMs: 100000,
+        squadActiveMs: 90000,
+        logsJoined: 3,
+        outgoingConditions: {
+          Burning: { applications: 4, damage: 1200, skills: {} },
+          Torment: { applications: 2, damage: 800, skills: {} },
+        },
+        incomingConditions: {},
+      },
+      {
+        account: "Rival.5678",
+        profession: "Warrior",
+        professionList: ["Warrior"],
+        totalFightMs: 100000,
+        squadActiveMs: 90000,
+        logsJoined: 3,
+        outgoingConditions: { Bleeding: { applications: 2, damage: 500, skills: {} } },
+        incomingConditions: {},
+      },
+    ];
+
+    const rows = normalizeTopPlayersLeaderboard(stats, "condiDamage");
+    expect(rows).toEqual([
+      expect.objectContaining({ rank: 1, account: "Player.1234", value: 2000, count: 3 }),
+      expect.objectContaining({ rank: 2, account: "Rival.5678", value: 500, count: 3 }),
+    ]);
+  });
 });

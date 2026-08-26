@@ -16,6 +16,7 @@ import type {
 export type TopPlayersMetricKey =
   | "dps"
   | "damage"
+  | "condiDamage"
   | "downContrib"
   | "healing"
   | "barrier"
@@ -187,7 +188,18 @@ export function normalizeTopPlayersLeaderboard(
   metric: TopPlayersMetricKey,
   normalizedSources = buildNormalizedTopPlayerSources(stats),
 ): LeaderboardEntry[] {
-  const grouped = groupByAccount(stats.leaderboards?.[metric] ?? []);
+  let grouped = groupByAccount(stats.leaderboards?.[metric] ?? []);
+  if (metric === "condiDamage" && grouped.size === 0) {
+    const legacyRows: LeaderboardEntry[] = (stats.conditionPlayers ?? []).map((player) => ({
+      rank: 0,
+      account: player.account,
+      profession: player.profession,
+      professionList: player.professionList ?? [],
+      value: Object.values(player.outgoingConditions ?? {}).reduce((sum, condition) => sum + (Number(condition?.damage) || 0), 0),
+      count: player.logsJoined ?? 0,
+    }));
+    grouped = groupByAccount(legacyRows);
+  }
   const entries: Omit<LeaderboardEntry, "rank">[] = [];
 
   for (const [account, rows] of grouped) {
