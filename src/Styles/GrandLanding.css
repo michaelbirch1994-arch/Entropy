@@ -5,10 +5,13 @@
   --signal-paper: #f2eee5;
   --signal-bright: #f4d887;
   --signal-deep: #8a641f;
+  --sanctum-render-width: max(100vw, calc(100vh * 1.7768331562));
+  --sanctum-render-height: calc(var(--sanctum-render-width) * 0.5627990431);
+  --sanctum-render-top: calc((100vh - var(--sanctum-render-height)) / 2);
   background:
     linear-gradient(90deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.18) 38%, rgba(0, 0, 0, 0.12) 66%, rgba(0, 0, 0, 0.42) 100%),
     linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.26)),
-    url("/images/obsidian-command-sanctum.png") center center / cover no-repeat,
+    url("/images/obsidian-command-sanctum.png") right center / cover no-repeat,
     #030303 !important;
 }
 
@@ -40,6 +43,111 @@
   background: linear-gradient(108deg, transparent 28%, rgba(244, 216, 135, 0.07) 42%, transparent 53%);
   translate: -46% 0;
   animation: sanctumLightPass 14s ease-in-out infinite;
+}
+
+.theme-sanctum-torches {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.theme-sanctum-torches > span {
+  --torch-delay: 0s;
+  position: absolute;
+  width: clamp(3px, calc(var(--sanctum-render-width) * 0.0021), 7px);
+  height: clamp(10px, calc(var(--sanctum-render-height) * 0.014), 22px);
+  transform: translate(-50%, -68%);
+  border-radius: 50% 50% 42% 42%;
+  background: linear-gradient(180deg, #fff9d6 0%, #ffd66d 30%, #d58c21 68%, rgba(107, 55, 11, 0.12) 100%);
+  filter: drop-shadow(0 0 5px rgba(255, 226, 137, 1));
+  opacity: 0.9;
+  animation: sanctumTorchCore 2.65s cubic-bezier(0.45, 0, 0.35, 1) var(--torch-delay) infinite;
+  will-change: opacity, scale, filter;
+}
+
+.theme-sanctum-torches > span::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  width: clamp(3.2rem, calc(var(--sanctum-render-width) * 0.045), 9rem);
+  aspect-ratio: 1.35;
+  transform: translate(-50%, -50%) scale(0.82);
+  background: radial-gradient(ellipse, rgba(255, 235, 173, 0.52) 0%, rgba(233, 176, 67, 0.24) 26%, rgba(152, 88, 19, 0.08) 50%, transparent 74%);
+  filter: blur(9px);
+  mix-blend-mode: screen;
+  opacity: 0.62;
+  animation: sanctumTorchHalo 2.65s cubic-bezier(0.45, 0, 0.35, 1) var(--torch-delay) infinite;
+  will-change: opacity, transform;
+}
+
+.theme-sanctum-torches > span::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 70%;
+  width: clamp(1.6rem, calc(var(--sanctum-render-width) * 0.018), 3.8rem);
+  height: clamp(0.45rem, calc(var(--sanctum-render-height) * 0.009), 1rem);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 220, 126, 0.46), rgba(178, 104, 24, 0.1) 45%, transparent 74%);
+  filter: blur(3px);
+  opacity: 0.58;
+  animation: sanctumTorchFloorGlow 2.65s cubic-bezier(0.45, 0, 0.35, 1) var(--torch-delay) infinite;
+  will-change: opacity, transform;
+}
+
+.theme-sanctum-torches > span > i,
+.theme-sanctum-torches > span > b {
+  position: absolute;
+  left: 50%;
+  bottom: 42%;
+  width: clamp(1.1rem, calc(var(--sanctum-render-width) * 0.012), 2.5rem);
+  height: clamp(4.5rem, calc(var(--sanctum-render-height) * 0.09), 9rem);
+  border-left: 3px solid rgba(255, 226, 145, 0.72);
+  border-radius: 52% 0 0 48%;
+  background: linear-gradient(90deg, transparent 18%, rgba(231, 179, 76, 0.12) 46%, transparent 78%);
+  filter: blur(2.4px) drop-shadow(0 0 7px rgba(238, 181, 70, 0.72));
+  transform-origin: 50% 100%;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity, transform;
+}
+
+.theme-sanctum-torches > span > i {
+  animation: sanctumTorchWispLeft 4.2s ease-out var(--torch-delay) infinite;
+}
+
+.theme-sanctum-torches > span > b {
+  margin-left: -0.15rem;
+  scale: -0.82 0.82;
+  animation: sanctumTorchWispRight 4.8s ease-out calc(var(--torch-delay) - 1.35s) infinite;
+}
+
+.theme-sanctum-torches > span:nth-child(1) {
+  left: calc(100vw - var(--sanctum-render-width) * 0.7033492823);
+  top: calc(var(--sanctum-render-top) + var(--sanctum-render-height) * 0.6301806599);
+  --torch-delay: -0.35s;
+}
+
+.theme-sanctum-torches > span:nth-child(2) {
+  left: calc(100vw - var(--sanctum-render-width) * 0.6226076555);
+  top: calc(var(--sanctum-render-top) + var(--sanctum-render-height) * 0.6450584485);
+  --torch-delay: -2.1s;
+}
+
+.theme-sanctum-torches > span:nth-child(3) {
+  left: calc(100vw - var(--sanctum-render-width) * 0.4013157895);
+  top: calc(var(--sanctum-render-top) + var(--sanctum-render-height) * 0.6450584485);
+  --torch-delay: -1.25s;
+}
+
+.theme-sanctum-torches > span:nth-child(4) {
+  left: calc(100vw - var(--sanctum-render-width) * 0.3211722488);
+  top: calc(var(--sanctum-render-top) + var(--sanctum-render-height) * 0.6301806599);
+  --torch-delay: -2.85s;
 }
 
 .theme-sanctum-sigils {
@@ -223,7 +331,7 @@
 }
 
 .theme-cinematic-copy {
-  grid-column: 1 / span 6;
+  grid-column: 1 / span 5;
   align-self: center !important;
   max-width: 42rem !important;
   padding: 0 2rem 0 0 !important;
@@ -233,7 +341,7 @@
   margin-bottom: 2rem !important;
   color: #c5ad75 !important;
   letter-spacing: 0 !important;
-  animation: flatReveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
+  animation: flatReveal 700ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both !important;
 }
 
 .theme-cinematic-signal {
@@ -251,6 +359,7 @@
   gap: 1.15rem;
   width: max-content;
   max-width: 100%;
+  isolation: isolate;
 }
 
 .theme-signal-lockup::after {
@@ -262,11 +371,16 @@
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--signal-bright) 50%, transparent);
   opacity: 0;
-  animation: wordmarkSignalCut 4.8s ease-in-out 1.4s infinite;
+  transform: scaleX(0.06);
+  transform-origin: center;
+  filter: drop-shadow(0 0 7px rgba(244, 216, 135, 0.82));
+  animation: logoLockupSweep 1.05s cubic-bezier(0.19, 1, 0.22, 1) 780ms both;
   pointer-events: none;
+  z-index: 4;
 }
 
 .theme-cinematic-mark {
+  position: relative;
   width: 4rem !important;
   height: 4rem !important;
   flex: 0 0 4rem;
@@ -277,7 +391,10 @@
   clip-path: none !important;
   box-shadow: none !important;
   filter: none !important;
-  animation: markResolve 900ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both !important;
+  overflow: visible;
+  isolation: isolate;
+  animation: logoMarkMaterialize 1.35s cubic-bezier(0.19, 1, 0.22, 1) 220ms both !important;
+  will-change: opacity, transform, filter;
 }
 
 .theme-signal-lockup::before {
@@ -289,17 +406,84 @@
   width: 1px;
   background: linear-gradient(transparent, rgba(244, 216, 135, 0.82) 24% 76%, transparent);
   box-shadow: 0 0 14px rgba(229, 185, 79, 0.18);
+  transform-origin: center;
+  animation: logoRuleDraw 1.05s cubic-bezier(0.19, 1, 0.22, 1) 120ms both;
 }
 
-.theme-cinematic-mark::before,
-.theme-cinematic-mark::after {
-  display: none !important;
+.theme-cinematic-mark::before {
+  content: "";
+  position: absolute;
+  inset: -0.62rem;
+  display: block !important;
+  border-radius: 50%;
+  background: conic-gradient(from 35deg, transparent 0 14%, rgba(244, 216, 135, 0.9) 21%, transparent 29% 54%, rgba(229, 185, 79, 0.62) 63%, transparent 72% 100%);
+  mask: radial-gradient(circle, transparent 65%, #000 67% 69%, transparent 71%);
+  opacity: 0;
+  animation: logoOrbitResolve 1.55s cubic-bezier(0.19, 1, 0.22, 1) 120ms both;
+  pointer-events: none;
+  z-index: -1;
 }
+
+.theme-cinematic-mark::after {
+  content: "";
+  position: absolute;
+  inset: -1.5rem;
+  display: block !important;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 239, 190, 0.48), rgba(229, 185, 79, 0.16) 28%, transparent 66%);
+  filter: blur(7px);
+  opacity: 0;
+  animation: logoFlareResolve 1.45s ease-out 280ms both;
+  pointer-events: none;
+  z-index: -2;
+}
+
+.theme-cinematic-mark svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 5px rgba(229, 185, 79, 0.34));
+  animation: logoGlyphSettle 1.3s cubic-bezier(0.19, 1, 0.22, 1) 260ms both;
+}
+
+.theme-cinematic-mark svg > circle:first-of-type,
+.theme-cinematic-mark svg > path {
+  stroke-dasharray: 72;
+  stroke-dashoffset: 72;
+  animation: logoStrokeDraw 1.05s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+.theme-cinematic-mark svg > circle:first-of-type {
+  animation-delay: 340ms;
+}
+
+.theme-cinematic-mark svg > path:first-of-type {
+  animation-delay: 520ms;
+}
+
+.theme-cinematic-mark svg > path:nth-of-type(2) {
+  animation-delay: 640ms;
+}
+
+.theme-cinematic-mark svg > circle:not(:first-of-type) {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: logoParticleAssemble 680ms cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+
+.theme-cinematic-mark svg > circle:nth-of-type(2) { animation-delay: 460ms; }
+.theme-cinematic-mark svg > circle:nth-of-type(3) { animation-delay: 720ms; }
+.theme-cinematic-mark svg > circle:nth-of-type(4) { animation-delay: 800ms; }
+.theme-cinematic-mark svg > circle:nth-of-type(5) { animation-delay: 880ms; }
+.theme-cinematic-mark svg > circle:nth-of-type(6) { animation-delay: 960ms; }
+.theme-cinematic-mark svg > circle:nth-of-type(7) { animation-delay: 1040ms; }
 
 .theme-cinematic-wordmark {
   position: relative;
+  display: inline-flex !important;
   margin: 0;
-  overflow: hidden;
+  overflow: visible;
   color: #f7f1e1 !important;
   background: none !important;
   font-family: var(--font-display);
@@ -311,18 +495,52 @@
   text-shadow: none !important;
   filter: none !important;
   white-space: nowrap;
-  animation: wordmarkResolve 850ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+  isolation: isolate;
 }
+
+.theme-cinematic-letter {
+  position: relative;
+  display: inline-block;
+  opacity: 0;
+  transform-origin: 50% 100%;
+  animation: logoLetterResolve 920ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform, filter;
+}
+
+.theme-cinematic-letter:nth-child(1) { animation-delay: 520ms; }
+.theme-cinematic-letter:nth-child(2) { animation-delay: 600ms; }
+.theme-cinematic-letter:nth-child(3) { animation-delay: 680ms; }
+.theme-cinematic-letter:nth-child(4) { animation-delay: 760ms; }
+.theme-cinematic-letter:nth-child(5) { animation-delay: 840ms; }
+.theme-cinematic-letter:nth-child(6) { animation-delay: 920ms; }
+.theme-cinematic-letter:nth-child(7) { animation-delay: 1000ms; }
 
 .theme-cinematic-wordmark::before {
   content: attr(data-wordmark);
   position: absolute;
   inset: 0;
   color: var(--signal-bright);
-  clip-path: inset(46% 0 48% 0);
-  translate: 0.5rem 0;
+  clip-path: inset(0 100% 0 0);
   opacity: 0;
-  animation: wordmarkSlice 4.8s steps(2, end) 1.4s infinite;
+  filter: blur(1px) drop-shadow(0 0 8px rgba(244, 216, 135, 0.5));
+  animation: logoWordmarkEcho 1.2s cubic-bezier(0.19, 1, 0.22, 1) 470ms both;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.theme-cinematic-wordmark::after {
+  content: "";
+  position: absolute;
+  top: -18%;
+  bottom: -18%;
+  left: -0.25rem;
+  width: 2px;
+  background: linear-gradient(transparent, rgba(255, 245, 211, 0.96) 34% 66%, transparent);
+  box-shadow: 0 0 12px rgba(244, 216, 135, 0.82);
+  opacity: 0;
+  animation: logoWordmarkBeam 1.1s cubic-bezier(0.19, 1, 0.22, 1) 720ms both;
+  pointer-events: none;
+  z-index: 3;
 }
 
 .theme-cinematic-declaration {
@@ -333,13 +551,13 @@
   line-height: 1.22 !important;
   letter-spacing: 0 !important;
   text-wrap: balance;
-  animation: flatReveal 750ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both !important;
+  animation: flatReveal 750ms cubic-bezier(0.22, 1, 0.36, 1) 1420ms both !important;
 }
 
 .theme-cinematic-support {
   max-width: 34rem !important;
   color: #c1b7a3 !important;
-  animation: flatReveal 750ms cubic-bezier(0.22, 1, 0.36, 1) 260ms both !important;
+  animation: flatReveal 750ms cubic-bezier(0.22, 1, 0.36, 1) 1580ms both !important;
 }
 
 .theme-cinematic-readouts {
@@ -347,7 +565,7 @@
   margin-top: 2.7rem !important;
   border-top-color: rgba(229, 185, 79, 0.35) !important;
   box-shadow: none !important;
-  animation: flatReveal 750ms cubic-bezier(0.22, 1, 0.36, 1) 340ms both !important;
+  animation: flatReveal 750ms cubic-bezier(0.22, 1, 0.36, 1) 1740ms both !important;
 }
 
 .theme-cinematic-readouts > div {
@@ -382,42 +600,100 @@
 }
 
 .theme-ingress-console {
-  grid-column: 8 / span 5;
-  align-self: center !important;
+  position: absolute !important;
+  right: calc((100vw - min(100vw, 112rem)) / -2 + var(--sanctum-render-width) * 0.0071770335);
+  top: calc(var(--sanctum-render-top) + var(--sanctum-render-height) * 0.0977683316);
+  width: calc(var(--sanctum-render-width) * 0.1985645933) !important;
+  height: calc(var(--sanctum-render-height) * 0.6333687566);
   margin: 0 !important;
-  border: 1px solid rgba(244, 216, 135, 0.48) !important;
-  border-radius: 2px !important;
-  background:
-    linear-gradient(145deg, rgba(229, 185, 79, 0.07), transparent 31%),
-    rgba(3, 3, 3, 0.94) !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
   clip-path: none !important;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.9),
-    0 0 0 2px rgba(138, 100, 31, 0.24),
-    inset 0 1px 0 rgba(255, 245, 215, 0.08),
-    0 34px 90px -46px #000 !important;
-  backdrop-filter: blur(18px);
+  box-shadow: none !important;
+  backdrop-filter: none;
+  transform: none;
+  isolation: isolate;
   animation: consoleResolve 900ms cubic-bezier(0.22, 1, 0.36, 1) 260ms both !important;
 }
 
 .theme-ingress-console::before {
-  left: 3.75rem !important;
-  top: -1px !important;
-  width: 38% !important;
-  height: 2px !important;
-  background: linear-gradient(90deg, transparent, var(--signal-bright), transparent) !important;
-  box-shadow: 0 0 16px rgba(244, 216, 135, 0.24) !important;
+  display: none !important;
 }
 
 .theme-ingress-console::after {
-  content: "";
+  display: none;
+}
+
+.theme-ingress-header,
+.theme-ingress-body,
+.theme-ingress-utility {
   position: absolute;
-  inset: 0;
-  z-index: -1;
-  inset: 0.55rem;
-  border: 1px solid rgba(229, 185, 79, 0.08);
-  pointer-events: none;
-  animation: consoleCeremonialTrace 7.5s ease-in-out 1.3s infinite;
+  left: 1.8%;
+  right: 4.5%;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.theme-ingress-header {
+  top: 7.55%;
+  height: 18.96%;
+  min-height: 0;
+  padding: 1.15rem 1.25rem !important;
+  align-items: flex-start !important;
+}
+
+.theme-ingress-body {
+  top: 28.69%;
+  height: 53.86%;
+  min-height: 0;
+  margin: 0;
+  padding: 0.75rem 1.05rem;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(229, 185, 79, 0.38) transparent;
+}
+
+.theme-ingress-primary .theme-raw-ingress {
+  height: 100%;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-ingress-primary .theme-raw-ingress > .space-y-3 {
+  flex: 1;
+  min-height: 0;
+  margin-top: 0.35rem;
+}
+
+.theme-ingress-primary .theme-raw-ingress > .space-y-3:not(:has(ul)) {
+  display: grid;
+  grid-template-rows: auto minmax(7rem, 1fr) auto;
+  gap: 0.75rem;
+}
+
+.theme-ingress-primary .theme-raw-ingress > .space-y-3:not(:has(ul)) > * {
+  margin-top: 0 !important;
+}
+
+.theme-cinematic-landing .theme-ingress-console [class*="bg-white/"] {
+  background: transparent !important;
+}
+
+.theme-ingress-utility {
+  top: 84.9%;
+  height: 14.26%;
+  padding: 0 1.05rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
 }
 
 .theme-ingress-header,
@@ -452,6 +728,19 @@
   background: rgba(229, 185, 79, 0.05) !important;
   color: #d6b968 !important;
   letter-spacing: 0 !important;
+}
+
+.theme-ingress-utility .theme-saved-report-gate {
+  margin-top: 0;
+}
+
+.theme-ingress-utility .theme-saved-report-gate summary {
+  padding: 0.55rem 0;
+}
+
+.theme-ingress-utility .theme-ingress-footer {
+  margin-top: auto;
+  padding-top: 0.55rem;
 }
 
 .theme-cinematic-horizon {
@@ -526,26 +815,99 @@
   to { opacity: 1; translate: 0 0; }
 }
 
-@keyframes markResolve {
-  from { opacity: 0; rotate: -24deg; scale: 0.76; }
-  to { opacity: 1; rotate: 0deg; scale: 1; }
+@keyframes logoRuleDraw {
+  from { opacity: 0; transform: scaleY(0); }
+  72% { opacity: 1; }
+  to { opacity: 0.72; transform: scaleY(1); }
 }
 
-@keyframes wordmarkResolve {
-  from { opacity: 0; clip-path: inset(0 100% 0 0); translate: -1rem 0; }
-  to { opacity: 1; clip-path: inset(0 0 0 0); translate: 0 0; }
+@keyframes logoLockupSweep {
+  0% { opacity: 0; transform: scaleX(0.06); }
+  38% { opacity: 0.95; }
+  72% { opacity: 0.42; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(1); }
 }
 
-@keyframes wordmarkSlice {
-  0%, 86%, 100% { opacity: 0; translate: 0.5rem 0; }
-  88%, 92% { opacity: 0.9; translate: -0.35rem 0; }
-  94% { opacity: 0.38; translate: 0.18rem 0; }
+@keyframes logoMarkMaterialize {
+  0% {
+    opacity: 0;
+    transform: translateX(-0.7rem) rotate(-15deg) scale(0.46);
+    filter: blur(8px) brightness(1.9);
+  }
+  58% {
+    opacity: 1;
+    transform: translateX(0) rotate(3deg) scale(1.12);
+    filter: blur(0) brightness(1.38);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) rotate(0) scale(1);
+    filter: blur(0) brightness(1);
+  }
 }
 
-@keyframes wordmarkSignalCut {
-  0%, 86%, 100% { opacity: 0; scale: 0.2 1; }
-  89% { opacity: 0.8; scale: 1 1; }
-  94% { opacity: 0.2; scale: 0.72 1; }
+@keyframes logoOrbitResolve {
+  0% { opacity: 0; transform: rotate(-150deg) scale(0.52); }
+  48% { opacity: 0.92; transform: rotate(28deg) scale(1.08); }
+  100% { opacity: 0.18; transform: rotate(115deg) scale(1); }
+}
+
+@keyframes logoFlareResolve {
+  0% { opacity: 0; transform: scale(0.28); }
+  36% { opacity: 0.72; transform: scale(0.9); }
+  100% { opacity: 0; transform: scale(1.72); }
+}
+
+@keyframes logoGlyphSettle {
+  0% { opacity: 0; transform: rotate(-12deg) scale(0.68); }
+  62% { opacity: 1; transform: rotate(2deg) scale(1.06); }
+  100% { opacity: 1; transform: rotate(0) scale(1); }
+}
+
+@keyframes logoStrokeDraw {
+  from { stroke-dashoffset: 72; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes logoParticleAssemble {
+  0% { opacity: 0; transform: translate(-0.8rem, 0.35rem) scale(0.18); }
+  68% { opacity: 1; transform: translate(0.08rem, -0.04rem) scale(1.28); }
+  100% { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+
+@keyframes logoLetterResolve {
+  0% {
+    color: var(--signal-gold);
+    opacity: 0;
+    transform: translateY(68%) scaleY(0.32);
+    filter: blur(8px) brightness(1.8);
+  }
+  58% {
+    color: var(--signal-bright);
+    opacity: 1;
+    transform: translateY(-5%) scaleY(1.08);
+    filter: blur(0) brightness(1.25);
+  }
+  100% {
+    color: #f7f1e1;
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    filter: blur(0) brightness(1);
+  }
+}
+
+@keyframes logoWordmarkEcho {
+  0% { opacity: 0; clip-path: inset(0 100% 0 0); }
+  36% { opacity: 0.72; }
+  72% { opacity: 0.72; clip-path: inset(0 0 0 0); }
+  100% { opacity: 0; clip-path: inset(0 0 0 0); }
+}
+
+@keyframes logoWordmarkBeam {
+  0% { left: -0.25rem; opacity: 0; }
+  16% { opacity: 1; }
+  78% { opacity: 0.72; }
+  100% { left: calc(100% + 0.25rem); opacity: 0; }
 }
 
 @keyframes consoleResolve {
@@ -558,7 +920,160 @@
   50% { opacity: 1; }
 }
 
-@media (max-width: 1100px) {
+@keyframes sanctumTorchCore {
+  0%, 100% {
+    opacity: 0.52;
+    scale: 0.86 0.82;
+    filter: drop-shadow(0 0 2px rgba(255, 205, 92, 0.62));
+  }
+  42% {
+    opacity: 1;
+    scale: 1.12 1.28;
+    filter: drop-shadow(0 0 8px rgba(255, 235, 167, 1));
+  }
+  68% {
+    opacity: 0.7;
+    scale: 0.94 1.04;
+    filter: drop-shadow(0 0 4px rgba(238, 180, 71, 0.84));
+  }
+}
+
+@keyframes sanctumTorchHalo {
+  0%, 100% {
+    opacity: 0.24;
+    transform: translate(-50%, -50%) scale(0.68);
+  }
+  42% {
+    opacity: 0.88;
+    transform: translate(-50%, -50%) scale(1.18);
+  }
+  68% {
+    opacity: 0.46;
+    transform: translate(-50%, -50%) scale(0.86);
+  }
+}
+
+@keyframes sanctumTorchFloorGlow {
+  0%, 100% {
+    opacity: 0.28;
+    transform: translate(-50%, -50%) scale(0.72, 0.78);
+  }
+  42% {
+    opacity: 0.76;
+    transform: translate(-50%, -50%) scale(1.28, 1.08);
+  }
+  68% {
+    opacity: 0.46;
+    transform: translate(-50%, -50%) scale(0.92, 0.9);
+  }
+}
+
+@keyframes sanctumTorchWispLeft {
+  0%, 10% {
+    opacity: 0;
+    transform: translate(-50%, 12%) rotate(-5deg) scale(0.46, 0.28);
+  }
+  28% {
+    opacity: 0.62;
+    transform: translate(-62%, -8%) rotate(-9deg) scale(0.72, 0.78);
+  }
+  58% {
+    opacity: 0.36;
+    transform: translate(-30%, -42%) rotate(12deg) scale(0.58, 1.08);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-95%, -88%) rotate(24deg) scale(0.34, 1.24);
+  }
+}
+
+@keyframes sanctumTorchWispRight {
+  0%, 18% {
+    opacity: 0;
+    transform: translate(-50%, 10%) rotate(7deg) scale(0.38, 0.24);
+  }
+  38% {
+    opacity: 0.54;
+    transform: translate(-35%, -14%) rotate(12deg) scale(0.68, 0.74);
+  }
+  66% {
+    opacity: 0.3;
+    transform: translate(-70%, -48%) rotate(-10deg) scale(0.52, 1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-10%, -92%) rotate(-22deg) scale(0.3, 1.2);
+  }
+}
+
+@keyframes sanctumTorchReducedBreath {
+  0%, 100% {
+    opacity: 0.58;
+    scale: 0.9 0.88;
+    filter: drop-shadow(0 0 3px rgba(255, 205, 92, 0.66));
+  }
+  50% {
+    opacity: 1;
+    scale: 1.08 1.2;
+    filter: drop-shadow(0 0 8px rgba(255, 235, 167, 1));
+  }
+}
+
+@keyframes sanctumTorchReducedHalo {
+  0%, 100% {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) scale(0.76);
+  }
+  50% {
+    opacity: 0.78;
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+}
+
+@keyframes sanctumTorchReducedFloorGlow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) scale(0.78, 0.82);
+  }
+  50% {
+    opacity: 0.68;
+    transform: translate(-50%, -50%) scale(1.18, 1.02);
+  }
+}
+
+@keyframes sanctumTorchReducedWispLeft {
+  0%, 100% {
+    opacity: 0.3;
+    transform: translate(-68%, -14%) rotate(-9deg) scale(0.52, 0.84);
+  }
+  50% {
+    opacity: 0.68;
+    transform: translate(-52%, -26%) rotate(3deg) scale(0.64, 1.04);
+  }
+}
+
+@keyframes sanctumTorchReducedWispRight {
+  0%, 100% {
+    opacity: 0.24;
+    transform: translate(-18%, -28%) rotate(13deg) scale(0.4, 0.74);
+  }
+  50% {
+    opacity: 0.56;
+    transform: translate(-34%, -42%) rotate(-2deg) scale(0.5, 0.94);
+  }
+}
+
+@keyframes logoReducedResolve {
+  from { opacity: 0; filter: brightness(1.35); }
+  to { opacity: 1; filter: brightness(1); }
+}
+
+@keyframes logoReducedLetterResolve {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 1500px) {
   .theme-cinematic-stage {
     padding-inline: 2.25rem !important;
   }
@@ -569,7 +1084,49 @@
   }
 
   .theme-ingress-console {
+    position: relative !important;
+    right: auto;
+    top: auto;
     grid-column: 7 / span 6;
+    width: 100% !important;
+    height: auto;
+    align-self: center;
+    transform: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .theme-ingress-header,
+  .theme-ingress-body,
+  .theme-ingress-utility {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: auto;
+    border: 1px solid rgba(244, 216, 135, 0.4) !important;
+    background: transparent !important;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.82),
+      inset 0 1px 0 rgba(255, 245, 215, 0.05),
+      0 28px 70px -48px #000;
+    backdrop-filter: none;
+  }
+
+  .theme-ingress-header {
+    min-height: auto;
+  }
+
+  .theme-ingress-body {
+    min-height: auto;
+    margin: 0;
+    overflow: visible;
+  }
+
+  .theme-ingress-utility {
+    min-height: 8rem;
+    padding: 0 1.05rem 0.8rem;
+    overflow: visible;
   }
 
   .theme-cinematic-wordmark {
@@ -581,21 +1138,36 @@
   }
 }
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   .theme-cinematic-landing {
     overflow: visible;
+  }
+
+  .theme-sanctum-torches {
+    display: none;
   }
 
   .theme-cinematic-stage {
     min-height: auto !important;
     grid-template-columns: minmax(0, 1fr) !important;
     gap: 2.75rem !important;
-    padding: 4.5rem 1.25rem 6.8rem !important;
+    padding-bottom: 6.8rem !important;
   }
 
   .theme-cinematic-copy,
   .theme-ingress-console {
     grid-column: 1;
+  }
+
+  .theme-ingress-console {
+    width: min(100%, 38rem) !important;
+    justify-self: center;
+  }
+}
+
+@media (max-width: 800px) {
+  .theme-cinematic-stage {
+    padding: 4.5rem 1.25rem 6.8rem !important;
   }
 
   .theme-cinematic-copy {
@@ -656,15 +1228,28 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .theme-sanctum-torches > span,
+  .theme-sanctum-torches > span::before,
+  .theme-sanctum-torches > span::after,
+  .theme-sanctum-torches > span > i,
+  .theme-sanctum-torches > span > b,
   .theme-signal-field span,
   .theme-signal-field i,
   .theme-cinematic-scanline::after,
   .theme-sanctum-sigils > span,
   .theme-cinematic-signal,
+  .theme-signal-lockup::before,
   .theme-signal-lockup::after,
   .theme-cinematic-mark,
+  .theme-cinematic-mark::before,
+  .theme-cinematic-mark::after,
+  .theme-cinematic-mark svg,
+  .theme-cinematic-mark svg > circle,
+  .theme-cinematic-mark svg > path,
   .theme-cinematic-wordmark,
+  .theme-cinematic-letter,
   .theme-cinematic-wordmark::before,
+  .theme-cinematic-wordmark::after,
   .theme-cinematic-kicker,
   .theme-cinematic-declaration,
   .theme-cinematic-support,
@@ -674,4 +1259,76 @@
   .theme-ingress-console::after {
     animation: none !important;
   }
+
+  .theme-sanctum-torches > span {
+    animation: sanctumTorchReducedBreath 4.8s ease-in-out var(--torch-delay) infinite !important;
+  }
+
+  .theme-sanctum-torches > span::before {
+    animation: sanctumTorchReducedHalo 4.8s ease-in-out var(--torch-delay) infinite !important;
+  }
+
+  .theme-sanctum-torches > span::after {
+    animation: sanctumTorchReducedFloorGlow 4.8s ease-in-out var(--torch-delay) infinite !important;
+  }
+
+  .theme-sanctum-torches > span > i {
+    animation: sanctumTorchReducedWispLeft 5.4s ease-in-out var(--torch-delay) infinite !important;
+  }
+
+  .theme-sanctum-torches > span > b {
+    animation: sanctumTorchReducedWispRight 6.1s ease-in-out calc(var(--torch-delay) - 1.1s) infinite !important;
+  }
+
+  .theme-signal-lockup::before {
+    opacity: 0.72;
+    transform: scaleY(1);
+  }
+
+  .theme-signal-lockup::after,
+  .theme-cinematic-wordmark::before,
+  .theme-cinematic-wordmark::after,
+  .theme-cinematic-mark::after {
+    opacity: 0;
+  }
+
+  .theme-cinematic-mark {
+    animation: logoReducedResolve 620ms ease-out 120ms both !important;
+  }
+
+  .theme-cinematic-mark::before {
+    opacity: 0.18;
+    transform: rotate(115deg) scale(1);
+  }
+
+  .theme-cinematic-mark svg > circle,
+  .theme-cinematic-mark svg > path {
+    opacity: 1;
+    stroke-dashoffset: 0;
+    transform: none;
+  }
+
+  .theme-cinematic-letter {
+    animation: logoReducedLetterResolve 360ms ease-out both !important;
+  }
+
+  .theme-cinematic-letter:nth-child(1) { animation-delay: 260ms !important; }
+  .theme-cinematic-letter:nth-child(2) { animation-delay: 320ms !important; }
+  .theme-cinematic-letter:nth-child(3) { animation-delay: 380ms !important; }
+  .theme-cinematic-letter:nth-child(4) { animation-delay: 440ms !important; }
+  .theme-cinematic-letter:nth-child(5) { animation-delay: 500ms !important; }
+  .theme-cinematic-letter:nth-child(6) { animation-delay: 560ms !important; }
+  .theme-cinematic-letter:nth-child(7) { animation-delay: 620ms !important; }
+
+  .theme-cinematic-kicker,
+  .theme-cinematic-declaration,
+  .theme-cinematic-support,
+  .theme-cinematic-readouts {
+    animation: logoReducedResolve 480ms ease-out both !important;
+  }
+
+  .theme-cinematic-kicker { animation-delay: 80ms !important; }
+  .theme-cinematic-declaration { animation-delay: 680ms !important; }
+  .theme-cinematic-support { animation-delay: 760ms !important; }
+  .theme-cinematic-readouts { animation-delay: 840ms !important; }
 }

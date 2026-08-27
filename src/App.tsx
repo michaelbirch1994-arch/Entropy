@@ -164,6 +164,14 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
   return (
     <div className="theme-cinematic-landing">
       <div className="theme-cinematic-scanline" aria-hidden="true" />
+      <div className="theme-sanctum-torches" aria-hidden="true">
+        {Array.from({ length: 4 }, (_, index) => (
+          <span key={index}>
+            <i />
+            <b />
+          </span>
+        ))}
+      </div>
       <div className="theme-sanctum-sigils" aria-hidden="true">
         {Array.from({ length: 7 }, (_, index) => <span key={index}><i /></span>)}
       </div>
@@ -191,8 +199,17 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
             <div className="theme-cinematic-mark" aria-hidden="true">
               <EntropyLogo size={48} />
             </div>
-            <h1 id="entropy-landing-title" className="theme-cinematic-wordmark" data-wordmark="ENTROPY">
-              Entropy
+            <h1
+              id="entropy-landing-title"
+              className="theme-cinematic-wordmark"
+              data-wordmark="ENTROPY"
+              aria-label="Entropy"
+            >
+              {Array.from("ENTROPY", (letter, index) => (
+                <span key={`${letter}-${index}`} className="theme-cinematic-letter" aria-hidden="true">
+                  {letter}
+                </span>
+              ))}
             </h1>
           </div>
           <p className="theme-cinematic-declaration">
@@ -218,31 +235,35 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
             <div className="theme-ingress-status"><i aria-hidden="true" /> Ready</div>
           </header>
 
-          <RawLogImporter cinematic />
+          <div className="theme-ingress-body theme-ingress-primary">
+            <RawLogImporter cinematic />
+          </div>
 
-          <details className="theme-saved-report-gate">
-            <summary>Open a saved Entropy report</summary>
-            <div className="theme-saved-report-body">
-              <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
-            </div>
-          </details>
+          <div className="theme-ingress-utility">
+            <details className="theme-saved-report-gate">
+              <summary>Open a saved Entropy report</summary>
+              <div className="theme-saved-report-body">
+                <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
+              </div>
+            </details>
 
-          <footer className="theme-ingress-footer">
-            <div className="theme-ingress-formats">
-              <span><Activity className="w-3 h-3" /> .zevtc / .evtc</span>
-              <span><Link2 className="w-3 h-3" /> dps.report</span>
-              <span><Activity className="w-3 h-3" /> shared reports</span>
-            </div>
-            <button type="button" onClick={onOpenAxiForgeLab} className="theme-command-button theme-builder-entry">
-              <FlaskConical className="h-4 w-4" />
-              Entropy Builder
-            </button>
-          </footer>
+            <footer className="theme-ingress-footer">
+              <div className="theme-ingress-formats">
+                <span><Activity className="w-3 h-3" /> .zevtc / .evtc</span>
+                <span><Link2 className="w-3 h-3" /> dps.report</span>
+                <span><Activity className="w-3 h-3" /> shared reports</span>
+              </div>
+              <button type="button" onClick={onOpenAxiForgeLab} className="theme-command-button theme-builder-entry">
+                <FlaskConical className="h-4 w-4" />
+                Entropy Builder
+              </button>
+            </footer>
+          </div>
         </div>
       </section>
 
       <div className="theme-cinematic-horizon" aria-hidden="true">
-        <span>Signal survives the noise</span>
+        <span>From chaos, command.</span>
       </div>
     </div>
   );
