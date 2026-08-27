@@ -1252,6 +1252,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .theme-cinematic-landing,
+  .theme-cinematic-landing *,
+  .theme-cinematic-landing *::before,
+  .theme-cinematic-landing *::after {
+    transition-duration: 0.01ms !important;
+  }
+
   .theme-sanctum-torches > span,
   .theme-sanctum-torches > span::before,
   .theme-sanctum-torches > span::after,
@@ -1318,6 +1325,8 @@
 
   .theme-cinematic-mark {
     animation: logoReducedResolve 620ms ease-out 120ms both !important;
+    animation-duration: 620ms !important;
+    animation-iteration-count: 1 !important;
   }
 
   .theme-cinematic-mark::before {
@@ -1334,6 +1343,8 @@
 
   .theme-cinematic-letter {
     animation: logoReducedLetterResolve 360ms ease-out both !important;
+    animation-duration: 360ms !important;
+    animation-iteration-count: 1 !important;
   }
 
   .theme-cinematic-letter:nth-child(1) { animation-delay: 260ms !important; }
@@ -1349,6 +1360,8 @@
   .theme-cinematic-support,
   .theme-cinematic-readouts {
     animation: logoReducedResolve 480ms ease-out both !important;
+    animation-duration: 480ms !important;
+    animation-iteration-count: 1 !important;
   }
 
   .theme-cinematic-kicker { animation-delay: 80ms !important; }
