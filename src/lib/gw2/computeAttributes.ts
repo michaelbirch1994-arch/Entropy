@@ -44,6 +44,29 @@ export interface AttributeTotals {
     conditionDuration: number;
 }
 
+export interface AttributeContribution {
+  label: string;
+  source: "base" | "armor" | "trinket" | "weapon";
+  stats: Partial<Record<Gw2Attribute, number>>;
+}
+
+export interface AttributePressureScores {
+  strike: number;
+  condition: number;
+  support: number;
+  sustain: number;
+}
+
+export interface AttributeProfile {
+  totals: AttributeTotals;
+  contributions: AttributeContribution[];
+  equippedSlots: number;
+  totalSlots: number;
+  activeWeaponSet: 1 | 2;
+  pressure: AttributePressureScores;
+  primaryIdentity: keyof AttributePressureScores;
+}
+
 const BASE_PRIMARY = { Power: 1000, Precision: 1000, Toughness: 1000, Vitality: 1000 } as const;
 
 const HEALTH_BASE_BY_PROFESSION: Record<string, number> = {
@@ -151,19 +174,53 @@ function addAttribute(totals: Record<Gw2Attribute, number>, attribute: Gw2Attrib
     totals[attribute] = (totals[attribute] ?? 0) + value;
 }
 
-function applyStatPiece(totals: Record<Gw2Attribute, number>, statName: string, slotKey: SlotKey) {
+function emptyContributionStats(): Record<Gw2Attribute, number> {
+  return {
+    Power: 0,
+    Precision: 0,
+    Toughness: 0,
+    Vitality: 0,
+    Concentration: 0,
+    ConditionDamage: 0,
+    Expertise: 0,
+    Ferocity: 0,
+    HealingPower: 0,
+  };
+}
+
+function mergeContribution(
+  target: Record<Gw2Attribute, number>,
+  addition: Record<Gw2Attribute, number>,
+) {
+  ALL_ATTRIBUTES.forEach((attribute) => {
+    target[attribute] += addition[attribute] ?? 0;
+  });
+}
+
+function applyStatPiece(totals: Record<Gw2Attribute, number>, statName: string, slotKey: SlotKey): Record<Gw2Attribute, number> {
+    const applied = emptyContributionStats();
     const combo = STAT_COMBOS[statName];
-    if (!combo) return;
+    if (!combo) return applied;
     if (combo.celestial) {
           const value = CELESTIAL_9STAT[slotKey];
-          ALL_ATTRIBUTES.forEach((attribute) => addAttribute(totals, attribute, value));
-          return;
+          ALL_ATTRIBUTES.forEach((attribute) => {
+            addAttribute(totals, attribute, value);
+            applied[attribute] += value;
+          });
+          return applied;
     }
     const isFourStat = combo.major.length === 2;
     const budget = (isFourStat ? BUDGET_4STAT : BUDGET_3STAT)[slotKey];
-    if (!budget) return;
-    combo.major.forEach((attribute) => addAttribute(totals, attribute, budget.major));
-    combo.minor.forEach((attribute) => addAttribute(totals, attribute, budget.minor));
+    if (!budget) return applied;
+    combo.major.forEach((attribute) => {
+      addAttribute(totals, attribute, budget.major);
+      applied[attribute] += budget.major;
+    });
+    combo.minor.forEach((attribute) => {
+      addAttribute(totals, attribute, budget.minor);
+      applied[attribute] += budget.minor;
+    });
+    return applied;
 }
 
 /**
@@ -175,7 +232,44 @@ function slotStat(builder: EntropyBuilderState, slot: string): string {
   return builder.equipment.slots[slot] || builder.equipment.statPackage;
 }
 
-export function computeAttributeTotals(builder: EntropyBuilderState, profession: Gw2Profession | null): AttributeTotals {
+function normalizePressureScore(score: number): number {
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function pressureScores(totals: AttributeTotals): AttributePressureScores {
+  return {
+    strike: normalizePressureScore(
+      (totals.power - 1000) / 15 +
+      (totals.precision - 1000) / 25 +
+      totals.ferocity / 18,
+    ),
+    condition: normalizePressureScore(
+      totals.conditionDamage / 13 +
+      totals.expertise / 18,
+    ),
+    support: normalizePressureScore(
+      totals.concentration / 16 +
+      totals.healingPower / 16,
+    ),
+    sustain: normalizePressureScore(
+      (totals.toughness - 1000) / 18 +
+      (totals.vitality - 1000) / 22 +
+      totals.healingPower / 24,
+    ),
+  };
+}
+
+function primaryIdentity(pressure: AttributePressureScores): keyof AttributePressureScores {
+  return (Object.entries(pressure) as Array<[keyof AttributePressureScores, number]>)
+    .sort((left, right) => right[1] - left[1])[0][0];
+}
+
+/**
+ * Compute base + equipment attribute totals plus tactical summaries for the
+ * Builder UI. This keeps combat-facing labels separate from the raw math so
+ * the stat engine can evolve without changing saved AxiCode payloads.
+ */
+export function computeAttributeProfile(builder: EntropyBuilderState, profession: Gw2Profession | null): AttributeProfile {
     const totals: Record<Gw2Attribute, number> = {
           Power: BASE_PRIMARY.Power,
           Precision: BASE_PRIMARY.Precision,
@@ -187,9 +281,17 @@ export function computeAttributeTotals(builder: EntropyBuilderState, profession:
           Ferocity: 0,
           HealingPower: 0,
     };
+  const baseStats = emptyContributionStats();
+  baseStats.Power = BASE_PRIMARY.Power;
+  baseStats.Precision = BASE_PRIMARY.Precision;
+  baseStats.Toughness = BASE_PRIMARY.Toughness;
+  baseStats.Vitality = BASE_PRIMARY.Vitality;
+  const armorStats = emptyContributionStats();
+  const trinketStats = emptyContributionStats();
+  const weaponStats = emptyContributionStats();
 
-  ARMOR_SLOTS.forEach((slot) => applyStatPiece(totals, slotStat(builder, slot), slot));
-  TRINKET_SLOTS.forEach(([slot, budgetKey]) => applyStatPiece(totals, slotStat(builder, slot), budgetKey));
+  ARMOR_SLOTS.forEach((slot) => mergeContribution(armorStats, applyStatPiece(totals, slotStat(builder, slot), slot)));
+  TRINKET_SLOTS.forEach(([slot, budgetKey]) => mergeContribution(trinketStats, applyStatPiece(totals, slotStat(builder, slot), budgetKey)));
 
   const activeSet = builder.activeWeaponSet === 2 ? 2 : 1;
   const mainhand = builder.equipment.weapons[`mainhand${activeSet}`];
@@ -198,8 +300,8 @@ export function computeAttributeTotals(builder: EntropyBuilderState, profession:
   const offhandStat = slotStat(builder, `offhand${activeSet}`);
   if (mainhand) {
     const twoHanded = isTwoHandedWeapon(profession, mainhand);
-    applyStatPiece(totals, mainhandStat, twoHanded ? "twoHand" : "oneHand");
-    if (!twoHanded && offhand) applyStatPiece(totals, offhandStat, "oneHand");
+    mergeContribution(weaponStats, applyStatPiece(totals, mainhandStat, twoHanded ? "twoHand" : "oneHand"));
+    if (!twoHanded && offhand) mergeContribution(weaponStats, applyStatPiece(totals, offhandStat, "oneHand"));
   }
 
   const healthBase = HEALTH_BASE_BY_PROFESSION[profession?.id ?? builder.professionId] ?? 5922;
@@ -210,7 +312,7 @@ export function computeAttributeTotals(builder: EntropyBuilderState, profession:
     const boonDuration = totals.Concentration / 15;
     const conditionDuration = totals.Expertise / 15;
 
-  return {
+  const computedTotals = {
         power: totals.Power,
         precision: totals.Precision,
         toughness: totals.Toughness,
@@ -226,6 +328,28 @@ export function computeAttributeTotals(builder: EntropyBuilderState, profession:
         boonDuration,
         conditionDuration,
   };
+  const pressure = pressureScores(computedTotals);
+  const equippedWeapons = mainhand ? isTwoHandedWeapon(profession, mainhand) ? 2 : 1 + (offhand ? 1 : 0) : 0;
+  const equippedSlots = ARMOR_SLOTS.length + TRINKET_SLOTS.length + equippedWeapons;
+
+  return {
+    totals: computedTotals,
+    contributions: [
+      { label: "Base chassis", source: "base", stats: baseStats },
+      { label: "Armor", source: "armor", stats: armorStats },
+      { label: "Trinkets", source: "trinket", stats: trinketStats },
+      { label: `Weapon set ${activeSet === 1 ? "I" : "II"}`, source: "weapon", stats: weaponStats },
+    ],
+    equippedSlots,
+    totalSlots: ARMOR_SLOTS.length + TRINKET_SLOTS.length + 2,
+    activeWeaponSet: activeSet,
+    pressure,
+    primaryIdentity: primaryIdentity(pressure),
+  };
+}
+
+export function computeAttributeTotals(builder: EntropyBuilderState, profession: Gw2Profession | null): AttributeTotals {
+  return computeAttributeProfile(builder, profession).totals;
 }
 
 // TODO(attributes-v2): fold in rune 6-piece bonuses, food/utility flat

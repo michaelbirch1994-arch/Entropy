@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { computeAttributeTotals, type AttributeTotals } from "../lib/gw2/computeAttributes";
+import {
+  computeAttributeProfile,
+  type AttributeProfile,
+  type AttributeTotals,
+  type Gw2Attribute,
+} from "../lib/gw2/computeAttributes";
 import {
   AlertCircle,
   Archive,
@@ -134,6 +139,24 @@ function kindLabel(kind: AxiForgeDecodeResult["kind"]): string {
   if (kind === "build") return "Build code detected";
   if (kind === "comp") return "Squad code detected";
   return "Waiting for AxiCode";
+}
+
+function formatInteger(value: number | undefined): string {
+  return Math.round(value ?? 0).toLocaleString();
+}
+
+function pressureLabel(identity: AttributeProfile["primaryIdentity"]): string {
+  if (identity === "strike") return "Strike pressure";
+  if (identity === "condition") return "Condition pressure";
+  if (identity === "support") return "Support uptime";
+  return "Sustain core";
+}
+
+function contributionTotal(
+  contribution: AttributeProfile["contributions"][number],
+  attributes: Gw2Attribute[],
+): number {
+  return attributes.reduce((total, attribute) => total + (contribution.stats[attribute] ?? 0), 0);
 }
 
 function isGw2SkillsInput(value: string): boolean {
@@ -531,6 +554,7 @@ function SquadWorkspace({
               <div className="theme-builder-party-slots">
                 {party.slots.map((buildId, slotIndex) => {
                   const selected = builds.find((build) => build.id === buildId);
+                  const selectedProfile = selected ? computeAttributeProfile(selected.state, null) : null;
                   return (
                     <div key={slotIndex} className={selected ? "theme-builder-squad-slot is-filled" : "theme-builder-squad-slot"}>
                       <span className="theme-builder-squad-slot-index">{slotIndex + 1}</span>
@@ -546,6 +570,12 @@ function SquadWorkspace({
                             <span>
                               <strong>{selected.name}</strong>
                               <small>{[selected.state.role, selected.state.equipment.statPackage].filter(Boolean).join(" / ") || selected.state.professionId}</small>
+                              {selectedProfile && (
+                                <em className="theme-builder-squad-pressure">
+                                  {pressureLabel(selectedProfile.primaryIdentity)}
+                                  <b>{selectedProfile.pressure[selectedProfile.primaryIdentity]}</b>
+                                </em>
+                              )}
                             </span>
                           </button>
                           <button
@@ -586,6 +616,7 @@ function BuildPreview({
   traitsBySpecId,
   skillsById,
   attributeTotals,
+  attributeProfile,
 }: {
   builder: EntropyBuilderState;
   profession: Gw2Profession | null;
@@ -593,6 +624,7 @@ function BuildPreview({
   traitsBySpecId: Map<number, Gw2Trait[]>;
   skillsById: Map<number, Gw2Skill>;
   attributeTotals: AttributeTotals;
+  attributeProfile: AttributeProfile;
 }) {
   const skillIds = [builder.healSkillId, builder.utilitySkillIds[0], builder.utilitySkillIds[1], builder.utilitySkillIds[2], builder.eliteSkillId];
   const skillLabels = ["Heal", "Utility", "Utility", "Utility", "Elite"];
@@ -611,6 +643,14 @@ function BuildPreview({
     ["Boon Duration", attributeTotals.boonDuration.toFixed(1) + "%"],
     ["Condition Duration", attributeTotals.conditionDuration.toFixed(1) + "%"],
   ];
+  const pressureRows = [
+    ["Strike", attributeProfile.pressure.strike],
+    ["Condition", attributeProfile.pressure.condition],
+    ["Support", attributeProfile.pressure.support],
+    ["Sustain", attributeProfile.pressure.sustain],
+  ] as const;
+  const offenseAttrs: Gw2Attribute[] = ["Power", "Precision", "Ferocity", "ConditionDamage", "Expertise"];
+  const supportAttrs: Gw2Attribute[] = ["Concentration", "HealingPower", "Toughness", "Vitality"];
 
   return (
     <div className="theme-builder-preview">
@@ -640,11 +680,36 @@ function BuildPreview({
         </div>
       </div>
 
+      <div className="theme-builder-tactical-strip">
+        <div className="theme-builder-tactical-card is-primary">
+          <small>Build identity</small>
+          <strong>{pressureLabel(attributeProfile.primaryIdentity)}</strong>
+          <span>Active set {attributeProfile.activeWeaponSet === 1 ? "I" : "II"} · {attributeProfile.equippedSlots}/{attributeProfile.totalSlots} gear slots scored</span>
+        </div>
+        {pressureRows.map(([label, value]) => (
+          <div key={label} className="theme-builder-tactical-meter">
+            <div><small>{label}</small><strong>{value}</strong></div>
+            <i><span style={{ width: `${value}%` }} /></i>
+          </div>
+        ))}
+      </div>
+
       <div className="theme-builder-preview-attributes">
         {attributeRows.map(([label, value]) => (
           <div key={label} className="theme-builder-preview-attribute">
             <span>{label}</span>
             <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+
+      <div className="theme-builder-contribution-grid">
+        {attributeProfile.contributions.map((contribution) => (
+          <div key={contribution.source} className="theme-builder-contribution-card">
+            <small>{contribution.label}</small>
+            <strong>+{formatInteger(contributionTotal(contribution, offenseAttrs))}</strong>
+            <span>offense stats</span>
+            <em>+{formatInteger(contributionTotal(contribution, supportAttrs))} support/sustain</em>
           </div>
         ))}
       </div>
@@ -904,7 +969,8 @@ export default function AxiForgeLabView() {
   }, []);
 
   const selectedProfession = useMemo(() => professions.find((profession) => profession.id === builder.professionId) ?? null, [builder.professionId, professions]);
-  const attributeTotals = useMemo(() => computeAttributeTotals(builder, selectedProfession), [builder, selectedProfession]);
+  const attributeProfile = useMemo(() => computeAttributeProfile(builder, selectedProfession), [builder, selectedProfession]);
+  const attributeTotals = attributeProfile.totals;
   const specsById = useMemo(() => new Map(professionSpecs.map((spec) => [spec.id, spec])), [professionSpecs]);
   const traitsBySpecId = useMemo(() => {
     const map = new Map<number, Gw2Trait[]>();
@@ -1630,6 +1696,7 @@ export default function AxiForgeLabView() {
                         traitsBySpecId={traitsBySpecId}
                         skillsById={skillsById}
                         attributeTotals={attributeTotals}
+                        attributeProfile={attributeProfile}
                       />
                       <EquipmentPreview
                         builder={builder}
