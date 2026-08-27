@@ -160,4 +160,32 @@ describe("computeAttributeTotals", () => {
                  expect(totals.power).toBe(1000);
                  expect(totals.precision).toBe(1000);
            });
+
+           it("uses per-slot trinket and weapon stat overrides when present", () => {
+                 const builder = equipFullSet(createEmptyBuilder("Guardian"), "Berserker's", "oneHand");
+                 builder.equipment.slots.amulet = "Harrier's";
+                 builder.equipment.slots.mainhand1 = "Harrier's";
+                 const totals = computeAttributeTotals(builder, makeProfession("Guardian"));
+
+                 expect(totals.power).toBe(2381);
+                 expect(totals.precision).toBe(1961 - 108 - 90);
+                 expect(totals.ferocity).toBe(961 - 108 - 90);
+                 expect(totals.healingPower).toBe(108 + 90);
+                 expect(totals.concentration).toBe(108 + 90);
+           });
+
+           it("uses the active weapon set for weapon stats", () => {
+                 const builder = equipFullSet(createEmptyBuilder("Guardian"), "Berserker's", "oneHand");
+                 builder.equipment.weapons.mainhand2 = "Greatsword";
+                 builder.equipment.weapons.offhand2 = "";
+                 builder.equipment.slots.mainhand2 = "Harrier's";
+                 builder.activeWeaponSet = 2;
+                 const totals = computeAttributeTotals(builder, makeProfession("Guardian"));
+
+                 expect(totals.power).toBe(2382);
+                 expect(totals.precision).toBe(1961 - 90 - 90);
+                 expect(totals.ferocity).toBe(961 - 90 - 90);
+                 expect(totals.healingPower).toBe(179);
+                 expect(totals.concentration).toBe(179);
+           });
 });
