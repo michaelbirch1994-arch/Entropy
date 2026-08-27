@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import Sidebar, { VIEW_ICONS, VIEW_TONES } from "./components/layout/Sidebar";
 import { ReportProvider, useReport } from "./store/ReportContext";
@@ -161,8 +161,22 @@ function ErrorState({ message }: { message: string }) {
 
 function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void }) {
   const { uploadReport, loadFromUrl, error, loading } = useReport();
+  const [landingReady, setLandingReady] = useState(false);
+
+  useEffect(() => {
+    let revealFrame = 0;
+    const paintFrame = window.requestAnimationFrame(() => {
+      revealFrame = window.requestAnimationFrame(() => setLandingReady(true));
+    });
+
+    return () => {
+      window.cancelAnimationFrame(paintFrame);
+      if (revealFrame) window.cancelAnimationFrame(revealFrame);
+    };
+  }, []);
+
   return (
-    <div className="theme-cinematic-landing">
+    <div className={`theme-cinematic-landing${landingReady ? " is-ready" : ""}`}>
       <div className="theme-cinematic-scanline" aria-hidden="true" />
       <div className="theme-sanctum-torches" aria-hidden="true">
         {Array.from({ length: 4 }, (_, index) => (
@@ -181,8 +195,8 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
             key={index}
             style={{
               height: `${18 + ((index * 29) % 54)}%`,
-              animationDelay: `${-((index * 0.11) % 3.6)}s`,
-            }}
+              "--signal-phase": index,
+            } as CSSProperties}
           />
         ))}
         <i />

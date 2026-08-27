@@ -291,12 +291,14 @@
 }
 
 .theme-signal-field span {
+  --signal-phase: 0;
   flex: 1 1 0;
   min-width: 1px;
   max-width: 2px;
   background: var(--signal-gold);
   transform-origin: center;
-  animation: signalFracture 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+  animation: signalFracture 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  animation-delay: calc(var(--signal-phase) * -74ms);
   will-change: opacity, transform;
 }
 
@@ -306,12 +308,6 @@
 
 .theme-signal-field span:nth-child(7n) {
   background: var(--signal-deep);
-}
-
-.theme-signal-field span:nth-child(-n + 12),
-.theme-signal-field span:nth-last-child(-n + 12) {
-  opacity: 0.55;
-  animation-duration: 5.4s;
 }
 
 .theme-signal-field i {
@@ -352,6 +348,11 @@
   margin-bottom: 2rem !important;
   color: #c5ad75 !important;
   letter-spacing: 0 !important;
+  opacity: 0;
+  translate: 0 1rem;
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-kicker {
   animation: flatReveal 700ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both !important;
 }
 
@@ -385,9 +386,12 @@
   transform: scaleX(0.06);
   transform-origin: center;
   filter: drop-shadow(0 0 7px rgba(244, 216, 135, 0.82));
-  animation: logoLockupSweep 1.05s cubic-bezier(0.19, 1, 0.22, 1) 780ms both;
   pointer-events: none;
   z-index: 4;
+}
+
+.theme-cinematic-landing.is-ready .theme-signal-lockup::after {
+  animation: logoLockupSweep 1.05s cubic-bezier(0.19, 1, 0.22, 1) 780ms both;
 }
 
 .theme-cinematic-mark {
@@ -404,8 +408,12 @@
   filter: none !important;
   overflow: visible;
   isolation: isolate;
-  animation: logoMarkMaterialize 1.35s cubic-bezier(0.19, 1, 0.22, 1) 220ms both !important;
+  opacity: 0;
   will-change: opacity, transform, filter;
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-mark {
+  animation: logoMarkMaterialize 1.35s cubic-bezier(0.19, 1, 0.22, 1) 220ms both !important;
 }
 
 .theme-signal-lockup::before {
@@ -417,7 +425,12 @@
   width: 1px;
   background: linear-gradient(transparent, rgba(244, 216, 135, 0.82) 24% 76%, transparent);
   box-shadow: 0 0 14px rgba(229, 185, 79, 0.18);
+  opacity: 0;
+  transform: scaleY(0);
   transform-origin: center;
+}
+
+.theme-cinematic-landing.is-ready .theme-signal-lockup::before {
   animation: logoRuleDraw 1.05s cubic-bezier(0.19, 1, 0.22, 1) 120ms both;
 }
 
@@ -430,9 +443,12 @@
   background: conic-gradient(from 35deg, transparent 0 14%, rgba(244, 216, 135, 0.9) 21%, transparent 29% 54%, rgba(229, 185, 79, 0.62) 63%, transparent 72% 100%);
   mask: radial-gradient(circle, transparent 65%, #000 67% 69%, transparent 71%);
   opacity: 0;
-  animation: logoOrbitResolve 1.55s cubic-bezier(0.19, 1, 0.22, 1) 120ms both;
   pointer-events: none;
   z-index: -1;
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-mark::before {
+  animation: logoOrbitResolve 1.55s cubic-bezier(0.19, 1, 0.22, 1) 120ms both;
 }
 
 .theme-cinematic-mark::after {
@@ -444,9 +460,12 @@
   background: radial-gradient(circle, rgba(255, 239, 190, 0.48), rgba(229, 185, 79, 0.16) 28%, transparent 66%);
   filter: blur(7px);
   opacity: 0;
-  animation: logoFlareResolve 1.45s ease-out 280ms both;
   pointer-events: none;
   z-index: -2;
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-mark::after {
+  animation: logoFlareResolve 1.45s ease-out 280ms both;
 }
 
 .theme-cinematic-mark svg {
@@ -454,6 +473,9 @@
   height: 100%;
   overflow: visible;
   filter: drop-shadow(0 0 5px rgba(229, 185, 79, 0.34));
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg {
   animation: logoGlyphSettle 1.3s cubic-bezier(0.19, 1, 0.22, 1) 260ms both;
 }
 
@@ -461,18 +483,22 @@
 .theme-cinematic-mark svg > path {
   stroke-dasharray: 72;
   stroke-dashoffset: 72;
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg > circle:first-of-type,
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg > path {
   animation: logoStrokeDraw 1.05s cubic-bezier(0.65, 0, 0.35, 1) forwards;
 }
 
-.theme-cinematic-mark svg > circle:first-of-type {
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg > circle:first-of-type {
   animation-delay: 340ms;
 }
 
-.theme-cinematic-mark svg > path:first-of-type {
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg > path:first-of-type {
   animation-delay: 520ms;
 }
 
-.theme-cinematic-mark svg > path:nth-of-type(2) {
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg > path:nth-of-type(2) {
   animation-delay: 640ms;
 }
 
@@ -480,15 +506,18 @@
   opacity: 0;
   transform-box: fill-box;
   transform-origin: center;
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg > circle:not(:first-of-type) {
   animation: logoParticleAssemble 680ms cubic-bezier(0.19, 1, 0.22, 1) forwards;
 }
 
-.theme-cinematic-mark svg > circle:nth-of-type(2) { animation-delay: 460ms; }
-.theme-cinematic-mark svg > circle:nth-of-type(3) { animation-delay: 720ms; }
-.theme-cinematic-mark svg > circle:nth-of-type(4) { animation-delay: 800ms; }
-.theme-cinematic-mark svg > circle:nth-of-type(5) { animation-delay: 880ms; }
-.theme-cinematic-mark svg > circle:nth-of-type(6) { animation-delay: 960ms; }
-.theme-cinematic-mark svg > circle:nth-of-type(7) { animation-delay: 1040ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg > circle:nth-of-type(2) { animation-delay: 460ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg > circle:nth-of-type(3) { animation-delay: 720ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg > circle:nth-of-type(4) { animation-delay: 800ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg > circle:nth-of-type(5) { animation-delay: 880ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg > circle:nth-of-type(6) { animation-delay: 960ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-mark svg > circle:nth-of-type(7) { animation-delay: 1040ms; }
 
 .theme-cinematic-wordmark {
   position: relative;
@@ -514,17 +543,20 @@
   display: inline-block;
   opacity: 0;
   transform-origin: 50% 100%;
-  animation: logoLetterResolve 920ms cubic-bezier(0.16, 1, 0.3, 1) both;
   will-change: opacity, transform, filter;
 }
 
-.theme-cinematic-letter:nth-child(1) { animation-delay: 520ms; }
-.theme-cinematic-letter:nth-child(2) { animation-delay: 600ms; }
-.theme-cinematic-letter:nth-child(3) { animation-delay: 680ms; }
-.theme-cinematic-letter:nth-child(4) { animation-delay: 760ms; }
-.theme-cinematic-letter:nth-child(5) { animation-delay: 840ms; }
-.theme-cinematic-letter:nth-child(6) { animation-delay: 920ms; }
-.theme-cinematic-letter:nth-child(7) { animation-delay: 1000ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-letter {
+  animation: logoLetterResolve 920ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(1) { animation-delay: 520ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(2) { animation-delay: 600ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(3) { animation-delay: 680ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(4) { animation-delay: 760ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(5) { animation-delay: 840ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(6) { animation-delay: 920ms; }
+.theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(7) { animation-delay: 1000ms; }
 
 .theme-cinematic-wordmark::before {
   content: attr(data-wordmark);
@@ -534,9 +566,12 @@
   clip-path: inset(0 100% 0 0);
   opacity: 0;
   filter: blur(1px) drop-shadow(0 0 8px rgba(244, 216, 135, 0.5));
-  animation: logoWordmarkEcho 1.2s cubic-bezier(0.19, 1, 0.22, 1) 470ms both;
   pointer-events: none;
   z-index: 2;
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-wordmark::before {
+  animation: logoWordmarkEcho 1.2s cubic-bezier(0.19, 1, 0.22, 1) 470ms both;
 }
 
 .theme-cinematic-wordmark::after {
@@ -549,9 +584,12 @@
   background: linear-gradient(transparent, rgba(255, 245, 211, 0.96) 34% 66%, transparent);
   box-shadow: 0 0 12px rgba(244, 216, 135, 0.82);
   opacity: 0;
-  animation: logoWordmarkBeam 1.1s cubic-bezier(0.19, 1, 0.22, 1) 720ms both;
   pointer-events: none;
   z-index: 3;
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-wordmark::after {
+  animation: logoWordmarkBeam 1.1s cubic-bezier(0.19, 1, 0.22, 1) 720ms both;
 }
 
 .theme-cinematic-declaration {
@@ -562,12 +600,22 @@
   line-height: 1.22 !important;
   letter-spacing: 0 !important;
   text-wrap: balance;
+  opacity: 0;
+  translate: 0 1rem;
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-declaration {
   animation: flatReveal 750ms cubic-bezier(0.22, 1, 0.36, 1) 1420ms both !important;
 }
 
 .theme-cinematic-support {
   max-width: 34rem !important;
   color: #c1b7a3 !important;
+  opacity: 0;
+  translate: 0 1rem;
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-support {
   animation: flatReveal 750ms cubic-bezier(0.22, 1, 0.36, 1) 1580ms both !important;
 }
 
@@ -576,6 +624,11 @@
   margin-top: 2.7rem !important;
   border-top-color: rgba(229, 185, 79, 0.35) !important;
   box-shadow: none !important;
+  opacity: 0;
+  translate: 0 1rem;
+}
+
+.theme-cinematic-landing.is-ready .theme-cinematic-readouts {
   animation: flatReveal 750ms cubic-bezier(0.22, 1, 0.36, 1) 1740ms both !important;
 }
 
@@ -777,9 +830,9 @@
 }
 
 @keyframes signalFracture {
-  0% { transform: scaleY(0.38); opacity: 0.24; }
-  44% { transform: scaleY(1.04); opacity: 0.76; }
-  100% { transform: scaleY(0.62); opacity: 0.42; }
+  0%, 100% { transform: scaleY(0.34); opacity: 0.22; }
+  40% { transform: scaleY(1.08); opacity: 0.82; }
+  68% { transform: scaleY(0.56); opacity: 0.38; }
 }
 
 @keyframes sanctumLightPass {
@@ -1088,13 +1141,40 @@
 }
 
 @keyframes logoReducedResolve {
-  from { opacity: 0; filter: brightness(1.35); }
-  to { opacity: 1; filter: brightness(1); }
+  from {
+    opacity: 0;
+    translate: 0 0.45rem;
+    filter: brightness(1.35);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    filter: brightness(1);
+  }
+}
+
+@keyframes logoReducedMarkResolve {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+    filter: brightness(1.45);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
 }
 
 @keyframes logoReducedLetterResolve {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+    transform: translateY(14%) scaleY(0.84);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
 }
 
 @media (max-width: 1500px) {
@@ -1303,7 +1383,8 @@
   }
 
   .theme-signal-field span {
-    animation: signalFractureReduced 5.2s ease-in-out infinite alternate !important;
+    animation: signalFractureReduced 5.2s ease-in-out infinite !important;
+    animation-delay: calc(var(--signal-phase) * -108ms) !important;
     animation-duration: 5.2s !important;
     animation-iteration-count: infinite !important;
   }
@@ -1340,9 +1421,9 @@
     animation: sanctumTorchReducedWispRight 6.1s ease-in-out calc(var(--torch-delay) - 1.1s) infinite !important;
   }
 
-  .theme-signal-lockup::before {
+  .theme-cinematic-landing.is-ready .theme-signal-lockup::before {
     opacity: 0.72;
-    transform: scaleY(1);
+    animation: logoRuleDraw 720ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both !important;
   }
 
   .theme-signal-lockup::after,
@@ -1352,13 +1433,13 @@
     opacity: 0;
   }
 
-  .theme-cinematic-mark {
-    animation: logoReducedResolve 620ms ease-out 120ms both !important;
-    animation-duration: 620ms !important;
+  .theme-cinematic-landing.is-ready .theme-cinematic-mark {
+    animation: logoReducedMarkResolve 900ms cubic-bezier(0.22, 1, 0.36, 1) 260ms both !important;
+    animation-duration: 900ms !important;
     animation-iteration-count: 1 !important;
   }
 
-  .theme-cinematic-mark::before {
+  .theme-cinematic-landing.is-ready .theme-cinematic-mark::before {
     opacity: 0.18;
     transform: rotate(115deg) scale(1);
   }
@@ -1370,33 +1451,33 @@
     transform: none;
   }
 
-  .theme-cinematic-letter {
-    animation: logoReducedLetterResolve 360ms ease-out both !important;
-    animation-duration: 360ms !important;
+  .theme-cinematic-landing.is-ready .theme-cinematic-letter {
+    animation: logoReducedLetterResolve 560ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
+    animation-duration: 560ms !important;
     animation-iteration-count: 1 !important;
   }
 
-  .theme-cinematic-letter:nth-child(1) { animation-delay: 260ms !important; }
-  .theme-cinematic-letter:nth-child(2) { animation-delay: 320ms !important; }
-  .theme-cinematic-letter:nth-child(3) { animation-delay: 380ms !important; }
-  .theme-cinematic-letter:nth-child(4) { animation-delay: 440ms !important; }
-  .theme-cinematic-letter:nth-child(5) { animation-delay: 500ms !important; }
-  .theme-cinematic-letter:nth-child(6) { animation-delay: 560ms !important; }
-  .theme-cinematic-letter:nth-child(7) { animation-delay: 620ms !important; }
+  .theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(1) { animation-delay: 480ms !important; }
+  .theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(2) { animation-delay: 550ms !important; }
+  .theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(3) { animation-delay: 620ms !important; }
+  .theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(4) { animation-delay: 690ms !important; }
+  .theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(5) { animation-delay: 760ms !important; }
+  .theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(6) { animation-delay: 830ms !important; }
+  .theme-cinematic-landing.is-ready .theme-cinematic-letter:nth-child(7) { animation-delay: 900ms !important; }
 
-  .theme-cinematic-kicker,
-  .theme-cinematic-declaration,
-  .theme-cinematic-support,
-  .theme-cinematic-readouts {
-    animation: logoReducedResolve 480ms ease-out both !important;
-    animation-duration: 480ms !important;
+  .theme-cinematic-landing.is-ready .theme-cinematic-kicker,
+  .theme-cinematic-landing.is-ready .theme-cinematic-declaration,
+  .theme-cinematic-landing.is-ready .theme-cinematic-support,
+  .theme-cinematic-landing.is-ready .theme-cinematic-readouts {
+    animation: logoReducedResolve 700ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
+    animation-duration: 700ms !important;
     animation-iteration-count: 1 !important;
   }
 
-  .theme-cinematic-kicker { animation-delay: 80ms !important; }
-  .theme-cinematic-declaration { animation-delay: 680ms !important; }
-  .theme-cinematic-support { animation-delay: 760ms !important; }
-  .theme-cinematic-readouts { animation-delay: 840ms !important; }
+  .theme-cinematic-landing.is-ready .theme-cinematic-kicker { animation-delay: 120ms !important; }
+  .theme-cinematic-landing.is-ready .theme-cinematic-declaration { animation-delay: 1120ms !important; }
+  .theme-cinematic-landing.is-ready .theme-cinematic-support { animation-delay: 1320ms !important; }
+  .theme-cinematic-landing.is-ready .theme-cinematic-readouts { animation-delay: 1520ms !important; }
 }
 
 @keyframes sanctumBackplateReducedDrift {
@@ -1411,8 +1492,9 @@
 }
 
 @keyframes signalFractureReduced {
-  0%, 100% { transform: scaleY(0.5); opacity: 0.28; }
-  50% { transform: scaleY(0.92); opacity: 0.68; }
+  0%, 100% { transform: scaleY(0.46); opacity: 0.28; }
+  42% { transform: scaleY(0.94); opacity: 0.68; }
+  72% { transform: scaleY(0.58); opacity: 0.4; }
 }
 
 @keyframes signalSweepReduced {
