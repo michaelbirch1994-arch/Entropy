@@ -31,6 +31,18 @@ function equipFullSet(builder: EntropyBuilderState, statPackage: string, weapon:
     return builder;
 }
 
+function equipRuneSet(builder: EntropyBuilderState, runeId: string) {
+    builder.equipment.runes = {
+          head: runeId,
+          shoulders: runeId,
+          chest: runeId,
+          hands: runeId,
+          legs: runeId,
+          feet: runeId,
+    };
+    return builder;
+}
+
 describe("computeAttributeTotals", () => {
     it("returns base 1000 primary stats with no gear and no profession passed", () => {
           const builder = createEmptyBuilder("Guardian");
@@ -218,5 +230,32 @@ describe("computeAttributeTotals", () => {
                  expect(profile.pressure.support).toBeGreaterThan(profile.pressure.strike);
                  expect(profile.pressure.sustain).toBeGreaterThan(profile.pressure.strike);
                  expect(["support", "sustain"]).toContain(profile.primaryIdentity);
+           });
+
+           it("includes full rune sets, food, and utility conversions as tactical contribution groups", () => {
+                 const builder = equipRuneSet(equipFullSet(createEmptyBuilder("Guardian"), "Berserker's", "oneHand"), "24836");
+                 builder.equipment.food = "Peppercorn-Crusted Sous-Vide Steak";
+                 builder.equipment.utility = "Superior Sharpening Stone";
+                 const profile = computeAttributeProfile(builder, makeProfession("Guardian"));
+
+                 expect(profile.totals.precision).toBe(1961);
+                 expect(profile.totals.ferocity).toBe(1256);
+                 expect(profile.totals.power).toBe(2790);
+
+                 expect(profile.contributions.find((entry) => entry.source === "rune")?.stats).toMatchObject({ Power: 175, Ferocity: 225 });
+                 expect(profile.contributions.find((entry) => entry.source === "food")?.stats).toMatchObject({ Power: 100, Ferocity: 70 });
+                 expect(profile.contributions.find((entry) => entry.source === "utility")?.stats).toMatchObject({ Power: 134 });
+           });
+
+           it("uses support rune and maintenance oil bonuses in boon/healing pressure", () => {
+                 const builder = equipRuneSet(equipFullSet(createEmptyBuilder("Guardian"), "Minstrel's", "oneHand"), "24842");
+                 builder.equipment.food = "Mint-Pear Cured Meat Flatbread";
+                 builder.equipment.utility = "Furious Maintenance Oil";
+                 const profile = computeAttributeProfile(builder, makeProfession("Guardian"));
+
+                 expect(profile.totals.healingPower).toBe(1173 + 300 + 100 + 30);
+                 expect(profile.totals.concentration).toBe(633 + 225 + 70 + 30);
+                 expect(profile.totals.boonDuration).toBeCloseTo(profile.totals.concentration / 15, 6);
+                 expect(profile.pressure.support).toBeGreaterThan(profile.pressure.strike);
            });
 });
