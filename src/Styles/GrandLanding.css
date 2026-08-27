@@ -297,6 +297,7 @@
   background: var(--signal-gold);
   transform-origin: center;
   animation: signalFracture 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+  will-change: opacity, transform;
 }
 
 .theme-signal-field span:nth-child(4n) {
@@ -776,9 +777,9 @@
 }
 
 @keyframes signalFracture {
-  0% { scale: 1 0.38; opacity: 0.24; }
-  44% { scale: 1 1.04; opacity: 0.76; }
-  100% { scale: 1 0.62; opacity: 0.42; }
+  0% { transform: scaleY(0.38); opacity: 0.24; }
+  44% { transform: scaleY(1.04); opacity: 0.76; }
+  100% { transform: scaleY(0.62); opacity: 0.42; }
 }
 
 @keyframes sanctumLightPass {
@@ -829,8 +830,8 @@
 }
 
 @keyframes signalTick {
-  0%, 100% { opacity: 0.42; scale: 0.55 1; transform-origin: left; }
-  50% { opacity: 1; scale: 1 1; transform-origin: left; }
+  0%, 100% { opacity: 0.42; transform: scaleX(0.55); transform-origin: left; }
+  50% { opacity: 1; transform: scaleX(1); transform-origin: left; }
 }
 
 @keyframes flatReveal {
@@ -1291,6 +1292,34 @@
     animation: none !important;
   }
 
+  .theme-cinematic-landing {
+    animation: sanctumBackplateReducedDrift 18s ease-in-out infinite !important;
+    animation-duration: 18s !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  .theme-signal-field {
+    opacity: 0.3;
+  }
+
+  .theme-signal-field span {
+    animation: signalFractureReduced 5.2s ease-in-out infinite alternate !important;
+    animation-duration: 5.2s !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  .theme-signal-field i {
+    animation: signalSweepReduced 10s ease-in-out infinite !important;
+    animation-duration: 10s !important;
+    animation-iteration-count: infinite !important;
+  }
+
+  .theme-cinematic-scanline::after {
+    animation: sanctumLightPassReduced 18s ease-in-out infinite !important;
+    animation-duration: 18s !important;
+    animation-iteration-count: infinite !important;
+  }
+
   .theme-sanctum-torches > span {
     animation: sanctumTorchReducedBreath 4.8s ease-in-out var(--torch-delay) infinite !important;
   }
@@ -1368,4 +1397,34 @@
   .theme-cinematic-declaration { animation-delay: 680ms !important; }
   .theme-cinematic-support { animation-delay: 760ms !important; }
   .theme-cinematic-readouts { animation-delay: 840ms !important; }
+}
+
+@keyframes sanctumBackplateReducedDrift {
+  0%, 100% {
+    background-position: 0 0, 0 0, right center, 0 0;
+    filter: brightness(1);
+  }
+  50% {
+    background-position: 0 0, 0 0, calc(100% - 0.55rem) center, 0 0;
+    filter: brightness(1.035);
+  }
+}
+
+@keyframes signalFractureReduced {
+  0%, 100% { transform: scaleY(0.5); opacity: 0.28; }
+  50% { transform: scaleY(0.92); opacity: 0.68; }
+}
+
+@keyframes signalSweepReduced {
+  0%, 24% { left: -12rem; opacity: 0; }
+  42% { opacity: 0.36; }
+  68% { opacity: 0.18; }
+  88%, 100% { left: calc(100% + 4rem); opacity: 0; }
+}
+
+@keyframes sanctumLightPassReduced {
+  0%, 20% { translate: -46% 0; opacity: 0; }
+  42% { opacity: 0.42; }
+  70% { opacity: 0.18; }
+  88%, 100% { translate: 48% 0; opacity: 0; }
 }
