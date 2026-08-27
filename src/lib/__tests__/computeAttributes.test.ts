@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeAttributeTotals } from "../gw2/computeAttributes";
+import { computeAttributeProfile, computeAttributeTotals } from "../gw2/computeAttributes";
 import { createEmptyBuilder } from "../axiforge/builderModel";
 import type { EntropyBuilderState, Gw2Profession } from "../../types/buildEditor";
 
@@ -187,5 +187,36 @@ describe("computeAttributeTotals", () => {
                  expect(totals.ferocity).toBe(961 - 90 - 90);
                  expect(totals.healingPower).toBe(179);
                  expect(totals.concentration).toBe(179);
+           });
+
+           it("returns a tactical profile with contribution groups and active set identity", () => {
+                 const builder = equipFullSet(createEmptyBuilder("Guardian"), "Berserker's", "oneHand");
+                 builder.equipment.slots.amulet = "Harrier's";
+                 const profile = computeAttributeProfile(builder, makeProfession("Guardian"));
+
+                 expect(profile.totals.power).toBe(2381);
+                 expect(profile.activeWeaponSet).toBe(1);
+                 expect(profile.equippedSlots).toBe(14);
+                 expect(profile.totalSlots).toBe(14);
+                 expect(profile.primaryIdentity).toBe("strike");
+                 expect(profile.pressure.strike).toBeGreaterThan(profile.pressure.support);
+
+                 const base = profile.contributions.find((entry) => entry.source === "base");
+                 const trinkets = profile.contributions.find((entry) => entry.source === "trinket");
+                 const weapons = profile.contributions.find((entry) => entry.source === "weapon");
+
+                 expect(base?.stats.Power).toBe(1000);
+                 expect(trinkets?.stats.HealingPower).toBe(108);
+                 expect(weapons?.label).toBe("Weapon set I");
+                 expect(weapons?.stats.Power).toBe(250);
+           });
+
+           it("scores a Minstrel support build as support/sustain instead of strike pressure", () => {
+                 const builder = equipFullSet(createEmptyBuilder("Guardian"), "Minstrel's", "oneHand");
+                 const profile = computeAttributeProfile(builder, makeProfession("Guardian"));
+
+                 expect(profile.pressure.support).toBeGreaterThan(profile.pressure.strike);
+                 expect(profile.pressure.sustain).toBeGreaterThan(profile.pressure.strike);
+                 expect(["support", "sustain"]).toContain(profile.primaryIdentity);
            });
 });
