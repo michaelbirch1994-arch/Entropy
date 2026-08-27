@@ -1911,9 +1911,25 @@ kbd {
 .theme-builder-root {
   --builder-line: rgba(119, 52, 31, 0.72);
   --builder-plate: rgba(10, 6, 4, 0.92);
+  position: relative;
+  isolation: isolate;
   width: min(100%, 96rem);
   margin: 0 auto;
   color: var(--theme-text);
+}
+
+.theme-builder-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(88, 255, 227, 0.08), transparent 24rem),
+    radial-gradient(circle at 82% 22%, rgba(255, 106, 50, 0.08), transparent 25rem),
+    linear-gradient(115deg, transparent 0 47%, rgba(88, 255, 227, 0.035) 48% 49%, transparent 50% 100%);
+  opacity: 0.8;
+  animation: theme-builder-atmosphere 14s ease-in-out infinite alternate;
 }
 
 .theme-builder-command-deck {
@@ -1943,6 +1959,7 @@ kbd {
   font-family: var(--font-mono);
   font-size: 0.5rem;
   letter-spacing: 0.15em;
+  animation: theme-builder-scan-copy 2.8s ease-in-out infinite;
 }
 
 .theme-builder-title-block,
@@ -2070,6 +2087,26 @@ kbd {
   color: #ffe5d5;
   background: linear-gradient(90deg, rgba(222, 57, 22, 0.28), rgba(83, 23, 10, 0.12));
   box-shadow: inset 3px 0 0 #f0582c, inset 0 -2px 0 rgba(255, 85, 34, 0.6);
+}
+
+.theme-builder-tabs > button,
+.theme-builder-command-actions .theme-command-button,
+.theme-builder-professions button,
+.theme-builder-skill-icon,
+.theme-builder-trait-tier button,
+.theme-builder-preview-skill,
+.theme-builder-preview-armor-badge {
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, opacity 0.16s ease, filter 0.16s ease;
+}
+
+.theme-builder-tabs > button:hover,
+.theme-builder-command-actions .theme-command-button:hover,
+.theme-builder-professions button:hover,
+.theme-builder-skill-slot:hover,
+.theme-builder-equipment-group:hover {
+  transform: translateY(-1px);
+  border-color: rgba(88, 255, 227, 0.54);
+  box-shadow: 0 14px 30px -26px rgba(88, 255, 227, 0.75), inset 0 0 0 1px rgba(88, 255, 227, 0.08);
 }
 
 .theme-builder-mode-switch {
@@ -2206,6 +2243,11 @@ kbd {
 }
 .theme-builder-professions button.is-active { border-color: rgba(255, 91, 38, 0.78); color: #ffe6d9; background: linear-gradient(145deg, rgba(222, 56, 20, 0.28), rgba(32, 10, 5, 0.9)); box-shadow: inset 2px 0 0 #ef5128; }
 .theme-builder-professions button.is-active span { filter: none; }
+.theme-builder-professions button:hover span,
+.theme-builder-skill-icon:hover img,
+.theme-builder-trait-tier button:hover img {
+  filter: saturate(1.18) drop-shadow(0 0 8px rgba(88, 255, 227, 0.55));
+}
 
 .theme-builder-spec-stack { display: grid; gap: 0.6rem; }
 .theme-builder-spec-line {
@@ -2237,7 +2279,7 @@ kbd {
 .theme-builder-skill-slot .theme-builder-input { margin: 0; min-width: 0; height: 2.7rem; }
 
 .theme-builder-equipment-grid { display: grid; grid-template-columns: 1.15fr 0.9fr 1fr; gap: 0.7rem; align-items: start; }
-.theme-builder-equipment-group { display: grid; gap: 0.62rem; min-height: 100%; padding: 0.75rem; border-left: 2px solid rgba(149, 45, 20, 0.58); background: rgba(4, 3, 2, 0.6); }
+.theme-builder-equipment-group { display: grid; gap: 0.62rem; min-height: 100%; padding: 0.75rem; border: 1px solid rgba(91, 43, 29, 0.35); border-left: 2px solid rgba(149, 45, 20, 0.58); background: rgba(4, 3, 2, 0.6); transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease; }
 .theme-builder-equipment-group h4 { color: #d2b9ad; font-size: 0.66rem; font-weight: 900; text-transform: uppercase; }
 .theme-builder-equipment-sheet {
   display: grid;
@@ -2348,10 +2390,46 @@ kbd {
 .theme-builder-party-name input { width: 100%; outline: none; background: transparent; color: #cdb6aa; font-size: 0.67rem; font-weight: 800; text-transform: uppercase; }
 .theme-builder-party-name button { color: #775d52; }
 .theme-builder-party-name svg { width: 0.8rem; }
-.theme-builder-party-slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.35rem; }
-.theme-builder-party-slots label { position: relative; display: grid; min-width: 0; min-height: 3.1rem; padding: 0.35rem 0.38rem 0.3rem 1.5rem; border: 1px dashed rgba(90, 48, 34, 0.72); background: rgba(255, 255, 255, 0.01); }
-.theme-builder-party-slots label.is-filled { border-style: solid; border-color: rgba(191, 65, 31, 0.7); background: linear-gradient(100deg, rgba(197, 48, 18, 0.15), transparent); }
-.theme-builder-party-slots label > span { position: absolute; left: 0.35rem; top: 0.35rem; color: #6a3c2d; font-family: var(--font-mono); font-size: 0.55rem; }
+.theme-builder-party-slots { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.42rem; }
+.theme-builder-squad-slot {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 4.6rem;
+  padding: 0.48rem;
+  border: 1px dashed rgba(90, 48, 34, 0.72);
+  background: rgba(255, 255, 255, 0.01);
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+.theme-builder-squad-slot.is-filled {
+  border-style: solid;
+  border-color: rgba(88, 255, 227, 0.55);
+  background: linear-gradient(145deg, rgba(24, 217, 189, 0.11), rgba(197, 48, 18, 0.08));
+}
+.theme-builder-squad-slot:hover {
+  transform: translateY(-2px);
+  border-color: rgba(88, 255, 227, 0.72);
+  box-shadow: 0 14px 28px -24px rgba(88, 255, 227, 0.8);
+}
+.theme-builder-squad-slot-index { position: absolute; left: 0.35rem; top: 0.3rem; color: #6a3c2d; font-family: var(--font-mono); font-size: 0.55rem; }
+.theme-builder-squad-card {
+  display: grid;
+  grid-template-columns: 2.15rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.32rem 1.25rem 0.32rem 0.25rem;
+  text-align: left;
+}
+.theme-builder-squad-card img,
+.theme-builder-squad-card > span:first-child { width: 2.15rem; height: 2.15rem; }
+.theme-builder-squad-card > span:last-child { display: grid; min-width: 0; gap: 0.12rem; }
+.theme-builder-squad-card strong { overflow: hidden; color: #e8fef9; font-size: 0.62rem; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.theme-builder-squad-card small,
+.theme-builder-squad-picker small { overflow: hidden; color: #7bbfaf; font-family: var(--font-mono); font-size: 0.48rem; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.theme-builder-squad-remove { position: absolute; top: 0.3rem; right: 0.32rem; color: #7e685d; }
+.theme-builder-squad-remove:hover { color: #ff9f77; }
+.theme-builder-squad-picker { display: grid; align-content: center; gap: 0.32rem; height: 100%; padding-left: 1.05rem; }
 .theme-builder-party-slots select { min-width: 0; outline: none; background: transparent; color: #bca79d; font-size: 0.58rem; }
 .theme-builder-party-slots option { background: #0a0604; }
 .theme-builder-party-slots small { color: #825a49; font-family: var(--font-mono); font-size: 0.48rem; text-transform: uppercase; }
@@ -3391,6 +3469,10 @@ button:disabled,
 .theme-builder-preview-attribute { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.5rem 0.7rem; border-radius: 0.4rem; border: 1px solid rgba(91, 43, 29, 0.55); background: rgba(4, 3, 2, 0.6); font-size: 0.72rem; }
 .theme-builder-preview-attribute span { color: #9a6855; text-transform: uppercase; letter-spacing: 0.04em; }
 .theme-builder-preview-attribute strong { color: #ffe6d9; }
+.theme-builder-preview-attribute:hover {
+  border-color: rgba(88, 255, 227, 0.5);
+  background: rgba(88, 255, 227, 0.045);
+}
 
 .theme-builder-preview-specs { display: grid; gap: 0.75rem; }
 .theme-builder-preview-spec-row { position: relative; display: flex; align-items: center; gap: 1rem; padding: 1rem 1.2rem; border-radius: 0.6rem; border: 1px solid rgba(91, 43, 29, 0.6); background-color: rgba(4, 3, 2, 0.85); background-size: cover; background-position: center; overflow: hidden; }
@@ -3656,4 +3738,14 @@ button:disabled,
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes theme-builder-atmosphere {
+  from { opacity: 0.58; transform: translate3d(-0.8rem, -0.4rem, 0) scale(1); }
+  to { opacity: 0.92; transform: translate3d(0.9rem, 0.45rem, 0) scale(1.02); }
+}
+
+@keyframes theme-builder-scan-copy {
+  0%, 100% { opacity: 0.24; }
+  50% { opacity: 0.58; }
 }

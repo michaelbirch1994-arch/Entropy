@@ -13,9 +13,9 @@
 //   https://wiki.guildwars2.com/wiki/Attribute
 //   for the derived-stat formulas.
 //
-// Scope: base 1000 primary stats + equipment (armor, weapons, trinkets)
-// at full Ascended rarity -- the same assumption every public build
-// calculator makes. Rune 6pc bonuses, food/utility flat stats, and
+// Scope: base 1000 primary stats + equipment (armor, active weapon set,
+// trinkets) at full Ascended rarity -- the same assumption every public
+// build calculator makes. Rune 6pc bonuses, food/utility flat stats, and
 // flat-stat traits are NOT modeled yet (see TODO at the bottom): they mix
 // plain "+N Attribute" text with proc effects that carry no stat value,
 // so they need their own parser rather than reusing combat facts.
@@ -136,6 +136,14 @@ const STAT_COMBOS: Record<string, StatCombo> = {
 };
 
 const ARMOR_SLOTS: SlotKey[] = ["head", "shoulders", "chest", "hands", "legs", "feet"];
+const TRINKET_SLOTS: Array<[string, SlotKey]> = [
+  ["amulet", "amulet"],
+  ["ring1", "ring"],
+  ["ring2", "ring"],
+  ["accessory1", "accessory"],
+  ["accessory2", "accessory"],
+  ["backpack", "back"],
+];
 
 const ALL_ATTRIBUTES: Gw2Attribute[] = ["Power", "Precision", "Toughness", "Vitality", "Concentration", "ConditionDamage", "Expertise", "Ferocity", "HealingPower"];
 
@@ -163,6 +171,10 @@ function applyStatPiece(totals: Record<Gw2Attribute, number>, statName: string, 
  * Ascended gear in the build's chosen stat package. Runes, food/utility,
  * and trait bonuses are not included yet -- see the file header.
  */
+function slotStat(builder: EntropyBuilderState, slot: string): string {
+  return builder.equipment.slots[slot] || builder.equipment.statPackage;
+}
+
 export function computeAttributeTotals(builder: EntropyBuilderState, profession: Gw2Profession | null): AttributeTotals {
     const totals: Record<Gw2Attribute, number> = {
           Power: BASE_PRIMARY.Power,
@@ -176,24 +188,19 @@ export function computeAttributeTotals(builder: EntropyBuilderState, profession:
           HealingPower: 0,
     };
 
-  const statName = builder.equipment.statPackage;
-    if (statName && STAT_COMBOS[statName]) {
-          ARMOR_SLOTS.forEach((slot) => applyStatPiece(totals, statName, slot));
-          applyStatPiece(totals, statName, "amulet");
-          applyStatPiece(totals, statName, "ring");
-          applyStatPiece(totals, statName, "ring");
-          applyStatPiece(totals, statName, "accessory");
-          applyStatPiece(totals, statName, "accessory");
-          applyStatPiece(totals, statName, "back");
+  ARMOR_SLOTS.forEach((slot) => applyStatPiece(totals, slotStat(builder, slot), slot));
+  TRINKET_SLOTS.forEach(([slot, budgetKey]) => applyStatPiece(totals, slotStat(builder, slot), budgetKey));
 
-      const mainhand = builder.equipment.weapons.mainhand1;
-          const offhand = builder.equipment.weapons.offhand1;
-          if (mainhand) {
-                  const twoHanded = isTwoHandedWeapon(profession, mainhand);
-                  applyStatPiece(totals, statName, twoHanded ? "twoHand" : "oneHand");
-                  if (!twoHanded && offhand) applyStatPiece(totals, statName, "oneHand");
-          }
-    }
+  const activeSet = builder.activeWeaponSet === 2 ? 2 : 1;
+  const mainhand = builder.equipment.weapons[`mainhand${activeSet}`];
+  const offhand = builder.equipment.weapons[`offhand${activeSet}`];
+  const mainhandStat = slotStat(builder, `mainhand${activeSet}`);
+  const offhandStat = slotStat(builder, `offhand${activeSet}`);
+  if (mainhand) {
+    const twoHanded = isTwoHandedWeapon(profession, mainhand);
+    applyStatPiece(totals, mainhandStat, twoHanded ? "twoHand" : "oneHand");
+    if (!twoHanded && offhand) applyStatPiece(totals, offhandStat, "oneHand");
+  }
 
   const healthBase = HEALTH_BASE_BY_PROFESSION[profession?.id ?? builder.professionId] ?? 5922;
     const health = healthBase + totals.Vitality * 10;

@@ -16,6 +16,7 @@ import {
   Layers3,
   Link2,
   Loader2,
+  MinusCircle,
   Plus,
   RotateCcw,
   Save,
@@ -475,6 +476,7 @@ function SquadWorkspace({
   boonComputing,
   onCreate,
   onChange,
+  onOpenBuild,
   onCopyCode,
   onShareCode,
 }: {
@@ -484,6 +486,7 @@ function SquadWorkspace({
   boonComputing: boolean;
   onCreate: () => void;
   onChange: (composition: BuilderComposition) => void;
+  onOpenBuild: (build: SavedBuilderBuild) => void;
   onCopyCode: () => void;
     onShareCode: () => void;
 }) {
@@ -498,6 +501,11 @@ function SquadWorkspace({
 
   const assigned = composition.parties.reduce((total, party) => total + party.slots.filter(Boolean).length, 0);
   const update = (partial: Partial<BuilderComposition>) => onChange({ ...composition, ...partial, updatedAt: new Date().toISOString() });
+  const updateSlot = (partyId: string, slotIndex: number, buildId: string | null) => update({
+    parties: composition.parties.map((item) => item.id === partyId
+      ? { ...item, slots: item.slots.map((slot, index) => index === slotIndex ? buildId : slot) }
+      : item),
+  });
 
   return (
     <>
@@ -524,14 +532,41 @@ function SquadWorkspace({
                 {party.slots.map((buildId, slotIndex) => {
                   const selected = builds.find((build) => build.id === buildId);
                   return (
-                    <label key={slotIndex} className={selected ? "is-filled" : ""}>
-                      <span>{slotIndex + 1}</span>
-                      <select value={buildId ?? ""} onChange={(event) => update({ parties: composition.parties.map((item) => item.id === party.id ? { ...item, slots: item.slots.map((slot, index) => index === slotIndex ? event.target.value || null : slot) } : item) })}>
-                        <option value="">Open slot</option>
-                        {builds.map((build) => <option key={build.id} value={build.id}>{build.name} · {build.state.professionId}</option>)}
-                      </select>
-                      {selected && <small>{selected.state.role || selected.state.professionId}</small>}
-                    </label>
+                    <div key={slotIndex} className={selected ? "theme-builder-squad-slot is-filled" : "theme-builder-squad-slot"}>
+                      <span className="theme-builder-squad-slot-index">{slotIndex + 1}</span>
+                      {selected ? (
+                        <>
+                          <button
+                            type="button"
+                            className="theme-builder-squad-card"
+                            onClick={() => onOpenBuild(selected)}
+                            title={`Open ${selected.name}`}
+                          >
+                            <ClassIcon name={selected.state.professionId} size="md" />
+                            <span>
+                              <strong>{selected.name}</strong>
+                              <small>{[selected.state.role, selected.state.equipment.statPackage].filter(Boolean).join(" / ") || selected.state.professionId}</small>
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            className="theme-builder-squad-remove"
+                            onClick={() => updateSlot(party.id, slotIndex, null)}
+                            title="Clear squad slot"
+                          >
+                            <MinusCircle className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      ) : (
+                        <label className="theme-builder-squad-picker">
+                          <small>Open slot</small>
+                          <select value="" onChange={(event) => updateSlot(party.id, slotIndex, event.target.value || null)}>
+                            <option value="">Assign build</option>
+                            {builds.map((build) => <option key={build.id} value={build.id}>{build.name} / {build.state.professionId}</option>)}
+                          </select>
+                        </label>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -1351,7 +1386,7 @@ export default function AxiForgeLabView() {
       )}
 
       {activeTab === "library" && <BuildLibrary builds={workspace.builds} onLoad={loadBuild} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} onShare={(code) => copyText(buildAxiForgeShareUrl(code), "Share link copied.")} />}
-      {activeTab === "squad" && <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} onCreate={createSquad} onChange={updateComposition} onCopyCode={exportSquad} onShareCode={shareSquad} />}
+      {activeTab === "squad" && <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={loadBuild} onCopyCode={exportSquad} onShareCode={shareSquad} />}
 
       {activeTab === "build" && (
         <div className="theme-builder-layout">
@@ -1445,6 +1480,14 @@ export default function AxiForgeLabView() {
                             {!currentIsValid && <option value={currentWeapon}>Unavailable · {currentWeapon}</option>}
                             {validWeapons.map(([name]) => <option key={name} value={name.toLowerCase()}>{name}</option>)}
                           </SelectField>
+                          <SelectField
+                            value={builder.equipment.slots[slot] || ""}
+                            onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, slots: { ...current.equipment.slots, [slot]: event.target.value } } }))}
+                            title={`Stat override for ${slot}`}
+                          >
+                            <option value="">Use doctrine stats</option>
+                            {statOptions.filter(Boolean).map((stat) => <option key={stat} value={stat}>{stat}</option>)}
+                          </SelectField>
                         </label>
                       );
                     })}
@@ -1459,11 +1502,13 @@ export default function AxiForgeLabView() {
       return (
         <label key={trinketSlot}>
           <FieldLabel>{trinketSlot}</FieldLabel>
-          <TextField
+          <SelectField
             value={current}
             onChange={(event) => updateBuilder((next) => ({ ...next, equipment: { ...next.equipment, slots: { ...next.equipment.slots, [trinketSlot]: event.target.value } } }))}
-            placeholder="Empty"
-          />
+          >
+            <option value="">Use doctrine stats</option>
+            {statOptions.filter(Boolean).map((stat) => <option key={stat} value={stat}>{stat}</option>)}
+          </SelectField>
           {!current && <span className="theme-builder-choice-note">Unassigned</span>}
         </label>
       );
