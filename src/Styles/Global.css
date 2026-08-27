@@ -1900,7 +1900,13 @@ kbd {
   .theme-quiet-button,
   .theme-command-button,
   .theme-filter-chip,
-  .theme-cinematic-signal {
+  .theme-cinematic-signal,
+  .theme-builder-root::before,
+  .theme-builder-command-deck::after,
+  .theme-builder-squad-slot,
+  .theme-builder-squad-card,
+  .theme-builder-equipment-group,
+  .theme-builder-preview-attribute {
     animation: none;
     transition-duration: 0.01ms;
   }
