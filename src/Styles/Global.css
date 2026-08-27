@@ -2372,6 +2372,181 @@ kbd {
 .theme-builder-boon-grid > div.is-missing { opacity: 0.5; }
 .theme-builder-boon-grid > div.is-missing .theme-builder-boon-icon img { filter: grayscale(1); }
 
+.theme-builder-squad-matrix {
+  margin-bottom: 0.9rem;
+  padding: 1rem;
+  border: 1px solid rgba(105, 48, 30, 0.82);
+  background:
+    linear-gradient(115deg, rgba(24, 217, 189, 0.11), transparent 24rem),
+    linear-gradient(145deg, rgba(152, 37, 15, 0.08), transparent 46%),
+    rgba(6, 4, 3, 0.92);
+  box-shadow: inset 4px 0 0 rgba(24, 217, 189, 0.45), 0 18px 44px -34px #000;
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+}
+.theme-builder-matrix-capacity {
+  min-width: 5.7rem;
+  padding-left: 0.8rem;
+  border-left: 1px solid rgba(88, 255, 227, 0.28);
+}
+.theme-builder-matrix-capacity strong {
+  display: block;
+  color: #7fffe8;
+  font-family: var(--font-mono);
+  font-size: 1.45rem;
+  line-height: 1;
+}
+.theme-builder-matrix-capacity span {
+  color: #7dbbae;
+  font-size: 0.52rem;
+  text-transform: uppercase;
+}
+.theme-builder-matrix-grid {
+  display: grid;
+  grid-template-columns: minmax(15rem, 1.45fr) minmax(10rem, 0.9fr) minmax(12rem, 1fr) minmax(11rem, 1fr);
+  gap: 0.65rem;
+}
+.theme-builder-matrix-panel {
+  min-width: 0;
+  padding: 0.72rem;
+  border: 1px solid rgba(91, 43, 29, 0.62);
+  background: rgba(4, 3, 2, 0.7);
+}
+.theme-builder-matrix-panel.is-focus {
+  border-color: rgba(88, 255, 227, 0.44);
+  background: linear-gradient(135deg, rgba(24, 217, 189, 0.13), rgba(4, 3, 2, 0.74));
+}
+.theme-builder-matrix-panel > small,
+.theme-builder-matrix-focus-head small {
+  display: block;
+  color: #8b6d61;
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.theme-builder-matrix-panel > em,
+.theme-builder-matrix-focus-head em {
+  display: block;
+  margin-top: 0.42rem;
+  color: #7bbfaf;
+  font-size: 0.55rem;
+  font-style: normal;
+  text-transform: uppercase;
+}
+.theme-builder-matrix-panel p {
+  color: #8d7469;
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+.theme-builder-matrix-focus-head {
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.58rem;
+}
+.theme-builder-matrix-focus-head strong {
+  display: block;
+  overflow: hidden;
+  color: #e8fef9;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.theme-builder-matrix-bars {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.72rem;
+}
+.theme-builder-matrix-bars > div {
+  display: grid;
+  grid-template-columns: 4.4rem minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: 0.42rem;
+}
+.theme-builder-matrix-bars span,
+.theme-builder-matrix-averages span {
+  color: #90776c;
+  font-size: 0.53rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.theme-builder-matrix-bars i {
+  height: 0.34rem;
+  overflow: hidden;
+  background: rgba(33, 16, 10, 0.92);
+}
+.theme-builder-matrix-bars b {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #18d9bd, #ffad45);
+  box-shadow: 0 0 12px rgba(24, 217, 189, 0.48);
+}
+.theme-builder-matrix-bars strong,
+.theme-builder-matrix-averages strong {
+  color: #ffe6d9;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  text-align: right;
+}
+.theme-builder-matrix-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-top: 0.62rem;
+}
+.theme-builder-matrix-chips span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.38rem 0.45rem;
+  border: 1px solid rgba(91, 43, 29, 0.62);
+  color: #c0a397;
+  font-size: 0.54rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+.theme-builder-matrix-chips b {
+  color: #fff0df;
+  font-family: var(--font-mono);
+}
+.theme-builder-matrix-chips .is-strike { border-color: rgba(255, 173, 69, 0.36); background: rgba(255, 173, 69, 0.08); }
+.theme-builder-matrix-chips .is-condition { border-color: rgba(255, 106, 50, 0.36); background: rgba(255, 106, 50, 0.08); }
+.theme-builder-matrix-chips .is-support { border-color: rgba(81, 237, 171, 0.34); background: rgba(81, 237, 171, 0.08); }
+.theme-builder-matrix-chips .is-sustain { border-color: rgba(111, 158, 255, 0.34); background: rgba(111, 158, 255, 0.08); }
+.theme-builder-matrix-averages,
+.theme-builder-matrix-top {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+}
+.theme-builder-matrix-averages > div,
+.theme-builder-matrix-top li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.theme-builder-matrix-top {
+  color: #af9589;
+  font-size: 0.58rem;
+  list-style: none;
+}
+.theme-builder-matrix-top span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.theme-builder-matrix-top b {
+  color: #7fffe8;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+}
+
 .theme-builder-empty span { max-width: 27rem; font-size: 0.7rem; }
 .theme-builder-library-list { display: grid; gap: 0.5rem; }
 .theme-builder-library-row { display: flex; align-items: center; gap: 0.8rem; min-height: 4.3rem; padding: 0.65rem; border: 1px solid rgba(91, 43, 29, 0.7); background: rgba(4, 3, 2, 0.74); }
@@ -2465,6 +2640,7 @@ kbd {
   .theme-builder-equipment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .theme-builder-equipment-sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .theme-builder-equipment-sheet-mark { grid-row: auto; }
+  .theme-builder-matrix-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .theme-builder-party-line { grid-template-columns: 1fr; }
 }
 
@@ -2484,6 +2660,7 @@ kbd {
   .theme-builder-mechanics,
   .theme-builder-tactical-strip,
   .theme-builder-contribution-grid,
+  .theme-builder-matrix-grid,
   .theme-builder-rail { grid-template-columns: 1fr; }
   .theme-builder-trait-tier > div { grid-template-columns: repeat(3, minmax(2.35rem, 1fr)); }
   .theme-builder-trait-tier button { width: 100%; }
