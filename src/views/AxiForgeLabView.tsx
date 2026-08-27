@@ -62,6 +62,7 @@ import {
 import { loadBuilderWorkspace, saveBuilderWorkspace } from "../lib/axiforge/builderStorage";
 import { BOON_DISPLAY_ORDER, type BoonCoverageEntry } from "../lib/axiforge/boonEngine";
 import { computeBuildBoonCoverage } from "../lib/axiforge/squadBoons";
+import { computeSquadTacticalReadout, type BuilderPressureIdentity } from "../lib/axiforge/squadTactics";
 import {
   fetchGw2Skills,
   fetchGw2Specializations,
@@ -150,6 +151,13 @@ function pressureLabel(identity: AttributeProfile["primaryIdentity"]): string {
   if (identity === "condition") return "Condition pressure";
   if (identity === "support") return "Support uptime";
   return "Sustain core";
+}
+
+function pressureShortLabel(identity: BuilderPressureIdentity): string {
+  if (identity === "strike") return "Strike";
+  if (identity === "condition") return "Condi";
+  if (identity === "support") return "Support";
+  return "Sustain";
 }
 
 function contributionTotal(
@@ -492,6 +500,93 @@ function SquadBoonCoverage({
   );
 }
 
+function SquadTacticalMatrix({
+  composition,
+  builds,
+  focusedBuildId,
+}: {
+  composition: BuilderComposition;
+  builds: SavedBuilderBuild[];
+  focusedBuildId: string | null;
+}) {
+  const readout = useMemo(() => computeSquadTacticalReadout(composition, builds), [composition, builds]);
+  const focusedBuild = focusedBuildId ? builds.find((build) => build.id === focusedBuildId) ?? null : null;
+  const focusedProfile = focusedBuild ? computeAttributeProfile(focusedBuild.state, null) : null;
+  const focused = focusedBuild && focusedProfile ? {
+    name: focusedBuild.name,
+    professionId: focusedBuild.state.professionId,
+    role: focusedBuild.state.role,
+    identity: focusedProfile.primaryIdentity,
+    pressure: focusedProfile.pressure,
+    gear: `${focusedProfile.equippedSlots}/${focusedProfile.totalSlots}`,
+  } : readout.topBuilds[0] ? {
+    name: readout.topBuilds[0].name,
+    professionId: readout.topBuilds[0].professionId,
+    role: readout.topBuilds[0].role,
+    identity: readout.topBuilds[0].primaryIdentity,
+    pressure: readout.topBuilds[0].pressure,
+    gear: "Saved",
+  } : null;
+  const identities: BuilderPressureIdentity[] = ["strike", "condition", "support", "sustain"];
+
+  return (
+    <section className="theme-builder-squad-matrix">
+      <div className="theme-builder-section-head">
+        <div><div className="theme-builder-kicker">AF-style squad telemetry</div><h3>Tactical matrix</h3></div>
+        <div className="theme-builder-matrix-capacity"><strong>{readout.assignedSlots}</strong><span>of {readout.capacity} assigned</span></div>
+      </div>
+      <div className="theme-builder-matrix-grid">
+        <div className="theme-builder-matrix-panel is-focus">
+          {focused ? (
+            <>
+              <div className="theme-builder-matrix-focus-head">
+                <ClassIcon name={focused.professionId} size="md" />
+                <span><small>Focused squad card</small><strong>{focused.name}</strong><em>{[focused.role, pressureLabel(focused.identity), focused.gear].filter(Boolean).join(" / ")}</em></span>
+              </div>
+              <div className="theme-builder-matrix-bars">
+                {identities.map((identity) => (
+                  <div key={identity}>
+                    <span>{pressureShortLabel(identity)}</span>
+                    <i><b style={{ width: `${focused.pressure[identity]}%` }} /></i>
+                    <strong>{focused.pressure[identity]}</strong>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p>No squad builds assigned yet. Save builds, assign them into slots, then hover or focus a squad card.</p>
+          )}
+        </div>
+        <div className="theme-builder-matrix-panel">
+          <small>Pressure mix</small>
+          <div className="theme-builder-matrix-chips">
+            {identities.map((identity) => (
+              <span key={identity} className={`is-${identity}`}><b>{readout.identityCounts[identity]}</b>{pressureShortLabel(identity)}</span>
+            ))}
+          </div>
+          <em>{readout.openSlots} open slot{readout.openSlots === 1 ? "" : "s"}</em>
+        </div>
+        <div className="theme-builder-matrix-panel">
+          <small>Average squad pressure</small>
+          <div className="theme-builder-matrix-averages">
+            {identities.map((identity) => (
+              <div key={identity}><span>{pressureShortLabel(identity)}</span><strong>{readout.averagePressure[identity]}</strong></div>
+            ))}
+          </div>
+        </div>
+        <div className="theme-builder-matrix-panel">
+          <small>Top pressure cards</small>
+          <ol className="theme-builder-matrix-top">
+            {readout.topBuilds.length ? readout.topBuilds.map((build) => (
+              <li key={build.buildId}><span>{build.name}</span><b>{build.score}</b></li>
+            )) : <li><span>No assigned builds</span><b>0</b></li>}
+          </ol>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function SquadWorkspace({
   composition,
   builds,
@@ -513,6 +608,8 @@ function SquadWorkspace({
   onCopyCode: () => void;
     onShareCode: () => void;
 }) {
+  const [focusedBuildId, setFocusedBuildId] = useState<string | null>(null);
+
   if (!composition) {
     return (
       <section className="theme-builder-workspace theme-builder-empty">
@@ -533,6 +630,7 @@ function SquadWorkspace({
   return (
     <>
       <SquadBoonCoverage composition={composition} builds={builds} boonCache={boonCache} computing={boonComputing} />
+      <SquadTacticalMatrix composition={composition} builds={builds} focusedBuildId={focusedBuildId} />
       <section className="theme-builder-workspace">
         <div className="theme-builder-section-head">
           <div className="grid flex-1 gap-3 md:grid-cols-[minmax(15rem,1fr)_9rem]">
@@ -564,6 +662,8 @@ function SquadWorkspace({
                             type="button"
                             className="theme-builder-squad-card"
                             onClick={() => onOpenBuild(selected)}
+                            onFocus={() => setFocusedBuildId(selected.id)}
+                            onMouseEnter={() => setFocusedBuildId(selected.id)}
                             title={`Open ${selected.name}`}
                           >
                             <ClassIcon name={selected.state.professionId} size="md" />
