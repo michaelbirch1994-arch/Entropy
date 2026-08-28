@@ -1,3 +1,4 @@
+import { isTauri } from "@tauri-apps/api/core";
 import type { WvWReport } from "../types/report";
 
 // Entropy's canonical hosted deployment. Only used when we're not in a
@@ -31,7 +32,17 @@ function isLoadableExternalUrl(value: string): boolean {
 
 export function getConfiguredShareViewerUrl(currentHref?: string): string {
   if (currentHref) return currentHref;
-  if (typeof window !== "undefined" && /^https?:$/i.test(window.location.protocol)) {
+
+  // The desktop app's WebView serves the frontend from a local pseudo-origin
+  // (https://tauri.localhost on Windows, tauri://localhost elsewhere) that
+  // passes a plain http(s)-protocol check, so isTauri() is checked explicitly
+  // here - otherwise share links would point at an address only reachable on
+  // this machine instead of falling through to the real hosted Vercel URL.
+  if (
+    typeof window !== "undefined" &&
+    /^https?:$/i.test(window.location.protocol) &&
+    !isTauri()
+  ) {
     return window.location.href;
   }
 
