@@ -127,6 +127,7 @@ const GAME_MODES = [
 ] as const;
 
 const ROLE_OPTIONS = ["", "DPS", "Support", "Healer", "Boon Support", "Control", "Roamer", "Commander"];
+const QUICK_STAT_OPTIONS = ["Celestial", "Marauder's", "Berserker's", "Minstrel's", "Trailblazer's", "Viper's", "Harrier's", "Ritualist's"];
 const BUILDER_FOOD_LABELS = BUILDER_FOOD_CHOICES.map((choice) => choice.label);
 const BUILDER_UTILITY_LABELS = BUILDER_UTILITY_CHOICES.map((choice) => choice.label);
 
@@ -393,6 +394,13 @@ function SkillPicker({
 }) {
   const selected = skills.find((skill) => skill.id === selectedId) ?? null;
   const options = skills.filter((skill) => skill.slot === slot && (!usedIds.includes(skill.id) || skill.id === selectedId));
+  const [query, setQuery] = useState("");
+  const listId = `builder-skill-${label.toLowerCase().replaceAll(/\W+/g, "-")}`;
+
+  useEffect(() => {
+    setQuery(selected?.name ?? (selectedId ? `Skill ${selectedId}` : ""));
+  }, [selected?.name, selectedId]);
+
   return (
     <div className="theme-builder-skill-slot">
       <FieldLabel>{label}</FieldLabel>
@@ -404,10 +412,29 @@ function SkillPicker({
       >
         {selected?.icon ? <img src={selected.icon} alt="" /> : <Plus className="h-5 w-5" />}
       </button>
-      <SelectField value={selectedId ?? ""} onChange={(event) => onChange(event.target.value ? Number(event.target.value) : null)}>
-        <option value="">Choose skill</option>
-        {options.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
-      </SelectField>
+      <div className="theme-builder-skill-search">
+        <Search className="h-4 w-4" aria-hidden="true" />
+        <TextField
+          list={listId}
+          value={query}
+          onChange={(event) => {
+            const value = event.target.value;
+            setQuery(value);
+            if (!value) {
+              onChange(null);
+              return;
+            }
+            const match = options.find((skill) => skill.name.toLowerCase() === value.toLowerCase());
+            if (match) onChange(match.id);
+          }}
+          onBlur={() => {
+            const match = options.find((skill) => skill.name.toLowerCase() === query.toLowerCase());
+            if (!match) setQuery(selected?.name ?? (selectedId ? `Skill ${selectedId}` : ""));
+          }}
+          placeholder={`Search ${label.toLowerCase()}`}
+        />
+        <datalist id={listId}>{options.map((skill) => <option key={skill.id} value={skill.name} />)}</datalist>
+      </div>
     </div>
   );
 }
@@ -1919,6 +1946,18 @@ export default function AxiForgeLabView() {
                       {statOptions.map((stat) => <option key={stat} value={stat}>{stat || "Choose stats"}</option>)}
                     </SelectField>
                   </label>
+                  <div className="theme-builder-stat-picks" role="group" aria-label="Quick stat packages">
+                    {QUICK_STAT_OPTIONS.filter((stat) => statOptions.includes(stat)).map((stat) => (
+                      <button
+                        key={stat}
+                        type="button"
+                        className={builder.equipment.statPackage === stat ? "is-active" : ""}
+                        onClick={() => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, statPackage: stat } }))}
+                      >
+                        {stat.replace("'s", "")}
+                      </button>
+                    ))}
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     {(["mainhand1", "offhand1", "mainhand2", "offhand2"] as const).map((slot) => {
                       const currentWeapon = builder.equipment.weapons[slot];
@@ -1939,6 +1978,24 @@ export default function AxiForgeLabView() {
                             {!currentIsValid && <option value={currentWeapon}>Unavailable · {currentWeapon}</option>}
                             {validWeapons.map(([name]) => <option key={name} value={name.toLowerCase()}>{name}</option>)}
                           </SelectField>
+                          {!offhandDisabled && (
+                            <div className="theme-builder-weapon-picks" role="group" aria-label={`${slot} quick weapon choices`}>
+                              {validWeapons.slice(0, 8).map(([name]) => {
+                                const value = name.toLowerCase();
+                                return (
+                                  <button
+                                    key={name}
+                                    type="button"
+                                    className={currentWeapon.toLowerCase() === value ? "is-active" : ""}
+                                    onClick={() => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, weapons: { ...current.equipment.weapons, [slot]: value } } }))}
+                                    title={name}
+                                  >
+                                    {name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                           <SelectField
                             value={builder.equipment.slots[slot] || ""}
                             onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, slots: { ...current.equipment.slots, [slot]: event.target.value } } }))}
@@ -1952,7 +2009,7 @@ export default function AxiForgeLabView() {
                     })}
                   </div>
                 </div>
-                <div className="theme-builder-equipment-group">
+                <div className="theme-builder-equipment-stack">
                   <div className="theme-builder-equipment-group">
   <h4>Trinkets</h4>
   <div className="grid grid-cols-2 gap-2">
