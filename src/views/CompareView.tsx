@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Panel from "../components/ui/Panel";
-import { Activity, ArrowRight, BarChart3, GitCompare, HeartPulse, Search, Shield, Swords, Zap } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, GitCompare, HeartPulse, Shield, Swords, Zap } from "lucide-react";
 import { getArchivedById, type ArchiveEntry } from "../utils/reportArchive";
 import { useCompare } from "../store/CompareContext";
 import { useReport } from "../store/ReportContext";
@@ -112,25 +112,22 @@ function ReportMetricTable({ rows, titleA, titleB }: { rows: MetricRow[]; titleA
 }
 
 function PlayerSelect({ label, value, options, onChange, exclude }: { label: string; value: string; options: ReturnType<typeof buildPlayerDuelOptions>; onChange: (value: string) => void; exclude?: string }) {
-  const listId = `${label.toLowerCase().replace(/\W+/g, "-")}-players`;
+  const availableOptions = options.filter((option) => option.account !== exclude);
   return (
     <label className="grid gap-1.5">
       <span className="text-[10px] font-black uppercase tracking-[0.18em] text-theme-muted">{label}</span>
-      <span className="relative block">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-theme-muted" />
-        <input
-          list={listId}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="Search account"
-          className="w-full rounded-xl border border-theme-border bg-theme-surface-inset/80 px-9 py-2.5 text-xs font-bold text-theme-text outline-none transition-colors focus:border-theme-accent/55"
-        />
-      </span>
-      <datalist id={listId}>
-        {options.filter((option) => option.account !== exclude).map((option) => (
-          <option key={option.account} value={option.account}>{option.professions.join(", ") || "Unknown"} · {option.reports} report{option.reports === 1 ? "" : "s"}</option>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-xl border border-theme-border bg-theme-surface-inset/80 px-3 py-2.5 text-xs font-bold text-theme-text outline-none transition-colors focus:border-theme-accent/55"
+      >
+        {!value && <option value="">Choose player</option>}
+        {availableOptions.map((option) => (
+          <option key={option.account} value={option.account}>
+            {option.account} — {option.professions.join(", ") || "Unknown"} · {option.reports} report{option.reports === 1 ? "" : "s"}
+          </option>
         ))}
-      </datalist>
+      </select>
     </label>
   );
 }
