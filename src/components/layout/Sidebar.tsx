@@ -80,6 +80,7 @@ const MENU: NavSection[] = [
     icon: <Swords className="w-4 h-4" />,
     items: [
       { id: "top-players", label: "Top Players", keywords: ["mvp", "damage", "healing", "barrier"] },
+      { id: "player-compare", label: "Player Compare", keywords: ["players", "versus", "duel", "head to head", "night"] },
       { id: "top-skills", label: "Top Skills", keywords: ["skill damage", "skill healing"] },
       { id: "offensive", label: "Offensive Stats", keywords: ["downs", "kills", "strips"] },
       { id: "defensive", label: "Defensive Stats", keywords: ["mitigation", "blocks", "healing"] },
@@ -381,6 +382,7 @@ export const VIEW_ICONS: Record<string, ReactNode> = {
   kdr: <Swords className="w-4 h-4" />,
   "fight-breakdown": <Swords className="w-4 h-4" />,
   "top-players": <Trophy className="w-4 h-4" />,
+  "player-compare": <GitCompare className="w-4 h-4" />,
   "top-skills": <Zap className="w-4 h-4" />,
   buffs: <Sparkles className="w-4 h-4" />,
   "damage-modifiers": <Percent className="w-4 h-4" />,

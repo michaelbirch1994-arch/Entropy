@@ -22,6 +22,7 @@ import OffensiveView from "./views/OffensiveView";
 import DefensiveView from "./views/DefensiveView";
 import RosterView from "./views/RosterView";
 import PlayerProfilesView from "./views/PlayerProfilesView";
+import PlayerCompareView from "./views/PlayerCompareView";
 import DamageModifiersView from "./views/DamageModifiersView";
 import RotationsView from "./views/RotationsView";
 import DpsGraphView from "./views/DpsGraphView";
@@ -73,6 +74,7 @@ const VIEW_TITLES: Record<string, string> = {
   defensive: "Defensive Stats",
   roster: "Roster Intel",
   "player-profiles": "Player Profiles",
+  "player-compare": "Player Compare",
   "damage-modifiers": "Damage Modifiers",
   rotations: "Rotations",
   "dps-graph": "DPS Graph",
@@ -109,6 +111,7 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "defensive": return <DefensiveView />;
     case "roster": return <RosterView />;
     case "player-profiles": return <PlayerProfilesView />;
+    case "player-compare": return <PlayerCompareView />;
     case "damage-modifiers": return <DamageModifiersView />;
     case "rotations": return <RotationsView />;
     case "dps-graph": return <DpsGraphView />;
@@ -766,4 +769,3 @@ export default function App() {
     </ViewProvider>
   );
 }
-
