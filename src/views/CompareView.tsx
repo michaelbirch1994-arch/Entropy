@@ -3,6 +3,7 @@ import Panel from "../components/ui/Panel";
 import { Activity, ArrowRight, BarChart3, GitCompare, HeartPulse, Search, Shield, Swords, Zap } from "lucide-react";
 import { getArchivedById, type ArchiveEntry } from "../utils/reportArchive";
 import { useCompare } from "../store/CompareContext";
+import { useReport } from "../store/ReportContext";
 import { useView } from "../store/ViewContext";
 import { fmtCompact, fmtDur, fmtFixed, fmtNum } from "../utils/format";
 import type { WvWReport } from "../types/report";
@@ -207,8 +208,7 @@ function DuelSourceTable({ title, rows, titleA, titleB, empty }: { title: string
   );
 }
 
-function PlayerDuelView({ entries }: { entries: [CompareMetrics, CompareMetrics] }) {
-  const reports = useMemo(() => entries.map((entry) => entry.entry.report as WvWReport), [entries]);
+function PlayerDuelView({ reports, scopeLabel }: { reports: WvWReport[]; scopeLabel: string }) {
   const options = useMemo(() => buildPlayerDuelOptions(reports), [reports]);
   const [playerA, setPlayerA] = useState("");
   const [playerB, setPlayerB] = useState("");
@@ -237,7 +237,7 @@ function PlayerDuelView({ entries }: { entries: [CompareMetrics, CompareMetrics]
         <PlayerSelect label="Player B" value={playerB} options={options} onChange={setPlayerB} exclude={playerA} />
         <div className="rounded-xl border border-theme-border/70 bg-theme-surface-inset/55 px-3 py-2 text-[10px] text-theme-muted">
           <div className="font-black uppercase tracking-[0.18em] text-theme-accent-strong">Scope</div>
-          <div className="mt-1 leading-4">Selected archive reports: {entries.map((entry) => entry.entry.title).join(" + ")}</div>
+          <div className="mt-1 leading-4">{scopeLabel}</div>
         </div>
       </div>
 
@@ -297,6 +297,7 @@ function PlayerDuelView({ entries }: { entries: [CompareMetrics, CompareMetrics]
 
 export default function CompareView() {
   const { compareIds } = useCompare();
+  const { report } = useReport();
   const { setActiveView } = useView();
   const [mode, setMode] = useState<CompareMode>("reports");
   const [metricsA, setMetricsA] = useState<CompareMetrics | null>(null);
@@ -344,6 +345,29 @@ export default function CompareView() {
   }, [metricsA, metricsB]);
 
   if (!compareIds) {
+    if (report) {
+      return (
+        <div className="space-y-5 animate-view pb-12">
+          <Panel
+            title="Player vs Player"
+            subtitle="Current-night head-to-head across overall output, skills used, healing sources, mitigation, dodges, support, defense, and condition pressure."
+            icon={<GitCompare className="w-4 h-4" />}
+          >
+            <div className="mb-4 rounded-xl border border-theme-accent/25 bg-theme-accent/10 px-4 py-3 text-xs text-theme-muted">
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-theme-accent-strong">Live report compare</div>
+              <div className="mt-1">
+                Comparing players from the loaded report: <span className="font-bold text-theme-text">{report.meta.title}</span>
+                {report.meta.dateLabel ? <span> · {report.meta.dateLabel}</span> : null}
+              </div>
+              <div className="mt-2">
+                To compare two separate nights, choose two reports from Archive and return here.
+              </div>
+            </div>
+            <PlayerDuelView reports={[report]} scopeLabel={`Loaded report: ${report.meta.title}${report.meta.dateLabel ? ` · ${report.meta.dateLabel}` : ""}`} />
+          </Panel>
+        </div>
+      );
+    }
     return (
       <div className="space-y-5 animate-view pb-12">
         <Panel
@@ -395,7 +419,10 @@ export default function CompareView() {
         </div>
 
         {mode === "players" ? (
-          <PlayerDuelView entries={[metricsA, metricsB]} />
+          <PlayerDuelView
+            reports={[metricsA.entry.report as WvWReport, metricsB.entry.report as WvWReport]}
+            scopeLabel={`Selected archive reports: ${metricsA.entry.title} + ${metricsB.entry.title}`}
+          />
         ) : (
           <>
             <div className="grid grid-cols-2 gap-4 mb-4">
