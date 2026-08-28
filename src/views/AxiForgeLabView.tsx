@@ -504,7 +504,7 @@ function BuildLibrary({
         <div className="theme-builder-search"><Search className="h-4 w-4" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search builds" /></div>
       </div>
       {filtered.length === 0 ? (
-        <div className="theme-builder-empty"><Archive className="h-7 w-7" /><strong>No saved builds</strong><span>Complete a loadout in Build and save it to establish the library.</span></div>
+        <div className="theme-builder-empty"><Archive className="h-7 w-7" /><strong>No saved builds</strong><span>Save a complete build or an unfinished draft to establish the library.</span></div>
       ) : (
         <div className="theme-builder-library-list">
           {filtered.map((build, index) => (
@@ -768,8 +768,7 @@ function SquadWorkspace({
   }
 
   const assigned = composition.parties.reduce((total, party) => total + party.slots.filter(Boolean).length, 0);
-  const assignedBuildIds = new Set(composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id)));
-  const availableBuilds = builds.filter((build) => !assignedBuildIds.has(build.id));
+  const availableBuilds = builds;
   const update = (partial: Partial<BuilderComposition>) => onChange({ ...composition, ...partial, updatedAt: new Date().toISOString() });
   const updateSlot = (partyId: string, slotIndex: number, buildId: string | null) => update({
     parties: composition.parties.map((item) => item.id === partyId
@@ -779,7 +778,7 @@ function SquadWorkspace({
   const handleSlotDrop = (event: React.DragEvent<HTMLDivElement>, partyId: string, slotIndex: number) => {
     event.preventDefault();
     const buildId = event.dataTransfer.getData("text/plain");
-    if (!buildId || assignedBuildIds.has(buildId)) return;
+    if (!buildId || !builds.some((build) => build.id === buildId)) return;
     updateSlot(partyId, slotIndex, buildId);
     setFocusedBuildId(buildId);
   };
@@ -874,7 +873,7 @@ function SquadWorkspace({
       <section className="theme-builder-workspace theme-builder-squad-library">
         <div className="theme-builder-section-head">
           <div><div className="theme-builder-kicker">Drag cards into open squad slots</div><h3>Saved build library</h3></div>
-          <span className="theme-builder-squad-library-count">{availableBuilds.length} available</span>
+          <span className="theme-builder-squad-library-count">{availableBuilds.length} saved</span>
         </div>
         {availableBuilds.length ? (
           <div className="theme-builder-library-list is-compact">
@@ -890,7 +889,7 @@ function SquadWorkspace({
             ))}
           </div>
         ) : (
-          <div className="theme-builder-empty is-compact"><Archive className="h-7 w-7" /><strong>No unassigned builds</strong><span>Clear a squad slot or save another build to add more cards here.</span></div>
+          <div className="theme-builder-empty is-compact"><Archive className="h-7 w-7" /><strong>No saved builds</strong><span>Save a build or draft, then drag it into as many squad slots as you need.</span></div>
         )}
       </section>
     </>
@@ -1479,17 +1478,27 @@ export default function AxiForgeLabView() {
   }
 
   async function saveCurrentBuild() {
+    const existing = workspace.builds.find((build) => build.id === editingBuildId);
+    let shareCode = existing?.shareCode ?? "";
+    let encoded = true;
     try {
-      const shareCode = createCurrentCode();
-      const existing = workspace.builds.find((build) => build.id === editingBuildId);
+      shareCode = createCurrentCode();
+    } catch {
+      encoded = false;
+    }
+    try {
       const saved = createSavedBuild(cloneBuilder(builder), shareCode, existing?.id);
       if (existing) saved.createdAt = existing.createdAt;
       setWorkspace((current) => ({ ...current, builds: existing ? current.builds.map((build) => build.id === existing.id ? saved : build) : [saved, ...current.builds] }));
       setEditingBuildId(saved.id);
       setExportCode(shareCode);
-      setNotice({ tone: issues.length ? "warning" : "success", message: issues.length ? `Saved with ${issues.length} readiness item${issues.length === 1 ? "" : "s"}.` : "Build saved to the local library." });
+      const readinessMessage = issues.length ? `Saved with ${issues.length} readiness item${issues.length === 1 ? "" : "s"}.` : "Build saved to the local library.";
+      setNotice({
+        tone: encoded && !issues.length ? "success" : "warning",
+        message: encoded ? readinessMessage : `${readinessMessage} AxiCode export is unavailable until the missing build data or catalog entries are resolved.`,
+      });
     } catch {
-      setNotice({ tone: "error", message: "This build could not be encoded. Check specialization and equipment selections." });
+      setNotice({ tone: "error", message: "This build could not be saved." });
     }
   }
 
