@@ -561,6 +561,53 @@ function BuildLibrary({
   );
 }
 
+function SquadSlotPicker({
+  id,
+  builds,
+  onAssign,
+}: {
+  id: string;
+  builds: SavedBuilderBuild[];
+  onAssign: (buildId: string | null) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const choices = useMemo(() => builds.map((build) => ({
+    build,
+    label: [build.name, build.state.professionId, build.state.role].filter(Boolean).join(" / "),
+  })), [builds]);
+
+  function handleChange(value: string) {
+    setQuery(value);
+    if (!value.trim()) {
+      onAssign(null);
+      return;
+    }
+    const match = choices.find((choice) => choice.label.toLowerCase() === value.trim().toLowerCase());
+    if (match) {
+      onAssign(match.build.id);
+      setQuery("");
+    }
+  }
+
+  return (
+    <label className="theme-builder-squad-picker">
+      <small>Open slot</small>
+      <div className="theme-builder-squad-search">
+        <Search className="h-3.5 w-3.5" />
+        <input
+          list={id}
+          value={query}
+          onChange={(event) => handleChange(event.target.value)}
+          placeholder="Search library"
+        />
+        <datalist id={id}>
+          {choices.map((choice) => <option key={choice.build.id} value={choice.label} />)}
+        </datalist>
+      </div>
+    </label>
+  );
+}
+
 function boonCacheKey(build: SavedBuilderBuild): string {
   return `${build.id}:${build.updatedAt}`;
 }
@@ -836,7 +883,21 @@ function SquadWorkspace({
         <div className="theme-builder-section-head">
           <div className="grid flex-1 gap-3 md:grid-cols-[minmax(15rem,1fr)_9rem]">
             <label><FieldLabel>Squad name</FieldLabel><TextField value={composition.name} onChange={(event) => update({ name: event.target.value })} /></label>
-            <label><FieldLabel>Mode</FieldLabel><SelectField value={composition.gameMode} onChange={(event) => update({ gameMode: event.target.value as BuilderComposition["gameMode"] })}>{GAME_MODES.map((mode) => <option key={mode.id} value={mode.id}>{mode.label}</option>)}</SelectField></label>
+            <div>
+              <FieldLabel>Mode</FieldLabel>
+              <div className="theme-builder-squad-mode" role="group" aria-label="Squad game mode">
+                {GAME_MODES.map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    className={composition.gameMode === mode.id ? "is-active" : undefined}
+                    onClick={() => update({ gameMode: mode.id })}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="theme-builder-squad-readout"><strong>{assigned}</strong><span>assigned</span></div>
           <button type="button" className="theme-command-button" onClick={onCopyCode} disabled={!assigned}><Clipboard className="h-4 w-4" /> Copy squad code</button>
@@ -897,13 +958,11 @@ function SquadWorkspace({
                           </button>
                         </>
                       ) : (
-                        <label className="theme-builder-squad-picker">
-                          <small>Open slot</small>
-                          <select value="" onChange={(event) => updateSlot(party.id, slotIndex, event.target.value || null)}>
-                            <option value="">Assign build</option>
-                            {availableBuilds.map((build) => <option key={build.id} value={build.id}>{build.name} / {build.state.professionId}</option>)}
-                          </select>
-                        </label>
+                        <SquadSlotPicker
+                          id={`squad-slot-${party.id}-${slotIndex}`}
+                          builds={availableBuilds}
+                          onAssign={(buildId) => updateSlot(party.id, slotIndex, buildId)}
+                        />
                       )}
                     </div>
                   );
@@ -2128,9 +2187,9 @@ export default function AxiForgeLabView() {
               <section className="theme-panel theme-builder-panel"><div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Profession system</div><h3>{builder.professionId} mechanics</h3></div><Sparkles className="h-5 w-5 text-theme-accent" /></div><div className="theme-builder-mechanics">
                 {builder.professionId === "Revenant" && <>{[0, 1].map((index) => <label key={index}><FieldLabel>Legend {index + 1}</FieldLabel><SelectField value={builder.selectedLegends[index]} onChange={(event) => updateBuilder((current) => ({ ...current, selectedLegends: current.selectedLegends.map((value, itemIndex) => itemIndex === index ? event.target.value : value) as [string, string] }))}><option value="">None</option>{legends.map((legend) => <option key={legend.id} value={legend.id}>{legendLabel(legend.id)}</option>)}</SelectField></label>)}</>}
                 {builder.professionId === "Ranger" && <>{(["terrestrial1", "terrestrial2"] as const).map((field, index) => <label key={field}><FieldLabel>Terrestrial pet {index + 1}</FieldLabel><SelectField value={builder.selectedPets[field] || ""} onChange={(event) => updateBuilder((current) => ({ ...current, selectedPets: { ...current.selectedPets, [field]: Number(event.target.value) || 0 } }))}><option value="">None</option>{pets.map((pet) => <option key={pet.id} value={pet.id}>{pet.name}</option>)}</SelectField></label>)}</>}
-                {builder.professionId === "Elementalist" && <>{(["activeAttunement", "activeAttunement2"] as const).map((field, index) => <label key={field}><FieldLabel>Attunement {index + 1}</FieldLabel><SelectField value={builder[field]} onChange={(event) => updateBuilder((current) => ({ ...current, [field]: event.target.value }))}>{["", "Fire", "Water", "Air", "Earth"].map((attunement) => <option key={attunement} value={attunement}>{attunement || "None"}</option>)}</SelectField></label>)}</>}
+                {builder.professionId === "Elementalist" && <>{(["activeAttunement", "activeAttunement2"] as const).map((field, index) => <div key={field}><FieldLabel>Attunement {index + 1}</FieldLabel><div className="theme-builder-mechanic-pills">{["", "Fire", "Water", "Air", "Earth"].map((attunement) => <button key={attunement || "None"} type="button" className={builder[field] === attunement ? "is-active" : undefined} onClick={() => updateBuilder((current) => ({ ...current, [field]: attunement }))}>{attunement || "None"}</button>)}</div></div>)}</>}
                 {builder.professionId === "Engineer" && <label><FieldLabel>Active kit</FieldLabel><SelectField value={builder.activeKit || ""} onChange={(event) => updateBuilder((current) => ({ ...current, activeKit: Number(event.target.value) || 0 }))}><option value="">None</option>{builder.activeKit > 0 && !engineerKitOptions.some((skill) => skill.id === builder.activeKit) && <option value={builder.activeKit}>Unavailable skill · {builder.activeKit}</option>}{engineerKitOptions.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}</SelectField></label>}
-                {builder.professionId === "Warrior" && <label><FieldLabel>Active weapon set</FieldLabel><SelectField value={builder.activeWeaponSet} onChange={(event) => updateBuilder((current) => ({ ...current, activeWeaponSet: Number(event.target.value) }))}><option value={1}>Weapon set I</option><option value={2}>Weapon set II</option></SelectField></label>}
+                {builder.professionId === "Warrior" && <div><FieldLabel>Active weapon set</FieldLabel><div className="theme-builder-mechanic-pills">{[1, 2].map((weaponSet) => <button key={weaponSet} type="button" className={builder.activeWeaponSet === weaponSet ? "is-active" : undefined} onClick={() => updateBuilder((current) => ({ ...current, activeWeaponSet: weaponSet }))}>Set {weaponSet === 1 ? "I" : "II"}</button>)}</div></div>}
                 {builder.professionId === "Thief" && <>{(["f2", "f3", "f4"] as const).map((field) => { const currentId = builder.antiquaryArtifacts[field]; return <label key={field}><FieldLabel>Antiquary {field.toUpperCase()}</FieldLabel><SelectField value={currentId || ""} onChange={(event) => updateBuilder((current) => ({ ...current, antiquaryArtifacts: { ...current.antiquaryArtifacts, [field]: Number(event.target.value) || 0 } }))}><option value="">None</option>{currentId > 0 && !thiefArtifactOptions.some((skill) => skill.id === currentId) && <option value={currentId}>Unavailable skill · {currentId}</option>}{thiefArtifactOptions.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}</SelectField></label>; })}</>}
               </div></section>
             )}
