@@ -421,6 +421,7 @@ function BuilderBuildCard({
   onCopy,
   onShare,
   onFocus,
+  slotCount = 0,
   draggable = false,
 }: {
   build: SavedBuilderBuild;
@@ -431,9 +432,12 @@ function BuilderBuildCard({
   onCopy?: (code: string) => void;
   onShare?: (code: string) => void;
   onFocus?: (id: string) => void;
+  slotCount?: number;
   draggable?: boolean;
 }) {
   const profile = useMemo(() => computeAttributeProfile(build.state, null), [build]);
+  const readinessIssues = useMemo(() => validateBuilder(build.state), [build]);
+  const isDraft = !build.shareCode || readinessIssues.length > 0;
   const summary = [
     build.state.role,
     build.state.equipment.statPackage,
@@ -465,11 +469,15 @@ function BuilderBuildCard({
         <span><b>{buildSkillCount(build)}</b>Skills</span>
         <span><b>{buildGearCount(build)}</b>Gear</span>
       </div>
+      <div className="theme-builder-card-badges">
+        <span className={isDraft ? "is-draft" : "is-ready"}>{isDraft ? "Draft" : "Ready"}</span>
+        {slotCount > 0 && <span className="is-assigned">Squad x{slotCount}</span>}
+      </div>
       <div className="theme-builder-row-actions">
         <button type="button" onClick={() => onLoad(build)} title="Open build"><FolderOpen /></button>
         {onDuplicate && <button type="button" onClick={() => onDuplicate(build)} title="Duplicate build"><Copy /></button>}
-        {onCopy && <button type="button" onClick={() => onCopy(build.shareCode)} title="Copy AxiCode"><Clipboard /></button>}
-        {onShare && <button type="button" onClick={() => onShare(build.shareCode)} title="Copy share link"><Link2 /></button>}
+        {onCopy && <button type="button" onClick={() => onCopy(build.shareCode)} title={build.shareCode ? "Copy AxiCode" : "Draft has no exportable AxiCode yet"} disabled={!build.shareCode}><Clipboard /></button>}
+        {onShare && <button type="button" onClick={() => onShare(build.shareCode)} title={build.shareCode ? "Copy share link" : "Draft has no share link yet"} disabled={!build.shareCode}><Link2 /></button>}
         {onDelete && <button type="button" onClick={() => onDelete(build.id)} title="Delete build"><Trash2 /></button>}
       </div>
     </article>
@@ -757,6 +765,15 @@ function SquadWorkspace({
     onShareCode: () => void;
 }) {
   const [focusedBuildId, setFocusedBuildId] = useState<string | null>(null);
+  const assignmentCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    composition?.parties.forEach((party) => {
+      party.slots.forEach((buildId) => {
+        if (buildId) counts.set(buildId, (counts.get(buildId) ?? 0) + 1);
+      });
+    });
+    return counts;
+  }, [composition]);
 
   if (!composition) {
     return (
@@ -884,6 +901,7 @@ function SquadWorkspace({
                 index={index}
                 onLoad={onOpenBuild}
                 onFocus={setFocusedBuildId}
+                slotCount={assignmentCounts.get(build.id) ?? 0}
                 draggable
               />
             ))}
@@ -1801,7 +1819,21 @@ export default function AxiForgeLabView() {
               <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Loadout identity</div><h3>{editingBuildId ? "Editing saved build" : "Unsaved field draft"}</h3></div><button type="button" className="theme-quiet-button" onClick={() => { updateBuilder(createEmptyBuilder(builder.professionId)); setEditingBuildId(null); setExportCode(""); }}><RotateCcw className="h-4 w-4" /> Reset</button></div>
               <div className="grid gap-3 md:grid-cols-[minmax(16rem,1.5fr)_minmax(10rem,.7fr)_minmax(14rem,1fr)]">
                 <label><FieldLabel>Build name</FieldLabel><TextField value={builder.name} onChange={(event) => updateBuilder((current) => ({ ...current, name: event.target.value }))} /></label>
-                <label><FieldLabel>Role</FieldLabel><SelectField value={builder.role} onChange={(event) => updateBuilder((current) => ({ ...current, role: event.target.value }))}>{ROLE_OPTIONS.map((role) => <option key={role} value={role}>{role || "Choose role"}</option>)}</SelectField></label>
+                <div>
+                  <FieldLabel>Role</FieldLabel>
+                  <div className="theme-builder-pill-grid" role="group" aria-label="Build role">
+                    {ROLE_OPTIONS.map((role) => (
+                      <button
+                        key={role || "none"}
+                        type="button"
+                        className={builder.role === role ? "is-active" : ""}
+                        onClick={() => updateBuilder((current) => ({ ...current, role }))}
+                      >
+                        {role || "No role"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <label><FieldLabel>Tags, comma separated</FieldLabel><TextField value={builder.tags.join(", ")} onChange={(event) => updateBuilder((current) => ({ ...current, tags: event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean) }))} placeholder="zerg, cleanse, guild" /></label>
               </div>
             </section>
@@ -1825,7 +1857,35 @@ export default function AxiForgeLabView() {
                   const selectedSpec = selectedSpecId ? specsById.get(selectedSpecId) : null;
                   return (
                     <div key={trackIndex} className="theme-builder-spec-line">
-                      <div className="theme-builder-spec-selector"><span>{String(trackIndex + 1).padStart(2, "0")}</span><SelectField value={selectedSpecId ?? ""} onChange={(event) => chooseSpec(trackIndex, event.target.value ? Number(event.target.value) : null)}><option value="">Choose specialization</option>{professionSpecs.map((spec) => <option key={spec.id} value={spec.id} disabled={builder.specializationIds.some((id, index) => index !== trackIndex && id === spec.id)}>{spec.name}{spec.elite ? " · Elite" : ""}</option>)}</SelectField>{selectedSpec?.icon && <button type="button" onClick={() => setSelectedSummary({ kind: "specialization", item: selectedSpec })}><img src={selectedSpec.icon} alt="" /></button>}</div>
+                      <div className="theme-builder-spec-selector">
+                        <span>{String(trackIndex + 1).padStart(2, "0")}</span>
+                        <SelectField value={selectedSpecId ?? ""} onChange={(event) => chooseSpec(trackIndex, event.target.value ? Number(event.target.value) : null)}>
+                          <option value="">Choose specialization</option>
+                          {professionSpecs.map((spec) => <option key={spec.id} value={spec.id} disabled={builder.specializationIds.some((id, index) => index !== trackIndex && id === spec.id)}>{spec.name}{spec.elite ? " · Elite" : ""}</option>)}
+                        </SelectField>
+                        {selectedSpec?.icon && <button type="button" onClick={() => setSelectedSummary({ kind: "specialization", item: selectedSpec })}><img src={selectedSpec.icon} alt="" /></button>}
+                        <div className="theme-builder-spec-picks" role="group" aria-label={`Specialization track ${trackIndex + 1} quick picks`}>
+                          {professionSpecs.map((spec) => {
+                            const isUsedElsewhere = builder.specializationIds.some((id, index) => index !== trackIndex && id === spec.id);
+                            return (
+                              <button
+                                key={spec.id}
+                                type="button"
+                                className={selectedSpecId === spec.id ? "is-active" : ""}
+                                disabled={isUsedElsewhere}
+                                onClick={() => chooseSpec(trackIndex, spec.id)}
+                                onFocus={() => setSelectedSummary({ kind: "specialization", item: spec })}
+                                onMouseEnter={() => setSelectedSummary({ kind: "specialization", item: spec })}
+                                title={isUsedElsewhere ? `${spec.name} is already on another track` : spec.name}
+                              >
+                                {spec.icon ? <img src={spec.icon} alt="" /> : <Layers3 className="h-4 w-4" />}
+                                <span>{spec.name}</span>
+                                {spec.elite && <b>Elite</b>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                       <div className="theme-builder-trait-grid">
                         {[1, 2, 3].map((tier) => {
                           const traits = (selectedSpecId ? traitsBySpecId.get(selectedSpecId) ?? [] : []).filter((trait) => trait.slot === "Major" && trait.tier === tier).sort((a, b) => a.order - b.order);
