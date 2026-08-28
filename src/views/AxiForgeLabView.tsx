@@ -97,6 +97,7 @@ import {
   choiceIsCodecSupported,
   equipmentItemIds,
   loadBuilderItemsByIds,
+  type BuilderNamedChoice,
 } from "../lib/gw2/builderEquipmentCatalog";
 import type {
   BuilderComposition,
@@ -247,44 +248,120 @@ function SearchableChoiceField({
   );
 }
 
-function SearchableItemChoiceField({
+function itemChoiceGroup(label: string): string {
+  const value = label.toLowerCase();
+  if (/(altruism|dwayna|flock|karakosa|leadership|mercy|monk|transference|water)/.test(value)) return "Support";
+  if (/(antitoxin|durability|earth|evasion|melandru|resistance|sanctuary|trooper)/.test(value)) return "Defense";
+  if (/(agony|afflicted|krait|nightmare|torment|venom|viper|lich|demon)/.test(value)) return "Condition";
+  if (/(fire|fireworks|scholar|strength|force|impact|rage|accuracy|air|bloodlust|eagle)/.test(value)) return "Power";
+  if (/(guardian|revenant|warrior|engineer|ranger|thief|elementalist|mesmer|necromancer|herald|firebrand|weaver|druid|scrapper|reaper|scourge|mirage|deadeye|daredevil|dragonhunter|spellbreaker|soulbeast|holosmith|renegade|tempest|chronomancer)/.test(value)) return "Profession";
+  return "General";
+}
+
+function ItemPickerField({
   id,
   label,
-  valueId,
+  value,
+  valueKind,
   choices,
   onChange,
   placeholder,
+  items,
 }: {
   id: string;
   label: string;
-  valueId: string;
-  choices: readonly { label: string; id?: number }[];
-  onChange: (id: string) => void;
+  value: string;
+  valueKind: "id" | "label";
+  choices: readonly BuilderNamedChoice[];
+  onChange: (value: string) => void;
   placeholder: string;
+  items: Record<number, Gw2Item>;
 }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [choiceItems, setChoiceItems] = useState<Record<number, Gw2Item>>({});
   const byId = useMemo(() => new Map(choices.filter((choice) => choice.id != null).map((choice) => [String(choice.id), choice.label])), [choices]);
-  const byLabel = useMemo(() => new Map(choices.map((choice) => [choice.label, choice])), [choices]);
-  const displayValue = valueId ? (byId.get(valueId) ?? valueId) : "";
-  const resolved = !valueId || byId.has(valueId);
+  const selectedChoice = valueKind === "id"
+    ? choices.find((choice) => String(choice.id) === value)
+    : choices.find((choice) => choice.label === value);
+  const selectedId = selectedChoice?.id ?? (valueKind === "id" ? Number(value) || 0 : 0);
+  const selectedItem = selectedId ? (choiceItems[selectedId] ?? items[selectedId]) : null;
+  const displayValue = value ? (selectedChoice?.label ?? selectedItem?.name ?? (valueKind === "id" ? byId.get(value) ?? value : value)) : "";
+  const resolved = !value || Boolean(selectedChoice) || (valueKind === "id" && byId.has(value));
+  const enrichedItems = { ...items, ...choiceItems };
+  const filters = useMemo(() => ["All", ...Array.from(new Set(choices.map((choice) => itemChoiceGroup(choice.label)))).sort()], [choices]);
+  const filteredChoices = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return choices.filter((choice) => {
+      const group = itemChoiceGroup(choice.label);
+      const item = choice.id ? enrichedItems[choice.id] : null;
+      const haystack = [choice.label, group, item?.type, item?.subtype, item?.description].filter(Boolean).join(" ").toLowerCase();
+      return (filter === "All" || group === filter) && (!needle || haystack.includes(needle));
+    });
+  }, [choices, enrichedItems, filter, query]);
+
+  useEffect(() => {
+    if (!open) return;
+    const ids = choices.flatMap((choice) => choice.id ? [choice.id] : []);
+    let cancelled = false;
+    loadBuilderItemsByIds(ids).then((loaded) => {
+      if (!cancelled) setChoiceItems((current) => ({ ...current, ...loaded }));
+    });
+    return () => { cancelled = true; };
+  }, [choices, open]);
+
+  function choose(choice: BuilderNamedChoice) {
+    onChange(valueKind === "id" ? String(choice.id ?? "") : choice.label);
+    setOpen(false);
+    setQuery("");
+  }
+
   return (
-    <label>
+    <div className="theme-builder-picker-field">
       <FieldLabel>{label}</FieldLabel>
-      <div className="theme-builder-choice-input">
-        <Search className="h-4 w-4" aria-hidden="true" />
-        <TextField
-          list={id}
-          value={displayValue}
-          onChange={(event) => {
-            const typed = event.target.value;
-            const match = byLabel.get(typed);
-            onChange(match ? String(match.id) : typed);
-          }}
-          placeholder={placeholder}
-        />
-      </div>
-      <datalist id={id}>{choices.map((choice) => <option key={choice.label} value={choice.label} />)}</datalist>
-      {!resolved && <span className="theme-builder-choice-note"><AlertCircle className="h-3.5 w-3.5" /> Raw item ID {valueId} — not in the curated catalog.</span>}
-    </label>
+      <button type="button" className="theme-builder-picker-trigger" onClick={() => setOpen(true)} aria-haspopup="dialog">
+        <span className="theme-builder-picker-icon">
+          {selectedItem?.icon ? <img src={selectedItem.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}
+        </span>
+        <span><strong>{displayValue || placeholder}</strong><small>{displayValue ? itemChoiceGroup(displayValue) : "Open searchable picker"}</small></span>
+        <ChevronRight className="h-4 w-4" aria-hidden="true" />
+      </button>
+      {!resolved && <span className="theme-builder-choice-note"><AlertCircle className="h-3.5 w-3.5" /> Raw item ID {value} — not in the curated catalog.</span>}
+      {open && (
+        <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
+          <section className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
+            <div className="theme-builder-picker-head">
+              <div><div className="theme-builder-kicker">Equipment picker</div><h3 id={`${id}-title`}>{label}</h3></div>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close picker"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="theme-builder-picker-search">
+              <Search className="h-4 w-4" aria-hidden="true" />
+              <TextField value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}`} autoFocus />
+            </div>
+            <div className="theme-builder-picker-filters" role="group" aria-label={`${label} filters`}>
+              {filters.map((item) => <button key={item} type="button" className={filter === item ? "is-active" : undefined} onClick={() => setFilter(item)}>{item}</button>)}
+            </div>
+            <div className="theme-builder-picker-list">
+              <button type="button" className={!value ? "is-active" : undefined} onClick={() => { onChange(""); setOpen(false); }}>
+                <span className="theme-builder-picker-icon"><Eraser className="h-4 w-4" aria-hidden="true" /></span>
+                <span><strong>Clear slot</strong><small>Use no {label.toLowerCase()}</small></span>
+              </button>
+              {filteredChoices.map((choice) => {
+                const item = choice.id ? enrichedItems[choice.id] : null;
+                const active = selectedChoice?.label === choice.label;
+                return (
+                  <button key={choice.label} type="button" className={active ? "is-active" : undefined} onClick={() => choose(choice)}>
+                    <span className="theme-builder-picker-icon">{item?.icon ? <img src={item.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}</span>
+                    <span><strong>{item?.name ?? choice.label}</strong><small>{itemChoiceGroup(choice.label)}{choice.id ? ` / Item ${choice.id}` : ""}</small></span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -2126,10 +2203,10 @@ export default function AxiForgeLabView() {
                   {hasMixedRunes ? (
                     <div className="theme-builder-split-runes">
                       <span className="theme-builder-choice-note"><Layers3 className="h-3.5 w-3.5" /> Mixed imported rune set — each armor slot remains editable.</span>
-                      {ARMOR_SLOTS.map((slot) => <SearchableItemChoiceField key={slot} id={`builder-rune-${slot}`} label={`${slot} rune`} valueId={builder.equipment.runes[slot]} choices={BUILDER_RUNE_CHOICES} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, runes: { ...current.equipment.runes, [slot]: value } } }))} placeholder="Search supported runes" />)}
+                      {ARMOR_SLOTS.map((slot) => <ItemPickerField key={slot} id={`builder-rune-${slot}`} label={`${slot} rune`} value={builder.equipment.runes[slot]} valueKind="id" choices={BUILDER_RUNE_CHOICES} items={equipmentItems} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, runes: { ...current.equipment.runes, [slot]: value } } }))} placeholder="Choose rune" />)}
                     </div>
                   ) : (
-                    <SearchableItemChoiceField id="builder-rune-all" label="Armor rune" valueId={builder.equipment.runes.head} choices={BUILDER_RUNE_CHOICES} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, runes: Object.fromEntries(ARMOR_SLOTS.map((slot) => [slot, value])) as EntropyBuilderState["equipment"]["runes"] } }))} placeholder="Applied to all armor" />
+                    <ItemPickerField id="builder-rune-all" label="Armor rune" value={builder.equipment.runes.head} valueKind="id" choices={BUILDER_RUNE_CHOICES} items={equipmentItems} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, runes: Object.fromEntries(ARMOR_SLOTS.map((slot) => [slot, value])) as EntropyBuilderState["equipment"]["runes"] } }))} placeholder="Choose rune" />
                   )}
                   <EquipmentItemSummary values={Object.values(builder.equipment.runes)} items={equipmentItems} />
                   {(["mainhand1", "mainhand2"] as const).map((slot) => { const current = builder.equipment.sigils[slot]; return (
@@ -2137,18 +2214,20 @@ export default function AxiForgeLabView() {
     <FieldLabel>{slot === "mainhand1" ? "Weapon set I sigils" : "Weapon set II sigils"}</FieldLabel>
     <div className="grid grid-cols-2 gap-2">
       {[0, 1].map((sigilIndex) => (
-        <SearchableItemChoiceField
+        <ItemPickerField
           key={sigilIndex}
           id={`builder-sigil-${slot}-${sigilIndex}`}
           label={`Sigil ${sigilIndex + 1}`}
-          valueId={current[sigilIndex] ?? ""}
+          value={current[sigilIndex] ?? ""}
+          valueKind="id"
           choices={BUILDER_SIGIL_CHOICES}
+          items={equipmentItems}
           onChange={(value) => updateBuilder((next) => {
             const nextValues = [...next.equipment.sigils[slot]];
             if (value) nextValues[sigilIndex] = value; else nextValues.splice(sigilIndex, 1);
             return { ...next, equipment: { ...next.equipment, sigils: { ...next.equipment.sigils, [slot]: nextValues.filter(Boolean) } } };
           })}
-          placeholder="Search supported sigils"
+          placeholder="Choose sigil"
         />
       ))}
     </div>
@@ -2158,11 +2237,11 @@ export default function AxiForgeLabView() {
                 </div>
                 <div className="theme-builder-equipment-group">
                   <h4>Relic and consumables</h4>
-                  <SearchableChoiceField id="builder-relics" label="Relic" value={builder.equipment.relic} choices={BUILDER_RELIC_CHOICES} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, relic: value } }))} placeholder="Search supported relics" />
+                  <ItemPickerField id="builder-relics" label="Relic" value={builder.equipment.relic} valueKind="label" choices={BUILDER_RELIC_CHOICES.map((choice) => ({ label: choice, id: BUILDER_RELIC_IDS[choice] }))} items={equipmentItems} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, relic: value } }))} placeholder="Choose relic" />
 <EquipmentItemSummary values={[String(BUILDER_RELIC_IDS[builder.equipment.relic] ?? "")]} items={equipmentItems} />
                   <SearchableChoiceField id="builder-foods" label="Food" value={builder.equipment.food} choices={BUILDER_FOOD_LABELS} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, food: value } }))} placeholder="Search supported food" />
                   <SearchableChoiceField id="builder-utilities" label="Utility" value={builder.equipment.utility} choices={BUILDER_UTILITY_LABELS} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, utility: value } }))} placeholder="Search supported utilities" />
-                  <SearchableItemChoiceField id="builder-enrichment" label="Enrichment" valueId={builder.equipment.enrichment} choices={BUILDER_ENRICHMENT_CHOICES} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, enrichment: value } }))} placeholder="Search supported enrichments" /><EquipmentItemSummary values={[builder.equipment.enrichment]} items={equipmentItems} />
+                  <ItemPickerField id="builder-enrichment" label="Enrichment" value={builder.equipment.enrichment} valueKind="id" choices={BUILDER_ENRICHMENT_CHOICES} items={equipmentItems} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, enrichment: value } }))} placeholder="Choose enrichment" /><EquipmentItemSummary values={[builder.equipment.enrichment]} items={equipmentItems} />
                   {Object.keys(builder.equipment.infusions).length > 0 && (
                     <div>
                       <FieldLabel>Imported infusions</FieldLabel>
