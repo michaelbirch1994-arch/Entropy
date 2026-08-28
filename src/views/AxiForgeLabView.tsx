@@ -215,10 +215,6 @@ function TextField(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`theme-builder-input ${props.className ?? ""}`} />;
 }
 
-function SelectField(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={`theme-builder-input ${props.className ?? ""}`} />;
-}
-
 function SearchableChoiceField({
   id,
   label,
@@ -256,6 +252,113 @@ function itemChoiceGroup(label: string): string {
   if (/(fire|fireworks|scholar|strength|force|impact|rage|accuracy|air|bloodlust|eagle)/.test(value)) return "Power";
   if (/(guardian|revenant|warrior|engineer|ranger|thief|elementalist|mesmer|necromancer|herald|firebrand|weaver|druid|scrapper|reaper|scourge|mirage|deadeye|daredevil|dragonhunter|spellbreaker|soulbeast|holosmith|renegade|tempest|chronomancer)/.test(value)) return "Profession";
   return "General";
+}
+
+type BuilderPickerChoice = {
+  value: string;
+  label: string;
+  meta?: string;
+  icon?: string;
+  group?: string;
+  disabled?: boolean;
+  disabledReason?: string;
+};
+
+function ChoicePickerField({
+  id,
+  label,
+  value,
+  choices,
+  onChange,
+  placeholder,
+  clearLabel = "Clear slot",
+  disabled = false,
+  disabledLabel,
+  onPreview,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  choices: BuilderPickerChoice[];
+  onChange: (value: string) => void;
+  placeholder: string;
+  clearLabel?: string;
+  disabled?: boolean;
+  disabledLabel?: string;
+  onPreview?: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("All");
+  const selected = choices.find((choice) => choice.value === value);
+  const filters = useMemo(() => ["All", ...Array.from(new Set(choices.map((choice) => choice.group).filter(Boolean) as string[])).sort()], [choices]);
+  const filteredChoices = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return choices.filter((choice) => {
+      const haystack = [choice.label, choice.meta, choice.group].filter(Boolean).join(" ").toLowerCase();
+      return (filter === "All" || choice.group === filter) && (!needle || haystack.includes(needle));
+    });
+  }, [choices, filter, query]);
+
+  function choose(choice: BuilderPickerChoice) {
+    if (choice.disabled) return;
+    onChange(choice.value);
+    setOpen(false);
+    setQuery("");
+  }
+
+  return (
+    <div className="theme-builder-picker-field">
+      <FieldLabel>{label}</FieldLabel>
+      <button type="button" className="theme-builder-picker-trigger" onClick={() => !disabled && setOpen(true)} aria-haspopup="dialog" disabled={disabled}>
+        <span className="theme-builder-picker-icon">
+          {selected?.icon ? <img src={selected.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}
+        </span>
+        <span><strong>{disabled ? (disabledLabel ?? placeholder) : (selected?.label ?? (value || placeholder))}</strong><small>{selected?.meta ?? selected?.group ?? "Open searchable picker"}</small></span>
+        <ChevronRight className="h-4 w-4" aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
+          <section className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
+            <div className="theme-builder-picker-head">
+              <div><div className="theme-builder-kicker">Builder picker</div><h3 id={`${id}-title`}>{label}</h3></div>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close picker"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="theme-builder-picker-search">
+              <Search className="h-4 w-4" aria-hidden="true" />
+              <TextField value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}`} autoFocus />
+            </div>
+            {filters.length > 1 && (
+              <div className="theme-builder-picker-filters" role="group" aria-label={`${label} filters`}>
+                {filters.map((item) => <button key={item} type="button" className={filter === item ? "is-active" : undefined} onClick={() => setFilter(item)}>{item}</button>)}
+              </div>
+            )}
+            <div className="theme-builder-picker-list">
+              <button type="button" className={!value ? "is-active" : undefined} onClick={() => { onChange(""); setOpen(false); }}>
+                <span className="theme-builder-picker-icon"><Eraser className="h-4 w-4" aria-hidden="true" /></span>
+                <span><strong>{clearLabel}</strong><small>Use default or leave empty</small></span>
+              </button>
+              {filteredChoices.map((choice) => (
+                <button
+                  key={choice.value}
+                  type="button"
+                  className={choice.value === value ? "is-active" : undefined}
+                  disabled={choice.disabled}
+                  title={choice.disabledReason ?? choice.label}
+                  onClick={() => choose(choice)}
+                  onFocus={() => onPreview?.(choice.value)}
+                  onMouseEnter={() => onPreview?.(choice.value)}
+                >
+                  <span className="theme-builder-picker-icon">{choice.icon ? <img src={choice.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}</span>
+                  <span><strong>{choice.label}</strong><small>{choice.disabledReason ?? choice.meta ?? choice.group ?? "Available"}</small></span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ItemPickerField({
@@ -471,16 +574,9 @@ function SkillPicker({
 }) {
   const selected = skills.find((skill) => skill.id === selectedId) ?? null;
   const options = skills.filter((skill) => skill.slot === slot && (!usedIds.includes(skill.id) || skill.id === selectedId));
-  const [query, setQuery] = useState("");
-  const listId = `builder-skill-${label.toLowerCase().replaceAll(/\W+/g, "-")}`;
-
-  useEffect(() => {
-    setQuery(selected?.name ?? (selectedId ? `Skill ${selectedId}` : ""));
-  }, [selected?.name, selectedId]);
 
   return (
     <div className="theme-builder-skill-slot">
-      <FieldLabel>{label}</FieldLabel>
       <button
         type="button"
         className="theme-builder-skill-icon"
@@ -489,29 +585,25 @@ function SkillPicker({
       >
         {selected?.icon ? <img src={selected.icon} alt="" /> : <Plus className="h-5 w-5" />}
       </button>
-      <div className="theme-builder-skill-search">
-        <Search className="h-4 w-4" aria-hidden="true" />
-        <TextField
-          list={listId}
-          value={query}
-          onChange={(event) => {
-            const value = event.target.value;
-            setQuery(value);
-            if (!value) {
-              onChange(null);
-              return;
-            }
-            const match = options.find((skill) => skill.name.toLowerCase() === value.toLowerCase());
-            if (match) onChange(match.id);
-          }}
-          onBlur={() => {
-            const match = options.find((skill) => skill.name.toLowerCase() === query.toLowerCase());
-            if (!match) setQuery(selected?.name ?? (selectedId ? `Skill ${selectedId}` : ""));
-          }}
-          placeholder={`Search ${label.toLowerCase()}`}
-        />
-        <datalist id={listId}>{options.map((skill) => <option key={skill.id} value={skill.name} />)}</datalist>
-      </div>
+      <ChoicePickerField
+        id={`builder-skill-${label.toLowerCase().replaceAll(/\W+/g, "-")}`}
+        label={label}
+        value={selectedId ? String(selectedId) : ""}
+        choices={options.map((skill) => ({
+          value: String(skill.id),
+          label: skill.name,
+          icon: skill.icon,
+          group: skill.type ?? skill.slot,
+          meta: skill.description ? skill.description.replaceAll(/<[^>]+>/g, " ").replaceAll(/\s+/g, " ").trim() : skill.type ?? skill.slot,
+        }))}
+        onChange={(value) => onChange(value ? Number(value) : null)}
+        onPreview={(value) => {
+          const skill = options.find((item) => String(item.id) === value);
+          if (skill) onInspect(skill);
+        }}
+        placeholder={`Choose ${label.toLowerCase()}`}
+        clearLabel={`Clear ${label}`}
+      />
     </div>
   );
 }
@@ -1614,15 +1706,26 @@ export default function AxiForgeLabView() {
   }
 
   function chooseSpec(trackIndex: number, id: number | null) {
+    const requestedSpec = id ? specsById.get(id) : null;
+    const existingElite = builder.specializationIds.some((specId, index) => {
+      if (index === trackIndex || !specId) return false;
+      return Boolean(specsById.get(specId)?.elite);
+    });
+    if (requestedSpec?.elite && existingElite) {
+      setNotice({ tone: "warning", message: "Only one elite specialization can be equipped per build." });
+      return;
+    }
     updateBuilder((current) => {
       const specializationIds = [...current.specializationIds] as EntropyBuilderState["specializationIds"];
       const traitChoices = current.traitChoices.map((row) => [...row]) as EntropyBuilderState["traitChoices"];
+      const isDuplicate = id != null && specializationIds.some((specId, index) => index !== trackIndex && specId === id);
+      const hasOtherElite = id != null && Boolean(specsById.get(id)?.elite) && specializationIds.some((specId, index) => index !== trackIndex && Boolean(specId && specsById.get(specId)?.elite));
+      if (isDuplicate || hasOtherElite) return current;
       specializationIds[trackIndex] = id;
       traitChoices[trackIndex] = [0, 0, 0];
       return { ...current, specializationIds, traitChoices };
     });
-    const spec = id ? specsById.get(id) : null;
-    if (spec) setSelectedSummary({ kind: "specialization", item: spec });
+    if (requestedSpec) setSelectedSummary({ kind: "specialization", item: requestedSpec });
   }
 
   function chooseTrait(trackIndex: number, tier: number, position: number, trait: Gw2Trait) {
@@ -2022,24 +2125,46 @@ export default function AxiForgeLabView() {
                     <div key={trackIndex} className="theme-builder-spec-line">
                       <div className="theme-builder-spec-selector">
                         <span>{String(trackIndex + 1).padStart(2, "0")}</span>
-                        <SelectField value={selectedSpecId ?? ""} onChange={(event) => chooseSpec(trackIndex, event.target.value ? Number(event.target.value) : null)}>
-                          <option value="">Choose specialization</option>
-                          {professionSpecs.map((spec) => <option key={spec.id} value={spec.id} disabled={builder.specializationIds.some((id, index) => index !== trackIndex && id === spec.id)}>{spec.name}{spec.elite ? " · Elite" : ""}</option>)}
-                        </SelectField>
+                        <ChoicePickerField
+                          id={`builder-spec-${trackIndex}`}
+                          label={`Track ${trackIndex + 1}`}
+                          value={selectedSpecId ? String(selectedSpecId) : ""}
+                          choices={professionSpecs.map((spec) => {
+                            const isUsedElsewhere = builder.specializationIds.some((id, index) => index !== trackIndex && id === spec.id);
+                            const eliteUsedElsewhere = spec.elite && builder.specializationIds.some((id, index) => index !== trackIndex && Boolean(id && specsById.get(id)?.elite));
+                            return {
+                              value: String(spec.id),
+                              label: spec.name,
+                              icon: spec.icon,
+                              group: spec.elite ? "Elite" : "Core",
+                              meta: spec.elite ? "Elite specialization" : "Core specialization",
+                              disabled: isUsedElsewhere || eliteUsedElsewhere,
+                              disabledReason: isUsedElsewhere ? "Already equipped" : eliteUsedElsewhere ? "Elite already equipped" : undefined,
+                            };
+                          })}
+                          onChange={(value) => chooseSpec(trackIndex, value ? Number(value) : null)}
+                          onPreview={(value) => {
+                            const spec = specsById.get(Number(value));
+                            if (spec) setSelectedSummary({ kind: "specialization", item: spec });
+                          }}
+                          placeholder="Choose specialization"
+                          clearLabel="Clear specialization"
+                        />
                         {selectedSpec?.icon && <button type="button" onClick={() => setSelectedSummary({ kind: "specialization", item: selectedSpec })}><img src={selectedSpec.icon} alt="" /></button>}
                         <div className="theme-builder-spec-picks" role="group" aria-label={`Specialization track ${trackIndex + 1} quick picks`}>
                           {professionSpecs.map((spec) => {
                             const isUsedElsewhere = builder.specializationIds.some((id, index) => index !== trackIndex && id === spec.id);
+                            const eliteUsedElsewhere = spec.elite && builder.specializationIds.some((id, index) => index !== trackIndex && Boolean(id && specsById.get(id)?.elite));
                             return (
                               <button
                                 key={spec.id}
                                 type="button"
                                 className={selectedSpecId === spec.id ? "is-active" : ""}
-                                disabled={isUsedElsewhere}
+                                disabled={isUsedElsewhere || eliteUsedElsewhere}
                                 onClick={() => chooseSpec(trackIndex, spec.id)}
                                 onFocus={() => setSelectedSummary({ kind: "specialization", item: spec })}
                                 onMouseEnter={() => setSelectedSummary({ kind: "specialization", item: spec })}
-                                title={isUsedElsewhere ? `${spec.name} is already on another track` : spec.name}
+                                title={isUsedElsewhere ? `${spec.name} is already on another track` : eliteUsedElsewhere ? "Only one elite specialization can be equipped" : spec.name}
                               >
                                 {spec.icon ? <img src={spec.icon} alt="" /> : <Layers3 className="h-4 w-4" />}
                                 <span>{spec.name}</span>
@@ -2076,12 +2201,15 @@ export default function AxiForgeLabView() {
               <div className="theme-builder-equipment-grid">
                 <div className="theme-builder-equipment-group">
                   <h4>Weapons and stats</h4>
-                  <label>
-                    <FieldLabel>Stat package</FieldLabel>
-                    <SelectField value={builder.equipment.statPackage} onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, statPackage: event.target.value } }))}>
-                      {statOptions.map((stat) => <option key={stat} value={stat}>{stat || "Choose stats"}</option>)}
-                    </SelectField>
-                  </label>
+                  <ChoicePickerField
+                    id="builder-stat-package"
+                    label="Stat package"
+                    value={builder.equipment.statPackage}
+                    choices={statOptions.filter(Boolean).map((stat) => ({ value: stat, label: stat, group: (QUICK_STAT_OPTIONS as readonly string[]).includes(stat) ? "Common" : "All stats" }))}
+                    onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, statPackage: value } }))}
+                    placeholder="Choose stats"
+                    clearLabel="Clear stat package"
+                  />
                   <div className="theme-builder-stat-picks" role="group" aria-label="Quick stat packages">
                     {QUICK_STAT_OPTIONS.filter((stat) => statOptions.includes(stat)).map((stat) => (
                       <button
@@ -2103,17 +2231,26 @@ export default function AxiForgeLabView() {
                       const mainhand = builder.equipment.weapons[`mainhand${slot.endsWith("1") ? "1" : "2"}`];
                       const offhandDisabled = slot.startsWith("offhand") && isTwoHandedWeapon(selectedProfession, mainhand);
                       return (
-                        <label key={slot}>
-                          <FieldLabel>{slot.startsWith("mainhand") ? `Main hand ${setNumber}` : `Off hand ${setNumber}`}</FieldLabel>
-                          <SelectField
+                        <div key={slot}>
+                          <ChoicePickerField
+                            id={`builder-weapon-${slot}`}
+                            label={slot.startsWith("mainhand") ? `Main hand ${setNumber}` : `Off hand ${setNumber}`}
                             value={currentWeapon}
                             disabled={offhandDisabled}
-                            onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, weapons: { ...current.equipment.weapons, [slot]: event.target.value } } }))}
-                          >
-                            <option value="">{offhandDisabled ? "Two-handed weapon equipped" : "Empty"}</option>
-                            {!currentIsValid && <option value={currentWeapon}>Unavailable · {currentWeapon}</option>}
-                            {validWeapons.map(([name]) => <option key={name} value={name.toLowerCase()}>{name}</option>)}
-                          </SelectField>
+                            disabledLabel="Two-handed weapon equipped"
+                            choices={[
+                              ...(!currentIsValid ? [{ value: currentWeapon, label: currentWeapon, group: "Imported", meta: "Unavailable for this slot" }] : []),
+                              ...validWeapons.map(([name, weapon]) => ({
+                                value: name.toLowerCase(),
+                                label: name,
+                                group: weapon.flags?.includes("TwoHand") ? "Two-handed" : slot.startsWith("mainhand") ? "Main hand" : "Off hand",
+                                meta: weapon.specialization ? "Elite weapon" : "Profession weapon",
+                              })),
+                            ]}
+                            onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, weapons: { ...current.equipment.weapons, [slot]: value } } }))}
+                            placeholder={offhandDisabled ? "Two-handed weapon equipped" : "Choose weapon"}
+                            clearLabel="Clear weapon"
+                          />
                           {!offhandDisabled && (
                             <div className="theme-builder-weapon-picks" role="group" aria-label={`${slot} quick weapon choices`}>
                               {validWeapons.slice(0, 8).map(([name]) => {
@@ -2132,15 +2269,16 @@ export default function AxiForgeLabView() {
                               })}
                             </div>
                           )}
-                          <SelectField
+                          <ChoicePickerField
+                            id={`builder-weapon-stat-${slot}`}
+                            label="Stat override"
                             value={builder.equipment.slots[slot] || ""}
-                            onChange={(event) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, slots: { ...current.equipment.slots, [slot]: event.target.value } } }))}
-                            title={`Stat override for ${slot}`}
-                          >
-                            <option value="">Use doctrine stats</option>
-                            {statOptions.filter(Boolean).map((stat) => <option key={stat} value={stat}>{stat}</option>)}
-                          </SelectField>
-                        </label>
+                            choices={statOptions.filter(Boolean).map((stat) => ({ value: stat, label: stat, group: (QUICK_STAT_OPTIONS as readonly string[]).includes(stat) ? "Common" : "All stats" }))}
+                            onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, slots: { ...current.equipment.slots, [slot]: value } } }))}
+                            placeholder="Use doctrine stats"
+                            clearLabel="Use doctrine stats"
+                          />
+                        </div>
                       );
                     })}
                   </div>
@@ -2152,17 +2290,18 @@ export default function AxiForgeLabView() {
     {["amulet", "ring1", "ring2", "accessory1", "accessory2", "backpack"].map((trinketSlot) => {
       const current = builder.equipment.slots[trinketSlot] || "";
       return (
-        <label key={trinketSlot}>
-          <FieldLabel>{trinketSlot}</FieldLabel>
-          <SelectField
+        <div key={trinketSlot}>
+          <ChoicePickerField
+            id={`builder-trinket-stat-${trinketSlot}`}
+            label={trinketSlot}
             value={current}
-            onChange={(event) => updateBuilder((next) => ({ ...next, equipment: { ...next.equipment, slots: { ...next.equipment.slots, [trinketSlot]: event.target.value } } }))}
-          >
-            <option value="">Use doctrine stats</option>
-            {statOptions.filter(Boolean).map((stat) => <option key={stat} value={stat}>{stat}</option>)}
-          </SelectField>
+            choices={statOptions.filter(Boolean).map((stat) => ({ value: stat, label: stat, group: (QUICK_STAT_OPTIONS as readonly string[]).includes(stat) ? "Common" : "All stats" }))}
+            onChange={(value) => updateBuilder((next) => ({ ...next, equipment: { ...next.equipment, slots: { ...next.equipment.slots, [trinketSlot]: value } } }))}
+            placeholder="Use doctrine stats"
+            clearLabel="Use doctrine stats"
+          />
           {!current && <span className="theme-builder-choice-note">Unassigned</span>}
-        </label>
+        </div>
       );
     })}
   </div>
@@ -2264,12 +2403,12 @@ export default function AxiForgeLabView() {
 
             {(builder.professionId === "Revenant" || builder.professionId === "Ranger" || builder.professionId === "Elementalist" || builder.professionId === "Engineer" || builder.professionId === "Warrior" || builder.professionId === "Thief") && (
               <section className="theme-panel theme-builder-panel"><div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Profession system</div><h3>{builder.professionId} mechanics</h3></div><Sparkles className="h-5 w-5 text-theme-accent" /></div><div className="theme-builder-mechanics">
-                {builder.professionId === "Revenant" && <>{[0, 1].map((index) => <label key={index}><FieldLabel>Legend {index + 1}</FieldLabel><SelectField value={builder.selectedLegends[index]} onChange={(event) => updateBuilder((current) => ({ ...current, selectedLegends: current.selectedLegends.map((value, itemIndex) => itemIndex === index ? event.target.value : value) as [string, string] }))}><option value="">None</option>{legends.map((legend) => <option key={legend.id} value={legend.id}>{legendLabel(legend.id)}</option>)}</SelectField></label>)}</>}
-                {builder.professionId === "Ranger" && <>{(["terrestrial1", "terrestrial2"] as const).map((field, index) => <label key={field}><FieldLabel>Terrestrial pet {index + 1}</FieldLabel><SelectField value={builder.selectedPets[field] || ""} onChange={(event) => updateBuilder((current) => ({ ...current, selectedPets: { ...current.selectedPets, [field]: Number(event.target.value) || 0 } }))}><option value="">None</option>{pets.map((pet) => <option key={pet.id} value={pet.id}>{pet.name}</option>)}</SelectField></label>)}</>}
+                {builder.professionId === "Revenant" && <>{[0, 1].map((index) => <ChoicePickerField key={index} id={`builder-legend-${index}`} label={`Legend ${index + 1}`} value={builder.selectedLegends[index]} choices={legends.map((legend) => ({ value: legend.id, label: legendLabel(legend.id), group: "Legend", meta: legend.id }))} onChange={(value) => updateBuilder((current) => ({ ...current, selectedLegends: current.selectedLegends.map((item, itemIndex) => itemIndex === index ? value : item) as [string, string] }))} placeholder="Choose legend" clearLabel="Clear legend" />)}</>}
+                {builder.professionId === "Ranger" && <>{(["terrestrial1", "terrestrial2"] as const).map((field, index) => <ChoicePickerField key={field} id={`builder-pet-${field}`} label={`Terrestrial pet ${index + 1}`} value={builder.selectedPets[field] ? String(builder.selectedPets[field]) : ""} choices={pets.map((pet) => ({ value: String(pet.id), label: pet.name, icon: pet.icon, group: "Pet", meta: pet.description }))} onChange={(value) => updateBuilder((current) => ({ ...current, selectedPets: { ...current.selectedPets, [field]: Number(value) || 0 } }))} placeholder="Choose pet" clearLabel="Clear pet" />)}</>}
                 {builder.professionId === "Elementalist" && <>{(["activeAttunement", "activeAttunement2"] as const).map((field, index) => <div key={field}><FieldLabel>Attunement {index + 1}</FieldLabel><div className="theme-builder-mechanic-pills">{["", "Fire", "Water", "Air", "Earth"].map((attunement) => <button key={attunement || "None"} type="button" className={builder[field] === attunement ? "is-active" : undefined} onClick={() => updateBuilder((current) => ({ ...current, [field]: attunement }))}>{attunement || "None"}</button>)}</div></div>)}</>}
-                {builder.professionId === "Engineer" && <label><FieldLabel>Active kit</FieldLabel><SelectField value={builder.activeKit || ""} onChange={(event) => updateBuilder((current) => ({ ...current, activeKit: Number(event.target.value) || 0 }))}><option value="">None</option>{builder.activeKit > 0 && !engineerKitOptions.some((skill) => skill.id === builder.activeKit) && <option value={builder.activeKit}>Unavailable skill · {builder.activeKit}</option>}{engineerKitOptions.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}</SelectField></label>}
+                {builder.professionId === "Engineer" && <ChoicePickerField id="builder-engineer-kit" label="Active kit" value={builder.activeKit ? String(builder.activeKit) : ""} choices={[...(builder.activeKit > 0 && !engineerKitOptions.some((skill) => skill.id === builder.activeKit) ? [{ value: String(builder.activeKit), label: `Unavailable skill ${builder.activeKit}`, group: "Imported", meta: "Unavailable skill" }] : []), ...engineerKitOptions.map((skill) => ({ value: String(skill.id), label: skill.name, icon: skill.icon, group: skill.type ?? "Kit", meta: skill.description }))]} onChange={(value) => updateBuilder((current) => ({ ...current, activeKit: Number(value) || 0 }))} onPreview={(value) => { const skill = engineerKitOptions.find((item) => String(item.id) === value); if (skill) setSelectedSummary({ kind: "skill", item: skill }); }} placeholder="Choose kit" clearLabel="Clear kit" />}
                 {builder.professionId === "Warrior" && <div><FieldLabel>Active weapon set</FieldLabel><div className="theme-builder-mechanic-pills">{[1, 2].map((weaponSet) => <button key={weaponSet} type="button" className={builder.activeWeaponSet === weaponSet ? "is-active" : undefined} onClick={() => updateBuilder((current) => ({ ...current, activeWeaponSet: weaponSet }))}>Set {weaponSet === 1 ? "I" : "II"}</button>)}</div></div>}
-                {builder.professionId === "Thief" && <>{(["f2", "f3", "f4"] as const).map((field) => { const currentId = builder.antiquaryArtifacts[field]; return <label key={field}><FieldLabel>Antiquary {field.toUpperCase()}</FieldLabel><SelectField value={currentId || ""} onChange={(event) => updateBuilder((current) => ({ ...current, antiquaryArtifacts: { ...current.antiquaryArtifacts, [field]: Number(event.target.value) || 0 } }))}><option value="">None</option>{currentId > 0 && !thiefArtifactOptions.some((skill) => skill.id === currentId) && <option value={currentId}>Unavailable skill · {currentId}</option>}{thiefArtifactOptions.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}</SelectField></label>; })}</>}
+                {builder.professionId === "Thief" && <>{(["f2", "f3", "f4"] as const).map((field) => { const currentId = builder.antiquaryArtifacts[field]; return <ChoicePickerField key={field} id={`builder-antiquary-${field}`} label={`Antiquary ${field.toUpperCase()}`} value={currentId ? String(currentId) : ""} choices={[...(currentId > 0 && !thiefArtifactOptions.some((skill) => skill.id === currentId) ? [{ value: String(currentId), label: `Unavailable skill ${currentId}`, group: "Imported", meta: "Unavailable skill" }] : []), ...thiefArtifactOptions.map((skill) => ({ value: String(skill.id), label: skill.name, icon: skill.icon, group: skill.type ?? "Profession", meta: skill.description }))]} onChange={(value) => updateBuilder((current) => ({ ...current, antiquaryArtifacts: { ...current.antiquaryArtifacts, [field]: Number(value) || 0 } }))} onPreview={(value) => { const skill = thiefArtifactOptions.find((item) => String(item.id) === value); if (skill) setSelectedSummary({ kind: "skill", item: skill }); }} placeholder="Choose artifact" clearLabel="Clear artifact" />; })}</>}
               </div></section>
             )}
 
