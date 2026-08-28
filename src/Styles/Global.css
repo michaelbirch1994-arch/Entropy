@@ -3160,6 +3160,243 @@ kbd {
 .theme-builder-add-line,
 .theme-builder-link { border-color: rgba(24, 82, 90, 0.76); color: var(--theme-accentStrong); }
 
+/* Builder polish pass */
+.theme-builder-command-deck,
+.theme-builder-workspace,
+.theme-builder-panel,
+.theme-builder-boon-coverage,
+.theme-builder-condition-coverage,
+.theme-builder-readiness,
+.theme-builder-inspector,
+.theme-builder-code-output {
+  border-radius: 16px;
+}
+
+.theme-builder-command-deck {
+  padding: 1.25rem;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(88, 255, 227, 0.12), transparent 18rem),
+    linear-gradient(105deg, rgba(24, 217, 189, 0.12), transparent 32%),
+    linear-gradient(178deg, rgba(7, 23, 28, 0.98), rgba(2, 10, 14, 0.97));
+}
+
+.theme-builder-command-actions .theme-command-button,
+.theme-builder-empty .theme-command-button,
+.theme-builder-section-head .theme-command-button,
+.theme-builder-squad-readout + .theme-command-button,
+.theme-builder-import-actions button,
+.theme-builder-row-actions button,
+.theme-builder-code-output button,
+.theme-builder-add-line {
+  border-radius: 999px;
+}
+
+.theme-builder-tabs {
+  gap: 0.28rem;
+  padding: 0.32rem;
+  border-radius: 999px;
+}
+
+.theme-builder-tabs > button {
+  min-width: 7.4rem;
+  height: 2.65rem;
+  border: 0;
+  border-radius: 999px;
+}
+
+.theme-builder-tabs > button.is-active {
+  box-shadow: inset 0 0 0 1px rgba(88, 255, 227, 0.32), 0 12px 24px -20px var(--theme-accent);
+}
+
+.theme-builder-mode-switch {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.theme-builder-mode-switch button,
+.theme-builder-mode-toggle button,
+.theme-builder-pill-grid button,
+.theme-builder-spec-picks button {
+  border-radius: 999px;
+}
+
+.theme-builder-panel,
+.theme-builder-workspace,
+.theme-builder-equipment-group,
+.theme-builder-spec-line,
+.theme-builder-skill-slot,
+.theme-builder-library-card,
+.theme-builder-party-line,
+.theme-builder-squad-slot {
+  border-color: rgba(38, 103, 112, 0.62);
+  background:
+    linear-gradient(135deg, rgba(88, 255, 227, 0.055), transparent 46%),
+    rgba(2, 11, 15, 0.76);
+  box-shadow: inset 0 1px 0 rgba(207, 255, 249, 0.035);
+}
+
+.theme-builder-panel {
+  padding: 1.05rem;
+}
+
+.theme-builder-input,
+.theme-builder-import-rack textarea,
+.theme-builder-notes,
+.theme-builder-search {
+  min-height: 2.55rem;
+  border-radius: 12px !important;
+}
+
+.theme-builder-pill-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.theme-builder-pill-grid button {
+  min-height: 2.55rem;
+  padding: 0.55rem 0.78rem;
+  border: 1px solid rgba(24, 78, 86, 0.82);
+  color: var(--theme-textMuted);
+  background: rgba(2, 10, 14, 0.86);
+  font-size: 0.66rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.theme-builder-pill-grid button:hover,
+.theme-builder-spec-picks button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(88, 255, 227, 0.7);
+  color: var(--theme-text);
+}
+
+.theme-builder-pill-grid button.is-active {
+  border-color: rgba(255, 171, 69, 0.72);
+  color: var(--theme-text);
+  background: linear-gradient(135deg, rgba(255, 171, 69, 0.16), rgba(24, 217, 189, 0.08));
+  box-shadow: inset 0 0 0 1px rgba(255, 222, 166, 0.14);
+}
+
+.theme-builder-spec-line {
+  border-radius: 14px;
+}
+
+.theme-builder-spec-selector {
+  grid-template-columns: 1.5rem minmax(0, 1fr) 2.45rem;
+}
+
+.theme-builder-spec-picks {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0.38rem;
+  margin-top: 0.48rem;
+}
+
+.theme-builder-spec-picks button {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.42rem;
+  min-width: 0;
+  min-height: 2.35rem;
+  padding: 0.34rem 0.55rem;
+  border: 1px solid rgba(24, 78, 86, 0.75);
+  color: var(--theme-textMuted);
+  background: rgba(2, 10, 14, 0.74);
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-align: left;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+}
+
+.theme-builder-spec-picks button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.theme-builder-spec-picks button.is-active {
+  border-color: var(--theme-accentStrong);
+  color: var(--theme-text);
+  background: linear-gradient(135deg, rgba(24, 217, 189, 0.24), rgba(3, 26, 30, 0.86));
+}
+
+.theme-builder-spec-picks img,
+.theme-builder-spec-picks svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  object-fit: contain;
+}
+
+.theme-builder-spec-picks span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-builder-spec-picks b,
+.theme-builder-card-badges span {
+  color: var(--theme-warning);
+  font-family: var(--font-mono);
+  font-size: 0.48rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.theme-builder-skill-slot,
+.theme-builder-equipment-group,
+.theme-builder-library-card,
+.theme-builder-squad-slot,
+.theme-builder-party-line {
+  border-radius: 14px;
+}
+
+.theme-builder-library-card {
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+}
+
+.theme-builder-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  justify-content: flex-end;
+}
+
+.theme-builder-card-badges span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.45rem;
+  padding: 0.22rem 0.45rem;
+  border: 1px solid rgba(24, 78, 86, 0.7);
+  border-radius: 999px;
+  color: var(--theme-textMuted);
+  background: rgba(2, 10, 14, 0.76);
+}
+
+.theme-builder-card-badges span.is-ready {
+  border-color: rgba(88, 255, 227, 0.5);
+  color: var(--theme-accentStrong);
+}
+
+.theme-builder-card-badges span.is-draft {
+  border-color: rgba(255, 171, 69, 0.5);
+  color: var(--theme-warning);
+}
+
+.theme-builder-card-badges span.is-assigned {
+  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--theme-text);
+}
+
+.theme-builder-row-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.34;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .theme-player-card,
   .theme-podium-card,
