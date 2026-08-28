@@ -2358,6 +2358,7 @@ kbd {
 .theme-builder-empty { display: flex; min-height: 22rem; flex-direction: column; align-items: center; justify-content: center; gap: 0.7rem; color: #7e685d; text-align: center; }
 .theme-builder-empty strong { color: #c6ada0; font-size: 0.85rem; text-transform: uppercase; }
 .theme-builder-boon-coverage { margin-bottom: 0.9rem; padding: 1rem; border: 1px solid rgba(105, 48, 30, 0.82); background: linear-gradient(115deg, rgba(152, 37, 15, 0.1), transparent 30%), rgba(6, 4, 3, 0.9); box-shadow: inset 4px 0 0 rgba(130, 35, 16, 0.55); clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 9px 100%, 0 calc(100% - 9px)); }
+.theme-builder-condition-coverage { background: linear-gradient(115deg, rgba(255, 106, 50, 0.12), transparent 30%), rgba(6, 4, 3, 0.9); box-shadow: inset 4px 0 0 rgba(255, 106, 50, 0.42); }
 .theme-builder-boon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.6rem, 1fr)); gap: 0.6rem; margin-top: 0.35rem; }
 .theme-builder-boon-grid > div { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; padding: 0.6rem 0.4rem 0.5rem; border-radius: 0.6rem; border: 1px solid rgba(91, 43, 29, 0.55); background: rgba(4, 3, 2, 0.6); cursor: default; transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease; }
 .theme-builder-boon-grid > div:hover { transform: translateY(-2px) scale(1.04); border-color: rgba(255, 200, 120, 0.5); box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
@@ -2369,6 +2370,9 @@ kbd {
 .theme-builder-boon-grid > div.is-covered { border-color: rgba(73, 138, 111, 0.6); background: rgba(17, 68, 48, 0.22); }
 .theme-builder-boon-grid > div.is-covered .theme-builder-boon-icon { border-color: rgba(73, 138, 111, 0.75); box-shadow: 0 0 0 3px rgba(73,138,111,0.18), 0 0 16px rgba(73,138,111,0.35); }
 .theme-builder-boon-grid > div.is-covered span { color: #bfe9d3; }
+.theme-builder-condition-grid > div.is-covered { border-color: rgba(255, 106, 50, 0.58); background: rgba(255, 106, 50, 0.16); }
+.theme-builder-condition-grid > div.is-covered .theme-builder-boon-icon { border-color: rgba(255, 173, 69, 0.68); box-shadow: 0 0 0 3px rgba(255,106,50,0.14), 0 0 16px rgba(255,106,50,0.28); }
+.theme-builder-condition-grid > div.is-covered span { color: #ffd2bf; }
 .theme-builder-boon-grid > div.is-missing { opacity: 0.5; }
 .theme-builder-boon-grid > div.is-missing .theme-builder-boon-icon img { filter: grayscale(1); }
 
@@ -2548,10 +2552,56 @@ kbd {
 }
 
 .theme-builder-empty span { max-width: 27rem; font-size: 0.7rem; }
+.theme-builder-empty.is-compact { min-height: 9rem; }
 .theme-builder-library-list { display: grid; gap: 0.5rem; }
+.theme-builder-library-list.is-compact { grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); }
 .theme-builder-library-row { display: flex; align-items: center; gap: 0.8rem; min-height: 4.3rem; padding: 0.65rem; border: 1px solid rgba(91, 43, 29, 0.7); background: rgba(4, 3, 2, 0.74); }
 .theme-builder-library-row:nth-child(even) { margin-left: 1.25rem; }
 .theme-builder-index { color: #6e3b2b; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 900; }
+.theme-builder-library-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  min-height: 4.8rem;
+  padding: 0.65rem;
+  border: 1px solid rgba(91, 43, 29, 0.7);
+  background: linear-gradient(100deg, rgba(24, 217, 189, 0.055), transparent 70%), rgba(4, 3, 2, 0.74);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+.theme-builder-library-card[draggable="true"] { cursor: grab; }
+.theme-builder-library-card[draggable="true"]:active { cursor: grabbing; }
+.theme-builder-library-card:hover,
+.theme-builder-library-card:focus-within { transform: translateY(-1px); border-color: rgba(88, 255, 227, 0.52); box-shadow: inset 3px 0 0 rgba(88, 255, 227, 0.32), 0 18px 34px -30px rgba(88, 255, 227, 0.72); }
+.theme-builder-library-card-main {
+  display: grid;
+  grid-template-columns: 2.35rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.58rem;
+  min-width: 0;
+  text-align: left;
+}
+.theme-builder-library-card-main > span:last-child { display: grid; min-width: 0; gap: 0.08rem; }
+.theme-builder-library-card-main strong { overflow: hidden; color: #e8fef9; font-size: 0.76rem; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+.theme-builder-library-card-main small { overflow: hidden; color: #7bbfaf; font-family: var(--font-mono); font-size: 0.56rem; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.theme-builder-library-card-main em { overflow: hidden; color: #9f7565; font-size: 0.58rem; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+.theme-builder-library-card-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(3.35rem, 1fr));
+  gap: 0.32rem;
+}
+.theme-builder-library-card-stats span {
+  display: grid;
+  gap: 0.04rem;
+  padding: 0.35rem 0.42rem;
+  border: 1px solid rgba(24, 75, 83, 0.62);
+  color: #8fb9b3;
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  text-transform: uppercase;
+}
+.theme-builder-library-card-stats b { color: #ffe6d9; font-size: 0.72rem; line-height: 1; }
 .theme-builder-library-row h4 { color: #e5d4ca; font-size: 0.78rem; font-weight: 850; }
 .theme-builder-library-row h4 + span,
 .theme-builder-library-row h4 ~ span { padding: 0.2rem 0.38rem; border: 1px solid rgba(107, 54, 37, 0.68); color: #a98472; font-size: 0.53rem; text-transform: uppercase; }
@@ -2592,6 +2642,17 @@ kbd {
   border-color: rgba(88, 255, 227, 0.72);
   box-shadow: 0 14px 28px -24px rgba(88, 255, 227, 0.8);
 }
+.theme-builder-squad-slot:not(.is-filled)::after {
+  content: "Drop build";
+  position: absolute;
+  right: 0.42rem;
+  bottom: 0.35rem;
+  color: rgba(88, 255, 227, 0.44);
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
 .theme-builder-squad-slot-index { position: absolute; left: 0.35rem; top: 0.3rem; color: #6a3c2d; font-family: var(--font-mono); font-size: 0.55rem; }
 .theme-builder-squad-card {
   display: grid;
@@ -2629,6 +2690,8 @@ kbd {
 .theme-builder-party-slots option { background: #0a0604; }
 .theme-builder-party-slots small { color: #825a49; font-family: var(--font-mono); font-size: 0.48rem; text-transform: uppercase; }
 .theme-builder-add-line { display: flex; align-items: center; gap: 0.4rem; margin: 0.75rem auto 0; padding: 0.5rem 0.7rem; border: 1px solid rgba(104, 49, 31, 0.75); color: #9e7867; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; }
+.theme-builder-squad-library { min-height: 0; margin-top: 0.9rem; }
+.theme-builder-squad-library-count { color: #7bbfaf; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 850; text-transform: uppercase; }
 
 @media (max-width: 1180px) {
   .theme-builder-layout { grid-template-columns: 1fr; }
@@ -2642,6 +2705,9 @@ kbd {
   .theme-builder-equipment-sheet-mark { grid-row: auto; }
   .theme-builder-matrix-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .theme-builder-party-line { grid-template-columns: 1fr; }
+  .theme-builder-library-card { grid-template-columns: auto minmax(0, 1fr); align-items: flex-start; }
+  .theme-builder-library-card-stats,
+  .theme-builder-library-card .theme-builder-row-actions { grid-column: 1 / -1; width: 100%; }
 }
 
 @media (max-width: 760px) {
@@ -2671,6 +2737,9 @@ kbd {
   .theme-builder-section-head { align-items: flex-start; flex-direction: column; }
   .theme-builder-search { min-width: 0; width: 100%; }
   .theme-builder-library-row { align-items: flex-start; flex-wrap: wrap; }
+  .theme-builder-library-list.is-compact { grid-template-columns: 1fr; }
+  .theme-builder-library-card-main { grid-template-columns: 2.15rem minmax(0, 1fr); }
+  .theme-builder-library-card-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .theme-builder-row-actions { width: 100%; justify-content: flex-end; }
   .theme-builder-party-slots { grid-template-columns: 1fr; }
 }
@@ -3020,6 +3089,7 @@ kbd {
 .theme-builder-command-deck,
 .theme-builder-workspace,
 .theme-builder-boon-coverage,
+.theme-builder-condition-coverage,
 .theme-builder-readiness,
 .theme-builder-inspector,
 .theme-builder-code-output {
@@ -3053,6 +3123,7 @@ kbd {
 .theme-builder-spec-line,
 .theme-builder-skill-slot,
 .theme-builder-library-row,
+.theme-builder-library-card,
 .theme-builder-party-line,
 .theme-builder-boon-grid > div {
   border-color: rgba(24, 75, 83, 0.78);
