@@ -62,6 +62,11 @@ import {
 import { loadBuilderWorkspace, saveBuilderWorkspace } from "../lib/axiforge/builderStorage";
 import { BOON_DISPLAY_ORDER, type BoonCoverageEntry } from "../lib/axiforge/boonEngine";
 import { computeBuildBoonCoverage } from "../lib/axiforge/squadBoons";
+import {
+  BUILDER_CONDITION_DISPLAY_ORDER,
+  type BuilderConditionEntry,
+} from "../lib/axiforge/conditionEngine";
+import { computeBuildConditionAccess } from "../lib/axiforge/squadConditions";
 import { computeSquadTacticalReadout, type BuilderPressureIdentity } from "../lib/axiforge/squadTactics";
 import {
   fetchGw2Skills,
@@ -158,6 +163,25 @@ function pressureShortLabel(identity: BuilderPressureIdentity): string {
   if (identity === "condition") return "Condi";
   if (identity === "support") return "Support";
   return "Sustain";
+}
+
+function buildWeaponSummary(build: SavedBuilderBuild): string {
+  const { weapons } = build.state.equipment;
+  const setOne = [weapons.mainhand1, weapons.offhand1].filter(Boolean).join(" + ");
+  const setTwo = [weapons.mainhand2, weapons.offhand2].filter(Boolean).join(" + ");
+  return [setOne, setTwo].filter(Boolean).join(" / ") || "Weapons open";
+}
+
+function buildSkillCount(build: SavedBuilderBuild): number {
+  return [build.state.healSkillId, ...build.state.utilitySkillIds, build.state.eliteSkillId].filter(Boolean).length;
+}
+
+function buildGearCount(build: SavedBuilderBuild): number {
+  const gearSlots = Object.values(build.state.equipment.slots).filter(Boolean).length;
+  const runes = Object.values(build.state.equipment.runes).filter(Boolean).length;
+  const sigils = Object.values(build.state.equipment.sigils).flat().filter(Boolean).length;
+  const extras = [build.state.equipment.relic, build.state.equipment.food, build.state.equipment.utility, build.state.equipment.enrichment].filter(Boolean).length;
+  return gearSlots + runes + sigils + extras;
 }
 
 function contributionTotal(
@@ -388,6 +412,70 @@ function SkillPicker({
   );
 }
 
+function BuilderBuildCard({
+  build,
+  index,
+  onLoad,
+  onDuplicate,
+  onDelete,
+  onCopy,
+  onShare,
+  onFocus,
+  draggable = false,
+}: {
+  build: SavedBuilderBuild;
+  index?: number;
+  onLoad: (build: SavedBuilderBuild) => void;
+  onDuplicate?: (build: SavedBuilderBuild) => void;
+  onDelete?: (id: string) => void;
+  onCopy?: (code: string) => void;
+  onShare?: (code: string) => void;
+  onFocus?: (id: string) => void;
+  draggable?: boolean;
+}) {
+  const profile = useMemo(() => computeAttributeProfile(build.state, null), [build]);
+  const summary = [
+    build.state.role,
+    build.state.equipment.statPackage,
+    buildWeaponSummary(build),
+  ].filter(Boolean).join(" / ");
+
+  return (
+    <article
+      className="theme-builder-library-card"
+      draggable={draggable}
+      onDragStart={(event) => {
+        event.dataTransfer.setData("text/plain", build.id);
+        event.dataTransfer.effectAllowed = "copy";
+      }}
+      onFocus={() => onFocus?.(build.id)}
+      onMouseEnter={() => onFocus?.(build.id)}
+    >
+      {index != null && <div className="theme-builder-index">{String(index + 1).padStart(2, "0")}</div>}
+      <button type="button" className="theme-builder-library-card-main" onClick={() => onLoad(build)} title={`Open ${build.name}`}>
+        <ClassIcon name={build.state.professionId} size="md" />
+        <span>
+          <strong>{build.name}</strong>
+          <small>{[build.state.professionId, pressureLabel(profile.primaryIdentity)].join(" / ")}</small>
+          <em>{summary || "No doctrine assigned"}</em>
+        </span>
+      </button>
+      <div className="theme-builder-library-card-stats">
+        <span><b>{profile.pressure[profile.primaryIdentity]}</b>{pressureShortLabel(profile.primaryIdentity)}</span>
+        <span><b>{buildSkillCount(build)}</b>Skills</span>
+        <span><b>{buildGearCount(build)}</b>Gear</span>
+      </div>
+      <div className="theme-builder-row-actions">
+        <button type="button" onClick={() => onLoad(build)} title="Open build"><FolderOpen /></button>
+        {onDuplicate && <button type="button" onClick={() => onDuplicate(build)} title="Duplicate build"><Copy /></button>}
+        {onCopy && <button type="button" onClick={() => onCopy(build.shareCode)} title="Copy AxiCode"><Clipboard /></button>}
+        {onShare && <button type="button" onClick={() => onShare(build.shareCode)} title="Copy share link"><Link2 /></button>}
+        {onDelete && <button type="button" onClick={() => onDelete(build.id)} title="Delete build"><Trash2 /></button>}
+      </div>
+    </article>
+  );
+}
+
 function BuildLibrary({
   builds,
   onLoad,
@@ -420,20 +508,17 @@ function BuildLibrary({
       ) : (
         <div className="theme-builder-library-list">
           {filtered.map((build, index) => (
-            <article key={build.id} className="theme-builder-library-row">
-              <div className="theme-builder-index">{String(index + 1).padStart(2, "0")}</div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2"><h4>{build.name}</h4><span>{build.state.professionId}</span>{build.state.role && <span>{build.state.role}</span>}</div>
-                <p>{build.state.tags.length ? build.state.tags.join(" / ") : "No tags"} · Updated {new Date(build.updatedAt).toLocaleDateString()}</p>
-              </div>
-              <div className="theme-builder-row-actions">
-                <button type="button" onClick={() => onLoad(build)} title="Open build"><FolderOpen /></button>
-                <button type="button" onClick={() => onDuplicate(build)} title="Duplicate build"><Copy /></button>
-                <button type="button" onClick={() => onCopy(build.shareCode)} title="Copy AxiCode"><Clipboard /></button>
-                <button type="button" onClick={() => onShare(build.shareCode)} title="Copy share link"><Link2 /></button>
-                <button type="button" onClick={() => onDelete(build.id)} title="Delete build"><Trash2 /></button>
-              </div>
-            </article>
+            <BuilderBuildCard
+              key={build.id}
+              build={build}
+              index={index}
+              onLoad={onLoad}
+              onDuplicate={onDuplicate}
+              onDelete={onDelete}
+              onCopy={onCopy}
+              onShare={onShare}
+              draggable
+            />
           ))}
         </div>
       )}
@@ -442,6 +527,10 @@ function BuildLibrary({
 }
 
 function boonCacheKey(build: SavedBuilderBuild): string {
+  return `${build.id}:${build.updatedAt}`;
+}
+
+function conditionCacheKey(build: SavedBuilderBuild): string {
   return `${build.id}:${build.updatedAt}`;
 }
 
@@ -492,6 +581,61 @@ function SquadBoonCoverage({
             >
               <div className="theme-builder-boon-icon">{entry?.icon ? <img src={entry.icon} alt="" /> : <Sparkles className="h-5 w-5" />}{covered && <em>{list.length}</em>}</div>
               <span>{boon}</span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function SquadConditionCoverage({
+  composition,
+  builds,
+  conditionCache,
+  computing,
+}: {
+  composition: BuilderComposition;
+  builds: SavedBuilderBuild[];
+  conditionCache: Record<string, BuilderConditionEntry[]>;
+  computing: boolean;
+}) {
+  const providers = useMemo(() => {
+    const map = new Map<string, { icon?: string; sources: Array<{ buildName: string; profession: string }> }>();
+    const referenced = composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id));
+    for (const buildId of referenced) {
+      const build = builds.find((item) => item.id === buildId);
+      if (!build) continue;
+      const coverage = conditionCache[conditionCacheKey(build)];
+      if (!coverage) continue;
+      for (const entry of coverage) {
+        const existing = map.get(entry.name) ?? { icon: entry.icon, sources: [] };
+        if (!existing.icon && entry.icon) existing.icon = entry.icon;
+        existing.sources.push({ buildName: build.name, profession: build.state.professionId });
+        map.set(entry.name, existing);
+      }
+    }
+    return map;
+  }, [composition, builds, conditionCache]);
+
+  return (
+    <section className="theme-builder-boon-coverage theme-builder-condition-coverage">
+      <div className="theme-builder-section-head">
+        <div><div className="theme-builder-kicker">Detected from assigned skills and traits</div><h3>Squad condition access</h3></div>
+        {computing && <Loader2 className="h-4 w-4 animate-spin" />}
+      </div>
+      <div className="theme-builder-boon-grid theme-builder-condition-grid">
+        {BUILDER_CONDITION_DISPLAY_ORDER.map((condition) => {
+          const entry = providers.get(condition); const list = entry?.sources ?? [];
+          const covered = list.length > 0;
+          return (
+            <div
+              key={condition}
+              className={covered ? "is-covered" : "is-missing"}
+              title={covered ? list.map((source) => `${source.buildName} (${source.profession})`).join(", ") : "No assigned build exposes this condition"}
+            >
+              <div className="theme-builder-boon-icon">{entry?.icon ? <img src={entry.icon} alt="" /> : <Sparkles className="h-5 w-5" />}{covered && <em>{list.length}</em>}</div>
+              <span>{condition}</span>
             </div>
           );
         })}
@@ -592,6 +736,8 @@ function SquadWorkspace({
   builds,
   boonCache,
   boonComputing,
+  conditionCache,
+  conditionComputing,
   onCreate,
   onChange,
   onOpenBuild,
@@ -602,6 +748,8 @@ function SquadWorkspace({
   builds: SavedBuilderBuild[];
   boonCache: Record<string, BoonCoverageEntry[]>;
   boonComputing: boolean;
+  conditionCache: Record<string, BuilderConditionEntry[]>;
+  conditionComputing: boolean;
   onCreate: () => void;
   onChange: (composition: BuilderComposition) => void;
   onOpenBuild: (build: SavedBuilderBuild) => void;
@@ -620,16 +768,26 @@ function SquadWorkspace({
   }
 
   const assigned = composition.parties.reduce((total, party) => total + party.slots.filter(Boolean).length, 0);
+  const assignedBuildIds = new Set(composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id)));
+  const availableBuilds = builds.filter((build) => !assignedBuildIds.has(build.id));
   const update = (partial: Partial<BuilderComposition>) => onChange({ ...composition, ...partial, updatedAt: new Date().toISOString() });
   const updateSlot = (partyId: string, slotIndex: number, buildId: string | null) => update({
     parties: composition.parties.map((item) => item.id === partyId
       ? { ...item, slots: item.slots.map((slot, index) => index === slotIndex ? buildId : slot) }
       : item),
   });
+  const handleSlotDrop = (event: React.DragEvent<HTMLDivElement>, partyId: string, slotIndex: number) => {
+    event.preventDefault();
+    const buildId = event.dataTransfer.getData("text/plain");
+    if (!buildId || assignedBuildIds.has(buildId)) return;
+    updateSlot(partyId, slotIndex, buildId);
+    setFocusedBuildId(buildId);
+  };
 
   return (
     <>
       <SquadBoonCoverage composition={composition} builds={builds} boonCache={boonCache} computing={boonComputing} />
+      <SquadConditionCoverage composition={composition} builds={builds} conditionCache={conditionCache} computing={conditionComputing} />
       <SquadTacticalMatrix composition={composition} builds={builds} focusedBuildId={focusedBuildId} />
       <section className="theme-builder-workspace">
         <div className="theme-builder-section-head">
@@ -654,7 +812,15 @@ function SquadWorkspace({
                   const selected = builds.find((build) => build.id === buildId);
                   const selectedProfile = selected ? computeAttributeProfile(selected.state, null) : null;
                   return (
-                    <div key={slotIndex} className={selected ? "theme-builder-squad-slot is-filled" : "theme-builder-squad-slot"}>
+                    <div
+                      key={slotIndex}
+                      className={selected ? "theme-builder-squad-slot is-filled" : "theme-builder-squad-slot"}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = "copy";
+                      }}
+                      onDrop={(event) => handleSlotDrop(event, party.id, slotIndex)}
+                    >
                       <span className="theme-builder-squad-slot-index">{slotIndex + 1}</span>
                       {selected ? (
                         <>
@@ -692,7 +858,7 @@ function SquadWorkspace({
                           <small>Open slot</small>
                           <select value="" onChange={(event) => updateSlot(party.id, slotIndex, event.target.value || null)}>
                             <option value="">Assign build</option>
-                            {builds.map((build) => <option key={build.id} value={build.id}>{build.name} / {build.state.professionId}</option>)}
+                            {availableBuilds.map((build) => <option key={build.id} value={build.id}>{build.name} / {build.state.professionId}</option>)}
                           </select>
                         </label>
                       )}
@@ -704,6 +870,28 @@ function SquadWorkspace({
           ))}
         </div>
         <button type="button" className="theme-builder-add-line" onClick={() => update({ parties: [...composition.parties, createParty(composition.parties.length)] })}><Plus className="h-4 w-4" /> Add subgroup</button>
+      </section>
+      <section className="theme-builder-workspace theme-builder-squad-library">
+        <div className="theme-builder-section-head">
+          <div><div className="theme-builder-kicker">Drag cards into open squad slots</div><h3>Saved build library</h3></div>
+          <span className="theme-builder-squad-library-count">{availableBuilds.length} available</span>
+        </div>
+        {availableBuilds.length ? (
+          <div className="theme-builder-library-list is-compact">
+            {availableBuilds.map((build, index) => (
+              <BuilderBuildCard
+                key={build.id}
+                build={build}
+                index={index}
+                onLoad={onOpenBuild}
+                onFocus={setFocusedBuildId}
+                draggable
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="theme-builder-empty is-compact"><Archive className="h-7 w-7" /><strong>No unassigned builds</strong><span>Clear a squad slot or save another build to add more cards here.</span></div>
+        )}
       </section>
     </>
   );
@@ -728,20 +916,20 @@ function BuildPreview({
 }) {
   const skillIds = [builder.healSkillId, builder.utilitySkillIds[0], builder.utilitySkillIds[1], builder.utilitySkillIds[2], builder.eliteSkillId];
   const skillLabels = ["Heal", "Utility", "Utility", "Utility", "Elite"];
-  const attributeRows: Array<[string, string]> = [
-    ["Power", Math.round(attributeTotals.power).toLocaleString()],
-    ["Precision", Math.round(attributeTotals.precision).toLocaleString()],
-    ["Toughness", Math.round(attributeTotals.toughness).toLocaleString()],
-    ["Vitality", Math.round(attributeTotals.vitality).toLocaleString()],
-    ["Ferocity", Math.round(attributeTotals.ferocity).toLocaleString()],
-    ["Condition Damage", Math.round(attributeTotals.conditionDamage).toLocaleString()],
-    ["Expertise", Math.round(attributeTotals.expertise).toLocaleString()],
-    ["Concentration", Math.round(attributeTotals.concentration).toLocaleString()],
-    ["Healing Power", Math.round(attributeTotals.healingPower).toLocaleString()],
-    ["Crit Chance", attributeTotals.critChance.toFixed(1) + "%"],
-    ["Crit Damage", attributeTotals.critDamage.toFixed(1) + "%"],
-    ["Boon Duration", attributeTotals.boonDuration.toFixed(1) + "%"],
-    ["Condition Duration", attributeTotals.conditionDuration.toFixed(1) + "%"],
+  const attributeRows: Array<[string, string, React.ReactNode]> = [
+    ["Power", Math.round(attributeTotals.power).toLocaleString(), <Swords className="h-4 w-4" />],
+    ["Precision", Math.round(attributeTotals.precision).toLocaleString(), <Sparkles className="h-4 w-4" />],
+    ["Toughness", Math.round(attributeTotals.toughness).toLocaleString(), <Shield className="h-4 w-4" />],
+    ["Vitality", Math.round(attributeTotals.vitality).toLocaleString(), <Shield className="h-4 w-4" />],
+    ["Ferocity", Math.round(attributeTotals.ferocity).toLocaleString(), <Swords className="h-4 w-4" />],
+    ["Condition Damage", Math.round(attributeTotals.conditionDamage).toLocaleString(), <Sparkles className="h-4 w-4" />],
+    ["Expertise", Math.round(attributeTotals.expertise).toLocaleString(), <Sparkles className="h-4 w-4" />],
+    ["Concentration", Math.round(attributeTotals.concentration).toLocaleString(), <Users className="h-4 w-4" />],
+    ["Healing Power", Math.round(attributeTotals.healingPower).toLocaleString(), <Users className="h-4 w-4" />],
+    ["Crit Chance", attributeTotals.critChance.toFixed(1) + "%", <Swords className="h-4 w-4" />],
+    ["Crit Damage", attributeTotals.critDamage.toFixed(1) + "%", <Swords className="h-4 w-4" />],
+    ["Boon Duration", attributeTotals.boonDuration.toFixed(1) + "%", <Users className="h-4 w-4" />],
+    ["Condition Duration", attributeTotals.conditionDuration.toFixed(1) + "%", <Sparkles className="h-4 w-4" />],
   ];
   const pressureRows = [
     ["Strike", attributeProfile.pressure.strike],
@@ -795,8 +983,9 @@ function BuildPreview({
       </div>
 
       <div className="theme-builder-preview-attributes">
-        {attributeRows.map(([label, value]) => (
+        {attributeRows.map(([label, value, icon]) => (
           <div key={label} className="theme-builder-preview-attribute">
+            <i>{icon}</i>
             <span>{label}</span>
             <strong>{value}</strong>
           </div>
@@ -1036,6 +1225,8 @@ export default function AxiForgeLabView() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [boonCache, setBoonCache] = useState<Record<string, BoonCoverageEntry[]>>({});
   const [boonComputing, setBoonComputing] = useState(false);
+  const [conditionCache, setConditionCache] = useState<Record<string, BuilderConditionEntry[]>>({});
+  const [conditionComputing, setConditionComputing] = useState(false);
   const [equipmentItems, setEquipmentItems] = useState<Record<number, Gw2Item>>({});
 
   const builder = workspace.draft;
@@ -1198,6 +1389,39 @@ export default function AxiForgeLabView() {
     });
     return () => { cancelled = true; };
   }, [activeComposition, workspace.builds, boonCache]);
+
+  useEffect(() => {
+    if (!activeComposition) return;
+    const referencedIds = new Set(
+      activeComposition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id)),
+    );
+    const targets = [...referencedIds]
+      .map((id) => workspace.builds.find((build) => build.id === id))
+      .filter((build): build is SavedBuilderBuild => Boolean(build));
+    const missing = targets.filter((build) => !(conditionCacheKey(build) in conditionCache));
+    if (!missing.length) return;
+    let cancelled = false;
+    setConditionComputing(true);
+    Promise.all(
+      missing.map(async (build) => {
+        try {
+          const coverage = await computeBuildConditionAccess(build.state);
+          return [conditionCacheKey(build), coverage] as const;
+        } catch {
+          return [conditionCacheKey(build), [] as BuilderConditionEntry[]] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      setConditionCache((current) => {
+        const next = { ...current };
+        for (const [key, coverage] of entries) next[key] = coverage;
+        return next;
+      });
+      setConditionComputing(false);
+    });
+    return () => { cancelled = true; };
+  }, [activeComposition, workspace.builds, conditionCache]);
 
   function chooseProfession(profession: Gw2Profession) {
     const next = createEmptyBuilder(profession.id);
@@ -1552,7 +1776,7 @@ export default function AxiForgeLabView() {
       )}
 
       {activeTab === "library" && <BuildLibrary builds={workspace.builds} onLoad={loadBuild} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} onShare={(code) => copyText(buildAxiForgeShareUrl(code), "Share link copied.")} />}
-      {activeTab === "squad" && <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={loadBuild} onCopyCode={exportSquad} onShareCode={shareSquad} />}
+      {activeTab === "squad" && <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} conditionCache={conditionCache} conditionComputing={conditionComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={loadBuild} onCopyCode={exportSquad} onShareCode={shareSquad} />}
 
       {activeTab === "build" && (
         <div className="theme-builder-layout">
