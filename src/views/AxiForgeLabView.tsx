@@ -489,7 +489,21 @@ function EquipmentItemSummary({ values, items }: { values: string[]; items: Reco
   );
 }
 
-function EquipmentLoadoutSheet({ builder, items }: { builder: EntropyBuilderState; items: Record<number, Gw2Item> }) {
+function resolveEliteSpecName(
+  specializationIds: (number | null | undefined)[] | undefined,
+  specsById: Map<number, Gw2Specialization>,
+  fallback: string,
+): string {
+  if (!specializationIds || !specsById.size) return fallback;
+  for (const id of specializationIds) {
+    if (id == null) continue;
+    const spec = specsById.get(id);
+    if (spec?.elite) return spec.name;
+  }
+  return fallback;
+}
+
+function EquipmentLoadoutSheet({ builder, items, specsById }: { builder: EntropyBuilderState; items: Record<number, Gw2Item>; specsById: Map<number, Gw2Specialization> }) {
   const weaponSet = (set: 1 | 2) => {
     const main = builder.equipment.weapons[`mainhand${set}`] || "Empty";
     const off = builder.equipment.weapons[`offhand${set}`];
@@ -507,7 +521,7 @@ function EquipmentLoadoutSheet({ builder, items }: { builder: EntropyBuilderStat
   ];
   return (
     <div className="theme-builder-equipment-sheet" aria-label="Current equipment summary">
-      <div className="theme-builder-equipment-sheet-mark"><ClassIcon name={builder.professionId} size="lg" /><span><small>Field loadout</small><strong>{builder.name || builder.professionId}</strong></span></div>
+      <div className="theme-builder-equipment-sheet-mark"><ClassIcon name={resolveEliteSpecName(builder.specializationIds, specsById, builder.professionId)} size="lg" /><span><small>Field loadout</small><strong>{builder.name || builder.professionId}</strong></span></div>
       {cells.map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}
     </div>
   );
@@ -622,6 +636,7 @@ function BuilderBuildCard({
   onFocus,
   slotCount = 0,
   draggable = false,
+  specsById,
 }: {
   build: SavedBuilderBuild;
   index?: number;
@@ -633,6 +648,7 @@ function BuilderBuildCard({
   onFocus?: (id: string) => void;
   slotCount?: number;
   draggable?: boolean;
+  specsById: Map<number, Gw2Specialization>;
 }) {
   const profile = useMemo(() => computeAttributeProfile(build.state, null), [build]);
   const readinessIssues = useMemo(() => validateBuilder(build.state), [build]);
@@ -656,7 +672,7 @@ function BuilderBuildCard({
     >
       {index != null && <div className="theme-builder-index">{String(index + 1).padStart(2, "0")}</div>}
       <button type="button" className="theme-builder-library-card-main" onClick={() => onLoad(build)} title={`Open ${build.name}`}>
-        <ClassIcon name={build.state.professionId} size="md" />
+        <ClassIcon name={resolveEliteSpecName(build.state.specializationIds, specsById, build.state.professionId)} size="md" />
         <span>
           <strong>{build.name}</strong>
           <small>{[build.state.professionId, pressureLabel(profile.primaryIdentity)].join(" / ")}</small>
@@ -690,6 +706,7 @@ function BuildLibrary({
   onDelete,
   onCopy,
   onShare,
+  specsById,
 }: {
   builds: SavedBuilderBuild[];
   onLoad: (build: SavedBuilderBuild) => void;
@@ -697,6 +714,7 @@ function BuildLibrary({
   onDelete: (id: string) => void;
   onCopy: (code: string) => void;
   onShare: (code: string) => void;
+  specsById: Map<number, Gw2Specialization>;
 }) {
   const [query, setQuery] = useState("");
   const filtered = builds.filter((build) => {
@@ -725,6 +743,7 @@ function BuildLibrary({
               onCopy={onCopy}
               onShare={onShare}
               draggable
+              specsById={specsById}
             />
           ))}
         </div>
@@ -997,6 +1016,7 @@ function SquadWorkspace({
   onOpenBuild,
   onCopyCode,
   onShareCode,
+  specsById,
 }: {
   composition: BuilderComposition | null;
   builds: SavedBuilderBuild[];
@@ -1009,6 +1029,7 @@ function SquadWorkspace({
   onOpenBuild: (build: SavedBuilderBuild) => void;
   onCopyCode: () => void;
     onShareCode: () => void;
+  specsById: Map<number, Gw2Specialization>;
 }) {
   const [focusedBuildId, setFocusedBuildId] = useState<string | null>(null);
   const assignmentCounts = useMemo(() => {
@@ -1161,6 +1182,7 @@ function SquadWorkspace({
                 onFocus={setFocusedBuildId}
                 slotCount={assignmentCounts.get(build.id) ?? 0}
                 draggable
+                specsById={specsById}
               />
             ))}
           </div>
@@ -1218,7 +1240,7 @@ function BuildPreview({
   return (
     <div className="theme-builder-preview">
       <div className="theme-builder-preview-header">
-        {profession && <ClassIcon name={profession.name} size="lg" />}
+        {profession && <ClassIcon name={resolveEliteSpecName(builder.specializationIds, specsById, profession.name)} size="lg" />}
         <div>
           <h2>{builder.name || "Untitled Build"}</h2>
           <p className="theme-builder-preview-subtitle">
@@ -1488,6 +1510,7 @@ export default function AxiForgeLabView() {
   const [pets, setPets] = useState<Gw2Pet[]>([]);
   const [catalogSource, setCatalogSource] = useState<BuilderCatalogSource | null>(null);
   const [professionSpecs, setProfessionSpecs] = useState<Gw2Specialization[]>([]);
+  const [allSpecsById, setAllSpecsById] = useState<Map<number, Gw2Specialization>>(new Map());
   const [selectedSpecTraits, setSelectedSpecTraits] = useState<Gw2Trait[]>([]);
   const [professionSkills, setProfessionSkills] = useState<Gw2Skill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1586,6 +1609,12 @@ export default function AxiForgeLabView() {
       .then((catalog) => {
         if (cancelled) return;
         setProfessions(catalog.professions);
+        const allSpecIds = Array.from(new Set(catalog.professions.flatMap((item) => item.specializations)));
+        if (allSpecIds.length) {
+          fetchGw2Specializations(allSpecIds)
+            .then((specs) => { if (!cancelled) setAllSpecsById(new Map(specs.map((spec) => [spec.id, spec]))); })
+            .catch(() => {});
+        }
         setItemStats(catalog.itemStats);
         setLegends(catalog.legends);
         setPets(catalog.pets);
@@ -2071,8 +2100,8 @@ export default function AxiForgeLabView() {
         </div>
       )}
 
-      {activeTab === "library" && <BuildLibrary builds={workspace.builds} onLoad={loadBuild} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} onShare={(code) => copyText(buildAxiForgeShareUrl(code), "Share link copied.")} />}
-      {activeTab === "squad" && <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} conditionCache={conditionCache} conditionComputing={conditionComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={loadBuild} onCopyCode={exportSquad} onShareCode={shareSquad} />}
+      {activeTab === "library" && <BuildLibrary builds={workspace.builds} onLoad={loadBuild} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} onShare={(code) => copyText(buildAxiForgeShareUrl(code), "Share link copied.")} specsById={allSpecsById} />}
+      {activeTab === "squad" && <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} conditionCache={conditionCache} conditionComputing={conditionComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={loadBuild} onCopyCode={exportSquad} onShareCode={shareSquad} specsById={allSpecsById} />}
 
       {activeTab === "build" && (
         <div className="theme-builder-layout">
@@ -2200,7 +2229,7 @@ export default function AxiForgeLabView() {
 
             <section className="theme-panel theme-builder-panel">
               <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Step 04</div><h3>Equipment doctrine</h3></div><Wrench className="h-5 w-5 text-theme-info" /></div>
-              <EquipmentLoadoutSheet builder={builder} items={equipmentItems} />
+              <EquipmentLoadoutSheet builder={builder} items={equipmentItems} specsById={specsById} />
               <div className="theme-builder-equipment-grid">
                 <div className="theme-builder-equipment-group">
                   <h4>Weapons and stats</h4>
