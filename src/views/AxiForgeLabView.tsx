@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   computeAttributeProfile,
   type AttributeProfile,
@@ -317,7 +318,7 @@ function ChoicePickerField({
         <span><strong>{disabled ? (disabledLabel ?? placeholder) : (selected?.label ?? (value || placeholder))}</strong><small>{selected?.meta ?? selected?.group ?? "Open searchable picker"}</small></span>
         <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </button>
-      {open && (
+      {open && createPortal(
         <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
           <section className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
             <div className="theme-builder-picker-head">
@@ -355,7 +356,8 @@ function ChoicePickerField({
               ))}
             </div>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
@@ -431,7 +433,7 @@ function ItemPickerField({
         <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </button>
       {!resolved && <span className="theme-builder-choice-note"><AlertCircle className="h-3.5 w-3.5" /> Raw item ID {value} — not in the curated catalog.</span>}
-      {open && (
+      {open && createPortal(
         <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
           <section className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
             <div className="theme-builder-picker-head">
@@ -462,7 +464,8 @@ function ItemPickerField({
               })}
             </div>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
