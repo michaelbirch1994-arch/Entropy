@@ -24,7 +24,6 @@ import {
   GitCompare,
   FlaskConical,
   Search,
-  Pin,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import EntropyLogo from "../ui/EntropyLogo";
@@ -144,40 +143,14 @@ function findSectionForView(viewId: string): string | null {
   return null;
 }
 
-const RECENT_STORAGE_KEY = "entropy.sidebar.recentViews";
-const PINNED_ITEMS: NavItem[] = [
-  { id: "squad-stats", label: "Squad Stats" },
-  { id: "fight-replay", label: "Fight Replay" },
-];
-
-function findItem(viewId: string): NavItem | undefined {
-  return MENU.flatMap((section) => section.items).find((item) => item.id === viewId);
-}
-
 export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   const [expanded, setExpanded] = useState<string | null>(() => findSectionForView(activeView) ?? "OVERVIEW");
   const [query, setQuery] = useState("");
   const [compact, setCompact] = useState(() => window.innerWidth <= 720);
   const searchRef = useRef<HTMLInputElement | null>(null);
-  const [recent, setRecent] = useState<NavItem[]>(() => {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(RECENT_STORAGE_KEY) ?? "[]") as string[];
-      return parsed.map(findItem).filter((item): item is NavItem => Boolean(item)).slice(0, 4);
-    } catch {
-      return [];
-    }
-  });
-
   useEffect(() => {
     const section = findSectionForView(activeView);
     if (section && section !== expanded) setExpanded(section);
-    const item = findItem(activeView);
-    if (!item) return;
-    setRecent((current) => {
-      const next = [item, ...current.filter((entry) => entry.id !== item.id && !PINNED_ITEMS.some((p) => p.id === entry.id))].slice(0, 4);
-      localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(next.map((entry) => entry.id)));
-      return next;
-    });
   }, [activeView]);
 
   useEffect(() => {
@@ -295,18 +268,6 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
             )}
           </div>
         )}
-
-        <div className="mb-2">
-          {!compact && (
-            <div className="mb-1 flex items-center gap-2 px-3 text-[10px] font-bold uppercase tracking-wider text-theme-muted/75">
-              <Pin className="h-3 w-3" />
-              Pinned / Recent
-            </div>
-          )}
-          <div className={compact ? "space-y-1" : "space-y-0.5"}>
-            {[...PINNED_ITEMS, ...recent.filter((item) => !PINNED_ITEMS.some((p) => p.id === item.id))].slice(0, compact ? 6 : 5).map((item) => renderItemButton(item))}
-          </div>
-        </div>
 
         {MENU.map((section) => {
           const isOpen = expanded === section.title;
