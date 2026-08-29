@@ -1,6 +1,12 @@
-import { fetchGw2Skills, fetchGw2Specializations, fetchGw2Traits } from "../gw2/gw2Api";
+import {
+  fetchGw2Professions,
+  fetchGw2Skills,
+  fetchGw2Specializations,
+  fetchGw2Traits,
+} from "../gw2/gw2Api";
 import type { EntropyBuilderState } from "../../types/buildEditor";
 import { analyzeBuildConditions, type BuilderConditionEntry } from "./conditionEngine";
+import { computeAttributeTotals } from "../gw2/computeAttributes";
 
 export async function computeBuildConditionAccess(state: EntropyBuilderState): Promise<BuilderConditionEntry[]> {
   const specIds = state.specializationIds.filter((id): id is number => Boolean(id));
@@ -35,10 +41,15 @@ export async function computeBuildConditionAccess(state: EntropyBuilderState): P
   const traitIds = [...minorTraitIds, ...chosenMajorIds];
   const traits = traitIds.length ? await fetchGw2Traits(traitIds) : [];
 
+  const professions = await fetchGw2Professions();
+  const profession = professions.find((item) => item.id === state.professionId) ?? null;
+
   const skillIds = [state.healSkillId, ...state.utilitySkillIds, state.eliteSkillId].filter(
     (id): id is number => Boolean(id),
   );
   const skills = skillIds.length ? await fetchGw2Skills(skillIds) : [];
 
-  return analyzeBuildConditions(skills, traits);
+  const conditionDurationPercent = computeAttributeTotals(state, profession).conditionDuration;
+
+  return analyzeBuildConditions(skills, traits, conditionDurationPercent);
 }

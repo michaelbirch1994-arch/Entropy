@@ -66,12 +66,15 @@ export interface BuilderConditionSource {
   stacks: number;
   duration: number;
   icon?: string;
+  recharge?: number;
+  estimatedUptimePercent?: number;
 }
 
 export interface BuilderConditionEntry {
   name: string;
   sources: BuilderConditionSource[];
   icon?: string;
+  estimatedUptimePercent?: number;
 }
 
 interface ConditionScanEntity {
@@ -100,19 +103,33 @@ function textConditionNames(entity: ConditionScanEntity): string[] {
   return [...names];
 }
 
+function findRechargeSeconds(facts: Gw2ApiFact[]): number | undefined {
+  const rechargeFact = facts.find((fact) => fact.type === "Recharge");
+  return rechargeFact?.value;
+}
+
 function addCondition(
   conditionMap: Map<string, BuilderConditionEntry>,
   name: string,
   entity: ConditionScanEntity,
   type: "skill" | "trait",
+  conditionDurationPercent: number,
   fact?: Gw2ApiFact,
 ) {
+  const recharge = findRechargeSeconds(entity.facts ?? []);
+  const duration = fact?.duration || 0;
+  const effectiveDuration = duration * (1 + conditionDurationPercent / 100);
+  const estimatedUptimePercent =
+    recharge && recharge > 0 && duration > 0 ? Math.min(100, (effectiveDuration / recharge) * 100) : undefined;
+
   const source: BuilderConditionSource = {
     type,
     sourceName: entity.name || "",
     stacks: fact?.apply_count || 1,
-    duration: fact?.duration || 0,
+    duration,
     icon: fact?.icon,
+    recharge,
+    estimatedUptimePercent,
   };
   const entry = conditionMap.get(name) ?? { name, sources: [], icon: FALLBACK_CONDITION_ICONS[name] };
   const isDuplicate = entry.sources.some(
@@ -126,15 +143,20 @@ function addCondition(
   conditionMap.set(name, entry);
 }
 
-function scanEntity(entity: ConditionScanEntity, type: "skill" | "trait", conditionMap: Map<string, BuilderConditionEntry>) {
+function scanEntity(
+  entity: ConditionScanEntity,
+  type: "skill" | "trait",
+  conditionMap: Map<string, BuilderConditionEntry>,
+  conditionDurationPercent: number,
+) {
   for (const fact of entity.facts ?? []) {
     if (!fact.type || !CONDITION_FACT_TYPES.has(fact.type)) continue;
     const name = normalizeConditionName(fact.status);
-    if (name) addCondition(conditionMap, name, entity, type, fact);
+    if (name) addCondition(conditionMap, name, entity, type, conditionDurationPercent, fact);
   }
 
   for (const name of textConditionNames(entity)) {
-    addCondition(conditionMap, name, entity, type);
+    addCondition(conditionMap, name, entity, type, conditionDurationPercent);
   }
 }
 
@@ -142,16 +164,29 @@ export function fallbackConditionIcon(name: string): string | undefined {
   return FALLBACK_CONDITION_ICONS[name];
 }
 
-export function analyzeBuildConditions(skills: Gw2Skill[], traits: Gw2Trait[]): BuilderConditionEntry[] {
+export function analyzeBuildConditions(
+  skills: Gw2Skill[],
+  traits: Gw2Trait[],
+  conditionDurationPercent = 0,
+): BuilderConditionEntry[] {
   const conditionMap = new Map<string, BuilderConditionEntry>();
-  for (const skill of skills) scanEntity(skill, "skill", conditionMap);
-  for (const trait of traits) scanEntity(trait, "trait", conditionMap);
+  for (const skill of skills) scanEntity(skill, "skill", conditionMap, conditionDurationPercent);
+  for (const trait of traits) scanEntity(trait, "trait", conditionMap, conditionDurationPercent);
 
   const order = new Map(BUILDER_CONDITION_DISPLAY_ORDER.map((name, index) => [name, index]));
   return [...conditionMap.values()]
-    .map((entry) => ({
-      ...entry,
-      icon: entry.sources.find((source) => source.icon)?.icon ?? entry.icon ?? fallbackConditionIcon(entry.name),
-    }))
+    .map((entry) => {
+      const knownUptimes = entry.sources
+        .map((source) => source.estimatedUptimePercent)
+        .filter((value): value is number => value != null);
+      const estimatedUptimePercent = knownUptimes.length
+        ? Math.min(100, knownUptimes.reduce((sum, value) => sum + value, 0))
+        : undefined;
+      return {
+        ...entry,
+        icon: entry.sources.find((source) => source.icon)?.icon ?? entry.icon ?? fallbackConditionIcon(entry.name),
+        estimatedUptimePercent,
+      };
+    })
     .sort((left, right) => (order.get(left.name) ?? 999) - (order.get(right.name) ?? 999));
 }

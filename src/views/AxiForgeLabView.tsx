@@ -854,10 +854,10 @@ function SquadBoonCoverage({
           const entry = providers.get(boon); const list = entry?.sources ?? [];
           const covered = list.length > 0;
           const bestUptime = list.reduce<number | undefined>(
-            (max, source) =>
+            (sum, source) =>
               source.estimatedUptimePercent != null
-                ? Math.max(max ?? 0, source.estimatedUptimePercent)
-                : max,
+                ? Math.min(100, (sum ?? 0) + source.estimatedUptimePercent)
+                : sum,
             undefined,
           );
           const tooltip = covered
@@ -898,7 +898,10 @@ function SquadConditionCoverage({
   computing: boolean;
 }) {
   const providers = useMemo(() => {
-    const map = new Map<string, { icon?: string; sources: Array<{ buildName: string; profession: string }> }>();
+    const map = new Map<
+      string,
+      { icon?: string; sources: Array<{ buildName: string; profession: string; estimatedUptimePercent?: number }> }
+    >();
     const referenced = composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id));
     for (const buildId of referenced) {
       const build = builds.find((item) => item.id === buildId);
@@ -908,7 +911,11 @@ function SquadConditionCoverage({
       for (const entry of coverage) {
         const existing = map.get(entry.name) ?? { icon: entry.icon, sources: [] };
         if (!existing.icon && entry.icon) existing.icon = entry.icon;
-        existing.sources.push({ buildName: build.name, profession: build.state.professionId });
+        existing.sources.push({
+          buildName: build.name,
+          profession: build.state.professionId,
+          estimatedUptimePercent: entry.estimatedUptimePercent,
+        });
         map.set(entry.name, existing);
       }
     }
@@ -925,14 +932,31 @@ function SquadConditionCoverage({
         {BUILDER_CONDITION_DISPLAY_ORDER.map((condition) => {
           const entry = providers.get(condition); const list = entry?.sources ?? [];
           const covered = list.length > 0;
+          const squadUptime = list.reduce<number | undefined>(
+            (sum, source) =>
+              source.estimatedUptimePercent != null
+                ? Math.min(100, (sum ?? 0) + source.estimatedUptimePercent)
+                : sum,
+            undefined,
+          );
+          const tooltip = covered
+            ? list
+                .map((source) =>
+                  source.estimatedUptimePercent != null
+                    ? `${source.buildName} (${source.profession}) - ~${Math.round(source.estimatedUptimePercent)}% uptime`
+                    : `${source.buildName} (${source.profession})`,
+                )
+                .join(", ")
+            : "No assigned build exposes this condition";
           return (
             <div
               key={condition}
               className={covered ? "is-covered" : "is-missing"}
-              title={covered ? list.map((source) => `${source.buildName} (${source.profession})`).join(", ") : "No assigned build exposes this condition"}
+              title={tooltip}
             >
               <div className="theme-builder-boon-icon">{entry?.icon ? <img src={entry.icon} alt="" /> : <Sparkles className="h-5 w-5" />}{covered && <em>{list.length}</em>}</div>
               <span>{condition}</span>
+              {squadUptime != null && <span className="theme-builder-boon-uptime">~{Math.round(squadUptime)}%</span>}
             </div>
           );
         })}
