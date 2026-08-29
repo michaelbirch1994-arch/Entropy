@@ -819,7 +819,10 @@ function SquadBoonCoverage({
   computing: boolean;
 }) {
   const providers = useMemo(() => {
-    const map = new Map<string, { icon?: string; sources: Array<{ buildName: string; profession: string }> }>();
+    const map = new Map<
+      string,
+      { icon?: string; sources: Array<{ buildName: string; profession: string; estimatedUptimePercent?: number }> }
+    >();
     const referenced = composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id));
     for (const buildId of referenced) {
       const build = builds.find((item) => item.id === buildId);
@@ -829,7 +832,11 @@ function SquadBoonCoverage({
       for (const entry of coverage) {
         if (!entry.hasAllySource) continue;
         const existing = map.get(entry.name) ?? { icon: entry.icon, sources: [] }; if (!existing.icon && entry.icon) existing.icon = entry.icon;
-        existing.sources.push({ buildName: build.name, profession: build.state.professionId });
+        existing.sources.push({
+          buildName: build.name,
+         profession: build.state.professionId,
+          estimatedUptimePercent: entry.estimatedUptimePercent,
+        });
         map.set(entry.name, existing);
       }
     }
@@ -846,14 +853,31 @@ function SquadBoonCoverage({
         {BOON_DISPLAY_ORDER.map((boon) => {
           const entry = providers.get(boon); const list = entry?.sources ?? [];
           const covered = list.length > 0;
+          const bestUptime = list.reduce<number | undefined>(
+            (max, source) =>
+              source.estimatedUptimePercent != null
+                ? Math.max(max ?? 0, source.estimatedUptimePercent)
+                : max,
+            undefined,
+          );
+          const tooltip = covered
+            ? list
+                .map((source) =>
+                  source.estimatedUptimePercent != null
+                    ? `${source.buildName} (${source.profession}) - ~${Math.round(source.estimatedUptimePercent)}% uptime`
+                    : `${source.buildName} (${source.profession})`,
+                )
+                .join(", ")
+            : "No assigned build grants this to allies";
           return (
             <div
               key={boon}
               className={covered ? "is-covered" : "is-missing"}
-              title={covered ? list.map((source) => `${source.buildName} (${source.profession})`).join(", ") : "No assigned build grants this to allies"}
+              title={tooltip}
             >
               <div className="theme-builder-boon-icon">{entry?.icon ? <img src={entry.icon} alt="" /> : <Sparkles className="h-5 w-5" />}{covered && <em>{list.length}</em>}</div>
               <span>{boon}</span>
+              {bestUptime != null && <span className="theme-builder-boon-uptime">~{Math.round(bestUptime)}%</span>}
             </div>
           );
         })}

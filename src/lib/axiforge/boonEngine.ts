@@ -48,6 +48,8 @@ export interface BoonSource {
   duration: number;
   isAlly: boolean;
   icon?: string;
+  recharge?: number;
+  estimatedUptimePercent?: number;
 }
 
 export interface BoonCoverageEntry {
@@ -55,6 +57,7 @@ export interface BoonCoverageEntry {
   sources: BoonSource[];
   hasAllySource: boolean;
   icon?: string;
+  estimatedUptimePercent?: number;
 }
 
 function isAllyTargeted(description: string | undefined, statusName: string, allBoonNames: string[]): boolean {
@@ -99,7 +102,17 @@ interface BoonScanEntity {
   facts?: Gw2ApiFact[];
 }
 
-function scanEntity(entity: BoonScanEntity, type: "skill" | "trait", boonMap: Map<string, BoonCoverageEntry>) {
+function findRechargeSeconds(facts: Gw2ApiFact[]): number | undefined {
+  const rechargeFact = facts.find((fact) => fact.type === "Recharge");
+  return rechargeFact?.value;
+}
+
+function scanEntity(
+  entity: BoonScanEntity,
+  type: "skill" | "trait",
+  boonMap: Map<string, BoonCoverageEntry>,
+  boonDurationPercent: number,
+) {
   const facts = entity.facts ?? [];
   const description = entity.description ?? "";
 
@@ -118,6 +131,11 @@ function scanEntity(entity: BoonScanEntity, type: "skill" | "trait", boonMap: Ma
     const duration = fact.duration || 0;
     const isAlly = isAllyTargeted(description, name, entityBoonNames);
 
+    const recharge = type === "skill" ? findRechargeSeconds(facts) : undefined;
+    const effectiveDuration = duration * (1 + boonDurationPercent / 100);
+    const estimatedUptimePercent =
+      recharge && recharge > 0 ? Math.min(100, (effectiveDuration / recharge) * 100) : undefined;
+
     const source: BoonSource = {
       type,
       sourceName: entity.name || "",
@@ -125,6 +143,8 @@ function scanEntity(entity: BoonScanEntity, type: "skill" | "trait", boonMap: Ma
       duration,
       isAlly,
       icon: fact.icon,
+      recharge,
+      estimatedUptimePercent,
     };
 
     if (!boonMap.has(name)) boonMap.set(name, { name, sources: [], hasAllySource: false });
@@ -140,17 +160,30 @@ function scanEntity(entity: BoonScanEntity, type: "skill" | "trait", boonMap: Ma
 }
 
 /** Compute boon coverage for one build from its resolved active skills + traits. */
-export function analyzeBuildBoons(skills: Gw2Skill[], traits: Gw2Trait[]): BoonCoverageEntry[] {
+export function analyzeBuildBoons(
+  skills: Gw2Skill[],
+  traits: Gw2Trait[],
+  boonDurationPercent = 0,
+): BoonCoverageEntry[] {
   const boonMap = new Map<string, BoonCoverageEntry>();
-  for (const skill of skills) if (skill) scanEntity(skill, "skill", boonMap);
-  for (const trait of traits) if (trait) scanEntity(trait, "trait", boonMap);
+  for (const skill of skills) if (skill) scanEntity(skill, "skill", boonMap, boonDurationPercent);
+  for (const trait of traits) if (trait) scanEntity(trait, "trait", boonMap, boonDurationPercent);
 
   const order = new Map(BOON_DISPLAY_ORDER.map((name, index) => [name, index]));
   return [...boonMap.values()]
-    .map((entry) => ({
-      ...entry,
-      hasAllySource: entry.sources.some((source) => source.isAlly),
-      icon: entry.sources.find((source) => source.icon)?.icon,
-    }))
+    .map((entry) => {
+      const knownUptimes = entry.sources
+        .map((source) => source.estimatedUptimePercent)
+        .filter((value): value is number => value != null);
+      const estimatedUptimePercent = knownUptimes.length
+        ? Math.min(100, knownUptimes.reduce((sum, value) => sum + value, 0))
+        : undefined;
+      return {
+        ...entry,
+        hasAllySource: entry.sources.some((source) => source.isAlly),
+        icon: entry.sources.find((source) => source.icon)?.icon,
+        estimatedUptimePercent,
+      };
+    })
     .sort((a, b) => (order.get(a.name) ?? 999) - (order.get(b.name) ?? 999));
 }

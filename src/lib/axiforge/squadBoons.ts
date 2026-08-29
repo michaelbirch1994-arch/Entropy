@@ -6,6 +6,7 @@ import {
 } from "../gw2/gw2Api";
 import type { EntropyBuilderState } from "../../types/buildEditor";
 import { analyzeBuildBoons, type BoonCoverageEntry } from "./boonEngine";
+import { computeAttributeTotals } from "../gw2/computeAttributes";
 
 /**
  * Resolve the live GW2 API data a build actually uses right now - its chosen
@@ -73,5 +74,7 @@ export async function computeBuildBoonCoverage(state: EntropyBuilderState): Prom
   ].filter((id): id is number => Boolean(id));
   const skills = skillIds.length ? await fetchGw2Skills(skillIds) : [];
 
-  return analyzeBuildBoons(skills, traits);
+  const boonDurationPercent = computeAttributeTotals(state, profession).boonDuration;
+
+  return analyzeBuildBoons(skills, traits, boonDurationPercent);
 }
