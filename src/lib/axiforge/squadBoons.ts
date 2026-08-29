@@ -1,4 +1,9 @@
-import { fetchGw2Skills, fetchGw2Specializations, fetchGw2Traits } from "../gw2/gw2Api";
+import {
+  fetchGw2Professions,
+  fetchGw2Skills,
+  fetchGw2Specializations,
+  fetchGw2Traits,
+} from "../gw2/gw2Api";
 import type { EntropyBuilderState } from "../../types/buildEditor";
 import { analyzeBuildBoons, type BoonCoverageEntry } from "./boonEngine";
 
@@ -45,9 +50,27 @@ export async function computeBuildBoonCoverage(state: EntropyBuilderState): Prom
   const traitIds = [...minorTraitIds, ...chosenMajorIds];
   const traits = traitIds.length ? await fetchGw2Traits(traitIds) : [];
 
-  const skillIds = [state.healSkillId, ...state.utilitySkillIds, state.eliteSkillId].filter(
-    (id): id is number => Boolean(id),
-  );
+  const professions = await fetchGw2Professions();
+  const profession = professions.find((item) => item.id === state.professionId) ?? null;
+  const weaponSkillIds = new Set<number>();
+  if (profession?.weapons) {
+    const equippedWeapons = Object.values(state.equipment.weapons).filter(Boolean);
+    for (const weaponName of equippedWeapons) {
+      const entry = Object.entries(profession.weapons).find(
+        ([name]) => name.toLowerCase() === weaponName.toLowerCase(),
+      );
+      for (const skillRef of entry?.[1]?.skills ?? []) {
+        if (skillRef.id) weaponSkillIds.add(skillRef.id);
+      }
+    }
+  }
+
+  const skillIds = [
+    state.healSkillId,
+    ...state.utilitySkillIds,
+    state.eliteSkillId,
+    ...weaponSkillIds,
+  ].filter((id): id is number => Boolean(id));
   const skills = skillIds.length ? await fetchGw2Skills(skillIds) : [];
 
   return analyzeBuildBoons(skills, traits);
