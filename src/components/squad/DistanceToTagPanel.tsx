@@ -18,6 +18,8 @@ const METRICS: Array<{ key: DistanceMetric; label: string }> = [
     { key: 'p95', label: 'p95' },
 ];
 
+/* A real on-map "distance to tag" reading can't plausibly exceed this - it mirrors RUN_BACK_RANGE in computePlayerAggregation.ts, the same sanity ceiling the live aggregation pipeline already applies to discard outlier samples. The legacy fallback below reads an already-summed totalDist/distCount pair straight from an older saved report, so a single corrupted pairing can average out to a wildly implausible multi-million-unit figure (seen in the wild as e.g. "27,703,763" on the Distance to Tag card). Re-applying the same ceiling here keeps the legacy path honest with the live one instead of trusting unbounded historical data. */ const MAX_PLAUSIBLE_DISTANCE = 5000;
+
 export function resolveDistanceToTagResult(
     result: DistanceToTagResult | undefined,
     legacyPlayers: GeneralPlayer[],
@@ -29,7 +31,7 @@ export function resolveDistanceToTagResult(
         const avg = Math.round(player.totalDist / player.distCount);
         // Raw metrics v5 counted missing distance as zero. A real non-commander
         // player cannot average exactly zero, so omit those hollow legacy rows.
-        if (!Number.isFinite(avg) || avg <= 0) return [];
+                if (!Number.isFinite(avg) || avg <= 0 || avg > MAX_PLAUSIBLE_DISTANCE) return [];
         return [{
             account: player.account,
             profession: player.profession,
