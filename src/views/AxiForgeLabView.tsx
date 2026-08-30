@@ -761,42 +761,24 @@ function SquadSlotPicker({
   builds: SavedBuilderBuild[];
   onAssign: (buildId: string | null) => void;
 }) {
-  const [query, setQuery] = useState("");
   const choices = useMemo(() => builds.map((build) => ({
-    build,
-    label: [build.name, build.state.professionId, build.state.role].filter(Boolean).join(" / "),
+    value: build.id,
+    label: build.name,
+    meta: [build.state.professionId, build.state.role].filter(Boolean).join(" / "),
+    group: build.state.professionId || undefined,
   })), [builds]);
 
-  function handleChange(value: string) {
-    setQuery(value);
-    if (!value.trim()) {
-      onAssign(null);
-      return;
-    }
-    const match = choices.find((choice) => choice.label.toLowerCase() === value.trim().toLowerCase());
-    if (match) {
-      onAssign(match.build.id);
-      setQuery("");
-    }
-  }
-
   return (
-    <label className="theme-builder-squad-picker">
-      <small>Open slot</small>
-      <div className="theme-builder-squad-search">
-        <Search className="h-3.5 w-3.5" />
-        <input
-          list={id}
-          value={query}
-          onChange={(event) => handleChange(event.target.value)}
-          placeholder="Search library"
-        />
-        <datalist id={id}>
-          {choices.map((choice) => <option key={choice.build.id} value={choice.label} />)}
-        </datalist>
-      </div>
-    </label>
-  );
+    <ChoicePickerField
+      id={id}
+      label="Open slot"
+      value=""
+      choices={choices}
+      onChange={(value) => onAssign(value || null)}
+      placeholder="Assign build"
+      clearLabel="Leave empty"
+      />
+    );
 }
 
 function boonCacheKey(build: SavedBuilderBuild): string {
