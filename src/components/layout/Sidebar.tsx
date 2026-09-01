@@ -26,6 +26,7 @@ import {
   Search,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { VIEW_SECTIONS, VIEW_TONES, type ViewRegistryItem, type ViewTone } from "../../lib/viewRegistry";
 import EntropyLogo from "../ui/EntropyLogo";
 
 interface SidebarProps {
@@ -33,111 +34,18 @@ interface SidebarProps {
   setActiveView: (view: string) => void;
 }
 
-interface NavItem {
-  id: string;
-  label: string;
-  keywords?: string[];
-}
-interface NavSection {
-  title: string;
-  icon: ReactNode;
-  items: NavItem[];
-  tone: ViewTone;
-  flat?: boolean;
-}
-
-export type ViewTone = "overview" | "squad" | "performance" | "combat" | "extras";
-
-const MENU: NavSection[] = [
-  {
-    title: "OVERVIEW",
-    tone: "overview",
-    icon: <Activity className="w-4 h-4" />,
-    items: [
-      { id: "overview", label: "Overview", keywords: ["summary", "night", "landing"] },
-      { id: "kdr", label: "KDR", keywords: ["kills", "deaths", "record"] },
-      { id: "fight-breakdown", label: "Fight Breakdown", keywords: ["fights", "per fight"] },
-      { id: "map-distribution", label: "Map Distribution", keywords: ["map", "borderland", "ebg"] },
-      { id: "classes", label: "Classes", keywords: ["profession", "specialization", "comp"] },
-      { id: "composition", label: "Composition", keywords: ["parties", "squad comp", "roles"] },
-    ],
-  },
-  {
-    title: "SQUAD & ROSTER",
-    tone: "squad",
-    icon: <Users className="w-4 h-4" />,
-    items: [
-      { id: "squad-stats", label: "Squad Stats", keywords: ["kill pressure", "healing effectiveness", "tag distance"] },
-      { id: "roster", label: "Roster Intel", keywords: ["attendance", "raid roster"] },
-      { id: "commander-stats", label: "Commander Stats & Highlights", keywords: ["tag", "lead", "highlights", "moments"] },
-      { id: "player-profiles", label: "Player Profiles", keywords: ["career", "history"] },
-    ],
-  },
-  {
-    title: "PERFORMANCE",
-    tone: "performance",
-    icon: <Swords className="w-4 h-4" />,
-    items: [
-      { id: "top-players", label: "Top Players", keywords: ["mvp", "damage", "healing", "barrier"] },
-      { id: "player-compare", label: "Player Compare", keywords: ["players", "versus", "duel", "head to head", "night"] },
-      { id: "top-skills", label: "Top Skills", keywords: ["skill damage", "skill healing"] },
-      { id: "offensive", label: "Offensive Stats", keywords: ["downs", "kills", "strips"] },
-      { id: "defensive", label: "Defensive Stats", keywords: ["mitigation", "blocks", "healing"] },
-      { id: "damage-modifiers", label: "Damage Modifiers", keywords: ["modifier", "crit"] },
-      { id: "rotations", label: "Rotations", keywords: ["apm", "casts"] },
-      { id: "buffs", label: "Buffs", keywords: ["uptime", "boons", "conditions", "stability"] },
-      { id: "buff-generation", label: "Buff Generation", keywords: ["boon generation", "cleanse", "stability", "quickness"] },
-      { id: "party-boons", label: "Party Boons", keywords: ["subgroup", "party", "group boons"] },
-      { id: "conditions", label: "Conditions", keywords: ["debuff", "bleed", "burning", "cripple", "weakness", "vulnerability", "condi damage"] },
-    ],
-  },
-  {
-    title: "COMBAT LOG",
-    tone: "combat",
-    icon: <Film className="w-4 h-4" />,
-    items: [
-      { id: "dps-graph", label: "DPS Graph" },
-      { id: "fight-replay", label: "Fight Replay" },
-      { id: "mechanics", label: "Mechanics Timeline" },
-      { id: "death-recap", label: "Death Recap" },
-    ],
-  },
-  {
-    title: "INTELLIGENCE",
-    tone: "extras",
-    icon: <Sparkles className="w-4 h-4" />,
-    flat: true,
-    items: [
-      { id: "intelligence", label: "Intelligence", keywords: ["ml", "predictive", "findings"] },
-    ],
-  },
-  {
-    title: "ARCHIVE",
-    tone: "extras",
-    icon: <Archive className="w-4 h-4" />,
-    flat: true,
-    items: [
-      { id: "archive", label: "Report Archive", keywords: ["history", "saved"] },
-      { id: "compare", label: "Compare Reports", keywords: ["diff", "reports"] },
-    ],
-  },
-  {
-    title: "TOOLS",
-    tone: "extras",
-    icon: <FlaskConical className="w-4 h-4" />,
-    flat: true,
-    items: [
-      { id: "axiforge-lab", label: "Entropy Builder", keywords: ["builder", "build editor", "tools"] },
-    ],
-  },
-];
-
-export const VIEW_TONES: Record<string, ViewTone> = Object.fromEntries(
-  MENU.flatMap((section) => section.items.map((item) => [item.id, section.tone])),
-) as Record<string, ViewTone>;
+const SECTION_ICONS: Record<string, ReactNode> = {
+  OVERVIEW: <Activity className="w-4 h-4" />,
+  "SQUAD & ROSTER": <Users className="w-4 h-4" />,
+  PERFORMANCE: <Swords className="w-4 h-4" />,
+  "COMBAT LOG": <Film className="w-4 h-4" />,
+  INTELLIGENCE: <Sparkles className="w-4 h-4" />,
+  ARCHIVE: <Archive className="w-4 h-4" />,
+  TOOLS: <FlaskConical className="w-4 h-4" />,
+};
 
 function findSectionForView(viewId: string): string | null {
-  for (const section of MENU) {
+  for (const section of VIEW_SECTIONS) {
     if (section.items.some((i) => i.id === viewId)) return section.title;
   }
   return null;
@@ -178,7 +86,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   const searchResults = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return [];
-    return MENU.flatMap((section) =>
+    return VIEW_SECTIONS.flatMap((section) =>
       section.items
         .filter((item) => [item.label, item.id, ...(item.keywords ?? [])].join(" ").toLowerCase().includes(needle))
         .map((item) => ({ ...item, section: section.title })),
@@ -190,7 +98,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
     setQuery("");
   };
 
-  const renderItemButton = (item: NavItem, options?: { compactList?: boolean; section?: string }) => {
+  const renderItemButton = (item: ViewRegistryItem, options?: { compactList?: boolean; section?: string }) => {
     const isActive = activeView === item.id;
     const icon = VIEW_ICONS[item.id] ?? <Activity className="w-4 h-4" />;
     const tone = VIEW_TONES[item.id] ?? "overview";
@@ -269,17 +177,18 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
           </div>
         )}
 
-        {MENU.map((section) => {
+        {VIEW_SECTIONS.map((section) => {
           const isOpen = expanded === section.title;
           const hasCurrent = section.items.some((i) => i.id === activeView);
           const isFlat = section.flat || section.items.length <= 2;
+          const sectionIcon = SECTION_ICONS[section.title] ?? <Activity className="w-4 h-4" />;
           return (
             <div key={section.title} className={compact ? "mt-1" : ""} data-tone={section.tone}>
               {isFlat ? (
                 <div className={compact ? "space-y-1" : "space-y-0.5"}>
                   {!compact && (
                     <div className={`mt-3 flex items-center gap-2 px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${hasCurrent ? "text-theme-accent" : "text-theme-muted/75"}`}>
-                      <span className={hasCurrent ? "text-theme-accent" : "text-theme-muted/75"}>{section.icon}</span>
+                      <span className={hasCurrent ? "text-theme-accent" : "text-theme-muted/75"}>{sectionIcon}</span>
                       {section.title}
                     </div>
                   )}
@@ -298,7 +207,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <span className={isOpen || hasCurrent ? "text-theme-accent" : "text-theme-muted"}>{section.icon}</span>
+                  <span className={isOpen || hasCurrent ? "text-theme-accent" : "text-theme-muted"}>{sectionIcon}</span>
                   {!compact && section.title}
                 </div>
                 {!compact && (

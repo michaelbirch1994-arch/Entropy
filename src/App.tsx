@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { motion } from "framer-motion";
-import Sidebar, { VIEW_ICONS, VIEW_TONES } from "./components/layout/Sidebar";
+import Sidebar, { VIEW_ICONS } from "./components/layout/Sidebar";
+import { VIEW_TITLES, VIEW_TONES } from "./lib/viewRegistry";
 import { ReportProvider, useReport } from "./store/ReportContext";
 import { ViewProvider, useView } from "./store/ViewContext";
 import { CompareProvider } from "./store/CompareContext";
@@ -39,11 +40,12 @@ import AxiForgeLabView from "./views/AxiForgeLabView";
 import { downloadReportArtifact } from "./lib/shareReportArtifact";
 import { buildEntropyShareLink, getReportPermalinks } from "./lib/shareLinks";
 import { METRICS_VERSION } from "./lib/buildReportFromFights";
-import { Activity, CircleAlert as AlertCircle, CloudUpload, FlaskConical, Link2, MessageCircle, RefreshCw, Send, Upload, X } from "lucide-react";
+import { Activity, CircleAlert as AlertCircle, CloudUpload, FlaskConical, Link2, MessageCircle, RefreshCw, Send, Share2, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
 import HostedReportShareModal from "./components/ui/HostedReportShareModal";
 import RawLogImporter from "./components/ui/RawLogImporter";
+import { TopbarActionMenu, TopbarMenuButton } from "./components/ui/TopbarActionMenu";
 import UpdateToast from "./components/ui/UpdateToast";
 import { useAutoUpdater } from "./utils/useAutoUpdater";
 import {
@@ -54,42 +56,6 @@ import {
   saveDiscordWebhookUrl,
   sendDiscordWebhook,
 } from "./utils/discordWebhook";
-
-
-
-
-const VIEW_TITLES: Record<string, string> = {
-  overview: "Overview",
-  kdr: "KDR",
-  "fight-breakdown": "Fight Breakdown",
-  "top-players": "Top Players",
-  "top-skills": "Top Skills",
-  buffs: "Buffs",
-  classes: "Classes",
-  "map-distribution": "Map Distribution",
-  "commander-stats": "Commander Stats & Highlights",
-  "squad-stats": "Squad Stats",
-  composition: "Composition",
-  offensive: "Offensive Stats",
-  defensive: "Defensive Stats",
-  roster: "Roster Intel",
-  "player-profiles": "Player Profiles",
-  "player-compare": "Player Compare",
-  "damage-modifiers": "Damage Modifiers",
-  rotations: "Rotations",
-  "dps-graph": "DPS Graph",
-  "fight-replay": "Fight Replay",
-  mechanics: "Mechanics Timeline",
-  "death-recap": "Death Recap",
-  "buff-generation": "Buff Generation",
-  "conditions": "Conditions",
-  "party-boons": "Party Boons",
-  highlights: "Commander Stats & Highlights",
-  archive: "Report Archive",
-  compare: "Compare Reports",
-  intelligence: "Intelligence",
-  "axiforge-lab": "Entropy Builder",
-};
 
 
 
@@ -483,71 +449,80 @@ function ReportShell() {
               </div>
               <div className="theme-topbar-actions flex flex-wrap items-center justify-end gap-2">
                 {/* These toggles only actually affect Offensive/Squad Stats (damage scope) and Defensive (per-second + squad-only) - hidden elsewhere so they stay honest about which views they change. */}
-                {(activeView === "offensive" || activeView === "squad-stats") && <DamageScopeToggle />}
-                {(activeView === "defensive" || activeView === "offensive") && <StatsDisplayToggle />}
-                {(activeView === "defensive" || activeView === "squad-stats") && <AllyScopeToggle />}
-                <button
-                  onClick={() => void handleReloadCurrent()}
-                  disabled={loading}
-                  title="Re-fetch the current report's dps.report fights and rebuild metrics with this Entropy version when source links are available."
-                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5 disabled:opacity-60"
-                >
-                  <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-                  {loading ? "Reloading" : "Reload"}
-                </button>
-                <button
-                  onClick={() => setAtHome(true)}
-                  title="Open the combat record intake. The current report stays active until you view or combine new fights."
-                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
-                >
-                  <Upload className="w-3 h-3" />
-                  Add logs
-                </button>
-                <button
-                  onClick={() => void handleReplaceLogs()}
-                  title="Clear the current report and start a fresh log intake."
-                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5 hover:text-amber-300"
-                >
-                  <Upload className="w-3 h-3" />
-                  Replace logs
-                </button>
-                <button
-                  onClick={handleExportReport}
-                  title="Copy a live Entropy viewer link that reloads these fights from their dps.report permalinks — works for any fight imported as a raw .zevtc/.evtc file or pasted dps.report link. Falls back to a local report file when no permalinks are available."
-                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
-                >
-                  <Link2 className="w-3 h-3" />
-                  {exportLabel}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHostedShareOpen(true)}
-                  title="Upload this report as a public, unlisted Entropy web report."
-                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
-                >
-                  <CloudUpload className="h-3 w-3" />
-                  Share to Web
-                </button>
-                <button
-                  onClick={() => handleShareToDiscord()}
-                  title="Post a compact Entropy summary embed to your saved Discord webhook."
-                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5 disabled:opacity-60"
-                  disabled={discordStatus === "sending"}
-                >
-                  <MessageCircle className="w-3 h-3" />
-                  {discordLabel}
-                </button>
-                <button
-                  onClick={() => {
-                    setDiscordDraftUrl(discordWebhookUrl);
-                    setDiscordOpen(true);
-                  }}
-                  title="Configure the Discord webhook used by the share button."
-                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5"
-                >
-                  <Send className="w-3 h-3" />
-                  Webhook
-                </button>
+                {(activeView === "offensive" || activeView === "squad-stats" || activeView === "defensive") && (
+                  <div className="theme-topbar-scope-group" aria-label="View metric display options">
+                    {(activeView === "offensive" || activeView === "squad-stats") && <DamageScopeToggle />}
+                    {(activeView === "defensive" || activeView === "offensive") && <StatsDisplayToggle />}
+                    {(activeView === "defensive" || activeView === "squad-stats") && <AllyScopeToggle />}
+                  </div>
+                )}
+                <TopbarActionMenu label="Report" icon={<Upload className="w-3 h-3" />}>
+                  <TopbarMenuButton
+                    onClick={() => void handleReloadCurrent()}
+                    disabled={loading}
+                    title="Re-fetch the current report's dps.report fights and rebuild metrics with this Entropy version when source links are available."
+                  >
+                    <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+                    <span>{loading ? "Reloading" : "Reload report"}</span>
+                  </TopbarMenuButton>
+                  <TopbarMenuButton
+                    onClick={() => setAtHome(true)}
+                    title="Open the combat record intake. The current report stays active until you view or combine new fights."
+                  >
+                    <Upload className="w-3 h-3" />
+                    <span>Add logs</span>
+                  </TopbarMenuButton>
+                  <TopbarMenuButton
+                    onClick={() => void handleReplaceLogs()}
+                    title="Clear the current report and start a fresh log intake."
+                    className="theme-topbar-menu-item-warning"
+                  >
+                    <Upload className="w-3 h-3" />
+                    <span>Replace logs</span>
+                  </TopbarMenuButton>
+                  <TopbarMenuButton
+                    onClick={() => void clearReport()}
+                    title="Clear the current report from this session."
+                    className="theme-topbar-menu-item-danger"
+                  >
+                    <X className="w-3 h-3" />
+                    <span>Clear report</span>
+                  </TopbarMenuButton>
+                </TopbarActionMenu>
+                <TopbarActionMenu label="Share" icon={<Share2 className="w-3 h-3" />}>
+                  <TopbarMenuButton
+                    onClick={handleExportReport}
+                    title="Copy a live Entropy viewer link that reloads these fights from their dps.report permalinks. Falls back to a local report file when no permalinks are available."
+                  >
+                    <Link2 className="w-3 h-3" />
+                    <span>{exportLabel}</span>
+                  </TopbarMenuButton>
+                  <TopbarMenuButton
+                    onClick={() => setHostedShareOpen(true)}
+                    title="Upload this report as a public, unlisted Entropy web report."
+                  >
+                    <CloudUpload className="h-3 w-3" />
+                    <span>Share to Web</span>
+                  </TopbarMenuButton>
+                  <TopbarMenuButton
+                    onClick={() => handleShareToDiscord()}
+                    title="Post a compact Entropy summary embed to your saved Discord webhook."
+                    disabled={discordStatus === "sending"}
+                  >
+                    <MessageCircle className="w-3 h-3" />
+                    <span>{discordLabel}</span>
+                  </TopbarMenuButton>
+                  <TopbarMenuButton
+                    onClick={() => {
+                      setDiscordDraftUrl(discordWebhookUrl);
+                      setDiscordOpen(true);
+                    }}
+                    title="Configure the Discord webhook used by the share button."
+                  >
+                    <Send className="w-3 h-3" />
+                    <span>Webhook</span>
+                  </TopbarMenuButton>
+                </TopbarActionMenu>
                 {source && (
                   <button
                     type="button"
@@ -563,14 +538,6 @@ function ReportShell() {
                     {exportStatus !== "idle" ? exportLabel : source === "upload" ? "Uploaded" : "Shared link"}
                   </button>
                 )}
-                <button
-                  onClick={clearReport}
-                  title="Clear the current report from this session."
-                  className="theme-quiet-button flex items-center gap-1.5 px-2.5 py-1.5 hover:text-rose-400"
-                >
-                  <X className="w-3 h-3" />
-                  Clear
-                </button>
                 {headerInfo && (
                   <div className="theme-status-pill flex items-center gap-3 px-4 py-2 text-xs font-mono">
                     <span>v{headerInfo.version}</span>

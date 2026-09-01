@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "audit:ui": "node scripts/audit-ui-surfaces.mjs --markdown",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",

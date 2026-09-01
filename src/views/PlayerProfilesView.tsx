@@ -14,6 +14,7 @@ import {
 import { fmtCompact, fmtFixedGrouped, fmtNum } from "../utils/format";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 import ProfessionIdentity from "../components/ui/ProfessionIdentity";
+import { SortableHeader } from "../components/ui/SortableHeader";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { CHART_COLORS, TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE } from "../utils/chartTheme";
 
@@ -77,22 +78,6 @@ export default function PlayerProfilesView() {
       return null;
     });
   };
-
-  const sortLabel = (key: TableSortKey) => (!sort || sort.key !== key ? "SORT" : sort.dir === "desc" ? "DESC" : "ASC");
-
-  const SortHeader = ({ label, k, align = "left" }: { label: string; k: TableSortKey; align?: "left" | "right" }) => (
-    <th className={`p-2.5 ${align === "right" ? "text-right" : ""}`}>
-      <button
-        type="button"
-        onClick={() => toggleSort(k)}
-        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
-          align === "right" ? "justify-end" : ""
-        } ${sort?.key === k ? "text-theme-accent" : "text-theme-muted hover:text-theme-text"}`}
-      >
-        {label} <span className="text-[8px] opacity-70">{sortLabel(k)}</span>
-      </button>
-    </th>
-  );
 
   // Top-12 chart of the currently filtered/sorted player pool by total
   // damage, so the visual leaderboard always matches whatever the table is
@@ -178,14 +163,14 @@ export default function PlayerProfilesView() {
               <table className="theme-data-table w-full text-left text-xs">
                 <thead>
                   <tr className="theme-table-head text-[10px] uppercase font-bold tracking-wider">
-                    <SortHeader label="Player" k="account" />
-                    <SortHeader label="Main Class" k="mainClass" />
-                    <SortHeader label="Fights" k="totalFightsJoined" align="right" />
-                    <SortHeader label="Total Damage" k="totalDamage" align="right" />
-                    <SortHeader label="Best DPS" k="bestDps" align="right" />
-                    <SortHeader label="Total Healing" k="totalHealing" align="right" />
-                    <SortHeader label="Down Contrib" k="totalDownContrib" align="right" />
-                    <SortHeader label="MVPs" k="mvpTotal" align="right" />
+                    <SortableHeader label="Player" sortKey="account" state={sort} onSort={toggleSort} />
+                    <SortableHeader label="Main Class" sortKey="mainClass" state={sort} onSort={toggleSort} />
+                    <SortableHeader label="Fights" sortKey="totalFightsJoined" state={sort} onSort={toggleSort} align="right" />
+                    <SortableHeader label="Total Damage" sortKey="totalDamage" state={sort} onSort={toggleSort} align="right" />
+                    <SortableHeader label="Best DPS" sortKey="bestDps" state={sort} onSort={toggleSort} align="right" />
+                    <SortableHeader label="Total Healing" sortKey="totalHealing" state={sort} onSort={toggleSort} align="right" />
+                    <SortableHeader label="Down Contrib" sortKey="totalDownContrib" state={sort} onSort={toggleSort} align="right" />
+                    <SortableHeader label="MVPs" sortKey="mvpTotal" state={sort} onSort={toggleSort} align="right" />
                     <th className="p-2.5">Badges</th>
                   </tr>
                 </thead>

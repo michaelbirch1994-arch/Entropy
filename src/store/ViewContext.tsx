@@ -2,8 +2,10 @@
 // state into a context so other views (e.g. ArchiveView and Intelligence) can
 // navigate the user to a different view programmatically while preserving the
 // exact evidence target that motivated the jump.
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { parseAxiForgeShareQuery } from "../lib/axiforge/axiForgeShareLink";
+import { viewLabel } from "../lib/viewRegistry";
+import { buildViewUrl, normalizeViewId, parseViewUrlState } from "./viewUrlState";
 
 export interface ViewNavigationTarget {
   source: "intelligence" | "archive" | "overview" | "other";
@@ -37,36 +39,59 @@ const ViewContext = createContext<ViewContextValue>({
   clearNavigationTarget: () => {},
 });
 
-const VIEW_LABELS: Record<string, string> = {
-  overview: "Overview",
-  kdr: "KDR",
-  "fight-breakdown": "Fight Breakdown",
-  "top-players": "Top Players",
-  "top-skills": "Top Skills",
-  offensive: "Offensive Stats",
-  defensive: "Defensive Stats",
-  "squad-stats": "Squad Stats",
-  "player-profiles": "Player Profiles",
-  "fight-replay": "Fight Replay",
-  mechanics: "Mechanics Timeline",
-  "death-recap": "Death Recap",
-  intelligence: "Intelligence",
-};
-
-function viewLabel(view: string) {
-  return VIEW_LABELS[view] ?? view.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
 export function ViewProvider({ children }: { children: ReactNode }) {
-  const [activeView, setActiveViewState] = useState(() =>
-    typeof window !== "undefined" && parseAxiForgeShareQuery(window.location.search) ? "axiforge-lab" : "overview"
-  );
+  const [activeView, setActiveViewState] = useState(() => {
+    if (typeof window === "undefined") return "overview";
+    if (parseAxiForgeShareQuery(window.location.search)) return "axiforge-lab";
+    return parseViewUrlState(window.location.search).view;
+  });
   const [previousView, setPreviousView] = useState<string | null>(null);
-  const [navigationTarget, setNavigationTarget] = useState<ViewNavigationTarget | null>(null);
-  const [navigationTrailTarget, setNavigationTrailTarget] = useState<ViewNavigationTarget | null>(null);
+  const [navigationTarget, setNavigationTarget] = useState<ViewNavigationTarget | null>(() => {
+    if (typeof window === "undefined" || parseAxiForgeShareQuery(window.location.search)) return null;
+    return parseViewUrlState(window.location.search).navigationTarget;
+  });
+  const [navigationTrailTarget, setNavigationTrailTarget] = useState<ViewNavigationTarget | null>(() => {
+    if (typeof window === "undefined" || parseAxiForgeShareQuery(window.location.search)) return null;
+    return parseViewUrlState(window.location.search).navigationTarget;
+  });
+  const activeViewRef = useRef(activeView);
+
+  useEffect(() => {
+    activeViewRef.current = activeView;
+  }, [activeView]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onPopState = () => {
+      if (parseAxiForgeShareQuery(window.location.search)) {
+        setPreviousView(activeViewRef.current === "axiforge-lab" ? null : activeViewRef.current);
+        setNavigationTarget(null);
+        setNavigationTrailTarget(null);
+        setActiveViewState("axiforge-lab");
+        return;
+      }
+
+      const parsed = parseViewUrlState(window.location.search);
+      setPreviousView(parsed.view === activeViewRef.current ? previousView : activeViewRef.current);
+      setNavigationTarget(parsed.navigationTarget);
+      setNavigationTrailTarget(parsed.navigationTarget);
+      setActiveViewState(parsed.view);
+    };
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [previousView]);
 
   function moveToView(view: string, target: ViewNavigationTarget | null) {
-    if (view === activeView) {
+    const normalizedView = normalizeViewId(view);
+    if (typeof window !== "undefined") {
+      const nextUrl = buildViewUrl(window.location.href, normalizedView, target);
+      const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (nextUrl !== currentUrl) window.history.pushState(null, "", nextUrl);
+    }
+
+    if (normalizedView === activeView) {
       setNavigationTarget(target);
       setNavigationTrailTarget(target);
       return;
@@ -75,7 +100,7 @@ export function ViewProvider({ children }: { children: ReactNode }) {
     setPreviousView(activeView);
     setNavigationTarget(target);
     setNavigationTrailTarget(target);
-    setActiveViewState(view);
+    setActiveViewState(normalizedView);
   }
 
   function setActiveView(view: string) {
@@ -83,12 +108,16 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   }
 
   function navigateToView(view: string, target?: Omit<ViewNavigationTarget, "targetView">) {
-    moveToView(view, target ? { ...target, targetView: view } : null);
+    const normalizedView = normalizeViewId(view);
+    moveToView(normalizedView, target ? { ...target, targetView: normalizedView } : null);
   }
 
   function goBackToPreviousView() {
     if (!previousView || previousView === activeView) return;
-    const destination = previousView;
+    const destination = normalizeViewId(previousView);
+    if (typeof window !== "undefined") {
+      window.history.pushState(null, "", buildViewUrl(window.location.href, destination, null));
+    }
     setPreviousView(activeView);
     setNavigationTarget(null);
     setNavigationTrailTarget(null);

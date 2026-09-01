@@ -6,6 +6,7 @@ import { useReport } from "../store/ReportContext";
 import { useView } from "../store/ViewContext";
 import { useCompare } from "../store/CompareContext";
 import { fmtCompact, fmtNum } from "../utils/format";
+import { SortableHeader } from "../components/ui/SortableHeader";
 
 type SortKey = "title" | "commanders" | "fights" | "record" | "totalDamage" | "avgSquadSize";
 type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
@@ -57,22 +58,6 @@ export default function ArchiveView() {
       return null;
     });
   };
-
-  const sortLabel = (key: SortKey) => (!sort || sort.key !== key ? "SORT" : sort.dir === "desc" ? "DESC" : "ASC");
-
-  const SortHeader = ({ label, k, align = "left" }: { label: string; k: SortKey; align?: "left" | "right" }) => (
-    <th className={`p-2.5 ${align === "right" ? "text-right" : ""}`}>
-      <button
-        type="button"
-        onClick={() => toggleSort(k)}
-        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors ${
-          align === "right" ? "justify-end" : ""
-        } ${sort?.key === k ? "text-theme-accent-strong" : "text-theme-muted hover:text-theme-text"}`}
-      >
-        {label} <span className="text-[8px] opacity-70">{sortLabel(k)}</span>
-      </button>
-    </th>
-  );
 
   function toggleSelected(id: string) {
     setSelected((prev) => {
@@ -161,12 +146,12 @@ export default function ArchiveView() {
                 <thead>
                   <tr className="text-[10px] text-theme-muted uppercase font-bold tracking-wider border-b border-theme-border/50">
                     <th className="p-2.5 w-8"></th>
-                    <SortHeader label="Report" k="title" />
-                    <SortHeader label="Commanders" k="commanders" />
-                    <SortHeader label="Fights" k="fights" align="right" />
-                    <SortHeader label="Outcome" k="record" align="right" />
-                    <SortHeader label="Squad Damage" k="totalDamage" align="right" />
-                    <SortHeader label="Avg Squad" k="avgSquadSize" align="right" />
+                    <SortableHeader label="Report" sortKey="title" state={sort} onSort={toggleSort} />
+                    <SortableHeader label="Commanders" sortKey="commanders" state={sort} onSort={toggleSort} />
+                    <SortableHeader label="Fights" sortKey="fights" state={sort} onSort={toggleSort} align="right" />
+                    <SortableHeader label="Outcome" sortKey="record" state={sort} onSort={toggleSort} align="right" />
+                    <SortableHeader label="Squad Damage" sortKey="totalDamage" state={sort} onSort={toggleSort} align="right" />
+                    <SortableHeader label="Avg Squad" sortKey="avgSquadSize" state={sort} onSort={toggleSort} align="right" />
                     <th className="p-2.5"></th>
                   </tr>
                 </thead>

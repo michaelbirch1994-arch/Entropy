@@ -5,6 +5,7 @@ import StatCard from "../components/ui/StatCard";
 import { fmtNum, fmtDur, profStyle } from "../utils/format";
 import { Users, Clock, Heart, Eye } from "lucide-react";
 import ProfessionIdentity from "../components/ui/ProfessionIdentity";
+import { SortableHeader } from "../components/ui/SortableHeader";
 
 type SortKey = "account" | "characters" | "classes" | "combat" | "squad" | "uptime";
 type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
@@ -74,21 +75,6 @@ export default function RosterView() {
           { key, dir: key === "account" || key === "characters" || key === "classes" ? "asc" : "desc" },
     );
 
-  const SortHeader = ({ label, k, align = "left", width }: { label: string; k: SortKey; align?: "left" | "right"; width?: string }) => (
-    <th className={`p-2.5 ${align === "right" ? "text-right" : ""} ${width ?? ""}`}>
-      <button
-        type="button"
-        onClick={() => toggleSort(k)}
-        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-theme-text ${
-          sort?.key === k ? "text-theme-accent" : ""
-        }`}
-      >
-        {label}
-        <span className="text-[8px] opacity-70">{sort?.key === k ? (sort.dir === "asc" ? "ASC" : "DESC") : "SORT"}</span>
-      </button>
-    </th>
-  );
-
   const PlayerClassChip = ({ profession }: { profession: string }) => (
     <ProfessionIdentity profession={profession} />
   );
@@ -156,12 +142,12 @@ export default function RosterView() {
           <table className="theme-data-table w-full text-left text-xs">
             <thead>
               <tr className="theme-table-head text-[10px] uppercase font-bold tracking-wider">
-                <SortHeader label="Player" k="account" />
-                <SortHeader label="Characters" k="characters" />
-                <SortHeader label="Classes Played" k="classes" />
-                <SortHeader label="Combat Time" k="combat" align="right" />
-                <SortHeader label="Squad Time" k="squad" align="right" />
-                <SortHeader label="Uptime" k="uptime" width="w-32" />
+                <SortableHeader label="Player" sortKey="account" state={sort} onSort={toggleSort} />
+                <SortableHeader label="Characters" sortKey="characters" state={sort} onSort={toggleSort} />
+                <SortableHeader label="Classes Played" sortKey="classes" state={sort} onSort={toggleSort} />
+                <SortableHeader label="Combat Time" sortKey="combat" state={sort} onSort={toggleSort} align="right" />
+                <SortableHeader label="Squad Time" sortKey="squad" state={sort} onSort={toggleSort} align="right" />
+                <SortableHeader label="Uptime" sortKey="uptime" state={sort} onSort={toggleSort} className="w-32" />
               </tr>
             </thead>
             <tbody className="font-mono">

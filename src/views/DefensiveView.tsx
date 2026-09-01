@@ -8,6 +8,8 @@ import { useStatsDisplay, pickStatsDisplayValue } from "../store/StatsDisplayCon
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
 import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import PlayerSampleCell from "../components/ui/PlayerSampleCell";
+import { SegmentedControl } from "../components/ui/SegmentedControl";
+import { SortableHeader } from "../components/ui/SortableHeader";
 import { resolvePlayerSampleContext } from "../lib/playerSampleContext";
 import { normalizeDefensivePlayerRows } from "../lib/defensivePlayerNormalization";
 
@@ -248,19 +250,6 @@ export default function DefensiveView() {
       return null;
     });
   };
-  const SortHeader = ({ label, k, align = "left", title }: { label: string; k: DefensiveSortKey; align?: "left" | "right"; title?: string }) => (
-    <th className={`p-2.5 ${align === "right" ? "text-right" : ""}`} title={title}>
-      <button
-        type="button"
-        onClick={() => toggleSort(k)}
-        className={`inline-flex items-center gap-1 uppercase tracking-wider transition-colors hover:text-slate-300 ${sort?.key === k ? "text-theme-accentStrong" : ""}`}
-      >
-        {label}
-        <span className="text-[8px] opacity-70">{sort?.key === k ? (sort.dir === "desc" ? "▼" : "▲") : "↕"}</span>
-      </button>
-    </th>
-  );
-
   const ClassCell = ({ profession }: { profession: string }) => (
     <ProfessionIdentity profession={profession} />
   );
@@ -287,25 +276,16 @@ export default function DefensiveView() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2">
-        {([
-          { k: "support", l: "Support" },
-          { k: "healing", l: "Healing" },
-          { k: "defense", l: "Defensive Stats" },
-        ] as { k: Tab; l: string }[]).map((t) => (
-          <button
-            key={t.k}
-            onClick={() => setTab(t.k)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-              tab === t.k
-                ? "border-theme-focus bg-theme-accentDim text-theme-accentStrong"
-                : "bg-[#0a101f] text-slate-500 border-slate-800 hover:text-slate-300"
-            }`}
-          >
-            {t.l}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        ariaLabel="Defensive report sections"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "support", label: "Support" },
+          { value: "healing", label: "Healing" },
+          { value: "defense", label: "Defensive Stats" },
+        ]}
+      />
 
       {tab === "support" && (
         <Panel title="Support Stats" icon={<Droplet className="w-4 h-4" />} bodyClassName="p-0">
@@ -314,14 +294,14 @@ export default function DefensiveView() {
               <thead>
                 <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
                   <th className="p-2.5">#</th>
-                  <SortHeader label="Player" k="player" />
-                  <SortHeader label="Class" k="class" />
-                  <SortHeader label="Sample" k="sample" align="right" title="Fights joined, session coverage, active combat time, and sample reliability" />
-                  <SortHeader label="Cleanses" k="cleanses" align="right" />
-                  <SortHeader label="Strips" k="strips" align="right" />
-                  <SortHeader label="Stun Breaks" k="stunBreaks" align="right" />
-                  <SortHeader label="Resurrects" k="resurrects" align="right" />
-                  <SortHeader label="Logs" k="logs" align="right" />
+                  <SortableHeader label="Player" sortKey="player" state={sort} onSort={toggleSort} />
+                  <SortableHeader label="Class" sortKey="class" state={sort} onSort={toggleSort} />
+                  <SortableHeader label="Sample" sortKey="sample" state={sort} onSort={toggleSort} align="right" title="Fights joined, session coverage, active combat time, and sample reliability" />
+                  <SortableHeader label="Cleanses" sortKey="cleanses" state={sort} onSort={toggleSort} align="right" />
+                  <SortableHeader label="Strips" sortKey="strips" state={sort} onSort={toggleSort} align="right" />
+                  <SortableHeader label="Stun Breaks" sortKey="stunBreaks" state={sort} onSort={toggleSort} align="right" />
+                  <SortableHeader label="Resurrects" sortKey="resurrects" state={sort} onSort={toggleSort} align="right" />
+                  <SortableHeader label="Logs" sortKey="logs" state={sort} onSort={toggleSort} align="right" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">
@@ -402,13 +382,13 @@ export default function DefensiveView() {
               <thead>
                 <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
                   <th className="p-2.5">#</th>
-                  <SortHeader label="Player" k="player" />
-                  <SortHeader label="Class" k="class" />
-                  <SortHeader label="Sample" k="sample" align="right" title="Fights joined, session coverage, active combat time, and sample reliability" />
-                  <SortHeader label="Healing" k="healing" align="right" />
-                  <SortHeader label="Squad Heal" k="squadHealing" align="right" />
-                  <SortHeader label="Barrier" k="barrier" align="right" />
-                  <SortHeader label="Downed Heal" k="downedHealing" align="right" />
+                  <SortableHeader label="Player" sortKey="player" state={sort} onSort={toggleSort} />
+                  <SortableHeader label="Class" sortKey="class" state={sort} onSort={toggleSort} />
+                  <SortableHeader label="Sample" sortKey="sample" state={sort} onSort={toggleSort} align="right" title="Fights joined, session coverage, active combat time, and sample reliability" />
+                  <SortableHeader label="Healing" sortKey="healing" state={sort} onSort={toggleSort} align="right" />
+                  <SortableHeader label="Squad Heal" sortKey="squadHealing" state={sort} onSort={toggleSort} align="right" />
+                  <SortableHeader label="Barrier" sortKey="barrier" state={sort} onSort={toggleSort} align="right" />
+                  <SortableHeader label="Downed Heal" sortKey="downedHealing" state={sort} onSort={toggleSort} align="right" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">
@@ -437,22 +417,22 @@ export default function DefensiveView() {
               <thead>
                 <tr className="text-[10px] text-slate-500 uppercase font-bold tracking-wider border-b border-slate-800/50">
                   <th className="p-2.5">#</th>
-                  <SortHeader label="Player" k="player" />
-                  <SortHeader label="Class" k="class" />
-                  <SortHeader label="Sample" k="sample" align="right" title="Fights joined, session coverage, active combat time, and sample reliability" />
-                  <SortHeader label="Damage Taken" k="damageTaken" align="right" />
-                  <SortHeader label="Power Dmg" k="powerDamage" align="right" />
-                  <SortHeader label="Condi Dmg" k="condiDamage" align="right" />
-                  <SortHeader label="Hits" k="hits" align="right" />
-                  <SortHeader label="Barrier Absorbed" k="barrierAbsorbed" align="right" title="Damage absorbed by barrier" />
-                  <SortHeader label="Mitigated Dmg" k="mitigatedDamage" align="right" title="Damage prevented by blocks, evades, misses, invulnerability, interrupts, and glancing hits. A leading ~ marks an estimate." />
-                  <SortHeader label="Blocks" k="blocks" align="right" title="Blocked incoming hits" />
-                  <SortHeader label="Dodges" k="dodges" align="right" title="Number of dodges" />
-                  <SortHeader label="Invulned" k="invulned" align="right" title="Number of times was invulnerable to damage" />
-                  <SortHeader label="Interrupted" k="interrupted" align="right" title="Number of times interrupted" />
-                  <SortHeader label="Strips Taken" k="stripsTaken" align="right" title="Boon stacks stripped from you by enemies" />
-                  <SortHeader label="Downs" k="downs" align="right" />
-                  <SortHeader label="Deaths" k="deaths" align="right" />
+                  <SortableHeader label="Player" sortKey="player" state={sort} onSort={toggleSort} />
+                  <SortableHeader label="Class" sortKey="class" state={sort} onSort={toggleSort} />
+                  <SortableHeader label="Sample" sortKey="sample" state={sort} onSort={toggleSort} align="right" title="Fights joined, session coverage, active combat time, and sample reliability" />
+                  <SortableHeader label="Damage Taken" sortKey="damageTaken" state={sort} onSort={toggleSort} align="right" />
+                  <SortableHeader label="Power Dmg" sortKey="powerDamage" state={sort} onSort={toggleSort} align="right" />
+                  <SortableHeader label="Condi Dmg" sortKey="condiDamage" state={sort} onSort={toggleSort} align="right" />
+                  <SortableHeader label="Hits" sortKey="hits" state={sort} onSort={toggleSort} align="right" />
+                  <SortableHeader label="Barrier Absorbed" sortKey="barrierAbsorbed" state={sort} onSort={toggleSort} align="right" title="Damage absorbed by barrier" />
+                  <SortableHeader label="Mitigated Dmg" sortKey="mitigatedDamage" state={sort} onSort={toggleSort} align="right" title="Damage prevented by blocks, evades, misses, invulnerability, interrupts, and glancing hits. A leading ~ marks an estimate." />
+                  <SortableHeader label="Blocks" sortKey="blocks" state={sort} onSort={toggleSort} align="right" title="Blocked incoming hits" />
+                  <SortableHeader label="Dodges" sortKey="dodges" state={sort} onSort={toggleSort} align="right" title="Number of dodges" />
+                  <SortableHeader label="Invulned" sortKey="invulned" state={sort} onSort={toggleSort} align="right" title="Number of times was invulnerable to damage" />
+                  <SortableHeader label="Interrupted" sortKey="interrupted" state={sort} onSort={toggleSort} align="right" title="Number of times interrupted" />
+                  <SortableHeader label="Strips Taken" sortKey="stripsTaken" state={sort} onSort={toggleSort} align="right" title="Boon stacks stripped from you by enemies" />
+                  <SortableHeader label="Downs" sortKey="downs" state={sort} onSort={toggleSort} align="right" />
+                  <SortableHeader label="Deaths" sortKey="deaths" state={sort} onSort={toggleSort} align="right" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/30 font-mono">
