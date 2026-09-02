@@ -311,7 +311,15 @@ function ChoicePickerField({
   return (
     <div className="theme-builder-picker-field">
       <FieldLabel>{label}</FieldLabel>
-      <button type="button" className="theme-builder-picker-trigger" onClick={() => !disabled && setOpen(true)} aria-haspopup="dialog" disabled={disabled}>
+      <button
+        type="button"
+        className="theme-builder-picker-trigger"
+        onClick={() => !disabled && setOpen(true)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={`${id}-dialog`}
+        disabled={disabled}
+      >
         <span className="theme-builder-picker-icon">
           {selected?.icon ? <img src={selected.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}
         </span>
@@ -320,7 +328,7 @@ function ChoicePickerField({
       </button>
       {open && createPortal(
         <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
-          <section className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
+          <section id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
             <div className="theme-builder-picker-head">
               <div><div className="theme-builder-kicker">Builder picker</div><h3 id={`${id}-title`}>{label}</h3></div>
               <button type="button" onClick={() => setOpen(false)} aria-label="Close picker"><X className="h-4 w-4" /></button>
@@ -425,7 +433,14 @@ function ItemPickerField({
   return (
     <div className="theme-builder-picker-field">
       <FieldLabel>{label}</FieldLabel>
-      <button type="button" className="theme-builder-picker-trigger" onClick={() => setOpen(true)} aria-haspopup="dialog">
+      <button
+        type="button"
+        className="theme-builder-picker-trigger"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={`${id}-dialog`}
+      >
         <span className="theme-builder-picker-icon">
           {selectedItem?.icon ? <img src={selectedItem.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}
         </span>
@@ -435,7 +450,7 @@ function ItemPickerField({
       {!resolved && <span className="theme-builder-choice-note"><AlertCircle className="h-3.5 w-3.5" /> Raw item ID {value} — not in the curated catalog.</span>}
       {open && createPortal(
         <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
-          <section className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
+          <section id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
             <div className="theme-builder-picker-head">
               <div><div className="theme-builder-kicker">Equipment picker</div><h3 id={`${id}-title`}>{label}</h3></div>
               <button type="button" onClick={() => setOpen(false)} aria-label="Close picker"><X className="h-4 w-4" /></button>
@@ -2100,18 +2115,27 @@ export default function AxiForgeLabView() {
         </div>
       </header>
 
-      <nav className="theme-builder-tabs" aria-label="Builder workspaces">
+      <nav className="theme-builder-tabs" role="tablist" aria-label="Builder workspaces">
         {([
           { id: "build", label: "Build", icon: Swords, count: issues.length },
           { id: "library", label: "Library", icon: Archive, count: workspace.builds.length },
           { id: "squad", label: "Squad", icon: Users, count: activeComposition?.parties.reduce((total, party) => total + party.slots.filter(Boolean).length, 0) ?? 0 },
         ] as const).map((tab) => (
-          <button key={tab.id} type="button" className={activeTab === tab.id ? "is-active" : ""} onClick={() => setActiveTab(tab.id)}>
+          <button
+            key={tab.id}
+            type="button"
+            id={`builder-tab-${tab.id}`}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`builder-panel-${tab.id}`}
+            className={activeTab === tab.id ? "is-active" : ""}
+            onClick={() => setActiveTab(tab.id)}
+          >
             <tab.icon className="h-4 w-4" /><span>{tab.label}</span><strong>{tab.count}</strong>
           </button>
         ))}
-        <div className="theme-builder-mode-switch">
-          {GAME_MODES.map((mode) => <button key={mode.id} type="button" className={builder.gameMode === mode.id ? "is-active" : ""} onClick={() => updateBuilder((current) => ({ ...current, gameMode: mode.id }))}>{mode.label}</button>)}
+        <div className="theme-builder-mode-switch" role="group" aria-label="Build game mode">
+          {GAME_MODES.map((mode) => <button key={mode.id} type="button" aria-pressed={builder.gameMode === mode.id} className={builder.gameMode === mode.id ? "is-active" : ""} onClick={() => updateBuilder((current) => ({ ...current, gameMode: mode.id }))}>{mode.label}</button>)}
         </div>
       </nav>
 
@@ -2130,17 +2154,25 @@ export default function AxiForgeLabView() {
         </div>
       )}
 
-      {activeTab === "library" && <BuildLibrary builds={workspace.builds} onLoad={loadBuild} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} onShare={(code) => copyText(buildAxiForgeShareUrl(code), "Share link copied.")} specsById={allSpecsById} />}
-      {activeTab === "squad" && <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} conditionCache={conditionCache} conditionComputing={conditionComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={loadBuild} onCopyCode={exportSquad} onShareCode={shareSquad} specsById={allSpecsById} />}
+      {activeTab === "library" && (
+        <div id="builder-panel-library" role="tabpanel" aria-labelledby="builder-tab-library">
+          <BuildLibrary builds={workspace.builds} onLoad={loadBuild} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} onShare={(code) => copyText(buildAxiForgeShareUrl(code), "Share link copied.")} specsById={allSpecsById} />
+        </div>
+      )}
+      {activeTab === "squad" && (
+        <div id="builder-panel-squad" role="tabpanel" aria-labelledby="builder-tab-squad">
+          <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} conditionCache={conditionCache} conditionComputing={conditionComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={loadBuild} onCopyCode={exportSquad} onShareCode={shareSquad} specsById={allSpecsById} />
+        </div>
+      )}
 
       {activeTab === "build" && (
-        <div className="theme-builder-layout">
+        <div id="builder-panel-build" role="tabpanel" aria-labelledby="builder-tab-build" className="theme-builder-layout">
           <main className="space-y-5">
           <div className="theme-builder-mode-toggle" role="tablist" aria-label="Builder view mode">
-            <button type="button" className={builderViewMode === "edit" ? "is-active" : ""} onClick={() => setBuilderViewMode("edit")}>Edit</button>
-            <button type="button" className={builderViewMode === "preview" ? "is-active" : ""} onClick={() => setBuilderViewMode("preview")}>Preview</button>
+            <button type="button" id="builder-view-tab-edit" role="tab" aria-selected={builderViewMode === "edit"} aria-controls="builder-view-panel" className={builderViewMode === "edit" ? "is-active" : ""} onClick={() => setBuilderViewMode("edit")}>Edit</button>
+            <button type="button" id="builder-view-tab-preview" role="tab" aria-selected={builderViewMode === "preview"} aria-controls="builder-view-panel" className={builderViewMode === "preview" ? "is-active" : ""} onClick={() => setBuilderViewMode("preview")}>Preview</button>
           </div>
-          <div key={builderViewMode} className="theme-builder-mode-content">
+          <div key={builderViewMode} id="builder-view-panel" role="tabpanel" aria-labelledby={`builder-view-tab-${builderViewMode}`} className="theme-builder-mode-content">
           {builderViewMode === "edit" ? (
             <>
             <section className="theme-panel theme-builder-panel theme-builder-identity">

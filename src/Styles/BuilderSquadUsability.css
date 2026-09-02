@@ -212,6 +212,29 @@
 }
 
 @media (max-width: 640px) {
+  .theme-builder-root .theme-builder-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+  }
+
+  .theme-builder-root .theme-builder-tabs > button {
+    min-width: 0;
+    padding-inline: 0.46rem;
+  }
+
+  .theme-builder-root .theme-builder-tabs > button span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .theme-builder-root .theme-builder-tabs > button strong {
+    min-width: 1.1rem;
+    height: 1.1rem;
+    font-size: 0.5rem;
+  }
+
   .theme-builder-root .theme-builder-party-line {
     padding: 0.65rem;
   }
