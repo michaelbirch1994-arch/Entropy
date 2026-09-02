@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   computeAttributeProfile,
@@ -265,6 +265,35 @@ type BuilderPickerChoice = {
   disabledReason?: string;
 };
 
+function moveTabFocus<T extends string>(
+  items: readonly T[],
+  current: T,
+  event: React.KeyboardEvent<HTMLButtonElement>,
+  onSelect: (value: T) => void,
+  buttonId: (value: T) => string,
+) {
+  const keyMap: Record<string, number | "first" | "last"> = {
+    ArrowRight: 1,
+    ArrowDown: 1,
+    ArrowLeft: -1,
+    ArrowUp: -1,
+    Home: "first",
+    End: "last",
+  };
+  const move = keyMap[event.key];
+  if (move === undefined) return;
+  event.preventDefault();
+  const currentIndex = Math.max(0, items.indexOf(current));
+  const nextIndex = move === "first"
+    ? 0
+    : move === "last"
+      ? items.length - 1
+      : (currentIndex + move + items.length) % items.length;
+  const next = items[nextIndex];
+  onSelect(next);
+  window.requestAnimationFrame(() => document.getElementById(buttonId(next))?.focus());
+}
+
 function ChoicePickerField({
   id,
   label,
@@ -291,6 +320,7 @@ function ChoicePickerField({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const selected = choices.find((choice) => choice.value === value);
   const filters = useMemo(() => ["All", ...Array.from(new Set(choices.map((choice) => choice.group).filter(Boolean) as string[])).sort()], [choices]);
   const filteredChoices = useMemo(() => {
@@ -301,10 +331,15 @@ function ChoicePickerField({
     });
   }, [choices, filter, query]);
 
+  function closePicker() {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
+
   function choose(choice: BuilderPickerChoice) {
     if (choice.disabled) return;
     onChange(choice.value);
-    setOpen(false);
+    closePicker();
     setQuery("");
   }
 
@@ -313,6 +348,7 @@ function ChoicePickerField({
       <FieldLabel>{label}</FieldLabel>
       <button
         type="button"
+        ref={triggerRef}
         className="theme-builder-picker-trigger"
         onClick={() => !disabled && setOpen(true)}
         aria-haspopup="dialog"
@@ -327,11 +363,11 @@ function ChoicePickerField({
         <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </button>
       {open && createPortal(
-        <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
-          <section id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
+        <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closePicker(); }}>
+          <section id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} onKeyDown={(event) => { if (event.key === "Escape") closePicker(); }}>
             <div className="theme-builder-picker-head">
               <div><div className="theme-builder-kicker">Builder picker</div><h3 id={`${id}-title`}>{label}</h3></div>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close picker"><X className="h-4 w-4" /></button>
+              <button type="button" onClick={closePicker} aria-label="Close picker"><X className="h-4 w-4" /></button>
             </div>
             <div className="theme-builder-picker-search">
               <Search className="h-4 w-4" aria-hidden="true" />
@@ -343,7 +379,7 @@ function ChoicePickerField({
               </div>
             )}
             <div className="theme-builder-picker-list">
-              <button type="button" className={!value ? "is-active" : undefined} onClick={() => { onChange(""); setOpen(false); }}>
+              <button type="button" className={!value ? "is-active" : undefined} onClick={() => { onChange(""); closePicker(); }}>
                 <span className="theme-builder-picker-icon"><Eraser className="h-4 w-4" aria-hidden="true" /></span>
                 <span><strong>{clearLabel}</strong><small>Use default or leave empty</small></span>
               </button>
@@ -394,6 +430,7 @@ function ItemPickerField({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const [choiceItems, setChoiceItems] = useState<Record<number, Gw2Item>>({});
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const byId = useMemo(() => new Map(choices.filter((choice) => choice.id != null).map((choice) => [String(choice.id), choice.label])), [choices]);
   const selectedChoice = valueKind === "id"
     ? choices.find((choice) => String(choice.id) === value)
@@ -424,9 +461,14 @@ function ItemPickerField({
     return () => { cancelled = true; };
   }, [choices, open]);
 
+  function closePicker() {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
+
   function choose(choice: BuilderNamedChoice) {
     onChange(valueKind === "id" ? String(choice.id ?? "") : choice.label);
-    setOpen(false);
+    closePicker();
     setQuery("");
   }
 
@@ -435,6 +477,7 @@ function ItemPickerField({
       <FieldLabel>{label}</FieldLabel>
       <button
         type="button"
+        ref={triggerRef}
         className="theme-builder-picker-trigger"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
@@ -449,11 +492,11 @@ function ItemPickerField({
       </button>
       {!resolved && <span className="theme-builder-choice-note"><AlertCircle className="h-3.5 w-3.5" /> Raw item ID {value} — not in the curated catalog.</span>}
       {open && createPortal(
-        <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
-          <section id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
+        <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closePicker(); }}>
+          <section id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} onKeyDown={(event) => { if (event.key === "Escape") closePicker(); }}>
             <div className="theme-builder-picker-head">
               <div><div className="theme-builder-kicker">Equipment picker</div><h3 id={`${id}-title`}>{label}</h3></div>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close picker"><X className="h-4 w-4" /></button>
+              <button type="button" onClick={closePicker} aria-label="Close picker"><X className="h-4 w-4" /></button>
             </div>
             <div className="theme-builder-picker-search">
               <Search className="h-4 w-4" aria-hidden="true" />
@@ -463,7 +506,7 @@ function ItemPickerField({
               {filters.map((item) => <button key={item} type="button" className={filter === item ? "is-active" : undefined} onClick={() => setFilter(item)}>{item}</button>)}
             </div>
             <div className="theme-builder-picker-list">
-              <button type="button" className={!value ? "is-active" : undefined} onClick={() => { onChange(""); setOpen(false); }}>
+              <button type="button" className={!value ? "is-active" : undefined} onClick={() => { onChange(""); closePicker(); }}>
                 <span className="theme-builder-picker-icon"><Eraser className="h-4 w-4" aria-hidden="true" /></span>
                 <span><strong>Clear slot</strong><small>Use no {label.toLowerCase()}</small></span>
               </button>
@@ -2098,6 +2141,12 @@ export default function AxiForgeLabView() {
     () => professionSkills.filter((skill) => skill.slot === "Profession"),
     [professionSkills],
   );
+  const workbenchTabs = [
+    { id: "build", label: "Build", icon: Swords, count: issues.length },
+    { id: "library", label: "Library", icon: Archive, count: workspace.builds.length },
+    { id: "squad", label: "Squad", icon: Users, count: activeComposition?.parties.reduce((total, party) => total + party.slots.filter(Boolean).length, 0) ?? 0 },
+  ] as const;
+  const builderViewModes = ["edit", "preview"] as const;
 
   return (
     <div className="theme-builder-root">
@@ -2116,11 +2165,7 @@ export default function AxiForgeLabView() {
       </header>
 
       <nav className="theme-builder-tabs" role="tablist" aria-label="Builder workspaces">
-        {([
-          { id: "build", label: "Build", icon: Swords, count: issues.length },
-          { id: "library", label: "Library", icon: Archive, count: workspace.builds.length },
-          { id: "squad", label: "Squad", icon: Users, count: activeComposition?.parties.reduce((total, party) => total + party.slots.filter(Boolean).length, 0) ?? 0 },
-        ] as const).map((tab) => (
+        {workbenchTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -2130,6 +2175,7 @@ export default function AxiForgeLabView() {
             aria-controls={`builder-panel-${tab.id}`}
             className={activeTab === tab.id ? "is-active" : ""}
             onClick={() => setActiveTab(tab.id)}
+            onKeyDown={(event) => moveTabFocus(workbenchTabs.map((item) => item.id), tab.id, event, setActiveTab, (item) => `builder-tab-${item}`)}
           >
             <tab.icon className="h-4 w-4" /><span>{tab.label}</span><strong>{tab.count}</strong>
           </button>
@@ -2169,8 +2215,8 @@ export default function AxiForgeLabView() {
         <div id="builder-panel-build" role="tabpanel" aria-labelledby="builder-tab-build" className="theme-builder-layout">
           <main className="space-y-5">
           <div className="theme-builder-mode-toggle" role="tablist" aria-label="Builder view mode">
-            <button type="button" id="builder-view-tab-edit" role="tab" aria-selected={builderViewMode === "edit"} aria-controls="builder-view-panel" className={builderViewMode === "edit" ? "is-active" : ""} onClick={() => setBuilderViewMode("edit")}>Edit</button>
-            <button type="button" id="builder-view-tab-preview" role="tab" aria-selected={builderViewMode === "preview"} aria-controls="builder-view-panel" className={builderViewMode === "preview" ? "is-active" : ""} onClick={() => setBuilderViewMode("preview")}>Preview</button>
+            <button type="button" id="builder-view-tab-edit" role="tab" aria-selected={builderViewMode === "edit"} aria-controls="builder-view-panel" className={builderViewMode === "edit" ? "is-active" : ""} onClick={() => setBuilderViewMode("edit")} onKeyDown={(event) => moveTabFocus(builderViewModes, "edit", event, setBuilderViewMode, (item) => `builder-view-tab-${item}`)}>Edit</button>
+            <button type="button" id="builder-view-tab-preview" role="tab" aria-selected={builderViewMode === "preview"} aria-controls="builder-view-panel" className={builderViewMode === "preview" ? "is-active" : ""} onClick={() => setBuilderViewMode("preview")} onKeyDown={(event) => moveTabFocus(builderViewModes, "preview", event, setBuilderViewMode, (item) => `builder-view-tab-${item}`)}>Preview</button>
           </div>
           <div key={builderViewMode} id="builder-view-panel" role="tabpanel" aria-labelledby={`builder-view-tab-${builderViewMode}`} className="theme-builder-mode-content">
           {builderViewMode === "edit" ? (
