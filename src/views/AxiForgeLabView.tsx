@@ -375,11 +375,11 @@ function ChoicePickerField({
             </div>
             {filters.length > 1 && (
               <div className="theme-builder-picker-filters" role="group" aria-label={`${label} filters`}>
-                {filters.map((item) => <button key={item} type="button" className={filter === item ? "is-active" : undefined} onClick={() => setFilter(item)}>{item}</button>)}
+                {filters.map((item) => <button key={item} type="button" aria-pressed={filter === item} className={filter === item ? "is-active" : undefined} onClick={() => setFilter(item)}>{item}</button>)}
               </div>
             )}
             <div className="theme-builder-picker-list">
-              <button type="button" className={!value ? "is-active" : undefined} onClick={() => { onChange(""); closePicker(); }}>
+              <button type="button" aria-pressed={!value} className={!value ? "is-active" : undefined} onClick={() => { onChange(""); closePicker(); }}>
                 <span className="theme-builder-picker-icon"><Eraser className="h-4 w-4" aria-hidden="true" /></span>
                 <span><strong>{clearLabel}</strong><small>Use default or leave empty</small></span>
               </button>
@@ -387,6 +387,7 @@ function ChoicePickerField({
                 <button
                   key={choice.value}
                   type="button"
+                  aria-pressed={choice.value === value}
                   className={choice.value === value ? "is-active" : undefined}
                   disabled={choice.disabled}
                   title={choice.disabledReason ?? choice.label}
@@ -503,10 +504,10 @@ function ItemPickerField({
               <TextField value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}`} autoFocus />
             </div>
             <div className="theme-builder-picker-filters" role="group" aria-label={`${label} filters`}>
-              {filters.map((item) => <button key={item} type="button" className={filter === item ? "is-active" : undefined} onClick={() => setFilter(item)}>{item}</button>)}
+              {filters.map((item) => <button key={item} type="button" aria-pressed={filter === item} className={filter === item ? "is-active" : undefined} onClick={() => setFilter(item)}>{item}</button>)}
             </div>
             <div className="theme-builder-picker-list">
-              <button type="button" className={!value ? "is-active" : undefined} onClick={() => { onChange(""); closePicker(); }}>
+              <button type="button" aria-pressed={!value} className={!value ? "is-active" : undefined} onClick={() => { onChange(""); closePicker(); }}>
                 <span className="theme-builder-picker-icon"><Eraser className="h-4 w-4" aria-hidden="true" /></span>
                 <span><strong>Clear slot</strong><small>Use no {label.toLowerCase()}</small></span>
               </button>
@@ -514,7 +515,7 @@ function ItemPickerField({
                 const item = choice.id ? enrichedItems[choice.id] : null;
                 const active = selectedChoice?.label === choice.label;
                 return (
-                  <button key={choice.label} type="button" className={active ? "is-active" : undefined} onClick={() => choose(choice)}>
+                  <button key={choice.label} type="button" aria-pressed={active} className={active ? "is-active" : undefined} onClick={() => choose(choice)}>
                     <span className="theme-builder-picker-icon">{item?.icon ? <img src={item.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}</span>
                     <span><strong>{item?.name ?? choice.label}</strong><small>{itemChoiceGroup(choice.label)}{choice.id ? ` / Item ${choice.id}` : ""}</small></span>
                   </button>
@@ -1171,6 +1172,7 @@ function SquadWorkspace({
                   <button
                     key={mode.id}
                     type="button"
+                    aria-pressed={composition.gameMode === mode.id}
                     className={composition.gameMode === mode.id ? "is-active" : undefined}
                     onClick={() => update({ gameMode: mode.id })}
                   >
@@ -2173,6 +2175,7 @@ export default function AxiForgeLabView() {
             role="tab"
             aria-selected={activeTab === tab.id}
             aria-controls={`builder-panel-${tab.id}`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
             className={activeTab === tab.id ? "is-active" : ""}
             onClick={() => setActiveTab(tab.id)}
             onKeyDown={(event) => moveTabFocus(workbenchTabs.map((item) => item.id), tab.id, event, setActiveTab, (item) => `builder-tab-${item}`)}
@@ -2232,6 +2235,7 @@ export default function AxiForgeLabView() {
                       <button
                         key={role || "none"}
                         type="button"
+                        aria-pressed={builder.role === role}
                         className={builder.role === role ? "is-active" : ""}
                         onClick={() => updateBuilder((current) => ({ ...current, role }))}
                       >
@@ -2248,7 +2252,7 @@ export default function AxiForgeLabView() {
               <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Step 01</div><h3>Profession chassis</h3></div><Shield className="h-5 w-5 text-theme-accent" /></div>
               <div className="theme-builder-professions">
                 {professions.map((profession) => (
-                  <button key={profession.id} type="button" className={builder.professionId === profession.id ? "is-active" : ""} onClick={() => chooseProfession(profession)} onFocus={() => setSelectedSummary({ kind: "profession", item: profession })} onMouseEnter={() => setSelectedSummary({ kind: "profession", item: profession })}>
+                  <button key={profession.id} type="button" aria-pressed={builder.professionId === profession.id} className={builder.professionId === profession.id ? "is-active" : ""} onClick={() => chooseProfession(profession)} onFocus={() => setSelectedSummary({ kind: "profession", item: profession })} onMouseEnter={() => setSelectedSummary({ kind: "profession", item: profession })}>
                     <span><ClassIcon name={profession.name} size="lg" /></span><strong>{profession.name}</strong>
                   </button>
                 ))}
@@ -2299,6 +2303,7 @@ export default function AxiForgeLabView() {
                               <button
                                 key={spec.id}
                                 type="button"
+                                aria-pressed={selectedSpecId === spec.id}
                                 className={selectedSpecId === spec.id ? "is-active" : ""}
                                 disabled={isUsedElsewhere || eliteUsedElsewhere}
                                 onClick={() => chooseSpec(trackIndex, spec.id)}
@@ -2317,7 +2322,7 @@ export default function AxiForgeLabView() {
                       <div className="theme-builder-trait-grid">
                         {[1, 2, 3].map((tier) => {
                           const traits = (selectedSpecId ? traitsBySpecId.get(selectedSpecId) ?? [] : []).filter((trait) => trait.slot === "Major" && trait.tier === tier).sort((a, b) => a.order - b.order);
-                          return <div key={tier} className="theme-builder-trait-tier"><FieldLabel>Tier {tier}</FieldLabel><div>{traits.map((trait, position) => <button key={trait.id} type="button" className={builder.traitChoices[trackIndex][tier - 1] === position + 1 ? "is-active" : ""} onClick={() => chooseTrait(trackIndex, tier, position + 1, trait)} onFocus={() => setSelectedSummary({ kind: "trait", item: trait })} onMouseEnter={() => setSelectedSummary({ kind: "trait", item: trait })} title={trait.name}>{trait.icon ? <img src={trait.icon} alt="" /> : position + 1}</button>)}</div></div>;
+                          return <div key={tier} className="theme-builder-trait-tier"><FieldLabel>Tier {tier}</FieldLabel><div>{traits.map((trait, position) => <button key={trait.id} type="button" aria-pressed={builder.traitChoices[trackIndex][tier - 1] === position + 1} className={builder.traitChoices[trackIndex][tier - 1] === position + 1 ? "is-active" : ""} onClick={() => chooseTrait(trackIndex, tier, position + 1, trait)} onFocus={() => setSelectedSummary({ kind: "trait", item: trait })} onMouseEnter={() => setSelectedSummary({ kind: "trait", item: trait })} title={trait.name}>{trait.icon ? <img src={trait.icon} alt="" /> : position + 1}</button>)}</div></div>;
                         })}
                       </div>
                     </div>
@@ -2355,6 +2360,7 @@ export default function AxiForgeLabView() {
                       <button
                         key={stat}
                         type="button"
+                        aria-pressed={builder.equipment.statPackage === stat}
                         className={builder.equipment.statPackage === stat ? "is-active" : ""}
                         onClick={() => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, statPackage: stat } }))}
                       >
@@ -2399,6 +2405,7 @@ export default function AxiForgeLabView() {
                                   <button
                                     key={name}
                                     type="button"
+                                    aria-pressed={currentWeapon.toLowerCase() === value}
                                     className={currentWeapon.toLowerCase() === value ? "is-active" : ""}
                                     onClick={() => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, weapons: { ...current.equipment.weapons, [slot]: value } } }))}
                                     title={name}
@@ -2545,9 +2552,9 @@ export default function AxiForgeLabView() {
               <section className="theme-panel theme-builder-panel"><div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Profession system</div><h3>{builder.professionId} mechanics</h3></div><Sparkles className="h-5 w-5 text-theme-accent" /></div><div className="theme-builder-mechanics">
                 {builder.professionId === "Revenant" && <>{[0, 1].map((index) => <ChoicePickerField key={index} id={`builder-legend-${index}`} label={`Legend ${index + 1}`} value={builder.selectedLegends[index]} choices={legends.map((legend) => ({ value: legend.id, label: legendLabel(legend.id), group: "Legend", meta: legend.id }))} onChange={(value) => updateBuilder((current) => ({ ...current, selectedLegends: current.selectedLegends.map((item, itemIndex) => itemIndex === index ? value : item) as [string, string] }))} placeholder="Choose legend" clearLabel="Clear legend" />)}</>}
                 {builder.professionId === "Ranger" && <>{(["terrestrial1", "terrestrial2"] as const).map((field, index) => <ChoicePickerField key={field} id={`builder-pet-${field}`} label={`Terrestrial pet ${index + 1}`} value={builder.selectedPets[field] ? String(builder.selectedPets[field]) : ""} choices={pets.map((pet) => ({ value: String(pet.id), label: pet.name, icon: pet.icon, group: "Pet", meta: pet.description }))} onChange={(value) => updateBuilder((current) => ({ ...current, selectedPets: { ...current.selectedPets, [field]: Number(value) || 0 } }))} placeholder="Choose pet" clearLabel="Clear pet" />)}</>}
-                {builder.professionId === "Elementalist" && <>{(["activeAttunement", "activeAttunement2"] as const).map((field, index) => <div key={field}><FieldLabel>Attunement {index + 1}</FieldLabel><div className="theme-builder-mechanic-pills">{["", "Fire", "Water", "Air", "Earth"].map((attunement) => <button key={attunement || "None"} type="button" className={builder[field] === attunement ? "is-active" : undefined} onClick={() => updateBuilder((current) => ({ ...current, [field]: attunement }))}>{attunement || "None"}</button>)}</div></div>)}</>}
+                {builder.professionId === "Elementalist" && <>{(["activeAttunement", "activeAttunement2"] as const).map((field, index) => <div key={field}><FieldLabel>Attunement {index + 1}</FieldLabel><div className="theme-builder-mechanic-pills">{["", "Fire", "Water", "Air", "Earth"].map((attunement) => <button key={attunement || "None"} type="button" aria-pressed={builder[field] === attunement} className={builder[field] === attunement ? "is-active" : undefined} onClick={() => updateBuilder((current) => ({ ...current, [field]: attunement }))}>{attunement || "None"}</button>)}</div></div>)}</>}
                 {builder.professionId === "Engineer" && <ChoicePickerField id="builder-engineer-kit" label="Active kit" value={builder.activeKit ? String(builder.activeKit) : ""} choices={[...(builder.activeKit > 0 && !engineerKitOptions.some((skill) => skill.id === builder.activeKit) ? [{ value: String(builder.activeKit), label: `Unavailable skill ${builder.activeKit}`, group: "Imported", meta: "Unavailable skill" }] : []), ...engineerKitOptions.map((skill) => ({ value: String(skill.id), label: skill.name, icon: skill.icon, group: skill.type ?? "Kit", meta: skill.description }))]} onChange={(value) => updateBuilder((current) => ({ ...current, activeKit: Number(value) || 0 }))} onPreview={(value) => { const skill = engineerKitOptions.find((item) => String(item.id) === value); if (skill) setSelectedSummary({ kind: "skill", item: skill }); }} placeholder="Choose kit" clearLabel="Clear kit" />}
-                {builder.professionId === "Warrior" && <div><FieldLabel>Active weapon set</FieldLabel><div className="theme-builder-mechanic-pills">{[1, 2].map((weaponSet) => <button key={weaponSet} type="button" className={builder.activeWeaponSet === weaponSet ? "is-active" : undefined} onClick={() => updateBuilder((current) => ({ ...current, activeWeaponSet: weaponSet }))}>Set {weaponSet === 1 ? "I" : "II"}</button>)}</div></div>}
+                {builder.professionId === "Warrior" && <div><FieldLabel>Active weapon set</FieldLabel><div className="theme-builder-mechanic-pills">{[1, 2].map((weaponSet) => <button key={weaponSet} type="button" aria-pressed={builder.activeWeaponSet === weaponSet} className={builder.activeWeaponSet === weaponSet ? "is-active" : undefined} onClick={() => updateBuilder((current) => ({ ...current, activeWeaponSet: weaponSet }))}>Set {weaponSet === 1 ? "I" : "II"}</button>)}</div></div>}
                 {builder.professionId === "Thief" && <>{(["f2", "f3", "f4"] as const).map((field) => { const currentId = builder.antiquaryArtifacts[field]; return <ChoicePickerField key={field} id={`builder-antiquary-${field}`} label={`Antiquary ${field.toUpperCase()}`} value={currentId ? String(currentId) : ""} choices={[...(currentId > 0 && !thiefArtifactOptions.some((skill) => skill.id === currentId) ? [{ value: String(currentId), label: `Unavailable skill ${currentId}`, group: "Imported", meta: "Unavailable skill" }] : []), ...thiefArtifactOptions.map((skill) => ({ value: String(skill.id), label: skill.name, icon: skill.icon, group: skill.type ?? "Profession", meta: skill.description }))]} onChange={(value) => updateBuilder((current) => ({ ...current, antiquaryArtifacts: { ...current.antiquaryArtifacts, [field]: Number(value) || 0 } }))} onPreview={(value) => { const skill = thiefArtifactOptions.find((item) => String(item.id) === value); if (skill) setSelectedSummary({ kind: "skill", item: skill }); }} placeholder="Choose artifact" clearLabel="Clear artifact" />; })}</>}
               </div></section>
             )}
