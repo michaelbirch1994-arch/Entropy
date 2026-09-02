@@ -530,6 +530,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
               <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
               <input
                 type="text"
+                aria-label="dps.report link or report id"
                 value={linkValue}
                 onChange={(e) => { setLinkValue(e.target.value); setLinkError(null); }}
                 onKeyDown={(e) => { if (e.key === "Enter") handleLinkSubmit(); }}
@@ -538,6 +539,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
               />
             </div>
             <button
+              aria-label="Load dps.report link"
               onClick={handleLinkSubmit}
               disabled={!linkValue.trim()}
               className="px-3.5 py-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-amber-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"

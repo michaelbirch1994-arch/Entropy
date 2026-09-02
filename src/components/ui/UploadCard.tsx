@@ -126,6 +126,7 @@ export default function UploadCard({ onFile, onUrl, error, loading }: UploadCard
               <Link className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="url"
+                aria-label="Entropy report URL"
                 value={urlValue}
                 onChange={(e) => { setUrlValue(e.target.value); setUrlError(null); }}
                 onKeyDown={(e) => { if (e.key === "Enter") handleUrlSubmit(); }}
@@ -134,6 +135,7 @@ export default function UploadCard({ onFile, onUrl, error, loading }: UploadCard
               />
             </div>
             <button
+              aria-label="Load Entropy report URL"
               onClick={handleUrlSubmit}
               disabled={!urlValue.trim()}
               className="px-5 py-3 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-amber-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
