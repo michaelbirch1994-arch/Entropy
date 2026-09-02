@@ -111,7 +111,15 @@ function LoadingState() {
 
 
 
-function ErrorState({ message }: { message: string }) {
+function ErrorState({
+  message,
+  onBackToImport,
+  onOpenAxiForgeLab,
+}: {
+  message: string;
+  onBackToImport: () => void;
+  onOpenAxiForgeLab: () => void;
+}) {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 px-6">
       <div className="w-14 h-14 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center">
@@ -120,6 +128,24 @@ function ErrorState({ message }: { message: string }) {
       <div className="text-center">
         <h2 className="text-lg font-bold text-slate-100">Failed to load report</h2>
         <p className="text-sm text-slate-400 mt-1 font-mono">{message}</p>
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={onBackToImport}
+          className="theme-command-button text-[10px] font-bold uppercase tracking-wider px-3 py-2 transition-colors"
+        >
+          <Upload className="h-3.5 w-3.5" />
+          Back to import
+        </button>
+        <button
+          type="button"
+          onClick={onOpenAxiForgeLab}
+          className="theme-quiet-button flex items-center gap-1.5 px-3 py-2 text-[10px] font-bold uppercase tracking-wider"
+        >
+          <FlaskConical className="h-3.5 w-3.5" />
+          Open Builder
+        </button>
       </div>
     </div>
   );
@@ -679,7 +705,19 @@ function ReportShell() {
           ) : showLoading ? (
             <LoadingState />
           ) : showError ? (
-            <ErrorState message={error!} />
+            <ErrorState
+              message={error!}
+              onBackToImport={() => {
+                void clearReport();
+                setAtHome(true);
+                setActiveView("overview");
+              }}
+              onOpenAxiForgeLab={() => {
+                void clearReport();
+                setAtHome(false);
+                setActiveView("axiforge-lab");
+              }}
+            />
           ) : showImport ? (
             <motion.div className="min-h-full w-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
               <div className="min-h-full w-full">
