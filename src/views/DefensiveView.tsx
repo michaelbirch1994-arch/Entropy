@@ -338,7 +338,7 @@ export default function DefensiveView() {
                 const share = topHealingSustain > 0 ? Math.max(5, (p.sustain / topHealingSustain) * 100) : 5;
                 return (
                   <article key={p.account} className="theme-player-card neon-healing group flex min-h-[12.5rem] flex-col justify-between overflow-hidden border p-4 transition-colors">
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="theme-player-card-head flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-visible rounded-xl border border-emerald-400/15 bg-emerald-500/[0.045]">
                           <ProfessionIcon profession={p.profession} className="h-9 w-9" />
@@ -353,7 +353,7 @@ export default function DefensiveView() {
                       </span>
                     </div>
 
-                    <div className="mt-4">
+                    <div className="theme-player-card-body mt-4">
                       <div className="flex items-end justify-between gap-3">
                         <div>
                           <div className="text-[10px] font-black uppercase tracking-wider text-theme-muted">Sustain output</div>
