@@ -419,7 +419,7 @@ export default function ReplayViewV2() {
               <button key={layer.label} type="button" onClick={() => layer.set(!layer.on)} className={`cursor-pointer rounded-lg border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${layer.on ? "border-sky-500/30 bg-sky-500/5 text-sky-400" : "border-slate-800 bg-black/30 text-slate-500 hover:text-slate-300"}`}>{layer.label}</button>
             ))}
             <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Zoom</span>
-            <input type="range" min={1} max={8} step={0.25} value={zoom} onChange={(event) => { setZoom(Number(event.target.value)); setFollowFocus(true); setPan({ x: 0, y: 0 }); }} className="w-28 accent-sky-400" />
+            <input type="range" aria-label="Fight replay zoom" min={1} max={8} step={0.25} value={zoom} onChange={(event) => { setZoom(Number(event.target.value)); setFollowFocus(true); setPan({ x: 0, y: 0 }); }} className="w-28 accent-sky-400" />
             <span className="w-9 font-mono text-[10px] text-slate-400">{zoom.toFixed(1)}x</span>
             {zoom > 1 && <button type="button" onClick={() => { setFollowFocus((value) => !value); setPan({ x: 0, y: 0 }); }} className={`rounded border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${followFocus ? "border-sky-500/30 bg-sky-500/10 text-sky-300" : "border-slate-800 text-slate-500"}`}>Follow focus</button>}
             {zoom !== 1 && <button type="button" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); setFollowFocus(true); }} className="rounded border border-slate-800 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300">Reset</button>}

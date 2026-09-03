@@ -451,6 +451,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                     <button
                       onClick={() => void runFolderScan()}
                       title="Scan now"
+                      aria-label="Scan watched folder now"
                       className="text-slate-500 hover:text-amber-400 transition-colors"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
@@ -458,6 +459,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                     <button
                       onClick={() => void disconnectFolder()}
                       title="Disconnect folder"
+                      aria-label="Disconnect watched folder"
                       className="text-slate-500 hover:text-rose-400 transition-colors"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -697,6 +699,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setViewing(item); }}
                           title="Quick peek (squad table only, no MVPs)"
+                          aria-label={`Quick peek ${item.label}`}
                           className="text-slate-500 hover:text-amber-400 transition-colors"
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -705,6 +708,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setReplaying(item); }}
                           title="Replay (scrubbable 2D positions, if available)"
+                          aria-label={`Replay ${item.label}`}
                           className="text-slate-500 hover:text-amber-400 transition-colors"
                         >
                           <Film className="w-3.5 h-3.5" />
@@ -716,6 +720,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                             rel="noreferrer"
                             onClick={(e) => e.stopPropagation()}
                             title="Open on dps.report"
+                            aria-label={`Open ${item.label} on dps.report`}
                             className="text-amber-400/50 hover:text-amber-400 transition-colors"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
