@@ -164,6 +164,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
                 ref={searchRef}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                aria-label="Quick switch navigation"
                 placeholder="Quick switch..."
                 className="w-full bg-transparent text-xs text-theme-text placeholder:text-theme-muted/70 outline-none"
               />
@@ -199,6 +200,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
               <button
                 onClick={() => toggle(section.title)}
                 aria-expanded={isOpen}
+                aria-label={`${isOpen ? "Collapse" : "Expand"} ${section.title} navigation section`}
                 data-tone={section.tone}
                 className={`theme-nav-section w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-200 ${
                   isOpen || hasCurrent
