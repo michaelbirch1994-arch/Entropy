@@ -1,0 +1,169 @@
+/* Product enrichment pass.
+   Presentation only: no selectors here alter report data, parsing, or metric calculations. */
+
+:root {
+  --surface-radius: 8px;
+  --surface-radius-large: 10px;
+  --surface-border-rest: color-mix(in srgb, var(--entropy-border) 76%, transparent);
+  --surface-border-active: color-mix(in srgb, var(--entropy-gold) 34%, var(--entropy-border));
+  --surface-shadow-rest: 0 18px 46px -42px rgba(0, 0, 0, 0.92);
+  --surface-shadow-hover: 0 22px 54px -44px rgba(0, 0, 0, 0.96);
+}
+
+.theme-panel,
+.theme-stat-card,
+.theme-table-shell,
+.theme-data-region,
+.theme-analytics-surface,
+.theme-player-card,
+.theme-podium-card,
+.theme-party-card,
+.theme-source-card,
+.theme-roster-player {
+  border-radius: var(--surface-radius) !important;
+}
+
+.theme-modal,
+.theme-alert-plate,
+.theme-evidence-gate {
+  border-radius: var(--surface-radius-large) !important;
+}
+
+.theme-panel:not([data-tone]),
+.theme-stat-card:not([data-tone]),
+.theme-panel[data-tone="system"],
+.theme-stat-card[data-tone="system"] {
+  --plate-accent: var(--entropy-gold-muted) !important;
+  --plate-accent-strong: var(--entropy-gold) !important;
+}
+
+.theme-panel,
+.theme-stat-card {
+  border-color: color-mix(in srgb, var(--plate-accent) 18%, var(--surface-border-rest)) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 32%),
+    linear-gradient(115deg, color-mix(in srgb, var(--plate-accent) 3.5%, transparent), transparent 48%),
+    color-mix(in srgb, var(--entropy-surface-1) 94%, var(--entropy-bg-deep)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.028),
+    inset 2px 0 0 color-mix(in srgb, var(--plate-accent) 30%, transparent),
+    var(--surface-shadow-rest) !important;
+}
+
+.theme-panel:hover,
+.theme-stat-card:hover {
+  border-color: color-mix(in srgb, var(--plate-accent) 31%, var(--surface-border-rest)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    inset 2px 0 0 color-mix(in srgb, var(--plate-accent) 44%, transparent),
+    var(--surface-shadow-hover) !important;
+}
+
+.theme-panel::before,
+.theme-stat-card::before {
+  width: 4.5rem;
+  height: 1px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--plate-accent) 58%, transparent), transparent 74%) !important;
+  opacity: 0.72;
+}
+
+.theme-panel::after,
+.theme-stat-card::after {
+  opacity: 0.18 !important;
+}
+
+.theme-panel-header {
+  min-height: 3.35rem !important;
+  border-bottom-color: color-mix(in srgb, var(--plate-accent) 12%, var(--entropy-border)) !important;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--plate-accent) 4%, transparent), transparent 15rem),
+    color-mix(in srgb, var(--entropy-surface-2) 72%, transparent) !important;
+}
+
+.theme-panel-title,
+.theme-stat-label {
+  color: color-mix(in srgb, var(--entropy-text-primary) 92%, var(--plate-accent)) !important;
+  letter-spacing: 0.04em !important;
+}
+
+.theme-panel-subtitle,
+.theme-stat-sub {
+  color: color-mix(in srgb, var(--entropy-text-muted) 78%, var(--entropy-text-secondary)) !important;
+}
+
+.theme-stat-icon,
+.theme-panel-icon {
+  color: color-mix(in srgb, var(--plate-accent) 72%, var(--entropy-text-primary)) !important;
+}
+
+.theme-stat-value {
+  letter-spacing: 0 !important;
+  text-shadow: 0 0 14px color-mix(in srgb, currentColor 7%, transparent) !important;
+}
+
+.theme-table-shell {
+  border-color: color-mix(in srgb, var(--entropy-gold) 12%, var(--entropy-border)) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.014), transparent 28%),
+    color-mix(in srgb, var(--entropy-bg-deep) 72%, var(--entropy-surface-1)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025), var(--surface-shadow-rest);
+}
+
+.theme-app-shell table {
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-app-shell thead,
+.theme-table-head {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--entropy-gold) 5%, transparent), transparent 40%),
+    color-mix(in srgb, var(--entropy-bg-deep) 90%, var(--entropy-surface-2)) !important;
+}
+
+.theme-app-shell tbody tr,
+.theme-table-row {
+  transition: background-color 120ms ease, box-shadow 120ms ease, color 120ms ease;
+}
+
+.theme-app-shell tbody tr:hover,
+.theme-table-row:hover {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--entropy-gold) 5%, transparent), transparent 62%),
+    color-mix(in srgb, var(--entropy-surface-2) 44%, transparent) !important;
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--entropy-gold) 42%, transparent) !important;
+}
+
+.theme-source-card,
+.theme-party-card,
+.theme-player-card,
+.theme-podium-card,
+.theme-roster-player {
+  background:
+    linear-gradient(120deg, color-mix(in srgb, var(--player-glow, var(--entropy-gold)) 3.5%, transparent), transparent 48%),
+    color-mix(in srgb, var(--entropy-surface-1) 92%, var(--entropy-bg-deep)) !important;
+  border-color: color-mix(in srgb, var(--player-glow, var(--entropy-gold)) 18%, var(--entropy-border)) !important;
+  box-shadow:
+    inset 2px 0 0 color-mix(in srgb, var(--player-glow, var(--entropy-gold)) 30%, transparent),
+    0 16px 40px -38px rgba(0, 0, 0, 0.95) !important;
+}
+
+.theme-alert-plate {
+  box-shadow: inset 2px 0 0 currentColor, 0 18px 46px -42px rgba(0, 0, 0, 0.95);
+}
+
+@media (max-width: 720px) {
+  .theme-panel-header {
+    min-height: 3rem !important;
+  }
+
+  .theme-panel-body {
+    padding-inline: clamp(0.875rem, 4vw, 1.25rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-app-shell tbody tr,
+  .theme-table-row {
+    transition: none;
+  }
+}

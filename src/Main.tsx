@@ -18,6 +18,7 @@ import "./Styles/RoyalPolish.css";
 import "./Styles/ObsidianGoldPass8.css";
 import "./Styles/GrandLanding.css";
 import "./Styles/BuilderSquadUsability.css";
+import "./Styles/ProductEnrichment.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
