@@ -32,6 +32,7 @@ import EntropyLogo from "../ui/EntropyLogo";
 interface SidebarProps {
   activeView: string;
   setActiveView: (view: string) => void;
+  hasReport?: boolean;
 }
 
 const SECTION_ICONS: Record<string, ReactNode> = {
@@ -51,7 +52,13 @@ function findSectionForView(viewId: string): string | null {
   return null;
 }
 
-export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
+export default function Sidebar({ activeView, setActiveView, hasReport = true }: SidebarProps) {
+  const visibleSections = useMemo(() => {
+    return VIEW_SECTIONS.map((section) => ({
+      ...section,
+      items: section.items.filter((item) => hasReport || item.requiresReport === false),
+    })).filter((section) => section.items.length > 0);
+  }, [hasReport]);
   const [expanded, setExpanded] = useState<string | null>(() => findSectionForView(activeView) ?? "OVERVIEW");
   const [query, setQuery] = useState("");
   const [compact, setCompact] = useState(() => window.innerWidth <= 720);
@@ -86,12 +93,12 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
   const searchResults = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return [];
-    return VIEW_SECTIONS.flatMap((section) =>
+    return visibleSections.flatMap((section) =>
       section.items
         .filter((item) => [item.label, item.id, ...(item.keywords ?? [])].join(" ").toLowerCase().includes(needle))
         .map((item) => ({ ...item, section: section.title })),
     ).slice(0, 8);
-  }, [query]);
+  }, [query, visibleSections]);
 
   const selectView = (view: string) => {
     setActiveView(view);
@@ -180,7 +187,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
           </div>
         )}
 
-        {VIEW_SECTIONS.map((section) => {
+        {visibleSections.map((section) => {
           const isOpen = expanded === section.title;
           const hasCurrent = section.items.some((i) => i.id === activeView);
           const isFlat = section.flat || section.items.length <= 2;

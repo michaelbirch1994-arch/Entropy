@@ -451,7 +451,7 @@ function ReportShell() {
 
 
       {/* Only show sidebar when a report is loaded */}
-      {(report || showTool) && <Sidebar activeView={activeView} setActiveView={handleSetActiveView} />}
+      {(report || showTool) && <Sidebar activeView={activeView} setActiveView={handleSetActiveView} hasReport={!!report} />}
 
 
 

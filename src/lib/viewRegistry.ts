@@ -4,6 +4,7 @@ export interface ViewRegistryItem {
   id: string;
   label: string;
   keywords?: string[];
+  requiresReport?: boolean;
 }
 
 export interface ViewRegistrySection {
@@ -76,8 +77,8 @@ export const VIEW_SECTIONS: ViewRegistrySection[] = [
     tone: "extras",
     flat: true,
     items: [
-      { id: "archive", label: "Report Archive", keywords: ["history", "saved"] },
-      { id: "compare", label: "Compare Reports", keywords: ["diff", "reports"] },
+      { id: "archive", label: "Report Archive", keywords: ["history", "saved"], requiresReport: false },
+      { id: "compare", label: "Compare Reports", keywords: ["diff", "reports"], requiresReport: false },
     ],
   },
   {
@@ -85,7 +86,7 @@ export const VIEW_SECTIONS: ViewRegistrySection[] = [
     tone: "extras",
     flat: true,
     items: [
-      { id: "axiforge-lab", label: "Entropy Builder", keywords: ["builder", "build editor", "tools"] },
+      { id: "axiforge-lab", label: "Entropy Builder", keywords: ["builder", "build editor", "tools"], requiresReport: false },
     ],
   },
 ];
