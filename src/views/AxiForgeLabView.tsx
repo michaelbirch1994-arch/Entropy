@@ -2158,7 +2158,16 @@ export default function AxiForgeLabView() {
           <div><div className="theme-builder-kicker">Neon systems loadout workshop</div><h2>Entropy Builder</h2><p>Construct, verify, archive, and organize Guild Wars 2 squad doctrine. {catalogSource === "cache" ? "Cached catalog ready." : catalogSource === "live" ? "Live catalog connected." : ""}</p></div>
         </div>
         <div className="theme-builder-command-actions">
-          <button type="button" onClick={() => setImportOpen((open) => !open)} className="theme-command-button"><Download className="h-4 w-4" /> Import</button>
+          <button
+            type="button"
+            onClick={() => setImportOpen((open) => !open)}
+            aria-expanded={importOpen}
+            aria-controls="builder-import-rack"
+            aria-label={importOpen ? "Hide build import panel" : "Show build import panel"}
+            className="theme-command-button"
+          >
+            <Download className="h-4 w-4" /> Import
+          </button>
           <button type="button" onClick={exportCurrentBuild} className="theme-command-button"><FileCode2 className="h-4 w-4" /> Copy code</button>
           <button type="button" onClick={exportChatCode} className="theme-command-button"><Clipboard className="h-4 w-4" /> Copy Chat Code</button>
           <button type="button" onClick={shareCurrentBuild} className="theme-command-button"><Link2 className="h-4 w-4" /> Share link</button>
@@ -2189,17 +2198,21 @@ export default function AxiForgeLabView() {
       </nav>
 
       {importOpen && (
-        <section className="theme-builder-import-rack">
-          <div><FieldLabel>Paste an Entropy code or gw2skills.net build URL</FieldLabel><textarea value={importCode} onChange={(event) => setImportCode(event.target.value)} placeholder="<AxiForge:...> or https://en.gw2skills.net/editor/?..." spellCheck={false} /></div>
+        <section id="builder-import-rack" className="theme-builder-import-rack">
+          <div><FieldLabel>Paste an Entropy code or gw2skills.net build URL</FieldLabel><textarea aria-label="Entropy code or gw2skills.net build URL" value={importCode} onChange={(event) => setImportCode(event.target.value)} placeholder="<AxiForge:...> or https://en.gw2skills.net/editor/?..." spellCheck={false} /></div>
           <div className="theme-builder-import-actions"><span className={detectedKind === "unknown" && !gw2SkillsInput ? "" : "is-ready"}>{gw2SkillsInput ? "gw2skills build detected" : kindLabel(detectedKind)}</span><button type="button" onClick={() => { setImportCode(""); setImportOpen(false); }}><Eraser className="h-4 w-4" /> Clear</button><button type="button" onClick={importBuildInput} disabled={importBusy || (detectedKind === "unknown" && !gw2SkillsInput)}>{importBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Import</button></div>
         </section>
       )}
 
       {(loading || catalogError || notice) && (
-        <div className={`theme-builder-notice ${catalogError || notice?.tone === "error" ? "is-error" : notice?.tone === "warning" ? "is-warning" : "is-success"}`}>
+        <div
+          className={`theme-builder-notice ${catalogError || notice?.tone === "error" ? "is-error" : notice?.tone === "warning" ? "is-warning" : "is-success"}`}
+          role={catalogError || notice?.tone === "error" ? "alert" : "status"}
+          aria-live={catalogError || notice?.tone === "error" ? "assertive" : "polite"}
+        >
           {loading && !catalogError ? <Loader2 className="h-4 w-4 animate-spin" /> : catalogError || notice?.tone === "error" ? <AlertCircle className="h-4 w-4" /> : <Check className="h-4 w-4" />}
           <span>{catalogError ?? notice?.message ?? "Loading live Guild Wars 2 catalog..."}</span>
-          {notice && <button type="button" onClick={() => setNotice(null)} title="Dismiss"><X className="h-4 w-4" /></button>}
+          {notice && <button type="button" onClick={() => setNotice(null)} title="Dismiss" aria-label="Dismiss Builder notice"><X className="h-4 w-4" /></button>}
         </div>
       )}
 
