@@ -482,7 +482,7 @@ function ReportShell() {
                     {(activeView === "defensive" || activeView === "squad-stats") && <AllyScopeToggle />}
                   </div>
                 )}
-                <TopbarActionMenu label="Report" icon={<Upload className="w-3 h-3" />}>
+                <TopbarActionMenu label="Report" icon={<Upload className="w-3 h-3" />} align="start">
                   <TopbarMenuButton
                     onClick={() => void handleReloadCurrent()}
                     disabled={loading}

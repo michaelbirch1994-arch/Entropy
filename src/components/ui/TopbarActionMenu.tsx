@@ -3,7 +3,17 @@ import { ChevronDown } from "lucide-react";
 
 const TOPBAR_MENU_OPEN_EVENT = "entropy:topbar-menu-open";
 
-export function TopbarActionMenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
+export function TopbarActionMenu({
+  label,
+  icon,
+  children,
+  align = "end",
+}: {
+  label: string;
+  icon: ReactNode;
+  children: ReactNode;
+  align?: "start" | "end";
+}) {
   const id = useId();
   const [open, setOpen] = useState(false);
   const detailsRef = useRef<HTMLDetailsElement>(null);
@@ -41,6 +51,7 @@ export function TopbarActionMenu({ label, icon, children }: { label: string; ico
     <details
       ref={detailsRef}
       className="theme-topbar-menu"
+      data-align={align}
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
