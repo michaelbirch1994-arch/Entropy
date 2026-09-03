@@ -76,6 +76,7 @@ export default function MechanicsView() {
       <div className="flex flex-wrap items-center gap-3">
         {data.fights.length > 1 && (
           <select
+            aria-label="Select mechanics fight"
             value={fightIdx}
             onChange={(e) => {
               setFightIdx(Number(e.target.value));

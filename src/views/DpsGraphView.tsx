@@ -180,6 +180,7 @@ const tally = new Map<number, { count: number; players: Set<string> }>();
       <div className="flex flex-wrap items-center gap-3">
         {data.fights.length > 1 && (
           <select
+            aria-label="Select DPS graph fight"
             value={fightIdx}
             onChange={(e) => { setFightIdx(Number(e.target.value)); setCompareAccounts([]); setSelectedT(null); }}
             className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2 focus:border-theme-focus focus:outline-none"

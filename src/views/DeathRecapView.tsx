@@ -327,6 +327,7 @@ export default function DeathRecapView() {
     <div className="space-y-5 animate-view pb-12">
       <div className="flex flex-wrap items-center gap-3">
         <select
+          aria-label="Filter death recaps by player"
           value={accountFilter}
           onChange={(e) => setAccountFilter(e.target.value)}
           className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2 focus:border-theme-focus focus:outline-none"

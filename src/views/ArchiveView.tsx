@@ -123,6 +123,7 @@ export default function ArchiveView() {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  aria-label="Search archived reports"
                   placeholder="Search by title or commander..."
                   className="w-full rounded-lg border border-theme-border bg-theme-surface-inset pl-8 pr-3 py-2 text-xs text-theme-text placeholder:text-theme-faint outline-none transition-all focus:border-theme-accent/50"
                 />

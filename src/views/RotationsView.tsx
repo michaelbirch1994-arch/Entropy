@@ -122,6 +122,7 @@ export default function RotationsView() {
       <div className="flex flex-wrap items-center gap-3">
         {data.fights.length > 1 && (
           <select
+            aria-label="Select rotation fight"
             value={fightIdx}
             onChange={(e) => { setFightIdx(Number(e.target.value)); setPlayerAccount(null); }}
             className="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-lg px-3 py-2 focus:border-theme-focus focus:outline-none"
@@ -134,6 +135,7 @@ export default function RotationsView() {
         <div className="relative flex-1 min-w-[180px] max-w-xs">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
           <input
+            aria-label="Filter rotations by player or class"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter by player or class..."

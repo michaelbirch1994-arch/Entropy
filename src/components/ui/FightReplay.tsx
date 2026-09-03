@@ -204,12 +204,15 @@ export default function FightReplay({ log, onClose }: { log: RawFightLog; onClos
             <div className="flex items-center gap-3 mt-4">
               <button
                 onClick={() => setPlaying((v) => !v)}
+                aria-label={playing ? "Pause fight replay" : "Play fight replay"}
+                title={playing ? "Pause fight replay" : "Play fight replay"}
                 className="w-9 h-9 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-400 flex items-center justify-center flex-shrink-0 hover:bg-amber-500/25 transition-colors"
               >
                 {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               </button>
               <input
                 type="range"
+                aria-label="Fight replay timeline"
                 min={0}
                 max={data.durationMs}
                 value={t}
@@ -220,6 +223,7 @@ export default function FightReplay({ log, onClose }: { log: RawFightLog; onClos
                 {fmtClock(t)} / {fmtClock(data.durationMs)}
               </span>
               <select
+                aria-label="Fight replay speed"
                 value={speed}
                 onChange={(e) => setSpeed(Number(e.target.value))}
                 className="bg-slate-900 border border-slate-700 text-slate-300 text-[11px] rounded-lg px-2 py-1.5 flex-shrink-0"
