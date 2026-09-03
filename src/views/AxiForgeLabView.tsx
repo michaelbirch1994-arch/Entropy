@@ -2307,7 +2307,16 @@ export default function AxiForgeLabView() {
                           placeholder="Choose specialization"
                           clearLabel="Clear specialization"
                         />
-                        {selectedSpec?.icon && <button type="button" onClick={() => setSelectedSummary({ kind: "specialization", item: selectedSpec })}><img src={selectedSpec.icon} alt="" /></button>}
+                        {selectedSpec?.icon && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSummary({ kind: "specialization", item: selectedSpec })}
+                            aria-label={`Inspect ${selectedSpec.name} specialization`}
+                            title={`Inspect ${selectedSpec.name} specialization`}
+                          >
+                            <img src={selectedSpec.icon} alt="" />
+                          </button>
+                        )}
                         <div className="theme-builder-spec-picks" role="group" aria-label={`Specialization track ${trackIndex + 1} quick picks`}>
                           {professionSpecs.map((spec) => {
                             const isUsedElsewhere = builder.specializationIds.some((id, index) => index !== trackIndex && id === spec.id);

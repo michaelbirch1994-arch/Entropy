@@ -460,18 +460,44 @@ export default function ReplayViewV2() {
           </div>
 
           <div className={`mt-4 flex items-center gap-3 rounded-xl border px-4 py-3 ${atEvidenceAnchor ? "border-sky-400/35 bg-sky-500/[0.07]" : "border-slate-800 bg-slate-900/50"}`}>
-            <button type="button" onClick={() => setPlaying((value) => !value)} className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sky-400/35 bg-sky-500/10 text-sky-300 transition hover:bg-sky-500/20">{playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}</button>
-            <input type="range" min={0} max={fight.data.durationMs} value={t} onChange={(event) => { setT(Number(event.target.value)); setPlaying(false); }} className="flex-1 accent-sky-400" />
+            <button
+              type="button"
+              onClick={() => setPlaying((value) => !value)}
+              aria-label={playing ? "Pause fight replay" : "Play fight replay"}
+              title={playing ? "Pause fight replay" : "Play fight replay"}
+              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sky-400/35 bg-sky-500/10 text-sky-300 transition hover:bg-sky-500/20"
+            >
+              {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            </button>
+            <input
+              type="range"
+              aria-label="Fight replay timeline"
+              min={0}
+              max={fight.data.durationMs}
+              value={t}
+              onChange={(event) => { setT(Number(event.target.value)); setPlaying(false); }}
+              className="flex-1 accent-sky-400"
+            />
             {atEvidenceAnchor && <span className="rounded-full border border-sky-400/25 bg-sky-500/[0.08] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-sky-200">Evidence anchor</span>}
             <span className="w-24 shrink-0 text-right font-mono text-[11px] text-slate-400">{fmtClock(t)} / {fmtClock(fight.data.durationMs)}</span>
-            <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} className="shrink-0 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-[11px] text-slate-300"><option value={1}>1x</option><option value={2}>2x</option><option value={4}>4x</option><option value={8}>8x</option></select>
+            <select
+              value={speed}
+              onChange={(event) => setSpeed(Number(event.target.value))}
+              aria-label="Fight replay speed"
+              className="shrink-0 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-[11px] text-slate-300"
+            >
+              <option value={1}>1x</option>
+              <option value={2}>2x</option>
+              <option value={4}>4x</option>
+              <option value={8}>8x</option>
+            </select>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-800/60 pt-3">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Export clip:</span>
-            <input type="number" min={0} max={fight.data.durationMs / 1000} value={Math.round(clipStart / 1000)} onChange={(event) => setClipStart(Number(event.target.value) * 1000)} className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300" />
+            <input type="number" aria-label="Replay clip start time in seconds" min={0} max={fight.data.durationMs / 1000} value={Math.round(clipStart / 1000)} onChange={(event) => setClipStart(Number(event.target.value) * 1000)} className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300" />
             <span className="text-[10px] text-slate-500">to</span>
-            <input type="number" min={0} max={fight.data.durationMs / 1000} value={Math.round(clipEnd / 1000)} onChange={(event) => setClipEnd(Number(event.target.value) * 1000)} className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300" />
+            <input type="number" aria-label="Replay clip end time in seconds" min={0} max={fight.data.durationMs / 1000} value={Math.round(clipEnd / 1000)} onChange={(event) => setClipEnd(Number(event.target.value) * 1000)} className="w-16 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300" />
             <span className="text-[10px] text-slate-500">sec</span>
             <button type="button" onClick={exportClip} className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-400 transition hover:bg-amber-500/20"><Download className="h-3 w-3" /> Download standalone .html</button>
           </div>
