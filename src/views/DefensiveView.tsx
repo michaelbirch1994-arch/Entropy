@@ -361,10 +361,6 @@ export default function DefensiveView() {
                             {fmtCompact(p.sustain)}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-theme-muted">Rank</div>
-                          <div className="mt-1 font-mono text-sm font-black text-amber-300">{i < 3 ? "MVP" : "Top 8"}</div>
-                        </div>
                       </div>
                       <div className="theme-progress-track mt-3 h-2 overflow-hidden rounded-full">
                         <div className="theme-progress-fill h-full rounded-full bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 transition-all duration-500" style={{ width: `${share}%` }} />
