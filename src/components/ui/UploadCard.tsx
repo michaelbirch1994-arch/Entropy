@@ -66,6 +66,7 @@ export default function UploadCard({ onFile, onUrl, error, loading }: UploadCard
       {/* File drop zone */}
       <div
         role="button"
+        aria-label="Upload saved Entropy report file"
         tabIndex={0}
         onClick={() => inputRef.current?.click()}
         onKeyDown={(e) => {

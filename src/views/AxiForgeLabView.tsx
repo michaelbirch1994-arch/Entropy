@@ -785,7 +785,7 @@ function BuildLibrary({
     <section className="theme-builder-workspace">
       <div className="theme-builder-section-head">
         <div><div className="theme-builder-kicker">Local doctrine</div><h3>Build library</h3></div>
-        <div className="theme-builder-search"><Search className="h-4 w-4" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search builds" /></div>
+        <div className="theme-builder-search"><Search className="h-4 w-4" /><input aria-label="Search builds" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search builds" /></div>
       </div>
       {filtered.length === 0 ? (
         <div className="theme-builder-empty"><Archive className="h-7 w-7" /><strong>No saved builds</strong><span>Save a complete build or an unfinished draft to establish the library.</span></div>

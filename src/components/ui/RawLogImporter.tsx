@@ -382,6 +382,9 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
     <div className={`w-full ${cinematic ? "theme-raw-ingress" : "max-w-lg"}`}>
       <button
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="raw-log-importer-panel"
+        aria-label={open ? "Hide combat record ingress" : "Show combat record ingress"}
         className="w-full flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-amber-400 transition-colors py-2"
       >
         <span className="flex items-center gap-1.5">
@@ -392,7 +395,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
       </button>
 
       {open && (
-        <div className="space-y-3 mt-2">
+        <div id="raw-log-importer-panel" className="space-y-3 mt-2">
           <p className="text-[11px] text-slate-500 leading-relaxed">
             Drop raw <span className="font-mono text-slate-400">.zevtc</span>/<span className="font-mono text-slate-400">.evtc</span> files
             or paste dps.report links below. Each fight is uploaded straight to dps.report for parsing, then pulled back
