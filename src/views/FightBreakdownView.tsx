@@ -202,6 +202,7 @@ export default function FightBreakdownView() {
                     <button
                       type="button"
                       aria-pressed={comparisonFightId === f.id}
+                      aria-label={`Use ${f.name} as the comparison fight`}
                       disabled={selectedFightId === f.id}
                       onClick={() => setComparisonFightId((current) => current === f.id ? null : f.id)}
                       title="Use this fight as the comparison"

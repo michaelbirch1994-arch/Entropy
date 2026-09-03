@@ -225,6 +225,7 @@ export default function PlayerCompareView() {
                     <button
                       key={item.key}
                       type="button"
+                      aria-pressed={category === item.key}
                       onClick={() => setCategory(item.key)}
                       className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-colors ${category === item.key ? "border-theme-accent/55 bg-theme-accent/12 text-theme-accent-strong" : "border-theme-border bg-theme-surface-inset/60 text-theme-muted hover:border-theme-accent/30"}`}
                     >
