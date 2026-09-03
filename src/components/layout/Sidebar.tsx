@@ -107,6 +107,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
         key={item.id}
         onClick={() => selectView(item.id)}
         aria-current={isActive ? "page" : undefined}
+        aria-label={compact ? item.label : undefined}
         data-tone={tone}
         title={compact ? item.label : undefined}
         className={`theme-nav-item group w-full text-left rounded-lg text-xs font-medium transition-all duration-200 relative ${
@@ -146,6 +147,7 @@ export default function Sidebar({ activeView, setActiveView }: SidebarProps) {
         <button
           type="button"
           onClick={() => setCompact(!compact)}
+          aria-label={compact ? "Expand sidebar" : "Collapse sidebar"}
           className="theme-quiet-button mt-3 flex w-full items-center justify-center gap-2 px-2 py-1.5"
           title={compact ? "Expand sidebar" : "Collapse sidebar"}
         >
