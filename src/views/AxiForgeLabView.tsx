@@ -371,7 +371,7 @@ function ChoicePickerField({
             </div>
             <div className="theme-builder-picker-search">
               <Search className="h-4 w-4" aria-hidden="true" />
-              <TextField value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}`} autoFocus />
+              <TextField value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}`} aria-label={`Search ${label} choices`} autoFocus />
             </div>
             {filters.length > 1 && (
               <div className="theme-builder-picker-filters" role="group" aria-label={`${label} filters`}>
@@ -501,7 +501,7 @@ function ItemPickerField({
             </div>
             <div className="theme-builder-picker-search">
               <Search className="h-4 w-4" aria-hidden="true" />
-              <TextField value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}`} autoFocus />
+              <TextField value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label} choices`} aria-label={`Search ${label} choices`} autoFocus />
             </div>
             <div className="theme-builder-picker-filters" role="group" aria-label={`${label} filters`}>
               {filters.map((item) => <button key={item} type="button" aria-pressed={filter === item} className={filter === item ? "is-active" : undefined} onClick={() => setFilter(item)}>{item}</button>)}
