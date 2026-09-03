@@ -748,11 +748,11 @@ function BuilderBuildCard({
         {slotCount > 0 && <span className="is-assigned">Squad x{slotCount}</span>}
       </div>
       <div className="theme-builder-row-actions">
-        <button type="button" onClick={() => onLoad(build)} title="Open build"><FolderOpen /></button>
-        {onDuplicate && <button type="button" onClick={() => onDuplicate(build)} title="Duplicate build"><Copy /></button>}
-        {onCopy && <button type="button" onClick={() => onCopy(build.shareCode)} title={build.shareCode ? "Copy AxiCode" : "Draft has no exportable AxiCode yet"} disabled={!build.shareCode}><Clipboard /></button>}
-        {onShare && <button type="button" onClick={() => onShare(build.shareCode)} title={build.shareCode ? "Copy share link" : "Draft has no share link yet"} disabled={!build.shareCode}><Link2 /></button>}
-        {onDelete && <button type="button" onClick={() => onDelete(build.id)} title="Delete build"><Trash2 /></button>}
+        <button type="button" onClick={() => onLoad(build)} title="Open build" aria-label={`Open ${build.name}`}><FolderOpen /></button>
+        {onDuplicate && <button type="button" onClick={() => onDuplicate(build)} title="Duplicate build" aria-label={`Duplicate ${build.name}`}><Copy /></button>}
+        {onCopy && <button type="button" onClick={() => onCopy(build.shareCode)} title={build.shareCode ? "Copy AxiCode" : "Draft has no exportable AxiCode yet"} aria-label={build.shareCode ? `Copy AxiCode for ${build.name}` : `${build.name} has no exportable AxiCode yet`} disabled={!build.shareCode}><Clipboard /></button>}
+        {onShare && <button type="button" onClick={() => onShare(build.shareCode)} title={build.shareCode ? "Copy share link" : "Draft has no share link yet"} aria-label={build.shareCode ? `Copy share link for ${build.name}` : `${build.name} has no share link yet`} disabled={!build.shareCode}><Link2 /></button>}
+        {onDelete && <button type="button" onClick={() => onDelete(build.id)} title="Delete build" aria-label={`Delete ${build.name}`}><Trash2 /></button>}
       </div>
     </article>
   );
@@ -1191,8 +1191,8 @@ function SquadWorkspace({
             <div key={party.id} className="theme-builder-party-line">
               <div className="theme-builder-party-name">
                 <span>{String(partyIndex + 1).padStart(2, "0")}</span>
-                <input value={party.name} onChange={(event) => update({ parties: composition.parties.map((item) => item.id === party.id ? { ...item, name: event.target.value } : item) })} />
-                {composition.parties.length > 1 && <button type="button" title="Remove subgroup" onClick={() => update({ parties: composition.parties.filter((item) => item.id !== party.id) })}><X /></button>}
+                <input aria-label={`Subgroup ${partyIndex + 1} name`} value={party.name} onChange={(event) => update({ parties: composition.parties.map((item) => item.id === party.id ? { ...item, name: event.target.value } : item) })} />
+                {composition.parties.length > 1 && <button type="button" title="Remove subgroup" aria-label={`Remove ${party.name}`} onClick={() => update({ parties: composition.parties.filter((item) => item.id !== party.id) })}><X /></button>}
               </div>
               <div className="theme-builder-party-slots">
                 {party.slots.map((buildId, slotIndex) => {
@@ -2608,7 +2608,7 @@ export default function AxiForgeLabView() {
           <aside className="theme-builder-rail">
             <div className="theme-builder-readiness"><div className="theme-builder-kicker">Readiness</div><div className="theme-builder-readiness-score"><strong>{Math.max(0, 6 - issues.length)}</strong><span>/ 6</span></div><div className="theme-builder-progress"><i style={{ width: `${Math.max(0, (6 - issues.length) / 6 * 100)}%` }} /></div>{issues.length ? <ul>{issues.map((issue) => <li key={issue}><ChevronRight className="h-3.5 w-3.5" />{issue}</li>)}</ul> : <p className="is-ready"><Check className="h-4 w-4" /> Build is ready to archive.</p>}</div>
             <DetailPanel selected={selectedSummary} />
-            {exportCode && <div className="theme-builder-code-output"><div className="flex items-center justify-between"><FieldLabel>Last exported code</FieldLabel><button type="button" title="Copy code" onClick={() => copyText(exportCode, "AxiCode copied.")}><Clipboard className="h-4 w-4" /></button></div><code>{exportCode}</code></div>}
+            {exportCode && <div className="theme-builder-code-output"><div className="flex items-center justify-between"><FieldLabel>Last exported code</FieldLabel><button type="button" title="Copy code" aria-label="Copy last exported AxiCode" onClick={() => copyText(exportCode, "AxiCode copied.")}><Clipboard className="h-4 w-4" /></button></div><code>{exportCode}</code></div>}
           </aside>
         </div>
       )}
