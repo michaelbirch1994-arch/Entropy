@@ -260,9 +260,14 @@
     right: 0.35rem;
   }
 
+  .theme-topbar-actions {
+    flex-wrap: wrap !important;
+    overflow-x: visible;
+  }
+
   .theme-topbar-scope-group {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: flex-start;
     padding-right: 0;
     margin-right: 0;
     border-right: 0;
