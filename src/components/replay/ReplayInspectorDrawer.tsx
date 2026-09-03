@@ -41,6 +41,7 @@ function ReplayInspectorDrawer({
         <button
           type="button"
           onClick={() => onModeChange("intelligence")}
+          aria-pressed={mode === "intelligence"}
           className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1.5 text-[9px] font-black uppercase tracking-wider transition ${modeClass(mode === "intelligence")}`}
         >
           <BrainCircuit className="h-3 w-3" /> Live Intel
@@ -49,6 +50,7 @@ function ReplayInspectorDrawer({
         <button
           type="button"
           onClick={() => onModeChange("player")}
+          aria-pressed={mode === "player"}
           className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1.5 text-[9px] font-black uppercase tracking-wider transition ${modeClass(mode === "player")}`}
         >
           <Crosshair className="h-3 w-3" /> Player

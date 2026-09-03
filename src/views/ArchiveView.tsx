@@ -163,6 +163,7 @@ export default function ArchiveView() {
                           type="checkbox"
                           checked={selected.has(e.id)}
                           onChange={() => toggleSelected(e.id)}
+                          aria-label={`Select ${e.title} for comparison`}
                           className="w-3.5 h-3.5 accent-theme-accent cursor-pointer"
                         />
                       </td>
@@ -187,6 +188,7 @@ export default function ArchiveView() {
                             type="button"
                             onClick={() => handleOpen(e)}
                             title="Open this report"
+                            aria-label={`Open ${e.title}`}
                             className="text-theme-muted hover:text-theme-accent-strong transition-colors"
                           >
                             <FolderOpen className="w-3.5 h-3.5" />
@@ -195,6 +197,7 @@ export default function ArchiveView() {
                             type="button"
                             onClick={() => void handleDelete(e.id)}
                             title="Remove from archive"
+                            aria-label={`Remove ${e.title} from archive`}
                             className="text-theme-muted hover:text-rose-400 transition-colors"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

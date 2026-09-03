@@ -86,6 +86,7 @@ export default function RawFightViewer({ summary, log, onClose }: RawFightViewer
             )}
             <button
               onClick={onClose}
+              aria-label="Close raw fight viewer"
               className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-white/[0.04] transition-colors"
             >
               <X className="w-5 h-5" />

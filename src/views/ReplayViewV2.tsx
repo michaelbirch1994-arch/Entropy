@@ -372,7 +372,7 @@ export default function ReplayViewV2() {
 
       <div className="flex flex-wrap items-center gap-3">
         {fights.length > 1 && (
-          <select value={fightIdx} onChange={(event) => { pendingSeekRef.current = null; setEvidenceOrigin(null); setFightIdx(Number(event.target.value)); }} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300">
+          <select aria-label="Select fight replay" value={fightIdx} onChange={(event) => { pendingSeekRef.current = null; setEvidenceOrigin(null); setFightIdx(Number(event.target.value)); }} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300">
             {fights.map((entry, index) => <option key={entry.fightId} value={index}>#{index + 1} · {entry.fightName}</option>)}
           </select>
         )}
@@ -416,7 +416,7 @@ export default function ReplayViewV2() {
               { on: showCasts, set: setShowCasts, label: "Cast markers", available: true },
               { on: showFacing, set: setShowFacing, label: "Facing", available: true },
             ] as { on: boolean; set: (value: boolean) => void; label: string; available: boolean }[]).filter((layer) => layer.available).map((layer) => (
-              <button key={layer.label} type="button" onClick={() => layer.set(!layer.on)} className={`cursor-pointer rounded-lg border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${layer.on ? "border-sky-500/30 bg-sky-500/5 text-sky-400" : "border-slate-800 bg-black/30 text-slate-500 hover:text-slate-300"}`}>{layer.label}</button>
+              <button key={layer.label} type="button" aria-pressed={layer.on} onClick={() => layer.set(!layer.on)} className={`cursor-pointer rounded-lg border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors ${layer.on ? "border-sky-500/30 bg-sky-500/5 text-sky-400" : "border-slate-800 bg-black/30 text-slate-500 hover:text-slate-300"}`}>{layer.label}</button>
             ))}
             <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Zoom</span>
             <input type="range" aria-label="Fight replay zoom" min={1} max={8} step={0.25} value={zoom} onChange={(event) => { setZoom(Number(event.target.value)); setFollowFocus(true); setPan({ x: 0, y: 0 }); }} className="w-28 accent-sky-400" />
