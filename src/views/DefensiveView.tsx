@@ -7,6 +7,7 @@ import { Shield, Heart, Droplet, Zap, Wind, Target } from "lucide-react";
 import { useStatsDisplay, pickStatsDisplayValue } from "../store/StatsDisplayContext";
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
 import ProfessionIdentity from "../components/ui/ProfessionIdentity";
+import ProfessionIcon from "../components/ui/ProfessionIcon";
 import PlayerSampleCell from "../components/ui/PlayerSampleCell";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { SortableHeader } from "../components/ui/SortableHeader";
@@ -243,6 +244,7 @@ export default function DefensiveView() {
   const fmtStat = (v: number, decimals = 0) => (isPerSecond ? fmtFixed(v, decimals || 2) : fmtCompact(v));
   const fmtStatN = (v: number, decimals = 0) => (isPerSecond ? fmtFixed(v, decimals || 2) : fmtNum(v));
   const lbl = (base: string) => (isPerSecond ? `${base}/s` : base);
+  const topHealingSustain = healingMvpRows[0]?.sustain ?? 0;
   const toggleSort = (key: DefensiveSortKey) => {
     setSort((prev) => {
       if (!prev || prev.key !== key) return { key, dir: "desc" };
@@ -331,41 +333,70 @@ export default function DefensiveView() {
           icon={<Heart className="w-4 h-4" />}
         >
           {healingMvpRows.length > 0 ? (
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-              {healingMvpRows.map((p, i) => (
-                <div key={p.account} className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-xs font-semibold text-slate-200">{p.account}</div>
-                      <div className="mt-1"><ClassCell profession={p.profession} /></div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {healingMvpRows.map((p, i) => {
+                const share = topHealingSustain > 0 ? Math.max(5, (p.sustain / topHealingSustain) * 100) : 5;
+                return (
+                  <article key={p.account} className="theme-player-card neon-healing group flex min-h-[12.5rem] flex-col justify-between overflow-hidden border p-4 transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-visible rounded-xl border border-emerald-400/15 bg-emerald-500/[0.045]">
+                          <ProfessionIcon profession={p.profession} className="h-9 w-9" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-black text-theme-text">{p.account}</div>
+                          <div className="mt-1"><ClassCell profession={p.profession} /></div>
+                        </div>
+                      </div>
+                      <span className={`font-mono text-xs font-black ${i < 3 ? "text-theme-accent-strong" : "text-theme-muted"}`}>
+                        #{i + 1}
+                      </span>
                     </div>
-                    <div className={`font-mono text-lg font-bold ${i < 3 ? "text-emerald-400" : "text-slate-300"}`}>
-                      {fmtCompact(p.sustain)}
+
+                    <div className="mt-4">
+                      <div className="flex items-end justify-between gap-3">
+                        <div>
+                          <div className="text-[10px] font-black uppercase tracking-wider text-theme-muted">Sustain output</div>
+                          <div className={`mt-1 font-mono text-2xl font-black leading-none ${i < 3 ? "text-emerald-300" : "text-theme-text"}`}>
+                            {fmtCompact(p.sustain)}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-theme-muted">Rank</div>
+                          <div className="mt-1 font-mono text-sm font-black text-amber-300">{i < 3 ? "MVP" : "Top 8"}</div>
+                        </div>
+                      </div>
+                      <div className="theme-progress-track mt-3 h-2 overflow-hidden rounded-full">
+                        <div className="theme-progress-fill h-full rounded-full bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 transition-all duration-500" style={{ width: `${share}%` }} />
+                      </div>
+                      <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-theme-muted">Share of healing leader</div>
                     </div>
-                  </div>
-                  <div className="mt-3 grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wider text-slate-500">
-                    <div>
-                      <div>Heal</div>
-                      <div className="font-mono text-[12px] text-emerald-400">{fmtCompact(p.healing)}</div>
+
+                    <div className="mt-4 grid grid-cols-4 gap-1.5 text-[10px] uppercase tracking-wider text-theme-muted">
+                      <div className="rounded-lg border border-white/[0.05] bg-black/20 px-2 py-1.5">
+                        <div>Heal</div>
+                        <div className="mt-0.5 font-mono text-[12px] font-black text-emerald-300">{fmtCompact(p.healing)}</div>
+                      </div>
+                      <div className="rounded-lg border border-white/[0.05] bg-black/20 px-2 py-1.5">
+                        <div>Barrier</div>
+                        <div className="mt-0.5 font-mono text-[12px] font-black text-amber-300">{fmtCompact(p.barrier)}</div>
+                      </div>
+                      <div className="rounded-lg border border-white/[0.05] bg-black/20 px-2 py-1.5">
+                        <div>Downed</div>
+                        <div className="mt-0.5 font-mono text-[12px] font-black text-emerald-200">{fmtCompact(p.downedHealing)}</div>
+                      </div>
+                      <div className="rounded-lg border border-white/[0.05] bg-black/20 px-2 py-1.5">
+                        <div>Life</div>
+                        <div className="mt-0.5 font-mono text-[12px] font-black text-lime-200">{fmtCompact(p.lifeSiphon)}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div>Barrier</div>
-                      <div className="font-mono text-[12px] text-amber-400">{fmtCompact(p.barrier)}</div>
+
+                    <div className="mt-3 border-t border-theme-border/50 pt-2">
+                      <PlayerSampleCell sample={p.sample} />
                     </div>
-                    <div>
-                      <div>Downed</div>
-                      <div className="font-mono text-[12px] text-emerald-300">{fmtCompact(p.downedHealing)}</div>
-                    </div>
-                    <div>
-                      <div>Life</div>
-                      <div className="font-mono text-[12px] text-emerald-200">{fmtCompact(p.lifeSiphon)}</div>
-                    </div>
-                  </div>
-                  <div className="mt-3 border-t border-theme-border/50 pt-2">
-                    <PlayerSampleCell sample={p.sample} />
-                  </div>
-                </div>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           ) : (
             <div className="rounded-lg border border-slate-800/60 bg-slate-950/40 p-5 text-center text-sm text-slate-500">
