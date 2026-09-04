@@ -503,6 +503,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
 
           <div
             role="button"
+            aria-label="Upload combat log files"
             tabIndex={0}
             onClick={() => inputRef.current?.click()}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); inputRef.current?.click(); } }}
@@ -646,6 +647,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                           checked={isSelected}
                           onChange={() => toggleSelected(item.key)}
                           onClick={(e) => e.stopPropagation()}
+                          aria-label={`Select ${item.label} for report combining`}
                           className="w-3.5 h-3.5 flex-shrink-0 accent-amber-500 cursor-pointer"
                         />
                       )}
