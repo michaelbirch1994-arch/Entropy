@@ -50,6 +50,15 @@ export default function FightReplay({ log, onClose }: { log: RawFightLog; onClos
     if (playing) setHover(null);
   }, [playing]);
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   const hoveredInspection = useMemo(() => {
     if (!hover || playing) return null;
     return inspectReplayPlayer(log, hover.account, t);
@@ -69,7 +78,7 @@ export default function FightReplay({ log, onClose }: { log: RawFightLog; onClos
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6" role="dialog" aria-modal="true" aria-label="Fight replay preview" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -80,7 +89,7 @@ export default function FightReplay({ log, onClose }: { log: RawFightLog; onClos
           <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400">
             <Film className="w-3.5 h-3.5" /> Fight Replay
           </span>
-          <button onClick={onClose} className="text-slate-500 hover:text-rose-400 transition-colors">
+          <button type="button" onClick={onClose} aria-label="Close fight replay preview" title="Close fight replay preview" className="text-slate-500 hover:text-rose-400 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
