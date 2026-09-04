@@ -5,6 +5,7 @@ import { useDamageScope, pickDamageScopeValue } from "../store/DamageScopeContex
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
 import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
+import PeakDamagePanel from "../components/ui/PeakDamagePanel";
 import LeaderboardTable from "../components/ui/LeaderboardTable";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 import type { DefensePlayer, HealingPlayer, LeaderboardEntry, OffensePlayer, PlayerSkillBreakdown, SupportPlayer } from "../types/report";
@@ -15,6 +16,7 @@ import { buildNormalizedTopPlayerSourceLeaderboards } from "../lib/topPlayerSour
 import { ChevronDown, ChevronUp, Trophy, Swords, Heart, Shield, Zap, Droplet, Target, Wind, Flame } from "lucide-react";
 
 type MetricKey =
+  | "peak1s"
   | "dps"
   | "damage"
   | "condiDamage"
@@ -30,6 +32,7 @@ type MetricKey =
   | "kills";
 
 const METRICS: { key: MetricKey; label: string; icon: typeof Trophy; unit?: string }[] = [
+  { key: "peak1s", label: "Peak 1s Damage", icon: Zap },
   { key: "dps", label: "DPS", icon: Swords, unit: "" },
   { key: "damage", label: "Total Damage", icon: Swords },
   { key: "condiDamage", label: "Condition Damage", icon: Flame },
@@ -46,6 +49,7 @@ const METRICS: { key: MetricKey; label: string; icon: typeof Trophy; unit?: stri
 ];
 
 const METRIC_GLOW: Record<MetricKey, string> = {
+  peak1s: "neon-offense",
   dps: "neon-offense",
   damage: "neon-offense",
   condiDamage: "neon-offense",
@@ -355,7 +359,7 @@ export default function TopPlayersView() {
   if (!report) return null;
   const normalizedSources = buildNormalizedTopPlayerSources(report.stats);
   const lb = buildNormalizedTopPlayerSourceLeaderboards(report.stats, normalizedSources);
-  const entries: LeaderboardEntry[] = normalizeTopPlayersLeaderboard(report.stats, metric, normalizedSources);
+  const entries: LeaderboardEntry[] = metric === "peak1s" ? [] : normalizeTopPlayersLeaderboard(report.stats, metric, normalizedSources);
   const active = METRICS.find((m) => m.key === metric)!;
   const maxValue = entries.length ? entries[0].value : 1;
   const snapshotKey = leaderboardSnapshotKey(metric, entries);
@@ -372,6 +376,7 @@ export default function TopPlayersView() {
               type="button"
               key={m.key}
               onClick={() => setMetric(m.key)}
+              aria-pressed={isActive}
               className={`theme-filter-button flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 border ${isActive ? "is-active" : ""}`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -381,6 +386,7 @@ export default function TopPlayersView() {
         })}
       </div>
 
+      {metric === "peak1s" ? <PeakDamagePanel data={report.stats.dpsGraph} totalFights={totalFights} /> : <>
       <div className="theme-podium-grid grid grid-cols-1 md:grid-cols-3 gap-4" key={`podium:${snapshotKey}`}>
         {entries.slice(0, 3).map((e, i) => {
           const place = i + 1;
@@ -466,6 +472,7 @@ export default function TopPlayersView() {
           generalPlayers={report.stats.generalPlayers}
         />
       </Panel>
+      </>}
     </div>
   );
 }

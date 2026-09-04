@@ -8,6 +8,9 @@
   --surface-border-active: color-mix(in srgb, var(--entropy-gold) 34%, var(--entropy-border));
   --surface-shadow-rest: 0 18px 46px -42px rgba(0, 0, 0, 0.92);
   --surface-shadow-hover: 0 22px 54px -44px rgba(0, 0, 0, 0.96);
+  --accent-light-edge: color-mix(in srgb, var(--entropy-gold) 62%, #fff1ce);
+  --accent-light-soft: color-mix(in srgb, var(--entropy-gold) 12%, transparent);
+  --accent-light-rim: color-mix(in srgb, var(--entropy-gold) 30%, transparent);
 }
 
 .theme-panel,
@@ -45,7 +48,7 @@
     linear-gradient(115deg, color-mix(in srgb, var(--plate-accent) 3.5%, transparent), transparent 48%),
     color-mix(in srgb, var(--entropy-surface-1) 94%, var(--entropy-bg-deep)) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.028),
+    inset 0 1px 0 var(--accent-light-soft),
     inset 2px 0 0 color-mix(in srgb, var(--plate-accent) 30%, transparent),
     var(--surface-shadow-rest) !important;
 }
@@ -54,7 +57,7 @@
 .theme-stat-card:hover {
   border-color: color-mix(in srgb, var(--plate-accent) 31%, var(--surface-border-rest)) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    inset 0 1px 0 var(--accent-light-rim),
     inset 2px 0 0 color-mix(in srgb, var(--plate-accent) 44%, transparent),
     var(--surface-shadow-hover) !important;
 }
@@ -143,6 +146,7 @@
     color-mix(in srgb, var(--entropy-surface-1) 92%, var(--entropy-bg-deep)) !important;
   border-color: color-mix(in srgb, var(--player-glow, var(--entropy-gold)) 18%, var(--entropy-border)) !important;
   box-shadow:
+    inset 0 1px 0 var(--accent-light-soft),
     inset 2px 0 0 color-mix(in srgb, var(--player-glow, var(--entropy-gold)) 30%, transparent),
     0 16px 40px -38px rgba(0, 0, 0, 0.95) !important;
 }
@@ -186,6 +190,38 @@
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--entropy-gold) 5%, transparent), transparent 65%),
     color-mix(in srgb, var(--entropy-surface-2) 34%, transparent) !important;
+}
+
+/* Concentrate static gold light on navigation and control rims, not data text. */
+.theme-nav-item[aria-current="page"],
+.theme-segmented-control-option[aria-selected="true"],
+.theme-builder-root .theme-builder-tabs > button.is-active {
+  box-shadow:
+    inset 0 1px 0 var(--accent-light-rim),
+    inset 2px 0 0 var(--accent-light-edge),
+    inset 0 0 18px var(--accent-light-soft),
+    0 0 12px color-mix(in srgb, var(--entropy-gold) 7%, transparent) !important;
+}
+
+.theme-nav-item[aria-current="page"] > svg,
+.theme-builder-root .theme-builder-mark > svg {
+  filter: drop-shadow(0 0 4px var(--accent-light-rim));
+}
+
+.theme-builder-root .theme-builder-mark {
+  border-color: var(--accent-light-rim);
+  background: color-mix(in srgb, var(--entropy-gold) 5%, var(--entropy-bg-deep));
+  box-shadow:
+    inset 0 1px 0 var(--accent-light-edge),
+    inset 0 0 14px var(--accent-light-soft),
+    0 0 16px var(--accent-light-soft);
+}
+
+.theme-builder-root .theme-builder-command-deck {
+  box-shadow:
+    inset 3px 0 0 var(--accent-light-edge),
+    inset 0 1px 0 var(--accent-light-rim),
+    0 -5px 20px -12px var(--accent-light-rim);
 }
 
 .theme-alert-plate {
