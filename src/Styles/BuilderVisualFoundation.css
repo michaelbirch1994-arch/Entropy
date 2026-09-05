@@ -389,6 +389,256 @@
   container-type: inline-size;
 }
 
+.theme-builder-layout > main {
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.theme-builder-loadout-canvas {
+  position: relative;
+  display: grid;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(216, 173, 74, 0.34);
+  border-radius: 8px;
+  background: #050708;
+  box-shadow: inset 0 1px 0 rgba(255, 236, 181, 0.045), 0 28px 70px -58px rgba(216, 173, 74, 0.72);
+}
+
+.theme-builder-canvas-header {
+  display: flex;
+  min-height: 4.4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.72rem 0.9rem;
+  border-bottom: 1px solid rgba(216, 173, 74, 0.25);
+  background: rgba(10, 13, 14, 0.98);
+}
+
+.theme-builder-canvas-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.72rem;
+}
+
+.theme-builder-canvas-identity > span,
+.theme-builder-canvas-identity > img {
+  width: 2.8rem;
+  height: 2.8rem;
+  flex: 0 0 2.8rem;
+}
+
+.theme-builder-canvas-identity h3 {
+  margin: 0.1rem 0 0;
+  color: #f5ebd4;
+  font-size: 1rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.theme-builder-canvas-status {
+  display: grid;
+  min-width: 4.2rem;
+  padding-left: 0.85rem;
+  border-left: 1px solid rgba(216, 173, 74, 0.25);
+  text-align: right;
+}
+
+.theme-builder-canvas-status span {
+  color: var(--theme-textFaint);
+  font-size: 0.56rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.theme-builder-canvas-status strong {
+  color: #f0ca68;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+}
+
+.theme-builder-canvas-stage {
+  position: relative;
+  display: grid;
+  gap: 0.72rem;
+  padding: 0.82rem 0.9rem 0.9rem;
+  border-bottom: 1px solid rgba(123, 108, 76, 0.22);
+}
+
+.theme-builder-canvas-stage:last-child {
+  border-bottom: 0;
+}
+
+.theme-builder-canvas-stage.is-combat {
+  background: rgba(216, 173, 74, 0.018);
+}
+
+.theme-builder-canvas-stage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: color-mix(in srgb, var(--builder-gold) 78%, var(--theme-textMuted));
+}
+
+.theme-builder-canvas-stage-head h4 {
+  margin: 0.08rem 0 0;
+  color: var(--theme-text);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.theme-builder-loadout-canvas .theme-builder-combat-bar {
+  padding: 0.9rem 1rem;
+  border-color: rgba(216, 173, 74, 0.27);
+  background: rgba(2, 4, 5, 0.96);
+  box-shadow: inset 0 1px 0 rgba(255, 236, 181, 0.04), 0 18px 40px -38px rgba(216, 173, 74, 0.8);
+}
+
+.theme-builder-loadout-canvas .theme-builder-spec-stack {
+  gap: 0.5rem;
+}
+
+.theme-builder-loadout-canvas .theme-builder-spec-line {
+  --builder-spec-art: none;
+  isolation: isolate;
+  position: relative;
+  grid-template-columns: minmax(13rem, 0.92fr) minmax(24rem, 1.55fr);
+  min-height: 5.1rem;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(123, 108, 76, 0.3);
+  border-radius: 6px;
+  background: #07090a;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.theme-builder-loadout-canvas .theme-builder-spec-line:nth-child(2),
+.theme-builder-loadout-canvas .theme-builder-spec-line:nth-child(3) {
+  margin: 0;
+}
+
+.theme-builder-loadout-canvas .theme-builder-spec-line::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: linear-gradient(90deg, rgba(6, 8, 9, 0.98) 0%, rgba(6, 8, 9, 0.92) 42%, rgba(6, 8, 9, 0.62) 100%), var(--builder-spec-art);
+  background-position: center, right 28%;
+  background-repeat: no-repeat;
+  background-size: cover, min(62%, 34rem) auto;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.theme-builder-loadout-canvas .theme-builder-spec-line.is-selected::before {
+  opacity: 0.58;
+}
+
+.theme-builder-loadout-canvas .theme-builder-spec-line.is-selected {
+  border-color: rgba(216, 173, 74, 0.42);
+  box-shadow: inset 2px 0 0 rgba(216, 173, 74, 0.72);
+}
+
+.theme-builder-loadout-canvas .theme-builder-spec-line.is-elite {
+  border-color: rgba(229, 190, 91, 0.58);
+  box-shadow: inset 2px 0 0 #e0b84f, 0 14px 34px -32px rgba(224, 184, 79, 0.8);
+}
+
+.theme-builder-loadout-canvas .theme-builder-spec-selector,
+.theme-builder-loadout-canvas .theme-builder-trait-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.theme-builder-loadout-canvas .theme-builder-trait-tier button {
+  border-radius: 4px;
+  background: rgba(2, 4, 5, 0.9);
+  opacity: 0.68;
+  transition: opacity 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.theme-builder-loadout-canvas .theme-builder-trait-tier button.is-active {
+  border-color: rgba(231, 193, 94, 0.9);
+  opacity: 1;
+  box-shadow: 0 0 0 1px rgba(231, 193, 94, 0.2), 0 0 16px -8px rgba(231, 193, 94, 0.9);
+}
+
+.theme-builder-canvas-stage.is-utility {
+  background: rgba(255, 255, 255, 0.008);
+}
+
+.theme-builder-loadout-canvas .theme-builder-skill-slot {
+  border-radius: 6px;
+  background: rgba(3, 5, 6, 0.92);
+}
+
+@container (max-width: 55rem) {
+  .theme-builder-loadout-canvas .theme-builder-combat-bar {
+    grid-template-columns: 1fr;
+    align-items: center;
+  }
+
+  .theme-builder-loadout-canvas .theme-builder-combat-core {
+    order: 2;
+    grid-template-columns: auto auto;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .theme-builder-loadout-canvas .theme-builder-combat-group.is-weapon {
+    order: 3;
+    text-align: left;
+  }
+
+  .theme-builder-loadout-canvas .theme-builder-combat-group.is-weapon .theme-builder-combat-skills {
+    justify-content: start;
+  }
+
+  .theme-builder-loadout-canvas .theme-builder-spec-line {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-builder-loadout-canvas .theme-builder-spec-line::before {
+    background-position: center, right top;
+    background-size: cover, min(72%, 31rem) auto;
+  }
+}
+
+@container (max-width: 34rem) {
+  .theme-builder-canvas-header,
+  .theme-builder-canvas-stage {
+    padding-right: 0.72rem;
+    padding-left: 0.72rem;
+  }
+
+  .theme-builder-canvas-identity > span,
+  .theme-builder-canvas-identity > img {
+    width: 2.35rem;
+    height: 2.35rem;
+    flex-basis: 2.35rem;
+  }
+
+  .theme-builder-canvas-identity h3 {
+    font-size: 0.88rem;
+  }
+
+  .theme-builder-loadout-canvas .theme-builder-spec-line {
+    min-height: 0;
+    padding: 0.58rem;
+  }
+
+  .theme-builder-loadout-canvas .theme-builder-spec-line::before {
+    background-image: linear-gradient(180deg, rgba(6, 8, 9, 0.82), rgba(6, 8, 9, 0.97)), var(--builder-spec-art);
+    background-position: center, right top;
+    background-size: cover, 100% auto;
+  }
+}
+
 /* The app rail can leave the builder narrower than the viewport breakpoint.
    Reflow section navigation from the actual workspace width so every tab stays visible. */
 @container (max-width: 42rem) {
@@ -447,5 +697,11 @@
 @media (prefers-reduced-motion: reduce) {
   .theme-builder-root::before {
     animation: none;
+  }
+
+  .theme-builder-loadout-canvas .theme-builder-spec-line,
+  .theme-builder-loadout-canvas .theme-builder-spec-line::before,
+  .theme-builder-loadout-canvas .theme-builder-trait-tier button {
+    transition: none;
   }
 }

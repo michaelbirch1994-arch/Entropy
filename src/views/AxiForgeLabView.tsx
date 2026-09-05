@@ -2731,15 +2731,47 @@ export default function AxiForgeLabView() {
           )}
 
           {builderViewMode === "traits" && (
-            <>
-            <section className="theme-panel theme-builder-panel">
-              <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Step 02</div><h3>Specializations and traits</h3></div><Layers3 className="h-5 w-5 text-theme-warning" /></div>
+            <div className="theme-panel theme-builder-loadout-canvas">
+              <header className="theme-builder-canvas-header">
+                <div className="theme-builder-canvas-identity">
+                  {selectedProfession && <ClassIcon name={selectedProfession.name} size="lg" />}
+                  <div>
+                    <div className="theme-builder-kicker">{selectedProfession?.name ?? "Build"} · {builder.gameMode.toUpperCase()}</div>
+                    <h3>{resolveEliteSpecName(builder.specializationIds, specsById, selectedProfession?.name ?? "Combat loadout")}</h3>
+                  </div>
+                </div>
+                <div className="theme-builder-canvas-status"><span>Loadout</span><strong>{6 - Math.min(6, issues.length)}/6</strong></div>
+              </header>
+
+              <div className="theme-builder-canvas-stage is-combat">
+                <div className="theme-builder-canvas-stage-head"><div><div className="theme-builder-kicker">Combat readout</div><h4>Equipped skill bar</h4></div><ArrowLeftRight className="h-4 w-4" /></div>
+                <BuilderCombatBar
+                  builder={builder}
+                  profession={selectedProfession}
+                  specsById={specsById}
+                  skillsById={skillsById}
+                  legends={legends}
+                  pets={pets}
+                  health={attributeTotals.health}
+                  weaponSet={displayedWeaponSet}
+                  onSwap={() => setDisplayedWeaponSet((current) => current === 1 ? 2 : 1)}
+                  onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })}
+                  onInspectPet={(pet) => setSelectedSummary({ kind: "pet", item: pet })}
+                />
+              </div>
+
+              <div className="theme-builder-canvas-stage">
+              <div className="theme-builder-canvas-stage-head"><div><div className="theme-builder-kicker">Specialization matrix</div><h4>Traits</h4></div><Layers3 className="h-4 w-4" /></div>
               <div className="theme-builder-spec-stack">
                 {[0, 1, 2].map((trackIndex) => {
                   const selectedSpecId = builder.specializationIds[trackIndex];
                   const selectedSpec = selectedSpecId ? specsById.get(selectedSpecId) : null;
                   return (
-                    <div key={trackIndex} className="theme-builder-spec-line">
+                    <div
+                      key={trackIndex}
+                      className={`theme-builder-spec-line ${selectedSpec ? "is-selected" : "is-empty"} ${selectedSpec?.elite ? "is-elite" : ""}`}
+                      style={selectedSpec?.background ? { "--builder-spec-art": `url("${selectedSpec.background}")` } as React.CSSProperties : undefined}
+                    >
                       <div className="theme-builder-spec-selector">
                         <span>{String(trackIndex + 1).padStart(2, "0")}</span>
                         <ChoicePickerField
@@ -2788,35 +2820,17 @@ export default function AxiForgeLabView() {
                   );
                 })}
               </div>
-            </section>
+              </div>
 
-            <section className="theme-panel theme-builder-panel">
-              <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Step 03</div><h3>Land skill bar</h3></div><Swords className="h-5 w-5 text-theme-danger" /></div>
+              <div className="theme-builder-canvas-stage is-utility">
+              <div className="theme-builder-canvas-stage-head"><div><div className="theme-builder-kicker">Land loadout</div><h4>Utility skills</h4></div><Swords className="h-4 w-4" /></div>
               <div className="theme-builder-skill-bar">
                 <SkillPicker label="Heal" slot="Heal" selectedId={builder.healSkillId} skills={skillGroups.Heal} allSkills={professionSkills} usedIds={[]} onChange={(id) => chooseSkill("Heal", id)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />
                 {[0, 1, 2].map((index) => <SkillPicker key={index} label={`Utility ${index + 1}`} slot="Utility" selectedId={builder.utilitySkillIds[index]} skills={skillGroups.Utility} allSkills={professionSkills} usedIds={builder.utilitySkillIds} onChange={(id) => chooseSkill("Utility", id, index)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />)}
                 <SkillPicker label="Elite" slot="Elite" selectedId={builder.eliteSkillId} skills={skillGroups.Elite} allSkills={professionSkills} usedIds={[]} onChange={(id) => chooseSkill("Elite", id)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />
               </div>
-            </section>
-
-            <section className="theme-panel theme-builder-panel theme-builder-combat-panel">
-              <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Combat readout</div><h3>Equipped skill bar</h3></div><ArrowLeftRight className="h-5 w-5 text-theme-accent" /></div>
-              <BuilderCombatBar
-                builder={builder}
-                profession={selectedProfession}
-                specsById={specsById}
-                skillsById={skillsById}
-                legends={legends}
-                pets={pets}
-                health={attributeTotals.health}
-                weaponSet={displayedWeaponSet}
-                onSwap={() => setDisplayedWeaponSet((current) => current === 1 ? 2 : 1)}
-                onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })}
-                onInspectPet={(pet) => setSelectedSummary({ kind: "pet", item: pet })}
-              />
-            </section>
-
-            </>
+              </div>
+            </div>
           )}
 
           {builderViewMode === "equipment" && (

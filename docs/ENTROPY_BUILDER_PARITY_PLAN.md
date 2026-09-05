@@ -67,6 +67,7 @@ Status: in progress.
 
 Implemented in the current slice:
 
+- Traits & Skills is presented as one cohesive loadout canvas with a compact profession header, combat bar, specialization matrix, and utility dock; responsive behavior follows the actual editor-column width.
 - Three compact specialization rows with searchable Core/Elite selection, icon-backed major trait choices, duplicate guards, and Inspector access.
 - Selected land skills, weapon skills, and API-explicit profession mechanics render as a visual combat bar with inspectable icons.
 - Land skill pickers expose core skills plus only skills belonging to the active specialization; incompatible imported selections remain visible and repairable.
