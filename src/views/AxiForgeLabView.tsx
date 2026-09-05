@@ -29,6 +29,7 @@ import {
   RotateCcw,
   Save,
   Search,
+  Share2,
   Shield,
   Sparkles,
   Swords,
@@ -2028,6 +2029,7 @@ export default function AxiForgeLabView() {
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("build");
   const [builderViewMode, setBuilderViewMode] = useState<BuilderSection>(loadBuilderSection);
   const [equipmentSection, setEquipmentSection] = useState<EquipmentSection>("weapons");
+  const exportMenuRef = useRef<HTMLDetailsElement>(null);
   const [displayedWeaponSet, setDisplayedWeaponSet] = useState<WeaponSetNumber>(() => workspace.draft.activeWeaponSet === 2 ? 2 : 1);
   const [editingBuildId, setEditingBuildId] = useState<string | null>(null);
   const [professions, setProfessions] = useState<Gw2Profession[]>([]);
@@ -2662,9 +2664,14 @@ export default function AxiForgeLabView() {
           >
             <Download className="h-4 w-4" /> Import
           </button>
-          <button type="button" onClick={exportCurrentBuild} className="theme-command-button"><FileCode2 className="h-4 w-4" /> Copy code</button>
-          <button type="button" onClick={exportChatCode} className="theme-command-button"><Clipboard className="h-4 w-4" /> Copy Chat Code</button>
-          <button type="button" onClick={shareCurrentBuild} className="theme-command-button"><Link2 className="h-4 w-4" /> Share link</button>
+          <details ref={exportMenuRef} className="theme-builder-export-menu">
+            <summary className="theme-command-button"><Share2 className="h-4 w-4" /> Export</summary>
+            <div role="menu" aria-label="Export build">
+              <button type="button" role="menuitem" onClick={() => { exportCurrentBuild(); exportMenuRef.current?.removeAttribute("open"); }}><FileCode2 className="h-4 w-4" /><span><strong>Entropy code</strong><small>Copy a portable build code</small></span></button>
+              <button type="button" role="menuitem" onClick={() => { exportChatCode(); exportMenuRef.current?.removeAttribute("open"); }}><Clipboard className="h-4 w-4" /><span><strong>Chat code</strong><small>Copy a Guild Wars 2 build code</small></span></button>
+              <button type="button" role="menuitem" onClick={() => { shareCurrentBuild(); exportMenuRef.current?.removeAttribute("open"); }}><Link2 className="h-4 w-4" /><span><strong>Share link</strong><small>Copy a link to this build</small></span></button>
+            </div>
+          </details>
           <button type="button" onClick={saveCurrentBuild} className="theme-command-button is-primary"><Save className="h-4 w-4" /> {editingBuildId ? "Update" : "Save"}</button>
         </div>
       </header>

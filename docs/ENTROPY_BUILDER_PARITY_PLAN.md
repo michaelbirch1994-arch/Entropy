@@ -76,6 +76,7 @@ Implemented in the current slice:
 - Ranger terrestrial pet choices exclude the five aquatic-only API IDs while retaining amphibious pets; invalid imported selections remain visible and repairable.
 - Revenant legend choices include core legends plus only the active elite specialization's legend, with both selected legend stances represented in the combat bar.
 - Equipment uses four focused workspaces for weapons, armor and trinkets, upgrades, and consumables; each workspace presents only its matching visual summary and controls.
+- The Builder command header keeps Import and Save visible while grouping secondary code and sharing actions into one Export menu.
 
 Remaining in Cut 3:
 
