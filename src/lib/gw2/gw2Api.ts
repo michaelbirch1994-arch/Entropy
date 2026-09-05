@@ -58,8 +58,11 @@ export async function fetchGw2Traits(ids: number[]): Promise<Gw2Trait[]> {
 }
 
 export async function fetchGw2Skills(ids: number[]): Promise<Gw2Skill[]> {
-  if (!ids.length) return [];
-  const skills = await getJson<Gw2Skill[]>(`/skills?ids=${idsParam([...new Set(ids)])}`);
+  const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))];
+  if (!uniqueIds.length) return [];
+  const batches: number[][] = [];
+  for (let index = 0; index < uniqueIds.length; index += 200) batches.push(uniqueIds.slice(index, index + 200));
+  const skills = (await Promise.all(batches.map((batch) => getJson<Gw2Skill[]>(`/skills?ids=${idsParam(batch)}`)))).flat();
   return skills
     .map((skill) => ({ ...skill, description: stripMarkup(skill.description) }))
     .sort((a, b) => a.slot.localeCompare(b.slot) || a.name.localeCompare(b.name));

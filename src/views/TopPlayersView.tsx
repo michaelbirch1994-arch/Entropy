@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useReport } from "../store/ReportContext";
 import { useDamageScope, pickDamageScopeValue } from "../store/DamageScopeContext";
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
@@ -239,10 +239,11 @@ function PlayerMetricCard({
   metricLabel,
   glowClass,
   unit,
-  breakdown,
   sample,
   expanded,
   onToggle,
+  controlsId,
+  triggerId,
 }: {
   entry: LeaderboardEntry;
   index: number;
@@ -250,10 +251,11 @@ function PlayerMetricCard({
   metricLabel: string;
   glowClass: string;
   unit?: string;
-  breakdown: PlayerSourceBreakdown;
   sample: PlayerSampleContext;
   expanded: boolean;
   onToggle: () => void;
+  controlsId: string;
+  triggerId: string;
 }) {
   const style = profStyle(entry.profession);
   const share = max > 0 ? Math.max(4, (entry.value / max) * 100) : 4;
@@ -261,8 +263,11 @@ function PlayerMetricCard({
 
   return (
     <button
+      id={triggerId}
       type="button"
       onClick={onToggle}
+      aria-expanded={expanded}
+      aria-controls={controlsId}
       className={`theme-player-card ${glowClass} rounded-2xl p-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent/40`}
     >
       <div className="theme-player-card-head flex items-start justify-between gap-3">
@@ -315,28 +320,104 @@ function PlayerMetricCard({
         <span>{expanded ? "Hide source breakdown" : "Show source breakdown"}</span>
         {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
       </div>
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            key="source-breakdown"
-            initial={{ height: 0, opacity: 0, y: -8 }}
-            animate={{ height: "auto", opacity: 1, y: 0 }}
-            exit={{ height: 0, opacity: 0, y: -8 }}
-            transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="mt-3 grid grid-cols-1 gap-3">
-              <SourceGroup title="Damage pressure" rows={breakdown.damage} />
-              <SourceGroup title="Healing sources" rows={breakdown.healing} />
-              <SourceGroup title="Barrier sources" rows={breakdown.barrier} />
-              <SourceGroup title="Support / control" rows={breakdown.support} />
-              <SourceGroup title="Defense context" rows={breakdown.defense} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </button>
   );
+}
+
+function PlayerSourceDetails({
+  entry,
+  breakdown,
+  panelId,
+  triggerId,
+  onClose,
+}: {
+  entry: LeaderboardEntry;
+  breakdown: PlayerSourceBreakdown;
+  panelId: string;
+  triggerId: string;
+  onClose: () => void;
+}) {
+  const reduceMotion = useReducedMotion();
+
+  const closeAndRestoreFocus = () => {
+    onClose();
+    requestAnimationFrame(() => document.getElementById(triggerId)?.focus());
+  };
+
+  return (
+    <motion.div
+      initial={reduceMotion ? false : { height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.16, 1, 0.3, 1] }}
+      className="theme-player-source-details-motion"
+    >
+      <section
+        id={panelId}
+        role="region"
+        aria-label={`${entry.account} source breakdown`}
+        aria-labelledby={triggerId}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape") return;
+          event.preventDefault();
+          closeAndRestoreFocus();
+        }}
+        className="theme-player-source-details"
+      >
+        <header className="theme-player-source-details-head">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-theme-accent">Source breakdown</div>
+            <div className="mt-1 flex items-center gap-2">
+              <ProfessionIcon profession={entry.profession} className="h-5 w-5" />
+              <strong className="text-sm text-theme-text">{entry.account}</strong>
+              <span className="font-mono text-[10px] text-theme-muted">{entry.profession}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="theme-quiet-button"
+            onClick={closeAndRestoreFocus}
+            aria-label={`Close ${entry.account} source breakdown`}
+          >
+            <ChevronUp className="h-4 w-4" />
+            Close
+          </button>
+        </header>
+        <div className="theme-player-source-details-grid">
+          <SourceGroup title="Damage pressure" rows={breakdown.damage} />
+          <SourceGroup title="Healing sources" rows={breakdown.healing} />
+          <SourceGroup title="Barrier sources" rows={breakdown.barrier} />
+          <SourceGroup title="Support / control" rows={breakdown.support} />
+          <SourceGroup title="Defense context" rows={breakdown.defense} />
+        </div>
+      </section>
+    </motion.div>
+  );
+}
+
+function playerCardColumnCount() {
+  if (typeof window === "undefined") return 3;
+  if (window.matchMedia("(min-width: 1280px)").matches) return 3;
+  if (window.matchMedia("(min-width: 768px)").matches) return 2;
+  return 1;
+}
+
+function usePlayerCardColumnCount() {
+  const [columns, setColumns] = useState(playerCardColumnCount);
+
+  useEffect(() => {
+    const update = () => setColumns(playerCardColumnCount());
+    const desktop = window.matchMedia("(min-width: 1280px)");
+    const tablet = window.matchMedia("(min-width: 768px)");
+    desktop.addEventListener("change", update);
+    tablet.addEventListener("change", update);
+    return () => {
+      desktop.removeEventListener("change", update);
+      tablet.removeEventListener("change", update);
+    };
+  }, []);
+
+  return columns;
 }
 
 export default function TopPlayersView() {
@@ -346,6 +427,7 @@ export default function TopPlayersView() {
   const { navigationTarget, clearNavigationTarget } = useView();
   const [metric, setMetric] = useState<MetricKey>("downContrib");
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const playerCardColumns = usePlayerCardColumnCount();
 
   useEffect(() => {
     if (navigationTarget?.targetView !== "top-players") return;
@@ -364,6 +446,11 @@ export default function TopPlayersView() {
   const maxValue = entries.length ? entries[0].value : 1;
   const snapshotKey = leaderboardSnapshotKey(metric, entries);
   const totalFights = report.stats.total;
+  const cardEntries = entries.slice(0, 12);
+  const cardRows = Array.from(
+    { length: Math.ceil(cardEntries.length / playerCardColumns) },
+    (_, rowIndex) => cardEntries.slice(rowIndex * playerCardColumns, (rowIndex + 1) * playerCardColumns),
+  );
 
   return (
     <div className="theme-view-layout space-y-5 animate-view pb-12">
@@ -420,43 +507,77 @@ export default function TopPlayersView() {
         accent="text-amber-400"
       >
         {entries.length > 0 ? (
-          <div className="theme-player-card-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" key={`cards:${snapshotKey}`}>
-            {entries.slice(0, 12).map((entry, index) => (
-              <PlayerMetricCard
-                key={`${metric}:card:${entry.account}:${entry.profession}:${entry.rank}:${entry.value}:${entry.count}`}
-                entry={entry}
-                index={index}
-                max={maxValue}
-                metricLabel={active.label}
-                glowClass={METRIC_GLOW[metric]}
-                unit={active.unit}
-                sample={{
-                  fights: normalizedSources.get(entry.account)?.general?.logsJoined ?? entry.count,
-                  totalFights,
-                  combatTimeMs: normalizedSources.get(entry.account)?.general?.squadActiveMs
-                    ?? normalizedSources.get(entry.account)?.general?.totalFightMs
-                    ?? 0,
-                }}
-                expanded={expandedCard === `${metric}:${entry.account}`}
-                onToggle={() => setExpandedCard((current) => current === `${metric}:${entry.account}` ? null : `${metric}:${entry.account}`)}
-                breakdown={buildPlayerSourceBreakdown({
-                  account: entry.account,
-                  offense: normalizedSources.get(entry.account)?.offense,
-                  healing: normalizedSources.get(entry.account)?.healing,
-                  support: normalizedSources.get(entry.account)?.support,
-                  defense: normalizedSources.get(entry.account)?.defense,
-                  leaderboards: lb,
-                  damageScope,
-                  allyScope,
-                  skillBreakdown: mergePlayerSkillBreakdownsForAccount(
-                    report.stats.playerSkillBreakdowns,
-                    entry.account,
-                    entry.profession,
-                    entry.professionList,
-                  ),
-                })}
-              />
-            ))}
+          <div className="theme-player-card-stack" key={`cards:${snapshotKey}`}>
+            {cardRows.map((row, rowIndex) => {
+              const selectedEntry = row.find((entry) => expandedCard === `${metric}:${entry.account}`);
+              const selectedIndex = selectedEntry ? cardEntries.indexOf(selectedEntry) : -1;
+              const selectedTriggerId = selectedEntry ? `top-player-card-${metric}-${selectedIndex}` : "";
+              const selectedPanelId = selectedEntry ? `top-player-details-${metric}-${selectedIndex}` : "";
+              const selectedBreakdown = selectedEntry ? buildPlayerSourceBreakdown({
+                account: selectedEntry.account,
+                offense: normalizedSources.get(selectedEntry.account)?.offense,
+                healing: normalizedSources.get(selectedEntry.account)?.healing,
+                support: normalizedSources.get(selectedEntry.account)?.support,
+                defense: normalizedSources.get(selectedEntry.account)?.defense,
+                leaderboards: lb,
+                damageScope,
+                allyScope,
+                skillBreakdown: mergePlayerSkillBreakdownsForAccount(
+                  report.stats.playerSkillBreakdowns,
+                  selectedEntry.account,
+                  selectedEntry.profession,
+                  selectedEntry.professionList,
+                ),
+              }) : null;
+
+              return (
+                <div className="theme-player-card-row-group" key={`${snapshotKey}:row:${rowIndex}`}>
+                  <div
+                    className="theme-player-card-row"
+                    style={{ gridTemplateColumns: `repeat(${playerCardColumns}, minmax(0, 1fr))` }}
+                  >
+                    {row.map((entry) => {
+                      const index = cardEntries.indexOf(entry);
+                      const cardKey = `${metric}:${entry.account}`;
+                      return (
+                        <PlayerMetricCard
+                          key={`${metric}:card:${entry.account}:${entry.profession}:${entry.rank}:${entry.value}:${entry.count}`}
+                          entry={entry}
+                          index={index}
+                          max={maxValue}
+                          metricLabel={active.label}
+                          glowClass={METRIC_GLOW[metric]}
+                          unit={active.unit}
+                          sample={{
+                            fights: normalizedSources.get(entry.account)?.general?.logsJoined ?? entry.count,
+                            totalFights,
+                            combatTimeMs: normalizedSources.get(entry.account)?.general?.squadActiveMs
+                              ?? normalizedSources.get(entry.account)?.general?.totalFightMs
+                              ?? 0,
+                          }}
+                          expanded={expandedCard === cardKey}
+                          onToggle={() => setExpandedCard((current) => current === cardKey ? null : cardKey)}
+                          controlsId={`top-player-details-${metric}-${index}`}
+                          triggerId={`top-player-card-${metric}-${index}`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <AnimatePresence initial={false} mode="wait">
+                    {selectedEntry && selectedBreakdown && (
+                      <PlayerSourceDetails
+                        key={`${metric}:details:${selectedEntry.account}`}
+                        entry={selectedEntry}
+                        breakdown={selectedBreakdown}
+                        panelId={selectedPanelId}
+                        triggerId={selectedTriggerId}
+                        onClose={() => setExpandedCard(null)}
+                      />
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="py-10 text-center text-sm text-theme-muted">No leaderboard data available for {active.label}.</div>

@@ -259,7 +259,7 @@ export default function DefensiveView() {
   return (
     <div className="space-y-5 animate-view pb-12">
       {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-9 gap-4">
+      <div className="theme-defensive-summary-grid grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-9 gap-4">
         <StatCard label={lbl("Total Healing")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalHealing, totals.healingActiveSec))} icon={<Heart className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
         <StatCard label={lbl("Total Barrier")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrier, totals.healingActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
         <StatCard label={lbl("Barrier Absorbed")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalBarrierAbsorbed, totals.defenseActiveSec))} icon={<Shield className="w-3.5 h-3.5 text-amber-300" />} accent="text-amber-300" />

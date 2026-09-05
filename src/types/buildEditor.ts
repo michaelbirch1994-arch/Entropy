@@ -111,6 +111,9 @@ export interface Gw2Skill {
   weapon_type?: string;
   professions?: string[];
   slot: Gw2SkillSlot;
+  attunement?: string;
+  dual_attunement?: string;
+  specialization?: number;
   facts?: Gw2ApiFact[];
 }
 
