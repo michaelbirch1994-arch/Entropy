@@ -52,7 +52,7 @@ Remaining in Cut 2:
 - Audit the curated rune, sigil, enrichment, relic, food, and utility lists against current game data before claiming full catalog coverage.
 - Expand profession mechanic-slot presentation beyond the API-explicit core and elite buttons now shown in Preview. Derived mechanics still require dedicated resolvers for weapon bursts, toolbelt loadouts, pets, legends, and transformed bars.
 - Add game-mode-aware filtering where the GW2 API exposes a reliable mode distinction.
-- Keep raw IDs available only in an advanced inspector for troubleshooting and lossless import.
+- Keep raw IDs available only in the collapsed Advanced build data inspector for troubleshooting and lossless import.
 
 Acceptance:
 

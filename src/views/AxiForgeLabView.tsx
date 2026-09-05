@@ -470,7 +470,7 @@ function ItemPickerField({
     : choices.find((choice) => choice.label === value);
   const selectedId = selectedChoice?.id ?? (valueKind === "id" ? Number(value) || 0 : 0);
   const selectedItem = selectedId ? (choiceItems[selectedId] ?? items[selectedId]) : null;
-  const displayValue = value ? (selectedChoice?.label ?? selectedItem?.name ?? (valueKind === "id" ? byId.get(value) ?? value : value)) : "";
+  const displayValue = value ? (selectedChoice?.label ?? selectedItem?.name ?? (valueKind === "id" ? byId.get(value) ?? "Unavailable imported item" : value)) : "";
   const resolved = !value || Boolean(selectedChoice) || (valueKind === "id" && byId.has(value));
   const enrichedItems = { ...items, ...choiceItems };
   const filters = useMemo(() => ["All", ...Array.from(new Set(choices.map((choice) => itemChoiceGroup(choice.label)))).sort()], [choices]);
@@ -523,7 +523,7 @@ function ItemPickerField({
         <span><strong>{displayValue || placeholder}</strong><small>{displayValue ? itemChoiceGroup(displayValue) : "Open searchable picker"}</small></span>
         <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </button>
-      {!resolved && <span className="theme-builder-choice-note"><AlertCircle className="h-3.5 w-3.5" /> Raw item ID {value} — not in the curated catalog.</span>}
+      {!resolved && <span className="theme-builder-choice-note"><AlertCircle className="h-3.5 w-3.5" /> Imported item is not in the curated catalog.</span>}
       {open && createPortal(
         <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closePicker(); }}>
           <section id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} onKeyDown={(event) => { if (event.key === "Escape") closePicker(); }}>
@@ -549,7 +549,7 @@ function ItemPickerField({
                 return (
                   <button key={choice.label} type="button" aria-pressed={active} className={active ? "is-active" : undefined} onClick={() => choose(choice)}>
                     <span className="theme-builder-picker-icon">{item?.icon ? <img src={item.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}</span>
-                    <span><strong>{item?.name ?? choice.label}</strong><small>{itemChoiceGroup(choice.label)}{choice.id ? ` / Item ${choice.id}` : ""}</small></span>
+                    <span><strong>{item?.name ?? choice.label}</strong><small>{itemChoiceGroup(choice.label)}</small></span>
                   </button>
                 );
               })}
@@ -572,7 +572,7 @@ function EquipmentItemSummary({ values, items }: { values: string[]; items: Reco
         return (
           <div key={value}>
             {item?.icon ? <img src={item.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}
-            <span><strong>{item?.name ?? "Unresolved item"}</strong><small>Item {value}</small></span>
+            <span><strong>{item?.name ?? "Unavailable imported item"}</strong><small>{item?.type ?? "Imported item"}</small></span>
           </div>
         );
       })}
@@ -601,7 +601,7 @@ function EquipmentLoadoutSheet({ builder, items, specsById }: { builder: Entropy
     return off ? `${main} + ${off}` : main;
   };
   const runeIds = [...new Set(Object.values(builder.equipment.runes).filter(Boolean))];
-  const runeNames = runeIds.map((id) => items[Number(id)]?.name ?? `Item ${id}`);
+  const runeNames = runeIds.map((id) => items[Number(id)]?.name ?? "Imported rune");
   const cells = [
     ["Stat doctrine", builder.equipment.statPackage || "Unassigned"],
     ["Weapon set I", weaponSet(1)],
@@ -634,7 +634,16 @@ function BuilderReadiness({ issues, embedded = false }: { issues: string[]; embe
   );
 }
 
-function DetailPanel({ selected, embedded = false }: { selected: BuilderSummaryItem | null; embedded?: boolean }) {
+function BuilderAdvancedData({ builder }: { builder: EntropyBuilderState }) {
+  return (
+    <details className="theme-builder-advanced-data">
+      <summary><Wrench className="h-3.5 w-3.5" /> Advanced build data</summary>
+      <pre>{JSON.stringify(builder, null, 2)}</pre>
+    </details>
+  );
+}
+
+function DetailPanel({ selected, builder, embedded = false }: { selected: BuilderSummaryItem | null; builder: EntropyBuilderState; embedded?: boolean }) {
   const className = `theme-builder-inspector${embedded ? " is-embedded" : ""}`;
   if (!selected) {
     return (
@@ -642,6 +651,7 @@ function DetailPanel({ selected, embedded = false }: { selected: BuilderSummaryI
         <div className="theme-builder-kicker"><BookOpen className="h-4 w-4" /> Field manual</div>
         <h3>Inspect the loadout</h3>
         <p>Focus a profession, specialization, trait, or skill to read its live Guild Wars 2 details here.</p>
+        <BuilderAdvancedData builder={builder} />
       </aside>
     );
   }
@@ -676,11 +686,12 @@ function DetailPanel({ selected, embedded = false }: { selected: BuilderSummaryI
       <a href={wikiSearchUrl(item.name)} target="_blank" rel="noreferrer" className="theme-builder-link">
         Open wiki <ExternalLink className="h-3.5 w-3.5" />
       </a>
+      <BuilderAdvancedData builder={builder} />
     </aside>
   );
 }
 
-function BuilderMobileTools({ issues, selected }: { issues: string[]; selected: BuilderSummaryItem | null }) {
+function BuilderMobileTools({ issues, selected, builder }: { issues: string[]; selected: BuilderSummaryItem | null; builder: EntropyBuilderState }) {
   const [openPanel, setOpenPanel] = useState<MobileRailPanel | null>(null);
   const returnFocusRef = useRef<HTMLButtonElement | null>(null);
   const readinessButtonRef = useRef<HTMLButtonElement>(null);
@@ -780,7 +791,7 @@ function BuilderMobileTools({ issues, selected }: { issues: string[]; selected: 
                   <button type="button" autoFocus onClick={closePanel} aria-label={`Close ${sheetTitle}`} title="Close"><X className="h-4 w-4" /></button>
                 </header>
                 <div className="theme-builder-mobile-sheet-content">
-                  {openPanel === "readiness" ? <BuilderReadiness issues={issues} embedded /> : <DetailPanel selected={selected} embedded />}
+                  {openPanel === "readiness" ? <BuilderReadiness issues={issues} embedded /> : <DetailPanel selected={selected} builder={builder} embedded />}
                 </div>
               </motion.section>
             </motion.div>
@@ -2937,9 +2948,9 @@ export default function AxiForgeLabView() {
                 {builder.professionId === "Revenant" && <>{[0, 1].map((index) => <ChoicePickerField key={index} id={`builder-legend-${index}`} label={`Legend ${index + 1}`} value={builder.selectedLegends[index]} choices={legends.map((legend) => ({ value: legend.id, label: legendLabel(legend.id), group: "Legend", meta: legend.id }))} onChange={(value) => updateBuilder((current) => ({ ...current, selectedLegends: current.selectedLegends.map((item, itemIndex) => itemIndex === index ? value : item) as [string, string] }))} placeholder="Choose legend" clearLabel="Clear legend" />)}</>}
                 {builder.professionId === "Ranger" && <>{(["terrestrial1", "terrestrial2"] as const).map((field, index) => <ChoicePickerField key={field} id={`builder-pet-${field}`} label={`Terrestrial pet ${index + 1}`} value={builder.selectedPets[field] ? String(builder.selectedPets[field]) : ""} choices={pets.map((pet) => ({ value: String(pet.id), label: pet.name, icon: pet.icon, group: "Pet", meta: pet.description }))} onChange={(value) => updateBuilder((current) => ({ ...current, selectedPets: { ...current.selectedPets, [field]: Number(value) || 0 } }))} placeholder="Choose pet" clearLabel="Clear pet" />)}</>}
                 {builder.professionId === "Elementalist" && <>{(["activeAttunement", "activeAttunement2"] as const).map((field, index) => <div key={field}><FieldLabel>Attunement {index + 1}</FieldLabel><div className="theme-builder-mechanic-pills">{["", "Fire", "Water", "Air", "Earth"].map((attunement) => <button key={attunement || "None"} type="button" aria-pressed={builder[field] === attunement} className={builder[field] === attunement ? "is-active" : undefined} onClick={() => updateBuilder((current) => ({ ...current, [field]: attunement }))}>{attunement || "None"}</button>)}</div></div>)}</>}
-                {builder.professionId === "Engineer" && <ChoicePickerField id="builder-engineer-kit" label="Active kit" value={builder.activeKit ? String(builder.activeKit) : ""} choices={[...(builder.activeKit > 0 && !engineerKitOptions.some((skill) => skill.id === builder.activeKit) ? [{ value: String(builder.activeKit), label: `Unavailable skill ${builder.activeKit}`, group: "Imported", meta: "Unavailable skill" }] : []), ...engineerKitOptions.map((skill) => ({ value: String(skill.id), label: skill.name, icon: skill.icon, group: skill.type ?? "Kit", meta: skill.description }))]} onChange={(value) => updateBuilder((current) => ({ ...current, activeKit: Number(value) || 0 }))} onPreview={(value) => { const skill = engineerKitOptions.find((item) => String(item.id) === value); if (skill) setSelectedSummary({ kind: "skill", item: skill }); }} placeholder="Choose kit" clearLabel="Clear kit" />}
+                {builder.professionId === "Engineer" && <ChoicePickerField id="builder-engineer-kit" label="Active kit" value={builder.activeKit ? String(builder.activeKit) : ""} choices={[...(builder.activeKit > 0 && !engineerKitOptions.some((skill) => skill.id === builder.activeKit) ? [{ value: String(builder.activeKit), label: "Unavailable imported skill", group: "Imported", meta: "Imported value" }] : []), ...engineerKitOptions.map((skill) => ({ value: String(skill.id), label: skill.name, icon: skill.icon, group: skill.type ?? "Kit", meta: skill.description }))]} onChange={(value) => updateBuilder((current) => ({ ...current, activeKit: Number(value) || 0 }))} onPreview={(value) => { const skill = engineerKitOptions.find((item) => String(item.id) === value); if (skill) setSelectedSummary({ kind: "skill", item: skill }); }} placeholder="Choose kit" clearLabel="Clear kit" />}
                 {builder.professionId === "Warrior" && <div><FieldLabel>Active weapon set</FieldLabel><div className="theme-builder-mechanic-pills">{[1, 2].map((weaponSet) => <button key={weaponSet} type="button" aria-pressed={builder.activeWeaponSet === weaponSet} className={builder.activeWeaponSet === weaponSet ? "is-active" : undefined} onClick={() => updateBuilder((current) => ({ ...current, activeWeaponSet: weaponSet }))}>Set {weaponSet === 1 ? "I" : "II"}</button>)}</div></div>}
-                {builder.professionId === "Thief" && <>{(["f2", "f3", "f4"] as const).map((field) => { const currentId = builder.antiquaryArtifacts[field]; return <ChoicePickerField key={field} id={`builder-antiquary-${field}`} label={`Antiquary ${field.toUpperCase()}`} value={currentId ? String(currentId) : ""} choices={[...(currentId > 0 && !thiefArtifactOptions.some((skill) => skill.id === currentId) ? [{ value: String(currentId), label: `Unavailable skill ${currentId}`, group: "Imported", meta: "Unavailable skill" }] : []), ...thiefArtifactOptions.map((skill) => ({ value: String(skill.id), label: skill.name, icon: skill.icon, group: skill.type ?? "Profession", meta: skill.description }))]} onChange={(value) => updateBuilder((current) => ({ ...current, antiquaryArtifacts: { ...current.antiquaryArtifacts, [field]: Number(value) || 0 } }))} onPreview={(value) => { const skill = thiefArtifactOptions.find((item) => String(item.id) === value); if (skill) setSelectedSummary({ kind: "skill", item: skill }); }} placeholder="Choose artifact" clearLabel="Clear artifact" />; })}</>}
+                {builder.professionId === "Thief" && <>{(["f2", "f3", "f4"] as const).map((field) => { const currentId = builder.antiquaryArtifacts[field]; return <ChoicePickerField key={field} id={`builder-antiquary-${field}`} label={`Antiquary ${field.toUpperCase()}`} value={currentId ? String(currentId) : ""} choices={[...(currentId > 0 && !thiefArtifactOptions.some((skill) => skill.id === currentId) ? [{ value: String(currentId), label: "Unavailable imported skill", group: "Imported", meta: "Imported value" }] : []), ...thiefArtifactOptions.map((skill) => ({ value: String(skill.id), label: skill.name, icon: skill.icon, group: skill.type ?? "Profession", meta: skill.description }))]} onChange={(value) => updateBuilder((current) => ({ ...current, antiquaryArtifacts: { ...current.antiquaryArtifacts, [field]: Number(value) || 0 } }))} onPreview={(value) => { const skill = thiefArtifactOptions.find((item) => String(item.id) === value); if (skill) setSelectedSummary({ kind: "skill", item: skill }); }} placeholder="Choose artifact" clearLabel="Clear artifact" />; })}</>}
               </div></section>
             )}
 
@@ -2970,11 +2981,11 @@ export default function AxiForgeLabView() {
           </div>
           </main>
 
-          <BuilderMobileTools issues={issues} selected={selectedSummary} />
+          <BuilderMobileTools issues={issues} selected={selectedSummary} builder={builder} />
 
           <aside className="theme-builder-rail">
             <BuilderReadiness issues={issues} />
-            <DetailPanel selected={selectedSummary} />
+            <DetailPanel selected={selectedSummary} builder={builder} />
             {exportCode && <div className="theme-builder-code-output"><div className="flex items-center justify-between"><FieldLabel>Last exported code</FieldLabel><button type="button" title="Copy code" aria-label="Copy last exported AxiCode" onClick={() => copyText(exportCode, "AxiCode copied.")}><Clipboard className="h-4 w-4" /></button></div><code>{exportCode}</code></div>}
           </aside>
         </div>
