@@ -50,7 +50,7 @@ Implemented in the current slice:
 Remaining in Cut 2:
 
 - Audit the curated rune, sigil, enrichment, relic, food, and utility lists against current game data before claiming full catalog coverage.
-- Complete profession mechanic-slot presentation for professions whose mechanics are not yet represented in the preview.
+- Complete profession mechanic-slot presentation after adding a validated source for elite-specialization replacements; the lightweight profession payload exposes base mechanic skills but not a complete active-build palette.
 - Add game-mode-aware filtering where the GW2 API exposes a reliable mode distinction.
 - Keep raw IDs available only in an advanced inspector for troubleshooting and lossless import.
 
