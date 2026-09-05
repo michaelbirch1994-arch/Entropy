@@ -94,6 +94,7 @@ import {
   weaponSkillIds,
   type WeaponSetNumber,
 } from "../lib/gw2/weaponSkillBar";
+import { resolveProfessionMechanicSlots } from "../lib/gw2/professionMechanics";
 import {
   BUILDER_FOOD_CHOICES,
   BUILDER_RELIC_CHOICES,
@@ -1501,6 +1502,7 @@ function SquadWorkspace({
 function BuilderCombatBar({
   builder,
   profession,
+  specsById,
   skillsById,
   health,
   weaponSet,
@@ -1509,6 +1511,7 @@ function BuilderCombatBar({
 }: {
   builder: EntropyBuilderState;
   profession: Gw2Profession | null;
+  specsById: Map<number, Gw2Specialization>;
   skillsById: Map<number, Gw2Skill>;
   health: number;
   weaponSet: WeaponSetNumber;
@@ -1518,6 +1521,7 @@ function BuilderCombatBar({
   const utilityIds = [builder.healSkillId, ...builder.utilitySkillIds, builder.eliteSkillId];
   const utilityLabels = ["Heal", "Utility 1", "Utility 2", "Utility 3", "Elite"];
   const weaponSlots = resolveWeaponSkillSlots(builder, profession, weaponSet, skillsById);
+  const mechanicSlots = resolveProfessionMechanicSlots(builder, profession, specsById, skillsById);
   const setLabel = weaponSet === 1 ? "I" : "II";
   const nextSetLabel = weaponSet === 1 ? "II" : "I";
   const mainhand = builder.equipment.weapons[weaponSet === 1 ? "mainhand1" : "mainhand2"];
@@ -1550,6 +1554,23 @@ function BuilderCombatBar({
       </div>
 
       <div className="theme-builder-combat-core">
+        {mechanicSlots.length > 0 && (
+          <div className="theme-builder-mechanic-skills" aria-label="Profession mechanics">
+            {mechanicSlots.map(({ key, skill }) => (
+              <button
+                key={`${key}-${skill.id}`}
+                type="button"
+                className="theme-builder-combat-skill is-mechanic"
+                onClick={() => onInspect(skill)}
+                title={skill.name}
+                aria-label={`${key}: ${skill.name}`}
+              >
+                {skill.icon ? <img src={skill.icon} alt="" /> : <span>{key}</span>}
+                <b>{key}</b>
+              </button>
+            ))}
+          </div>
+        )}
         <div className="theme-builder-preview-hp" aria-label={`${Math.round(health).toLocaleString()} health`}>
           <strong>{Math.round(health).toLocaleString()}</strong>
           <span>HP</span>
@@ -1647,7 +1668,7 @@ function BuildPreview({
         </div>
       </div>
 
-      <BuilderCombatBar builder={builder} profession={profession} skillsById={skillsById} health={attributeTotals.health} weaponSet={weaponSet} onSwap={onSwapWeaponSet} onInspect={onInspectSkill} />
+      <BuilderCombatBar builder={builder} profession={profession} specsById={specsById} skillsById={skillsById} health={attributeTotals.health} weaponSet={weaponSet} onSwap={onSwapWeaponSet} onInspect={onInspectSkill} />
 
       <div className="theme-builder-tactical-strip">
         <div className="theme-builder-tactical-card is-primary">
@@ -2714,6 +2735,7 @@ export default function AxiForgeLabView() {
               <BuilderCombatBar
                 builder={builder}
                 profession={selectedProfession}
+                specsById={specsById}
                 skillsById={skillsById}
                 health={attributeTotals.health}
                 weaponSet={displayedWeaponSet}

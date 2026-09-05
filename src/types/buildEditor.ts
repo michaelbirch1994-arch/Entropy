@@ -1,6 +1,6 @@
 export type Gw2GameMode = "pve" | "pvp" | "wvw";
 
-export type Gw2SkillSlot = "Heal" | "Utility" | "Elite" | "Profession";
+export type Gw2SkillSlot = "Heal" | "Utility" | "Elite" | "Profession" | `Profession_${number}`;
 
 export interface Gw2ApiFact {
   text?: string;
@@ -114,6 +114,7 @@ export interface Gw2Skill {
   attunement?: string;
   dual_attunement?: string;
   specialization?: number;
+  flip_skill?: number;
   facts?: Gw2ApiFact[];
 }
 
