@@ -2696,29 +2696,6 @@ export default function AxiForgeLabView() {
                             <img src={selectedSpec.icon} alt="" />
                           </button>
                         )}
-                        <div className="theme-builder-spec-picks" role="group" aria-label={`Specialization track ${trackIndex + 1} quick picks`}>
-                          {professionSpecs.map((spec) => {
-                            const isUsedElsewhere = builder.specializationIds.some((id, index) => index !== trackIndex && id === spec.id);
-                            const eliteUsedElsewhere = spec.elite && builder.specializationIds.some((id, index) => index !== trackIndex && Boolean(id && specsById.get(id)?.elite));
-                            return (
-                              <button
-                                key={spec.id}
-                                type="button"
-                                aria-pressed={selectedSpecId === spec.id}
-                                className={selectedSpecId === spec.id ? "is-active" : ""}
-                                disabled={isUsedElsewhere || eliteUsedElsewhere}
-                                onClick={() => chooseSpec(trackIndex, spec.id)}
-                                onFocus={() => setSelectedSummary({ kind: "specialization", item: spec })}
-                                onMouseEnter={() => setSelectedSummary({ kind: "specialization", item: spec })}
-                                title={isUsedElsewhere ? `${spec.name} is already on another track` : eliteUsedElsewhere ? "Only one elite specialization can be equipped" : spec.name}
-                              >
-                                {spec.icon ? <img src={spec.icon} alt="" /> : <Layers3 className="h-4 w-4" />}
-                                <span>{spec.name}</span>
-                                {spec.elite && <b>Elite</b>}
-                              </button>
-                            );
-                          })}
-                        </div>
                       </div>
                       <div className="theme-builder-trait-grid">
                         {[1, 2, 3].map((tier) => {

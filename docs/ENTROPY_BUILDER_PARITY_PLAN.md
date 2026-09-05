@@ -63,8 +63,16 @@ Acceptance:
 
 ## Cut 3 — visual build sheet and derived summaries
 
-- Render the familiar three specialization rows and trait choices as an interactive build sheet.
-- Render heal, utility, elite, profession, pet, and legend slots with icons and tooltips.
+Status: in progress.
+
+Implemented in the current slice:
+
+- Three compact specialization rows with searchable Core/Elite selection, icon-backed major trait choices, duplicate guards, and Inspector access.
+- Selected land skills, weapon skills, and API-explicit profession mechanics render as a visual combat bar with inspectable icons.
+
+Remaining in Cut 3:
+
+- Complete visual coverage for profession-specific pet and legend slots, transformed bars, and tooltip detail across all selected slots.
 - Compute a transparent summary of selected boons, conditions, control, healing, barrier, and revival utility from official metadata.
 - Label inferred coverage separately from guaranteed build facts; never invent uptime or combat performance.
 

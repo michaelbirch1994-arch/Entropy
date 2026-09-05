@@ -141,8 +141,7 @@
 .theme-builder-mode-switch button,
 .theme-builder-mode-toggle button,
 .theme-builder-pill-grid button,
-.theme-builder-stat-picks button,
-.theme-builder-spec-picks button {
+.theme-builder-stat-picks button {
   border-radius: 5px;
 }
 
