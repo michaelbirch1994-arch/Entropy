@@ -138,6 +138,7 @@ import ClassIcon from "../components/ui/ClassIcon";
 
 type WorkbenchTab = "build" | "library" | "squad";
 type BuilderSection = "overview" | "traits" | "equipment" | "notes" | "preview";
+type EquipmentSection = "weapons" | "armor" | "upgrades" | "consumables";
 type MobileRailPanel = "readiness" | "inspector";
 type Notice = { tone: "success" | "warning" | "error"; message: string };
 
@@ -165,6 +166,12 @@ const BUILDER_SECTIONS: Array<{ id: BuilderSection; label: string }> = [
   { id: "equipment", label: "Equipment" },
   { id: "notes", label: "Notes" },
   { id: "preview", label: "Preview" },
+];
+const EQUIPMENT_SECTIONS: Array<{ id: EquipmentSection; label: string }> = [
+  { id: "weapons", label: "Weapons" },
+  { id: "armor", label: "Armor & Trinkets" },
+  { id: "upgrades", label: "Upgrades" },
+  { id: "consumables", label: "Consumables" },
 ];
 const BUILDER_SECTION_SESSION_KEY = "entropy.builder.section";
 
@@ -603,26 +610,83 @@ function resolveEliteSpecName(
   return fallback;
 }
 
-function EquipmentLoadoutSheet({ builder, items, specsById }: { builder: EntropyBuilderState; items: Record<number, Gw2Item>; specsById: Map<number, Gw2Specialization> }) {
+function EquipmentLoadoutSheet({ builder, items, specsById, section }: { builder: EntropyBuilderState; items: Record<number, Gw2Item>; specsById: Map<number, Gw2Specialization>; section: EquipmentSection }) {
   const weaponSet = (set: 1 | 2) => {
     const main = builder.equipment.weapons[`mainhand${set}`] || "Empty";
     const off = builder.equipment.weapons[`offhand${set}`];
     return off ? `${main} + ${off}` : main;
   };
+  const slotStat = (slot: string) => builder.equipment.slots[slot] || builder.equipment.statPackage || "Unassigned";
   const runeIds = [...new Set(Object.values(builder.equipment.runes).filter(Boolean))];
   const runeNames = runeIds.map((id) => items[Number(id)]?.name ?? "Imported rune");
-  const cells = [
-    ["Stat doctrine", builder.equipment.statPackage || "Unassigned"],
-    ["Weapon set I", weaponSet(1)],
-    ["Weapon set II", weaponSet(2)],
-    ["Armor runes", runeNames.length ? runeNames.join(" · ") : "Unassigned"],
-    ["Relic", builder.equipment.relic || "Unassigned"],
-    ["Consumables", [builder.equipment.food, builder.equipment.utility].filter(Boolean).join(" · ") || "Unassigned"],
-  ];
+  const sigilIds = [...new Set(Object.values(builder.equipment.sigils).flat().filter(Boolean))];
+  const sigilNames = sigilIds.map((id) => items[Number(id)]?.name ?? "Imported sigil");
+  const trinketSlots = [
+    ["amulet", "Amulet"],
+    ["ring1", "Ring I"],
+    ["ring2", "Ring II"],
+    ["accessory1", "Accessory I"],
+    ["accessory2", "Accessory II"],
+    ["backpack", "Back item"],
+  ] as const;
   return (
-    <div className="theme-builder-equipment-sheet" aria-label="Current equipment summary">
-      <div className="theme-builder-equipment-sheet-mark"><ClassIcon name={resolveEliteSpecName(builder.specializationIds, specsById, builder.professionId)} size="lg" /><span><small>Field loadout</small><strong>{builder.name || builder.professionId}</strong></span></div>
-      {cells.map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}
+    <div className="theme-builder-equipment-board" aria-label="Current equipment loadout">
+      <header className="theme-builder-equipment-board-head">
+        <div className="theme-builder-equipment-sheet-mark"><ClassIcon name={resolveEliteSpecName(builder.specializationIds, specsById, builder.professionId)} size="lg" /><span><small>Field loadout</small><strong>{builder.name || builder.professionId}</strong></span></div>
+        <div><small>Stat doctrine</small><strong>{builder.equipment.statPackage || "Unassigned"}</strong></div>
+      </header>
+      <div className={`theme-builder-equipment-board-grid is-${section}`}>
+        {section === "armor" && <section className="theme-builder-equipment-zone is-armor" aria-labelledby="builder-loadout-armor">
+          <div className="theme-builder-equipment-zone-head"><Shield className="h-4 w-4" /><h4 id="builder-loadout-armor">Armor</h4><span>{ARMOR_SLOTS.filter((slot) => builder.equipment.slots[slot]).length}/6 overrides</span></div>
+          <div className="theme-builder-loadout-slots">
+            {ARMOR_SLOTS.map((slot) => (
+              <div key={slot} className={builder.equipment.slots[slot] ? "is-assigned" : ""}>
+                <span><Shield className="h-4 w-4" /></span>
+                <small>{ARMOR_SLOT_LABELS[slot]}</small>
+                <strong>{slotStat(slot)}</strong>
+              </div>
+            ))}
+          </div>
+        </section>}
+        {section === "weapons" && <section className="theme-builder-equipment-zone is-weapons" aria-labelledby="builder-loadout-weapons">
+          <div className="theme-builder-equipment-zone-head"><Swords className="h-4 w-4" /><h4 id="builder-loadout-weapons">Weapon sets</h4><span>{builder.activeWeaponSet === 2 ? "Set II active" : "Set I active"}</span></div>
+          <div className="theme-builder-loadout-weapons">
+            {([1, 2] as const).map((set) => (
+              <div key={set} className={builder.activeWeaponSet === set ? "is-active" : ""}>
+                <span><Swords className="h-5 w-5" /></span>
+                <small>Set {set === 1 ? "I" : "II"}</small>
+                <strong>{weaponSet(set)}</strong>
+                <em>{slotStat(`mainhand${set}`)}</em>
+              </div>
+            ))}
+          </div>
+        </section>}
+        {section === "armor" && <section className="theme-builder-equipment-zone is-trinkets" aria-labelledby="builder-loadout-trinkets">
+          <div className="theme-builder-equipment-zone-head"><Sparkles className="h-4 w-4" /><h4 id="builder-loadout-trinkets">Trinkets</h4><span>6 slots</span></div>
+          <div className="theme-builder-loadout-slots">
+            {trinketSlots.map(([slot, label]) => (
+              <div key={slot} className={builder.equipment.slots[slot] ? "is-assigned" : ""}>
+                <span><Sparkles className="h-4 w-4" /></span>
+                <small>{label}</small>
+                <strong>{slotStat(slot)}</strong>
+              </div>
+            ))}
+          </div>
+        </section>}
+        {section === "upgrades" && <section className="theme-builder-equipment-zone is-upgrades" aria-labelledby="builder-loadout-upgrades">
+          <div className="theme-builder-equipment-zone-head"><Sparkles className="h-4 w-4" /><h4 id="builder-loadout-upgrades">Upgrades</h4><span>Runes, sigils, relic</span></div>
+          <div className="theme-builder-loadout-upgrades">
+            <div><small>Armor runes</small><strong>{runeNames.length ? runeNames.join(" · ") : "Unassigned"}</strong></div>
+            <div><small>Weapon sigils</small><strong>{sigilNames.length ? sigilNames.join(" · ") : "Unassigned"}</strong></div>
+            <div><small>Relic</small><strong>{builder.equipment.relic || "Unassigned"}</strong></div>
+          </div>
+        </section>}
+      </div>
+      {section === "consumables" && <footer className="theme-builder-equipment-board-foot">
+        <div><small>Food</small><strong>{builder.equipment.food || "Unassigned"}</strong></div>
+        <div><small>Utility</small><strong>{builder.equipment.utility || "Unassigned"}</strong></div>
+        <div><small>Enrichment</small><strong>{items[Number(builder.equipment.enrichment)]?.name ?? (builder.equipment.enrichment || "Unassigned")}</strong></div>
+      </footer>}
     </div>
   );
 }
@@ -1963,6 +2027,7 @@ export default function AxiForgeLabView() {
   const [workspace, setWorkspace] = useState<BuilderWorkspace>(() => loadBuilderWorkspace());
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("build");
   const [builderViewMode, setBuilderViewMode] = useState<BuilderSection>(loadBuilderSection);
+  const [equipmentSection, setEquipmentSection] = useState<EquipmentSection>("weapons");
   const [displayedWeaponSet, setDisplayedWeaponSet] = useState<WeaponSetNumber>(() => workspace.draft.activeWeaponSet === 2 ? 2 : 1);
   const [editingBuildId, setEditingBuildId] = useState<string | null>(null);
   const [professions, setProfessions] = useState<Gw2Profession[]>([]);
@@ -2834,11 +2899,30 @@ export default function AxiForgeLabView() {
           )}
 
           {builderViewMode === "equipment" && (
-            <section className="theme-panel theme-builder-panel">
-              <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Step 04</div><h3>Equipment doctrine</h3></div><Wrench className="h-5 w-5 text-theme-info" /></div>
-              <EquipmentLoadoutSheet builder={builder} items={equipmentItems} specsById={specsById} />
-              <div className="theme-builder-equipment-grid">
-                <div className="theme-builder-equipment-group">
+            <section className="theme-panel theme-builder-panel theme-builder-equipment-workspace">
+              <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Field loadout</div><h3>Equipment</h3></div><Wrench className="h-5 w-5 text-theme-info" /></div>
+              <nav className="theme-builder-equipment-nav" role="tablist" aria-label="Equipment editor sections">
+                {EQUIPMENT_SECTIONS.map((section) => (
+                  <button
+                    key={section.id}
+                    id={`builder-equipment-tab-${section.id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={equipmentSection === section.id}
+                    aria-controls="builder-equipment-editor"
+                    tabIndex={equipmentSection === section.id ? 0 : -1}
+                    className={equipmentSection === section.id ? "is-active" : ""}
+                    onClick={() => setEquipmentSection(section.id)}
+                    onKeyDown={(event) => moveTabFocus(EQUIPMENT_SECTIONS.map((item) => item.id), section.id, event, setEquipmentSection, (item) => `builder-equipment-tab-${item}`)}
+                  >
+                    {section.id === "weapons" ? <Swords className="h-4 w-4" /> : section.id === "armor" ? <Shield className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                    <span>{section.label}</span>
+                  </button>
+                ))}
+              </nav>
+              <EquipmentLoadoutSheet builder={builder} items={equipmentItems} specsById={specsById} section={equipmentSection} />
+              <div id="builder-equipment-editor" role="tabpanel" aria-labelledby={`builder-equipment-tab-${equipmentSection}`} className="theme-builder-equipment-grid is-focused">
+                <div className="theme-builder-equipment-group is-weapons" hidden={equipmentSection !== "weapons"}>
                   <h4>Weapons and stats</h4>
                   <ChoicePickerField
                     id="builder-stat-package"
@@ -2911,8 +2995,8 @@ export default function AxiForgeLabView() {
                     ))}
                   </div>
                 </div>
-                <div className="theme-builder-equipment-stack">
-                  <div className="theme-builder-equipment-group">
+                <div className="theme-builder-equipment-stack is-gear" hidden={equipmentSection !== "armor" && equipmentSection !== "upgrades"}>
+                  <div className="theme-builder-equipment-group is-armor" hidden={equipmentSection !== "armor"}>
                     <h4>Armor stats</h4>
                     <span className="theme-builder-choice-note">Each slot uses the doctrine stat package unless you set an override.</span>
                     <div className="theme-builder-armor-stat-grid">
@@ -2930,7 +3014,7 @@ export default function AxiForgeLabView() {
                       ))}
                     </div>
                   </div>
-                  <div className="theme-builder-equipment-group">
+                  <div className="theme-builder-equipment-group is-trinkets" hidden={equipmentSection !== "armor"}>
   <h4>Trinkets</h4>
   <div className="theme-builder-trinket-grid grid grid-cols-2 gap-2">
     {["amulet", "ring1", "ring2", "accessory1", "accessory2", "backpack"].map((trinketSlot) => {
@@ -2952,7 +3036,7 @@ export default function AxiForgeLabView() {
     })}
   </div>
 </div>
-                  <div className="theme-builder-equipment-group">
+                  <div className="theme-builder-equipment-group is-upgrades" hidden={equipmentSection !== "upgrades"}>
                     <h4>Runes and sigils</h4>
                   {hasMixedRunes ? (
                     <div className="theme-builder-split-runes">
@@ -2990,7 +3074,7 @@ export default function AxiForgeLabView() {
 ); })}
                   </div>
                 </div>
-                <div className="theme-builder-equipment-group">
+                <div className="theme-builder-equipment-group is-consumables" hidden={equipmentSection !== "consumables"}>
                   <h4>Relic and consumables</h4>
                   <ItemPickerField id="builder-relics" label="Relic" value={builder.equipment.relic} valueKind="label" choices={BUILDER_RELIC_CHOICES.map((choice) => ({ label: choice, id: BUILDER_RELIC_IDS[choice] }))} items={equipmentItems} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, relic: value } }))} placeholder="Choose relic" />
 <EquipmentItemSummary values={[String(BUILDER_RELIC_IDS[builder.equipment.relic] ?? "")]} items={equipmentItems} />

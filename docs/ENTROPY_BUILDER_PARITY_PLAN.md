@@ -42,6 +42,7 @@ Implemented in the current slice:
 - Local item metadata cache with raw-value fallback when metadata is unavailable.
 - Compact visual loadout summary for stats, weapon sets, runes, relic, and consumables.
 - Visual armor, weapon-set, trinket, relic, consumable, and enrichment rows with explicit empty states.
+- Equipment opens with a synchronized visual loadout summary that follows the active equipment workspace; editor columns reflow from the actual workspace width.
 - Per-slot armor, weapon, and trinket stat overrides backed by the existing local builder state.
 - Weapon-specific skill previews with a display-only weapon-set swap control.
 - Mixed per-slot rune imports remain independently editable instead of being flattened.
@@ -74,6 +75,7 @@ Implemented in the current slice:
 - Ranger terrestrial pet slots render from explicit Builder selections with official names, descriptions, and icons.
 - Ranger terrestrial pet choices exclude the five aquatic-only API IDs while retaining amphibious pets; invalid imported selections remain visible and repairable.
 - Revenant legend choices include core legends plus only the active elite specialization's legend, with both selected legend stances represented in the combat bar.
+- Equipment uses four focused workspaces for weapons, armor and trinkets, upgrades, and consumables; each workspace presents only its matching visual summary and controls.
 
 Remaining in Cut 3:
 
