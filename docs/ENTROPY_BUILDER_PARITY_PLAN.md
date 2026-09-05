@@ -42,6 +42,7 @@ Implemented in the current slice:
 - Local item metadata cache with raw-value fallback when metadata is unavailable.
 - Compact visual loadout summary for stats, weapon sets, runes, relic, and consumables.
 - Visual armor, weapon-set, trinket, relic, consumable, and enrichment rows with explicit empty states.
+- Per-slot armor, weapon, and trinket stat overrides backed by the existing local builder state.
 - Weapon-specific skill previews with a display-only weapon-set swap control.
 - Mixed per-slot rune imports remain independently editable instead of being flattened.
 - Unsupported future text values remain visible and are clearly marked as not encodable by the installed AxiCode format.
@@ -49,7 +50,6 @@ Implemented in the current slice:
 Remaining in Cut 2:
 
 - Audit the curated rune, sigil, enrichment, relic, food, and utility lists against current game data before claiming full catalog coverage.
-- Add per-slot armor stat overrides; armor currently inherits the shared stat doctrine while weapons and trinkets support overrides.
 - Complete profession mechanic-slot presentation for professions whose mechanics are not yet represented in the preview.
 - Add game-mode-aware filtering where the GW2 API exposes a reliable mode distinction.
 - Keep raw IDs available only in an advanced inspector for troubleshooting and lossless import.

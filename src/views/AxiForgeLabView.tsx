@@ -139,6 +139,14 @@ const GAME_MODES = [
 
 const ROLE_OPTIONS = ["", "DPS", "Support", "Healer", "Boon Support", "Control", "Roamer", "Commander"];
 const QUICK_STAT_OPTIONS = ["Celestial", "Marauder's", "Berserker's", "Minstrel's", "Trailblazer's", "Viper's", "Harrier's", "Ritualist's"];
+const ARMOR_SLOT_LABELS: Record<(typeof ARMOR_SLOTS)[number], string> = {
+  head: "Head",
+  shoulders: "Shoulders",
+  chest: "Chest",
+  hands: "Hands",
+  legs: "Legs",
+  feet: "Feet",
+};
 const BUILDER_FOOD_LABELS = BUILDER_FOOD_CHOICES.map((choice) => choice.label);
 const BUILDER_UTILITY_LABELS = BUILDER_UTILITY_CHOICES.map((choice) => choice.label);
 const BUILDER_SECTIONS: Array<{ id: BuilderSection; label: string }> = [
@@ -1773,8 +1781,8 @@ function EquipmentPreview({
               <div key={slot} className="theme-builder-preview-armor-row">
                 <div className="theme-builder-preview-armor-icon"><Shield className="h-4 w-4" /></div>
                 <div className="theme-builder-preview-armor-info">
-                  <small>{slot}</small>
-                  <strong>{builder.equipment.statPackage || "Unassigned"}</strong>
+                  <small>{ARMOR_SLOT_LABELS[slot]}</small>
+                  <strong>{builder.equipment.slots[slot] || builder.equipment.statPackage || "Unassigned"}</strong>
                 </div>
                 <div className="theme-builder-preview-armor-badge" title={rune?.name ?? "No rune"}>
                   {rune?.icon ? <img src={rune.icon} alt="" /> : <Sparkles className="h-4 w-4" />}
@@ -2796,6 +2804,24 @@ export default function AxiForgeLabView() {
                   </div>
                 </div>
                 <div className="theme-builder-equipment-stack">
+                  <div className="theme-builder-equipment-group">
+                    <h4>Armor stats</h4>
+                    <span className="theme-builder-choice-note">Each slot uses the doctrine stat package unless you set an override.</span>
+                    <div className="theme-builder-armor-stat-grid">
+                      {ARMOR_SLOTS.map((slot) => (
+                        <ChoicePickerField
+                          key={slot}
+                          id={`builder-armor-stat-${slot}`}
+                          label={ARMOR_SLOT_LABELS[slot]}
+                          value={builder.equipment.slots[slot] || ""}
+                          choices={statOptions.filter(Boolean).map((stat) => ({ value: stat, label: stat, group: (QUICK_STAT_OPTIONS as readonly string[]).includes(stat) ? "Common" : "All stats" }))}
+                          onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, slots: { ...current.equipment.slots, [slot]: value } } }))}
+                          placeholder="Use doctrine stats"
+                          clearLabel="Use doctrine stats"
+                        />
+                      ))}
+                    </div>
+                  </div>
                   <div className="theme-builder-equipment-group">
   <h4>Trinkets</h4>
   <div className="theme-builder-trinket-grid grid grid-cols-2 gap-2">

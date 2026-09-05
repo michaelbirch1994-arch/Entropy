@@ -251,6 +251,13 @@
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
 }
 
+.theme-builder-armor-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+}
+
 .theme-builder-pill-grid {
   gap: 0.3rem;
   margin-top: 0.3rem;
@@ -364,6 +371,10 @@
 
   .theme-builder-panel {
     padding: 0.75rem;
+  }
+
+  .theme-builder-armor-stat-grid {
+    grid-template-columns: 1fr;
   }
 
   .theme-builder-professions {
