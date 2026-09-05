@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { Gw2Profession, Gw2Skill, Gw2Specialization } from "../../types/buildEditor";
+import type { Gw2Pet, Gw2Profession, Gw2Skill, Gw2Specialization } from "../../types/buildEditor";
 import { createEmptyBuilder } from "../axiforge/builderModel";
-import { resolveProfessionMechanicSlots } from "../gw2/professionMechanics";
+import { resolveProfessionMechanicSlots, resolveRangerPetSlots } from "../gw2/professionMechanics";
 
 const profession: Gw2Profession = {
   id: "Guardian",
@@ -55,5 +55,18 @@ describe("resolveProfessionMechanicSlots", () => {
   it("leaves state-derived profession mechanics to dedicated resolvers", () => {
     const warrior = { ...profession, id: "Warrior", name: "Warrior" };
     expect(resolveProfessionMechanicSlots(createEmptyBuilder("Warrior"), warrior, new Map(), skills)).toEqual([]);
+  });
+
+  it("maps only explicitly selected terrestrial Ranger pets", () => {
+    const builder = createEmptyBuilder("Ranger");
+    builder.selectedPets.terrestrial1 = 4;
+    builder.selectedPets.terrestrial2 = 99;
+    const pets: Gw2Pet[] = [{ id: 4, name: "Juvenile Jungle Stalker", icon: "stalker.png" }];
+
+    expect(resolveRangerPetSlots(builder, pets)).toEqual([
+      { key: "P1", pet: pets[0] },
+      { key: "P2", pet: null },
+    ]);
+    expect(resolveRangerPetSlots(createEmptyBuilder("Guardian"), pets)).toEqual([]);
   });
 });

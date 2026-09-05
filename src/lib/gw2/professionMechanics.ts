@@ -1,8 +1,13 @@
-import type { EntropyBuilderState, Gw2Profession, Gw2Skill, Gw2Specialization } from "../../types/buildEditor";
+import type { EntropyBuilderState, Gw2Pet, Gw2Profession, Gw2Skill, Gw2Specialization } from "../../types/buildEditor";
 
 export interface ProfessionMechanicSlot {
   key: `F${number}`;
   skill: Gw2Skill;
+}
+
+export interface RangerPetSlot {
+  key: "P1" | "P2";
+  pet: Gw2Pet | null;
 }
 
 const HIDDEN_MECHANIC_NAME = /^(?:exit|leave|stow)\b/i;
@@ -50,4 +55,16 @@ export function resolveProfessionMechanicSlots(
   return [...bySlot.entries()]
     .sort(([left], [right]) => left - right)
     .map(([slot, skill]) => ({ key: `F${slot}` as `F${number}`, skill }));
+}
+
+export function resolveRangerPetSlots(
+  builder: EntropyBuilderState,
+  pets: Gw2Pet[],
+): RangerPetSlot[] {
+  if (builder.professionId !== "Ranger") return [];
+  const petsById = new Map(pets.map((pet) => [pet.id, pet]));
+  return [builder.selectedPets.terrestrial1, builder.selectedPets.terrestrial2].map((id, index) => ({
+    key: index === 0 ? "P1" : "P2",
+    pet: id ? petsById.get(id) ?? null : null,
+  }));
 }

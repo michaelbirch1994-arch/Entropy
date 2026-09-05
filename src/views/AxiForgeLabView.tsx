@@ -94,7 +94,7 @@ import {
   weaponSkillIds,
   type WeaponSetNumber,
 } from "../lib/gw2/weaponSkillBar";
-import { resolveProfessionMechanicSlots } from "../lib/gw2/professionMechanics";
+import { resolveProfessionMechanicSlots, resolveRangerPetSlots } from "../lib/gw2/professionMechanics";
 import {
   BUILDER_FOOD_CHOICES,
   BUILDER_RELIC_CHOICES,
@@ -1515,24 +1515,29 @@ function BuilderCombatBar({
   profession,
   specsById,
   skillsById,
+  pets,
   health,
   weaponSet,
   onSwap,
   onInspect,
+  onInspectPet,
 }: {
   builder: EntropyBuilderState;
   profession: Gw2Profession | null;
   specsById: Map<number, Gw2Specialization>;
   skillsById: Map<number, Gw2Skill>;
+  pets: Gw2Pet[];
   health: number;
   weaponSet: WeaponSetNumber;
   onSwap: () => void;
   onInspect: (skill: Gw2Skill) => void;
+  onInspectPet: (pet: Gw2Pet) => void;
 }) {
   const utilityIds = [builder.healSkillId, ...builder.utilitySkillIds, builder.eliteSkillId];
   const utilityLabels = ["Heal", "Utility 1", "Utility 2", "Utility 3", "Elite"];
   const weaponSlots = resolveWeaponSkillSlots(builder, profession, weaponSet, skillsById);
   const mechanicSlots = resolveProfessionMechanicSlots(builder, profession, specsById, skillsById);
+  const petSlots = resolveRangerPetSlots(builder, pets);
   const setLabel = weaponSet === 1 ? "I" : "II";
   const nextSetLabel = weaponSet === 1 ? "II" : "I";
   const mainhand = builder.equipment.weapons[weaponSet === 1 ? "mainhand1" : "mainhand2"];
@@ -1565,8 +1570,8 @@ function BuilderCombatBar({
       </div>
 
       <div className="theme-builder-combat-core">
-        {mechanicSlots.length > 0 && (
-          <div className="theme-builder-mechanic-skills" aria-label="Profession mechanics">
+        {(mechanicSlots.length > 0 || petSlots.length > 0) && (
+          <div className="theme-builder-mechanic-skills" aria-label={petSlots.length ? "Profession mechanics and Ranger pets" : "Profession mechanics"}>
             {mechanicSlots.map(({ key, skill }) => (
               <button
                 key={`${key}-${skill.id}`}
@@ -1577,6 +1582,20 @@ function BuilderCombatBar({
                 aria-label={`${key}: ${skill.name}`}
               >
                 {skill.icon ? <img src={skill.icon} alt="" /> : <span>{key}</span>}
+                <b>{key}</b>
+              </button>
+            ))}
+            {petSlots.map(({ key, pet }) => (
+              <button
+                key={key}
+                type="button"
+                className="theme-builder-combat-skill is-mechanic is-companion"
+                disabled={!pet}
+                onClick={() => pet && onInspectPet(pet)}
+                title={pet?.name ?? `${key} pet not selected`}
+                aria-label={pet ? `${key}: ${pet.name}` : `${key} pet not selected`}
+              >
+                {pet?.icon ? <img src={pet.icon} alt="" /> : <span>{key}</span>}
                 <b>{key}</b>
               </button>
             ))}
@@ -1625,22 +1644,26 @@ function BuildPreview({
   specsById,
   traitsBySpecId,
   skillsById,
+  pets,
   attributeTotals,
   attributeProfile,
   weaponSet,
   onSwapWeaponSet,
   onInspectSkill,
+  onInspectPet,
 }: {
   builder: EntropyBuilderState;
   profession: Gw2Profession | null;
   specsById: Map<number, Gw2Specialization>;
   traitsBySpecId: Map<number, Gw2Trait[]>;
   skillsById: Map<number, Gw2Skill>;
+  pets: Gw2Pet[];
   attributeTotals: AttributeTotals;
   attributeProfile: AttributeProfile;
   weaponSet: WeaponSetNumber;
   onSwapWeaponSet: () => void;
   onInspectSkill: (skill: Gw2Skill) => void;
+  onInspectPet: (pet: Gw2Pet) => void;
 }) {
   const attributeRows: Array<[string, string, React.ReactNode]> = [
     ["Power", Math.round(attributeTotals.power).toLocaleString(), <Swords className="h-4 w-4" />],
@@ -1679,7 +1702,7 @@ function BuildPreview({
         </div>
       </div>
 
-      <BuilderCombatBar builder={builder} profession={profession} specsById={specsById} skillsById={skillsById} health={attributeTotals.health} weaponSet={weaponSet} onSwap={onSwapWeaponSet} onInspect={onInspectSkill} />
+      <BuilderCombatBar builder={builder} profession={profession} specsById={specsById} skillsById={skillsById} pets={pets} health={attributeTotals.health} weaponSet={weaponSet} onSwap={onSwapWeaponSet} onInspect={onInspectSkill} onInspectPet={onInspectPet} />
 
       <div className="theme-builder-tactical-strip">
         <div className="theme-builder-tactical-card is-primary">
@@ -2725,10 +2748,12 @@ export default function AxiForgeLabView() {
                 profession={selectedProfession}
                 specsById={specsById}
                 skillsById={skillsById}
+                pets={pets}
                 health={attributeTotals.health}
                 weaponSet={displayedWeaponSet}
                 onSwap={() => setDisplayedWeaponSet((current) => current === 1 ? 2 : 1)}
                 onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })}
+                onInspectPet={(pet) => setSelectedSummary({ kind: "pet", item: pet })}
               />
             </section>
 
@@ -2943,11 +2968,13 @@ export default function AxiForgeLabView() {
                         specsById={specsById}
                         traitsBySpecId={traitsBySpecId}
                         skillsById={skillsById}
+                        pets={pets}
                         attributeTotals={attributeTotals}
                         attributeProfile={attributeProfile}
                         weaponSet={displayedWeaponSet}
                         onSwapWeaponSet={() => setDisplayedWeaponSet((current) => current === 1 ? 2 : 1)}
                         onInspectSkill={(skill) => setSelectedSummary({ kind: "skill", item: skill })}
+                        onInspectPet={(pet) => setSelectedSummary({ kind: "pet", item: pet })}
                       />
                       <EquipmentPreview
                         builder={builder}

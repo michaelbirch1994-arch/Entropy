@@ -69,10 +69,11 @@ Implemented in the current slice:
 
 - Three compact specialization rows with searchable Core/Elite selection, icon-backed major trait choices, duplicate guards, and Inspector access.
 - Selected land skills, weapon skills, and API-explicit profession mechanics render as a visual combat bar with inspectable icons.
+- Ranger terrestrial pet slots render from explicit Builder selections with official names, descriptions, and icons.
 
 Remaining in Cut 3:
 
-- Complete visual coverage for profession-specific pet and legend slots, transformed bars, and tooltip detail across all selected slots.
+- Complete visual coverage for profession-specific legend slots, transformed bars, and tooltip detail across all selected slots.
 - Compute a transparent summary of selected boons, conditions, control, healing, barrier, and revival utility from official metadata.
 - Label inferred coverage separately from guaranteed build facts; never invent uptime or combat performance.
 
