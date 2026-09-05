@@ -5,6 +5,7 @@ import type {
   Gw2Pet,
   Gw2Profession,
   Gw2ProfessionWeapon,
+  Gw2Skill,
 } from "../../types/buildEditor";
 import {
   fetchGw2ItemStats,
@@ -22,6 +23,30 @@ export const AQUATIC_ONLY_RANGER_PET_IDS = new Set([21, 40, 41, 42, 43]);
 
 export function isTerrestrialRangerPet(petId: number): boolean {
   return !AQUATIC_ONLY_RANGER_PET_IDS.has(petId);
+}
+
+export function availableProfessionSkills(
+  skills: Gw2Skill[],
+  specializationIds: Array<number | null>,
+): Gw2Skill[] {
+  const activeSpecializations = new Set(specializationIds.filter((id): id is number => id != null));
+  return skills.filter((skill) => !skill.specialization || activeSpecializations.has(skill.specialization));
+}
+
+export function validateBuilderSkillsAgainstCatalog(
+  builder: EntropyBuilderState,
+  skills: Gw2Skill[],
+): string[] {
+  const eligibleIds = new Set(availableProfessionSkills(skills, builder.specializationIds).map((skill) => skill.id));
+  const skillsById = new Map(skills.map((skill) => [skill.id, skill]));
+  const selectedIds = [builder.healSkillId, ...builder.utilitySkillIds, builder.eliteSkillId]
+    .filter((id): id is number => id != null);
+  return [...new Set(selectedIds.flatMap((id) => {
+    const skill = skillsById.get(id);
+    return skill && !eligibleIds.has(id)
+      ? [`${skill.name} is not available to the selected specializations.`]
+      : [];
+  }))];
 }
 
 export type BuilderCatalogSource = "live" | "cache";

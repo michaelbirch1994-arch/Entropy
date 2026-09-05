@@ -2,13 +2,15 @@ import { describe, expect, it } from "vitest";
 import { createEmptyBuilder } from "../axiforge/builderModel";
 import {
   AQUATIC_ONLY_RANGER_PET_IDS,
+  availableProfessionSkills,
   availableProfessionWeapons,
   isTerrestrialRangerPet,
   isTwoHandedWeapon,
   validateBuilderEquipmentAgainstCatalog,
+  validateBuilderSkillsAgainstCatalog,
   weaponFitsBuilderSlot,
 } from "../gw2/builderCatalog";
-import type { Gw2Profession } from "../../types/buildEditor";
+import type { Gw2Profession, Gw2Skill } from "../../types/buildEditor";
 
 const profession: Gw2Profession = {
   id: "Guardian",
@@ -24,6 +26,23 @@ const profession: Gw2Profession = {
 };
 
 describe("Builder foundation catalog", () => {
+  it("offers core skills plus only the active specialization skills", () => {
+    const skills: Gw2Skill[] = [
+      { id: 1, name: "Core Heal", slot: "Heal" },
+      { id: 2, name: "Dragonhunter Heal", slot: "Heal", specialization: 27 },
+      { id: 3, name: "Firebrand Heal", slot: "Heal", specialization: 62 },
+    ];
+    expect(availableProfessionSkills(skills, [null, null, 62]).map((skill) => skill.id)).toEqual([1, 3]);
+    expect(availableProfessionSkills(skills, [null, null, null]).map((skill) => skill.id)).toEqual([1]);
+
+    const builder = createEmptyBuilder("Guardian");
+    builder.specializationIds = [null, null, 62];
+    builder.healSkillId = 2;
+    expect(validateBuilderSkillsAgainstCatalog(builder, skills)).toEqual([
+      "Dragonhunter Heal is not available to the selected specializations.",
+    ]);
+  });
+
   it("separates aquatic-only pets without excluding amphibious land pets", () => {
     expect([...AQUATIC_ONLY_RANGER_PET_IDS]).toEqual([21, 40, 41, 42, 43]);
     expect(isTerrestrialRangerPet(21)).toBe(false);

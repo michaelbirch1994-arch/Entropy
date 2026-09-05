@@ -82,11 +82,13 @@ import {
 import { encodeBuildChatCode, type ChatCodeCatalog } from "../lib/gw2/chatCode";
 import { importGw2SkillsBuild, validateGw2SkillsEditorUrl } from "../lib/gw2/gw2SkillsImport";
 import {
+  availableProfessionSkills,
   availableProfessionWeapons,
   isTerrestrialRangerPet,
   isTwoHandedWeapon,
   loadBuilderFoundationCatalog,
   validateBuilderEquipmentAgainstCatalog,
+  validateBuilderSkillsAgainstCatalog,
   weaponFitsBuilderSlot,
   type BuilderCatalogSource,
 } from "../lib/gw2/builderCatalog";
@@ -809,6 +811,7 @@ function SkillPicker({
   slot,
   selectedId,
   skills,
+  allSkills,
   usedIds,
   onChange,
   onInspect,
@@ -817,12 +820,14 @@ function SkillPicker({
   slot: Gw2SkillSlot;
   selectedId: number | null;
   skills: Gw2Skill[];
+  allSkills: Gw2Skill[];
   usedIds: Array<number | null>;
   onChange: (id: number | null) => void;
   onInspect: (skill: Gw2Skill) => void;
 }) {
-  const selected = skills.find((skill) => skill.id === selectedId) ?? null;
+  const selected = allSkills.find((skill) => skill.id === selectedId) ?? null;
   const options = skills.filter((skill) => skill.slot === slot && (!usedIds.includes(skill.id) || skill.id === selectedId));
+  const selectedIsUnavailable = Boolean(selected && !options.some((skill) => skill.id === selected.id));
 
   return (
     <div className="theme-builder-skill-slot">
@@ -838,13 +843,24 @@ function SkillPicker({
         id={`builder-skill-${label.toLowerCase().replaceAll(/\W+/g, "-")}`}
         label={label}
         value={selectedId ? String(selectedId) : ""}
-        choices={options.map((skill) => ({
+        choices={[
+          ...(selectedIsUnavailable && selected ? [{
+            value: String(selected.id),
+            label: selected.name,
+            icon: selected.icon,
+            group: "Unavailable",
+            meta: "Not available to the selected specializations",
+            disabled: true,
+            disabledReason: "Not available to the selected specializations",
+          }] : []),
+          ...options.map((skill) => ({
           value: String(skill.id),
           label: skill.name,
           icon: skill.icon,
           group: skill.type ?? skill.slot,
           meta: skill.description ? skill.description.replaceAll(/<[^>]+>/g, " ").replaceAll(/\s+/g, " ").trim() : skill.type ?? skill.slot,
-        }))}
+          })),
+        ]}
         onChange={(value) => onChange(value ? Number(value) : null)}
         onPreview={(value) => {
           const skill = options.find((item) => String(item.id) === value);
@@ -2012,12 +2028,12 @@ export default function AxiForgeLabView() {
   const runeValues = useMemo(() => [...new Set(Object.values(builder.equipment.runes).filter(Boolean))], [builder.equipment.runes]);
   const hasMixedRunes = runeValues.length > 1;
   const issues = useMemo(() => {
-    const next = [...validateBuilder(builder), ...validateBuilderEquipmentAgainstCatalog(builder, selectedProfession)];
+    const next = [...validateBuilder(builder), ...validateBuilderEquipmentAgainstCatalog(builder, selectedProfession), ...validateBuilderSkillsAgainstCatalog(builder, professionSkills)];
     if (!choiceIsCodecSupported(builder.equipment.relic, BUILDER_RELIC_CHOICES)) next.push("Relic is not supported by the installed AxiCode format.");
     if (!choiceIsCodecSupported(builder.equipment.food, BUILDER_FOOD_LABELS)) next.push("Food is not supported by the installed AxiCode format.");
     if (!choiceIsCodecSupported(builder.equipment.utility, BUILDER_UTILITY_LABELS)) next.push("Utility is not supported by the installed AxiCode format.");
     return next;
-  }, [builder, selectedProfession]);
+  }, [builder, professionSkills, selectedProfession]);
   const builderSectionIssueCounts = useMemo<Record<BuilderSection, number>>(() => {
     const overviewIssues = new Set(["Add a build name."]);
     const traitsIssues = new Set([
@@ -2026,7 +2042,7 @@ export default function AxiForgeLabView() {
       "Complete the land skill bar.",
     ]);
     const overview = issues.filter((issue) => overviewIssues.has(issue)).length;
-    const traits = issues.filter((issue) => traitsIssues.has(issue)).length;
+    const traits = issues.filter((issue) => traitsIssues.has(issue) || issue.endsWith(" is not available to the selected specializations.")).length;
     return {
       overview,
       traits,
@@ -2506,7 +2522,11 @@ export default function AxiForgeLabView() {
     await copyText(url, "Squad share link copied.");
     }
     
-    const skillGroups = useMemo(() => ({ Heal: professionSkills.filter((skill) => skill.slot === "Heal"), Utility: professionSkills.filter((skill) => skill.slot === "Utility"), Elite: professionSkills.filter((skill) => skill.slot === "Elite") }), [professionSkills]);
+    const availableSkills = useMemo(
+      () => availableProfessionSkills(professionSkills, builder.specializationIds),
+      [builder.specializationIds, professionSkills],
+    );
+    const skillGroups = useMemo(() => ({ Heal: availableSkills.filter((skill) => skill.slot === "Heal"), Utility: availableSkills.filter((skill) => skill.slot === "Utility"), Elite: availableSkills.filter((skill) => skill.slot === "Elite") }), [availableSkills]);
   const engineerKitOptions = useMemo(
     () => professionSkills.filter((skill) => skill.name.toLowerCase().includes("kit")),
     [professionSkills],
@@ -2736,9 +2756,9 @@ export default function AxiForgeLabView() {
             <section className="theme-panel theme-builder-panel">
               <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Step 03</div><h3>Land skill bar</h3></div><Swords className="h-5 w-5 text-theme-danger" /></div>
               <div className="theme-builder-skill-bar">
-                <SkillPicker label="Heal" slot="Heal" selectedId={builder.healSkillId} skills={skillGroups.Heal} usedIds={[]} onChange={(id) => chooseSkill("Heal", id)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />
-                {[0, 1, 2].map((index) => <SkillPicker key={index} label={`Utility ${index + 1}`} slot="Utility" selectedId={builder.utilitySkillIds[index]} skills={skillGroups.Utility} usedIds={builder.utilitySkillIds} onChange={(id) => chooseSkill("Utility", id, index)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />)}
-                <SkillPicker label="Elite" slot="Elite" selectedId={builder.eliteSkillId} skills={skillGroups.Elite} usedIds={[]} onChange={(id) => chooseSkill("Elite", id)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />
+                <SkillPicker label="Heal" slot="Heal" selectedId={builder.healSkillId} skills={skillGroups.Heal} allSkills={professionSkills} usedIds={[]} onChange={(id) => chooseSkill("Heal", id)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />
+                {[0, 1, 2].map((index) => <SkillPicker key={index} label={`Utility ${index + 1}`} slot="Utility" selectedId={builder.utilitySkillIds[index]} skills={skillGroups.Utility} allSkills={professionSkills} usedIds={builder.utilitySkillIds} onChange={(id) => chooseSkill("Utility", id, index)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />)}
+                <SkillPicker label="Elite" slot="Elite" selectedId={builder.eliteSkillId} skills={skillGroups.Elite} allSkills={professionSkills} usedIds={[]} onChange={(id) => chooseSkill("Elite", id)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />
               </div>
             </section>
 
