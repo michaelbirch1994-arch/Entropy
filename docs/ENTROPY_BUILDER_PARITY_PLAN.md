@@ -19,7 +19,7 @@ The existing workspace already supports:
 
 ## Cut 1 — catalog-backed legal choices
 
-Status: implemented on `feature/entropy-builder-parity`.
+Status: implemented and present in the `v0.2.98` baseline.
 
 - One cache-backed GW2 catalog source for professions, stat packages, legends, and pets.
 - Seven-day local cache with stale-cache fallback when the API is temporarily unavailable.
@@ -31,22 +31,26 @@ Status: implemented on `feature/entropy-builder-parity`.
 
 ## Cut 2 — complete equipment editor
 
-Status: in progress on `feature/entropy-builder-parity`.
+Status: in progress; the baseline below was verified against `v0.2.98`.
 
 Implemented in the current slice:
 
 - Searchable, codec-backed relic, food, and utility choices.
+- Searchable curated rune, sigil, and enrichment choices.
 - Official GW2 item-name and icon resolution for imported rune, sigil, and enrichment IDs.
+- Official relic icon resolution for supported relics.
 - Local item metadata cache with raw-value fallback when metadata is unavailable.
 - Compact visual loadout summary for stats, weapon sets, runes, relic, and consumables.
+- Visual armor, weapon-set, trinket, relic, consumable, and enrichment rows with explicit empty states.
+- Weapon-specific skill previews with a display-only weapon-set swap control.
 - Mixed per-slot rune imports remain independently editable instead of being flattened.
 - Unsupported future text values remain visible and are clearly marked as not encodable by the installed AxiCode format.
 
 Remaining in Cut 2:
 
-- Add full searchable rune, sigil, and enrichment catalogs, plus official relic icon resolution.
-- Add armor, trinket, and weapon slot cards with clear empty and unavailable states.
-- Add weapon-specific skill previews and profession mechanic slots.
+- Audit the curated rune, sigil, enrichment, relic, food, and utility lists against current game data before claiming full catalog coverage.
+- Add per-slot armor stat overrides; armor currently inherits the shared stat doctrine while weapons and trinkets support overrides.
+- Complete profession mechanic-slot presentation for professions whose mechanics are not yet represented in the preview.
 - Add game-mode-aware filtering where the GW2 API exposes a reliable mode distinction.
 - Keep raw IDs available only in an advanced inspector for troubleshooting and lossless import.
 

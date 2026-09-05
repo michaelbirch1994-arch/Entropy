@@ -375,6 +375,65 @@
   }
 }
 
+.theme-builder-layout {
+  container-type: inline-size;
+}
+
+/* The app rail can leave the builder narrower than the viewport breakpoint.
+   Reflow section navigation from the actual workspace width so every tab stays visible. */
+@container (max-width: 42rem) {
+  .theme-builder-mode-toggle {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .theme-builder-mode-toggle button {
+    grid-column: span 2;
+    min-width: 0;
+    min-height: 2.65rem;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.64rem;
+  }
+
+  .theme-builder-mode-toggle button:nth-child(n + 4) {
+    grid-column: span 3;
+    border-top: 1px solid var(--builder-edge);
+  }
+
+  .theme-builder-mode-toggle button:nth-child(3),
+  .theme-builder-mode-toggle button:last-child {
+    border-right: 0;
+  }
+}
+
+@container (max-width: 22rem) {
+  .theme-builder-mode-toggle {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .theme-builder-mode-toggle button,
+  .theme-builder-mode-toggle button:nth-child(n + 4) {
+    grid-column: span 1;
+    border-right: 1px solid var(--builder-edge);
+    border-top: 0;
+  }
+
+  .theme-builder-mode-toggle button:nth-child(even) {
+    border-right: 0;
+  }
+
+  .theme-builder-mode-toggle button:nth-child(n + 3) {
+    border-top: 1px solid var(--builder-edge);
+  }
+
+  .theme-builder-mode-toggle button:last-child {
+    grid-column: span 2;
+    border-right: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .theme-builder-root::before {
     animation: none;
