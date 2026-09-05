@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { Gw2Pet, Gw2Profession, Gw2Skill, Gw2Specialization } from "../../types/buildEditor";
+import type { Gw2Legend, Gw2Pet, Gw2Profession, Gw2Skill, Gw2Specialization } from "../../types/buildEditor";
 import { createEmptyBuilder } from "../axiforge/builderModel";
-import { resolveProfessionMechanicSlots, resolveRangerPetSlots } from "../gw2/professionMechanics";
+import {
+  availableRevenantLegends,
+  resolveProfessionMechanicSlots,
+  resolveRangerPetSlots,
+  resolveRevenantLegendSlots,
+  validateRevenantLegendSelection,
+} from "../gw2/professionMechanics";
 
 const profession: Gw2Profession = {
   id: "Guardian",
@@ -68,5 +74,30 @@ describe("resolveProfessionMechanicSlots", () => {
       { key: "P2", pet: null },
     ]);
     expect(resolveRangerPetSlots(createEmptyBuilder("Guardian"), pets)).toEqual([]);
+  });
+
+  it("offers core Revenant legends plus only the active elite legend", () => {
+    const legends: Gw2Legend[] = [
+      { id: "Legend2", swap: 28134 },
+      { id: "Legend5", swap: 41858 },
+      { id: "Legend7", swap: 62749 },
+    ];
+    const legendSkills = new Map<number, Gw2Skill>([
+      [28134, { id: 28134, name: "Legendary Assassin Stance", slot: "Profession_1" }],
+      [41858, { id: 41858, name: "Legendary Renegade Stance", slot: "Profession_1", specialization: 63 }],
+      [62749, { id: 62749, name: "Legendary Alliance", slot: "Profession_1", specialization: 69 }],
+    ]);
+    expect(availableRevenantLegends(legends, [null, null, 69], legendSkills).map((legend) => legend.id)).toEqual(["Legend2", "Legend7"]);
+
+    const builder = createEmptyBuilder("Revenant");
+    builder.specializationIds = [null, null, 69];
+    builder.selectedLegends = ["Legend2", "Legend5"];
+    expect(resolveRevenantLegendSlots(builder, legends, legendSkills)).toEqual([
+      { key: "L1", legend: legends[0], skill: legendSkills.get(28134) },
+      { key: "L2", legend: legends[1], skill: legendSkills.get(41858) },
+    ]);
+    expect(validateRevenantLegendSelection(builder, legends, legendSkills)).toEqual([
+      "Legendary Renegade Stance is not available to the selected specializations.",
+    ]);
   });
 });

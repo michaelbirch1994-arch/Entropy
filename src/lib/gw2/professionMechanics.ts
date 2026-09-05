@@ -1,4 +1,4 @@
-import type { EntropyBuilderState, Gw2Pet, Gw2Profession, Gw2Skill, Gw2Specialization } from "../../types/buildEditor";
+import type { EntropyBuilderState, Gw2Legend, Gw2Pet, Gw2Profession, Gw2Skill, Gw2Specialization } from "../../types/buildEditor";
 
 export interface ProfessionMechanicSlot {
   key: `F${number}`;
@@ -8,6 +8,12 @@ export interface ProfessionMechanicSlot {
 export interface RangerPetSlot {
   key: "P1" | "P2";
   pet: Gw2Pet | null;
+}
+
+export interface RevenantLegendSlot {
+  key: "L1" | "L2";
+  legend: Gw2Legend | null;
+  skill: Gw2Skill | null;
 }
 
 const HIDDEN_MECHANIC_NAME = /^(?:exit|leave|stow)\b/i;
@@ -67,4 +73,50 @@ export function resolveRangerPetSlots(
     key: index === 0 ? "P1" : "P2",
     pet: id ? petsById.get(id) ?? null : null,
   }));
+}
+
+export function availableRevenantLegends(
+  legends: Gw2Legend[],
+  specializationIds: Array<number | null>,
+  skillsById: Map<number, Gw2Skill>,
+): Gw2Legend[] {
+  const activeSpecializations = new Set(specializationIds.filter((id): id is number => id != null));
+  return legends.filter((legend) => {
+    const swapSkill = legend.swap ? skillsById.get(legend.swap) : null;
+    return !swapSkill?.specialization || activeSpecializations.has(swapSkill.specialization);
+  });
+}
+
+export function resolveRevenantLegendSlots(
+  builder: EntropyBuilderState,
+  legends: Gw2Legend[],
+  skillsById: Map<number, Gw2Skill>,
+): RevenantLegendSlot[] {
+  if (builder.professionId !== "Revenant") return [];
+  const legendsById = new Map(legends.map((legend) => [legend.id, legend]));
+  return builder.selectedLegends.map((id, index) => {
+    const legend = id ? legendsById.get(id) ?? null : null;
+    return {
+      key: index === 0 ? "L1" : "L2",
+      legend,
+      skill: legend?.swap ? skillsById.get(legend.swap) ?? null : null,
+    };
+  });
+}
+
+export function validateRevenantLegendSelection(
+  builder: EntropyBuilderState,
+  legends: Gw2Legend[],
+  skillsById: Map<number, Gw2Skill>,
+): string[] {
+  if (builder.professionId !== "Revenant") return [];
+  const availableIds = new Set(availableRevenantLegends(legends, builder.specializationIds, skillsById).map((legend) => legend.id));
+  const legendsById = new Map(legends.map((legend) => [legend.id, legend]));
+  return [...new Set(builder.selectedLegends.flatMap((id) => {
+    const legend = legendsById.get(id);
+    const swapSkill = legend?.swap ? skillsById.get(legend.swap) : null;
+    return legend && swapSkill && !availableIds.has(id)
+      ? [`${swapSkill.name} is not available to the selected specializations.`]
+      : [];
+  }))];
 }

@@ -97,7 +97,13 @@ import {
   weaponSkillIds,
   type WeaponSetNumber,
 } from "../lib/gw2/weaponSkillBar";
-import { resolveProfessionMechanicSlots, resolveRangerPetSlots } from "../lib/gw2/professionMechanics";
+import {
+  availableRevenantLegends,
+  resolveProfessionMechanicSlots,
+  resolveRangerPetSlots,
+  resolveRevenantLegendSlots,
+  validateRevenantLegendSelection,
+} from "../lib/gw2/professionMechanics";
 import {
   BUILDER_FOOD_CHOICES,
   BUILDER_RELIC_CHOICES,
@@ -1532,6 +1538,7 @@ function BuilderCombatBar({
   profession,
   specsById,
   skillsById,
+  legends,
   pets,
   health,
   weaponSet,
@@ -1543,6 +1550,7 @@ function BuilderCombatBar({
   profession: Gw2Profession | null;
   specsById: Map<number, Gw2Specialization>;
   skillsById: Map<number, Gw2Skill>;
+  legends: Gw2Legend[];
   pets: Gw2Pet[];
   health: number;
   weaponSet: WeaponSetNumber;
@@ -1554,6 +1562,7 @@ function BuilderCombatBar({
   const utilityLabels = ["Heal", "Utility 1", "Utility 2", "Utility 3", "Elite"];
   const weaponSlots = resolveWeaponSkillSlots(builder, profession, weaponSet, skillsById);
   const mechanicSlots = resolveProfessionMechanicSlots(builder, profession, specsById, skillsById);
+  const legendSlots = resolveRevenantLegendSlots(builder, legends, skillsById);
   const petSlots = resolveRangerPetSlots(builder, pets);
   const setLabel = weaponSet === 1 ? "I" : "II";
   const nextSetLabel = weaponSet === 1 ? "II" : "I";
@@ -1587,8 +1596,8 @@ function BuilderCombatBar({
       </div>
 
       <div className="theme-builder-combat-core">
-        {(mechanicSlots.length > 0 || petSlots.length > 0) && (
-          <div className="theme-builder-mechanic-skills" aria-label={petSlots.length ? "Profession mechanics and Ranger pets" : "Profession mechanics"}>
+        {(mechanicSlots.length > 0 || legendSlots.length > 0 || petSlots.length > 0) && (
+          <div className="theme-builder-mechanic-skills" aria-label="Profession mechanics">
             {mechanicSlots.map(({ key, skill }) => (
               <button
                 key={`${key}-${skill.id}`}
@@ -1599,6 +1608,20 @@ function BuilderCombatBar({
                 aria-label={`${key}: ${skill.name}`}
               >
                 {skill.icon ? <img src={skill.icon} alt="" /> : <span>{key}</span>}
+                <b>{key}</b>
+              </button>
+            ))}
+            {legendSlots.map(({ key, skill }) => (
+              <button
+                key={key}
+                type="button"
+                className="theme-builder-combat-skill is-mechanic is-companion"
+                disabled={!skill}
+                onClick={() => skill && onInspect(skill)}
+                title={skill?.name ?? `${key} legend not selected`}
+                aria-label={skill ? `${key}: ${skill.name}` : `${key} legend not selected`}
+              >
+                {skill?.icon ? <img src={skill.icon} alt="" /> : <span>{key}</span>}
                 <b>{key}</b>
               </button>
             ))}
@@ -1661,6 +1684,7 @@ function BuildPreview({
   specsById,
   traitsBySpecId,
   skillsById,
+  legends,
   pets,
   attributeTotals,
   attributeProfile,
@@ -1674,6 +1698,7 @@ function BuildPreview({
   specsById: Map<number, Gw2Specialization>;
   traitsBySpecId: Map<number, Gw2Trait[]>;
   skillsById: Map<number, Gw2Skill>;
+  legends: Gw2Legend[];
   pets: Gw2Pet[];
   attributeTotals: AttributeTotals;
   attributeProfile: AttributeProfile;
@@ -1719,7 +1744,7 @@ function BuildPreview({
         </div>
       </div>
 
-      <BuilderCombatBar builder={builder} profession={profession} specsById={specsById} skillsById={skillsById} pets={pets} health={attributeTotals.health} weaponSet={weaponSet} onSwap={onSwapWeaponSet} onInspect={onInspectSkill} onInspectPet={onInspectPet} />
+      <BuilderCombatBar builder={builder} profession={profession} specsById={specsById} skillsById={skillsById} legends={legends} pets={pets} health={attributeTotals.health} weaponSet={weaponSet} onSwap={onSwapWeaponSet} onInspect={onInspectSkill} onInspectPet={onInspectPet} />
 
       <div className="theme-builder-tactical-strip">
         <div className="theme-builder-tactical-card is-primary">
@@ -2028,12 +2053,17 @@ export default function AxiForgeLabView() {
   const runeValues = useMemo(() => [...new Set(Object.values(builder.equipment.runes).filter(Boolean))], [builder.equipment.runes]);
   const hasMixedRunes = runeValues.length > 1;
   const issues = useMemo(() => {
-    const next = [...validateBuilder(builder), ...validateBuilderEquipmentAgainstCatalog(builder, selectedProfession), ...validateBuilderSkillsAgainstCatalog(builder, professionSkills)];
+    const next = [
+      ...validateBuilder(builder),
+      ...validateBuilderEquipmentAgainstCatalog(builder, selectedProfession),
+      ...validateBuilderSkillsAgainstCatalog(builder, professionSkills),
+      ...validateRevenantLegendSelection(builder, legends, skillsById),
+    ];
     if (!choiceIsCodecSupported(builder.equipment.relic, BUILDER_RELIC_CHOICES)) next.push("Relic is not supported by the installed AxiCode format.");
     if (!choiceIsCodecSupported(builder.equipment.food, BUILDER_FOOD_LABELS)) next.push("Food is not supported by the installed AxiCode format.");
     if (!choiceIsCodecSupported(builder.equipment.utility, BUILDER_UTILITY_LABELS)) next.push("Utility is not supported by the installed AxiCode format.");
     return next;
-  }, [builder, professionSkills, selectedProfession]);
+  }, [builder, legends, professionSkills, selectedProfession, skillsById]);
   const builderSectionIssueCounts = useMemo<Record<BuilderSection, number>>(() => {
     const overviewIssues = new Set(["Add a build name."]);
     const traitsIssues = new Set([
@@ -2093,7 +2123,10 @@ export default function AxiForgeLabView() {
     if (!selectedProfession) return;
     let cancelled = false;
     setCatalogError(null);
-    const skillIds = [...selectedProfession.skills.map((skill) => skill.id), ...weaponSkillIds(selectedProfession)];
+    const legendSwapIds = selectedProfession.id === "Revenant"
+      ? legends.flatMap((legend) => legend.swap ? [legend.swap] : [])
+      : [];
+    const skillIds = [...selectedProfession.skills.map((skill) => skill.id), ...weaponSkillIds(selectedProfession), ...legendSwapIds];
     Promise.all([fetchGw2Specializations(selectedProfession.specializations), fetchGw2Skills(skillIds)])
       .then(([specs, skills]) => {
         if (cancelled) return;
@@ -2109,7 +2142,7 @@ export default function AxiForgeLabView() {
       })
       .catch((error) => !cancelled && setCatalogError(error instanceof Error ? error.message : "Unable to load profession data."));
     return () => { cancelled = true; };
-  }, [selectedProfession?.id]);
+  }, [legends, selectedProfession?.id]);
 
   useEffect(() => {
     const ids = builder.specializationIds.flatMap((id) => id ? specsById.get(id)?.major_traits ?? [] : []);
@@ -2526,6 +2559,10 @@ export default function AxiForgeLabView() {
       () => availableProfessionSkills(professionSkills, builder.specializationIds),
       [builder.specializationIds, professionSkills],
     );
+    const availableLegends = useMemo(
+      () => availableRevenantLegends(legends, builder.specializationIds, skillsById),
+      [builder.specializationIds, legends, skillsById],
+    );
     const skillGroups = useMemo(() => ({ Heal: availableSkills.filter((skill) => skill.slot === "Heal"), Utility: availableSkills.filter((skill) => skill.slot === "Utility"), Elite: availableSkills.filter((skill) => skill.slot === "Elite") }), [availableSkills]);
   const engineerKitOptions = useMemo(
     () => professionSkills.filter((skill) => skill.name.toLowerCase().includes("kit")),
@@ -2769,6 +2806,7 @@ export default function AxiForgeLabView() {
                 profession={selectedProfession}
                 specsById={specsById}
                 skillsById={skillsById}
+                legends={legends}
                 pets={pets}
                 health={attributeTotals.health}
                 weaponSet={displayedWeaponSet}
@@ -2968,7 +3006,35 @@ export default function AxiForgeLabView() {
 
             {builderViewMode === "traits" && (builder.professionId === "Revenant" || builder.professionId === "Ranger" || builder.professionId === "Elementalist" || builder.professionId === "Engineer" || builder.professionId === "Warrior" || builder.professionId === "Thief") && (
               <section className="theme-panel theme-builder-panel"><div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Profession system</div><h3>{builder.professionId} mechanics</h3></div><Sparkles className="h-5 w-5 text-theme-accent" /></div><div className="theme-builder-mechanics">
-                {builder.professionId === "Revenant" && <>{[0, 1].map((index) => <ChoicePickerField key={index} id={`builder-legend-${index}`} label={`Legend ${index + 1}`} value={builder.selectedLegends[index]} choices={legends.map((legend) => ({ value: legend.id, label: legendLabel(legend.id), group: "Legend", meta: legend.id }))} onChange={(value) => updateBuilder((current) => ({ ...current, selectedLegends: current.selectedLegends.map((item, itemIndex) => itemIndex === index ? value : item) as [string, string] }))} placeholder="Choose legend" clearLabel="Clear legend" />)}</>}
+                {builder.professionId === "Revenant" && <>{[0, 1].map((index) => {
+                  const selectedLegendId = builder.selectedLegends[index];
+                  const selectedLegend = legends.find((legend) => legend.id === selectedLegendId);
+                  const selectedSwapSkill = selectedLegend?.swap ? skillsById.get(selectedLegend.swap) : null;
+                  const legalChoices: BuilderPickerChoice[] = availableLegends
+                    .filter((legend) => !builder.selectedLegends.includes(legend.id) || legend.id === selectedLegendId)
+                    .map((legend) => {
+                      const swapSkill = legend.swap ? skillsById.get(legend.swap) : null;
+                      return {
+                        value: legend.id,
+                        label: swapSkill?.name ?? legendLabel(legend.id),
+                        icon: swapSkill?.icon,
+                        group: swapSkill?.specialization ? "Elite legend" : "Core legend",
+                        meta: swapSkill?.description ?? legend.id,
+                      };
+                    });
+                  if (selectedLegend && !availableLegends.some((legend) => legend.id === selectedLegend.id)) {
+                    legalChoices.unshift({
+                      value: selectedLegend.id,
+                      label: selectedSwapSkill?.name ?? legendLabel(selectedLegend.id),
+                      icon: selectedSwapSkill?.icon,
+                      group: "Unavailable",
+                      meta: "Not available to the selected specializations",
+                      disabled: true,
+                      disabledReason: "Not available to the selected specializations",
+                    });
+                  }
+                  return <ChoicePickerField key={index} id={`builder-legend-${index}`} label={`Legend ${index + 1}`} value={selectedLegendId} choices={legalChoices} onChange={(value) => updateBuilder((current) => ({ ...current, selectedLegends: current.selectedLegends.map((item, itemIndex) => itemIndex === index ? value : item) as [string, string] }))} onPreview={(value) => { const legend = legends.find((item) => item.id === value); const skill = legend?.swap ? skillsById.get(legend.swap) : null; if (skill) setSelectedSummary({ kind: "skill", item: skill }); }} placeholder="Choose legend" clearLabel="Clear legend" />;
+                })}</>}
                 {builder.professionId === "Ranger" && <>{(["terrestrial1", "terrestrial2"] as const).map((field, index) => {
                   const selectedPetId = builder.selectedPets[field];
                   const selectedPet = pets.find((pet) => pet.id === selectedPetId);
@@ -3007,6 +3073,7 @@ export default function AxiForgeLabView() {
                         specsById={specsById}
                         traitsBySpecId={traitsBySpecId}
                         skillsById={skillsById}
+                        legends={legends}
                         pets={pets}
                         attributeTotals={attributeTotals}
                         attributeProfile={attributeProfile}

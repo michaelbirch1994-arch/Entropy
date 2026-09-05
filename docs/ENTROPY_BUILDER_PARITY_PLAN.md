@@ -72,6 +72,7 @@ Implemented in the current slice:
 - Land skill pickers expose core skills plus only skills belonging to the active specialization; incompatible imported selections remain visible and repairable.
 - Ranger terrestrial pet slots render from explicit Builder selections with official names, descriptions, and icons.
 - Ranger terrestrial pet choices exclude the five aquatic-only API IDs while retaining amphibious pets; invalid imported selections remain visible and repairable.
+- Revenant legend choices include core legends plus only the active elite specialization's legend, with both selected legend stances represented in the combat bar.
 
 Remaining in Cut 3:
 
