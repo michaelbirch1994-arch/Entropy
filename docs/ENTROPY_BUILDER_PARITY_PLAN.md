@@ -70,6 +70,7 @@ Implemented in the current slice:
 - Three compact specialization rows with searchable Core/Elite selection, icon-backed major trait choices, duplicate guards, and Inspector access.
 - Selected land skills, weapon skills, and API-explicit profession mechanics render as a visual combat bar with inspectable icons.
 - Ranger terrestrial pet slots render from explicit Builder selections with official names, descriptions, and icons.
+- Ranger terrestrial pet choices exclude the five aquatic-only API IDs while retaining amphibious pets; invalid imported selections remain visible and repairable.
 
 Remaining in Cut 3:
 

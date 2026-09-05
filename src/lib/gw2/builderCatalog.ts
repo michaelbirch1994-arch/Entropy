@@ -16,6 +16,14 @@ import {
 export const BUILDER_CATALOG_CACHE_KEY = "entropy.builder.catalog.v1";
 export const BUILDER_CATALOG_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+// The pets API does not expose an environment field. These are the aquatic-only
+// pets; drakes and siege turtle are amphibious and remain valid on land.
+export const AQUATIC_ONLY_RANGER_PET_IDS = new Set([21, 40, 41, 42, 43]);
+
+export function isTerrestrialRangerPet(petId: number): boolean {
+  return !AQUATIC_ONLY_RANGER_PET_IDS.has(petId);
+}
+
 export type BuilderCatalogSource = "live" | "cache";
 
 export interface BuilderFoundationCatalog {

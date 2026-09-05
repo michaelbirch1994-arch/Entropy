@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createEmptyBuilder } from "../axiforge/builderModel";
 import {
+  AQUATIC_ONLY_RANGER_PET_IDS,
   availableProfessionWeapons,
+  isTerrestrialRangerPet,
   isTwoHandedWeapon,
   validateBuilderEquipmentAgainstCatalog,
   weaponFitsBuilderSlot,
@@ -22,6 +24,14 @@ const profession: Gw2Profession = {
 };
 
 describe("Builder foundation catalog", () => {
+  it("separates aquatic-only pets without excluding amphibious land pets", () => {
+    expect([...AQUATIC_ONLY_RANGER_PET_IDS]).toEqual([21, 40, 41, 42, 43]);
+    expect(isTerrestrialRangerPet(21)).toBe(false);
+    expect(isTerrestrialRangerPet(40)).toBe(false);
+    expect(isTerrestrialRangerPet(7)).toBe(true);
+    expect(isTerrestrialRangerPet(66)).toBe(true);
+  });
+
   it("only exposes specialization weapons when that specialization is selected", () => {
     expect(availableProfessionWeapons(profession, [null, null, null]).map(([name]) => name)).not.toContain("Rifle");
     expect(availableProfessionWeapons(profession, [42, null, null]).map(([name]) => name)).toContain("Rifle");
