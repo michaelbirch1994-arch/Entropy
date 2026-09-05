@@ -46,10 +46,11 @@ Implemented in the current slice:
 - Weapon-specific skill previews with a display-only weapon-set swap control.
 - Mixed per-slot rune imports remain independently editable instead of being flattened.
 - Unsupported future text values remain visible and are clearly marked as not encodable by the installed AxiCode format.
+- Rune, sigil, and enrichment catalogs match the synced AxiForge 0.12.0 lists; all 195 IDs and names were verified against the official GW2 API.
+- Relic, food, and utility choices match the exact vocabulary encodable by @axiapps/code 1.3.1. Newer relics remain lossless imported values until the codec supports them.
 
 Remaining in Cut 2:
 
-- Audit the curated rune, sigil, enrichment, relic, food, and utility lists against current game data before claiming full catalog coverage.
 - Expand profession mechanic-slot presentation beyond the API-explicit core and elite buttons now shown in Preview. Derived mechanics still require dedicated resolvers for weapon bursts, toolbelt loadouts, pets, legends, and transformed bars.
 - Add game-mode-aware filtering where the GW2 API exposes a reliable mode distinction.
 - Keep raw IDs available only in the collapsed Advanced build data inspector for troubleshooting and lossless import.

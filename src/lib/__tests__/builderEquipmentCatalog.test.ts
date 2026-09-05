@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { createEmptyEquipment } from "../axiforge/builderModel";
 import {
   BUILDER_FOOD_CHOICES,
+  BUILDER_ENRICHMENT_CHOICES,
   BUILDER_RELIC_CHOICES,
+  BUILDER_RUNE_CHOICES,
+  BUILDER_SIGIL_CHOICES,
   BUILDER_UTILITY_CHOICES,
   choiceIsCodecSupported,
   equipmentItemIds,
@@ -13,6 +16,19 @@ describe("Builder equipment catalog", () => {
     expect(BUILDER_RELIC_CHOICES).toContain("Relic of the Thief");
     expect(BUILDER_FOOD_CHOICES.find((choice) => choice.id === 41569)?.label).toBe("Bowl of Sweet and Spicy Butternut Squash Soup");
     expect(BUILDER_UTILITY_CHOICES.find((choice) => choice.id === 78305)?.label).toBe("Superior Sharpening Stone");
+    expect(BUILDER_RELIC_CHOICES).toHaveLength(106);
+    expect(BUILDER_FOOD_CHOICES).toHaveLength(14);
+    expect(BUILDER_UTILITY_CHOICES).toHaveLength(5);
+    expect(choiceIsCodecSupported("Relic of Galdra", BUILDER_RELIC_CHOICES)).toBe(false);
+  });
+
+  it("keeps the verified upgrade catalogs complete and duplicate-free", () => {
+    expect(BUILDER_RUNE_CHOICES).toHaveLength(99);
+    expect(BUILDER_SIGIL_CHOICES).toHaveLength(81);
+    expect(BUILDER_ENRICHMENT_CHOICES).toHaveLength(15);
+    for (const choices of [BUILDER_RUNE_CHOICES, BUILDER_SIGIL_CHOICES, BUILDER_ENRICHMENT_CHOICES]) {
+      expect(new Set(choices.map((choice) => choice.id)).size).toBe(choices.length);
+    }
   });
 
   it("collects only valid unique item IDs without mutating equipment", () => {

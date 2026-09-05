@@ -38,10 +38,11 @@ export const BUILDER_RELIC_CHOICES = [
   "Relic of the Sorcerer", "Relic of the Steamshrieker", "Relic of the Stormsinger", "Relic of the Sunless",
   "Relic of the Thief", "Relic of the Trooper", "Relic of the Twin Generals", "Relic of the Unseen Invasion",
   "Relic of the Warrior", "Relic of the Water", "Relic of the Wayfinder", "Relic of the Weaver",
-  "Relic of the Wizard's Tower", "Relic of the Zephyrite", "Relic of Galdra", "Relic of Watch",
-  "Relic of the Cruel Overseer", "Relic of the Director", "Relic of the Doyen", "Relic of the Sacred Grounds",
+  "Relic of the Wizard's Tower", "Relic of the Zephyrite",
 ] as const;
 
+// The map also includes known relics newer than the installed codec. Their
+// metadata can hydrate lossless imports even though the picker cannot encode them.
 export const BUILDER_RELIC_IDS: Record<string, number> = {
   "Relic of Agony": 104849,
   "Relic of Akeem": 100432,
