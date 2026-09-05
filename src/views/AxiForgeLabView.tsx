@@ -25,6 +25,8 @@ import {
   Link2,
   Loader2,
   MinusCircle,
+  PanelRightClose,
+  PanelRightOpen,
   Plus,
   RotateCcw,
   Save,
@@ -2029,6 +2031,7 @@ export default function AxiForgeLabView() {
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("build");
   const [builderViewMode, setBuilderViewMode] = useState<BuilderSection>(loadBuilderSection);
   const [equipmentSection, setEquipmentSection] = useState<EquipmentSection>("weapons");
+  const [detailRailOpen, setDetailRailOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDetailsElement>(null);
   const [displayedWeaponSet, setDisplayedWeaponSet] = useState<WeaponSetNumber>(() => workspace.draft.activeWeaponSet === 2 ? 2 : 1);
   const [editingBuildId, setEditingBuildId] = useState<string | null>(null);
@@ -2729,7 +2732,7 @@ export default function AxiForgeLabView() {
       )}
 
       {activeTab === "build" && (
-        <div id="builder-panel-build" role="tabpanel" aria-labelledby="builder-tab-build" className="theme-builder-layout">
+        <div id="builder-panel-build" role="tabpanel" aria-labelledby="builder-tab-build" className={`theme-builder-layout${detailRailOpen ? " is-rail-open" : " is-rail-collapsed"}`}>
           <main className="space-y-5">
           <div className="theme-builder-mode-toggle" role="tablist" aria-label="Build editor sections">
             {BUILDER_SECTIONS.map((section) => (
@@ -3198,7 +3201,20 @@ export default function AxiForgeLabView() {
 
           <BuilderMobileTools issues={issues} selected={selectedSummary} builder={builder} />
 
-          <aside className="theme-builder-rail">
+          <button
+            type="button"
+            className="theme-builder-rail-toggle"
+            aria-expanded={detailRailOpen}
+            aria-controls="builder-detail-rail"
+            aria-label={detailRailOpen ? "Hide build readiness and inspector" : "Show build readiness and inspector"}
+            title={detailRailOpen ? "Hide build details" : "Show build details"}
+            onClick={() => setDetailRailOpen((open) => !open)}
+          >
+            {detailRailOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+            {!detailRailOpen && <span aria-label={`${issues.length} build issues`}>{issues.length}</span>}
+          </button>
+
+          <aside id="builder-detail-rail" className="theme-builder-rail" hidden={!detailRailOpen}>
             <BuilderReadiness issues={issues} />
             <DetailPanel selected={selectedSummary} builder={builder} />
             {exportCode && <div className="theme-builder-code-output"><div className="flex items-center justify-between"><FieldLabel>Last exported code</FieldLabel><button type="button" title="Copy code" aria-label="Copy last exported AxiCode" onClick={() => copyText(exportCode, "AxiCode copied.")}><Clipboard className="h-4 w-4" /></button></div><code>{exportCode}</code></div>}

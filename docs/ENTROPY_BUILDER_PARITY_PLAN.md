@@ -77,6 +77,7 @@ Implemented in the current slice:
 - Revenant legend choices include core legends plus only the active elite specialization's legend, with both selected legend stances represented in the combat bar.
 - Equipment uses four focused workspaces for weapons, armor and trinkets, upgrades, and consumables; each workspace presents only its matching visual summary and controls.
 - The Builder command header keeps Import and Save visible while grouping secondary code and sharing actions into one Export menu.
+- Desktop editing opens at full canvas width; readiness and the contextual Inspector remain available in an optional detail rail, while narrow screens retain the existing mobile sheets.
 
 Remaining in Cut 3:
 
