@@ -12,6 +12,7 @@ function shortName(name: string): string {
 // EI orientations use game-space Y, while replay pixels grow downward.
 const FACING_ANGLE_SIGN = -1;
 const FACING_ANGLE_OFFSET_DEG = 0;
+const REPLAY_MAP_REQUEST_PROPS: Record<string, string> = { referrerPolicy: "no-referrer" };
 
 function facingLineEnd(cx: number, cy: number, length: number, angleDeg: number) {
   const rad = ((FACING_ANGLE_SIGN * angleDeg + FACING_ANGLE_OFFSET_DEG) * Math.PI) / 180;
@@ -117,7 +118,7 @@ export function ReplayMapStage({
             if (!visible) return null;
             const width = data.map!.width;
             const height = data.map!.height;
-            return <image key={`${image.url}-${index}`} href={image.url} x={image.x} y={image.y} width={width} height={height} opacity={0.9} preserveAspectRatio="none" />;
+            return <image key={`${image.url}-${index}`} href={image.url} x={image.x} y={image.y} width={width} height={height} opacity={0.9} preserveAspectRatio="none" {...REPLAY_MAP_REQUEST_PROPS} />;
           })}
 
           {showMechanics && (data.mechanics ?? []).filter((mechanic) => Math.abs(mechanic.t - timestampMs) <= 1500 && mechanic.account).map((mechanic, index) => {

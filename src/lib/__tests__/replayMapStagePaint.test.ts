@@ -45,16 +45,25 @@ function replayData(): ReplayData {
   };
 }
 
-function renderFrame(timestampMs: number): string {
+function renderFrame(timestampMs: number, showMap = false): string {
+  const data = replayData();
+  if (showMap) {
+    data.map = {
+      images: [{ url: "https://i.imgur.com/replay-map.png", startMs: 0, endMs: 1000, x: 0, y: 0 }],
+      width: 100,
+      height: 100,
+      inchToPixel: 1,
+    };
+  }
   return renderToStaticMarkup(
     createElement(ReplayMapStage, {
-      data: replayData(),
+      data,
       timestampMs,
       viewBox: "0 0 100 100",
       markerUnit: 1,
       selectedAccount: null,
       alignedIntelligenceEvent: null,
-      showMap: false,
+      showMap,
       showMechanics: false,
       showCasts: false,
       showFacing: false,
@@ -93,5 +102,12 @@ describe("ReplayMapStage stable actor painting", () => {
     const frame = renderFrame(150);
     expect(frame).toContain('id="replay-icon-clip-0-Player1234"');
     expect(frame).toContain('cx="0" cy="0"');
+  });
+
+  it("does not send the Entropy page referrer when loading a replay map", () => {
+    const frame = renderFrame(150, true);
+
+    expect(frame).toContain('href="https://i.imgur.com/replay-map.png"');
+    expect(frame).toContain('referrerPolicy="no-referrer"');
   });
 });
