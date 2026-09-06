@@ -2964,43 +2964,38 @@ export default function AxiForgeLabView() {
           </div>
           <div key={builderViewMode} id="builder-view-panel" role="tabpanel" aria-labelledby={`builder-view-tab-${builderViewMode}`} className="theme-builder-mode-content">
           {builderViewMode === "overview" && (
-            <>
-            <section className="theme-panel theme-builder-panel theme-builder-identity">
-              <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Loadout identity</div><h3>{editingBuildId ? "Editing saved build" : "Unsaved field draft"}</h3></div><button type="button" className="theme-quiet-button" onClick={() => { updateBuilder(createEmptyBuilder(builder.professionId)); setEditingBuildId(null); setExportCode(""); }}><RotateCcw className="h-4 w-4" /> Reset</button></div>
-              <div className="grid gap-3 md:grid-cols-[minmax(16rem,1.5fr)_minmax(10rem,.7fr)_minmax(14rem,1fr)]">
-                <label><FieldLabel>Build name</FieldLabel><TextField value={builder.name} onChange={(event) => updateBuilder((current) => ({ ...current, name: event.target.value }))} /></label>
-                <div>
-                  <FieldLabel>Role</FieldLabel>
-                  <div className="theme-builder-pill-grid" role="group" aria-label="Build role">
-                    {ROLE_OPTIONS.map((role) => (
-                      <button
-                        key={role || "none"}
-                        type="button"
-                        aria-pressed={builder.role === role}
-                        className={builder.role === role ? "is-active" : ""}
-                        onClick={() => updateBuilder((current) => ({ ...current, role }))}
-                      >
-                        {role || "No role"}
-                      </button>
-                    ))}
+            <section className="theme-builder-loadout-canvas theme-builder-overview-canvas">
+              <header className="theme-builder-canvas-header">
+                <div className="theme-builder-canvas-identity">
+                  {selectedProfession && <ClassIcon name={selectedProfession.name} size="lg" />}
+                  <div>
+                    <div className="theme-builder-kicker">Build profile · {builder.gameMode.toUpperCase()}</div>
+                    <h3>{builder.name.trim() || "Untitled build"}</h3>
                   </div>
                 </div>
+                <button type="button" className="theme-quiet-button theme-builder-canvas-reset" aria-label="Reset build draft" title="Reset build draft" onClick={() => { updateBuilder(createEmptyBuilder(builder.professionId)); setEditingBuildId(null); setExportCode(""); }}><RotateCcw className="h-4 w-4" /> Reset</button>
+              </header>
+
+              <div className="theme-builder-canvas-stage is-identity">
+                <div className="theme-builder-canvas-stage-head"><div><div className="theme-builder-kicker">Identity</div><h4>{editingBuildId ? "Saved build details" : "Draft details"}</h4></div></div>
+                <div className="grid gap-3 md:grid-cols-[minmax(16rem,1.5fr)_minmax(10rem,.7fr)_minmax(14rem,1fr)]">
+                <label><FieldLabel>Build name</FieldLabel><TextField value={builder.name} onChange={(event) => updateBuilder((current) => ({ ...current, name: event.target.value }))} /></label>
+                <label className="theme-builder-role-field"><FieldLabel>Role</FieldLabel><select className="theme-builder-input" aria-label="Build role" value={builder.role} onChange={(event) => updateBuilder((current) => ({ ...current, role: event.target.value }))}>{ROLE_OPTIONS.map((role) => <option key={role || "none"} value={role}>{role || "No role"}</option>)}</select></label>
                 <label><FieldLabel>Tags, comma separated</FieldLabel><TextField value={builder.tags.join(", ")} onChange={(event) => updateBuilder((current) => ({ ...current, tags: event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean) }))} placeholder="zerg, cleanse, guild" /></label>
+                </div>
+              </div>
+
+              <div className="theme-builder-canvas-stage is-profession">
+                <div className="theme-builder-canvas-stage-head"><div><div className="theme-builder-kicker">Character chassis</div><h4>Profession</h4></div><span className="theme-builder-stage-value">{selectedProfession?.name ?? "Not selected"}</span></div>
+                <div className="theme-builder-professions">
+                  {professions.map((profession) => (
+                    <button key={profession.id} type="button" aria-pressed={builder.professionId === profession.id} className={builder.professionId === profession.id ? "is-active" : ""} onClick={() => chooseProfession(profession)} onFocus={() => setSelectedSummary({ kind: "profession", item: profession })} onMouseEnter={() => setSelectedSummary({ kind: "profession", item: profession })}>
+                      <span><ClassIcon name={profession.name} size="lg" /></span><strong>{profession.name}</strong>
+                    </button>
+                  ))}
+                </div>
               </div>
             </section>
-
-            <section className="theme-panel theme-builder-panel">
-              <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Step 01</div><h3>Profession chassis</h3></div><Shield className="h-5 w-5 text-theme-accent" /></div>
-              <div className="theme-builder-professions">
-                {professions.map((profession) => (
-                  <button key={profession.id} type="button" aria-pressed={builder.professionId === profession.id} className={builder.professionId === profession.id ? "is-active" : ""} onClick={() => chooseProfession(profession)} onFocus={() => setSelectedSummary({ kind: "profession", item: profession })} onMouseEnter={() => setSelectedSummary({ kind: "profession", item: profession })}>
-                    <span><ClassIcon name={profession.name} size="lg" /></span><strong>{profession.name}</strong>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            </>
           )}
 
           {builderViewMode === "traits" && (

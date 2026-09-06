@@ -1726,6 +1726,54 @@
   font-size: 1rem;
 }
 
+.theme-builder-canvas-reset {
+  display: inline-flex;
+  min-height: 2.1rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.58rem;
+  border: 1px solid var(--builder-edge);
+  border-radius: 5px;
+  color: var(--theme-textMuted);
+  background: rgba(3, 6, 7, 0.72);
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.theme-builder-canvas-reset:hover,
+.theme-builder-canvas-reset:focus-visible {
+  border-color: var(--builder-gold-soft);
+  color: #f5e3ab;
+}
+
+.theme-builder-stage-value {
+  color: color-mix(in srgb, var(--builder-gold) 72%, var(--theme-textMuted));
+  font-size: 0.6rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.theme-builder-overview-canvas .theme-builder-canvas-stage.is-identity {
+  background: rgba(216, 173, 74, 0.018);
+}
+
+.theme-builder-overview-canvas .theme-builder-input {
+  width: 100%;
+}
+
+.theme-builder-overview-canvas select.theme-builder-input {
+  appearance: auto;
+  padding: 0.48rem 0.55rem;
+  color: var(--theme-text);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.theme-builder-overview-canvas .theme-builder-professions {
+  margin: 0;
+}
+
 .theme-builder-canvas-stage {
   position: relative;
   display: grid;
@@ -1891,6 +1939,17 @@
 
   .theme-builder-canvas-identity h3 {
     font-size: 0.88rem;
+  }
+
+  .theme-builder-overview-canvas .theme-builder-canvas-header {
+    align-items: center;
+  }
+
+  .theme-builder-overview-canvas .theme-builder-canvas-reset {
+    width: 2.1rem;
+    padding: 0;
+    justify-content: center;
+    font-size: 0;
   }
 
   .theme-builder-loadout-canvas .theme-builder-spec-line {
