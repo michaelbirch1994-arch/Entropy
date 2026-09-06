@@ -2,12 +2,16 @@
    Uses AxiForge's restrained editor hierarchy as a reference while preserving
    Entropy's existing controls, data model, and black-gold identity. */
 
-.theme-builder-root {
+.theme-builder-root,
+.theme-builder-viewer {
   --builder-gold: #d8ad4a;
   --builder-gold-soft: rgba(216, 173, 74, 0.42);
   --builder-edge: rgba(123, 108, 76, 0.34);
   --builder-surface: rgba(7, 10, 11, 0.96);
   --builder-surface-raised: rgba(11, 15, 16, 0.96);
+}
+
+.theme-builder-root {
   min-width: 0;
   max-width: 100%;
 }
@@ -886,6 +890,164 @@
   top: 0;
   min-width: 0;
   margin: 0;
+}
+
+/* Keep the focused viewer in Entropy's black-gold family. Profession artwork
+   retains its native color, while chrome and data surfaces share one palette. */
+.theme-builder-viewer-body {
+  background:
+    linear-gradient(180deg, rgba(216, 173, 74, 0.018), transparent 18rem),
+    #030506;
+}
+
+.theme-builder-viewer .theme-builder-preview-header {
+  border-bottom-color: rgba(216, 173, 74, 0.2);
+}
+
+.theme-builder-viewer .theme-builder-preview-header h2,
+.theme-builder-viewer .theme-builder-preview-attribute strong,
+.theme-builder-viewer .theme-builder-tactical-card strong,
+.theme-builder-viewer .theme-builder-tactical-meter strong,
+.theme-builder-viewer .theme-builder-contribution-card strong,
+.theme-builder-viewer .theme-builder-preview-armor-info strong,
+.theme-builder-viewer .theme-builder-preview-weapon-name,
+.theme-builder-viewer .theme-builder-preview-trinket-card strong {
+  color: #f3eee3;
+}
+
+.theme-builder-viewer .theme-builder-preview-subtitle,
+.theme-builder-viewer .theme-builder-tactical-card small,
+.theme-builder-viewer .theme-builder-tactical-meter small,
+.theme-builder-viewer .theme-builder-contribution-card small,
+.theme-builder-viewer .theme-builder-preview-attribute span,
+.theme-builder-viewer .theme-builder-preview-armor-info small,
+.theme-builder-viewer .theme-builder-preview-weapon-set > small,
+.theme-builder-viewer .theme-builder-preview-trinket-card small {
+  color: color-mix(in srgb, var(--builder-gold) 54%, var(--theme-textMuted));
+}
+
+.theme-builder-viewer .theme-builder-combat-bar {
+  border-color: rgba(216, 173, 74, 0.34);
+  background:
+    linear-gradient(90deg, rgba(216, 173, 74, 0.035), transparent 28%, transparent 72%, rgba(216, 173, 74, 0.025)),
+    #030506;
+  box-shadow: inset 0 1px 0 rgba(255, 236, 181, 0.04);
+}
+
+.theme-builder-viewer .theme-builder-tactical-card,
+.theme-builder-viewer .theme-builder-tactical-meter,
+.theme-builder-viewer .theme-builder-contribution-card,
+.theme-builder-viewer .theme-builder-preview-attribute,
+.theme-builder-viewer .theme-builder-preview-armor-row,
+.theme-builder-viewer .theme-builder-preview-weapon-set,
+.theme-builder-viewer .theme-builder-preview-trinket-card,
+.theme-builder-viewer .theme-builder-preview-consumable-row {
+  border-color: rgba(123, 108, 76, 0.36);
+  background: rgba(6, 8, 9, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 213, 0.025);
+}
+
+.theme-builder-viewer .theme-builder-tactical-card::before,
+.theme-builder-viewer .theme-builder-tactical-meter::before,
+.theme-builder-viewer .theme-builder-contribution-card::before {
+  background: linear-gradient(115deg, rgba(216, 173, 74, 0.11), transparent 48%, rgba(205, 217, 214, 0.035));
+}
+
+.theme-builder-viewer .theme-builder-tactical-card.is-primary {
+  border-color: rgba(216, 173, 74, 0.66);
+  background:
+    linear-gradient(135deg, rgba(216, 173, 74, 0.12), transparent 58%),
+    rgba(8, 9, 8, 0.96);
+  box-shadow: inset 2px 0 0 var(--builder-gold), inset 0 1px 0 rgba(255, 241, 198, 0.05);
+}
+
+.theme-builder-viewer .theme-builder-tactical-meter i {
+  background: rgba(65, 55, 35, 0.56);
+}
+
+.theme-builder-viewer .theme-builder-tactical-meter i span {
+  background: linear-gradient(90deg, #9b7325, #e4bd59, #f4dda0);
+}
+
+.theme-builder-viewer .theme-builder-contribution-card span {
+  color: var(--theme-textMuted);
+}
+
+.theme-builder-viewer .theme-builder-contribution-card em {
+  color: #b8c9c5;
+}
+
+.theme-builder-viewer .theme-builder-preview-attribute > i,
+.theme-builder-viewer .theme-builder-preview-equipment-heading,
+.theme-builder-viewer .theme-builder-preview-equipment-column h4 {
+  color: #d8ad4a;
+}
+
+.theme-builder-viewer .theme-builder-preview-attribute:hover,
+.theme-builder-viewer .theme-builder-preview-armor-row:hover,
+.theme-builder-viewer .theme-builder-preview-weapon-set:hover,
+.theme-builder-viewer .theme-builder-preview-trinket-card:hover,
+.theme-builder-viewer .theme-builder-preview-consumable-row:hover {
+  border-color: rgba(216, 173, 74, 0.58);
+  background: rgba(216, 173, 74, 0.045);
+}
+
+.theme-builder-viewer .theme-builder-preview-spec-row {
+  border-color: rgba(123, 108, 76, 0.42);
+  background-color: #050708;
+}
+
+.theme-builder-viewer .theme-builder-preview-spec-row::before {
+  background: linear-gradient(90deg, rgba(3, 5, 6, 0.96) 15%, rgba(3, 5, 6, 0.64) 60%, rgba(3, 5, 6, 0.88));
+}
+
+.theme-builder-viewer .theme-builder-preview-spec-badge,
+.theme-builder-viewer .theme-builder-preview-tier-minor,
+.theme-builder-viewer .theme-builder-preview-tier-majors img,
+.theme-builder-viewer .theme-builder-preview-trait-button.is-selected img {
+  border-color: rgba(216, 173, 74, 0.66);
+  box-shadow: none;
+}
+
+.theme-builder-viewer .theme-builder-preview-trait-button.is-selected img {
+  box-shadow: 0 0 12px -5px rgba(216, 173, 74, 0.9);
+}
+
+.theme-builder-viewer .theme-builder-preview-equipment {
+  border-top-color: rgba(216, 173, 74, 0.3);
+}
+
+.theme-builder-viewer .theme-builder-preview-armor-icon,
+.theme-builder-viewer .theme-builder-preview-armor-badge {
+  border-color: rgba(216, 173, 74, 0.32);
+  color: #d8ad4a;
+  background: rgba(216, 173, 74, 0.055);
+}
+
+.theme-builder-viewer .theme-builder-preview-empty-note {
+  color: var(--theme-textFaint);
+}
+
+.theme-builder-viewer .theme-builder-inspector {
+  border-color: rgba(216, 173, 74, 0.42);
+  background:
+    linear-gradient(145deg, rgba(216, 173, 74, 0.05), transparent 48%),
+    #070a0b;
+  box-shadow: inset 2px 0 0 rgba(216, 173, 74, 0.58);
+}
+
+.theme-builder-viewer .theme-builder-inspector-icon,
+.theme-builder-viewer .theme-builder-link {
+  border-color: rgba(216, 173, 74, 0.42);
+  color: #e2bc5c;
+  background: rgba(216, 173, 74, 0.045);
+}
+
+.theme-builder-viewer .theme-builder-link:hover,
+.theme-builder-viewer .theme-builder-link:focus-visible {
+  border-color: rgba(232, 197, 105, 0.78);
+  color: #f5dfa0;
+  background: rgba(216, 173, 74, 0.08);
 }
 
 .theme-builder-preview-spec-identity {
