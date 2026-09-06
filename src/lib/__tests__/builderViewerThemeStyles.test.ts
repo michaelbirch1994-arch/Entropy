@@ -11,4 +11,10 @@ describe("builder viewer theme styles", () => {
     expect(css).toContain(".theme-builder-viewer .theme-builder-inspector");
     expect(css).toContain(".theme-builder-viewer .theme-builder-link:hover");
   });
+
+  it("keeps the compact Builder shell and narrow section strip", () => {
+    expect(css).toContain(".theme-builder-catalog-state");
+    expect(css).toMatch(/@container \(max-width: 42rem\)[\s\S]*?\.theme-builder-mode-toggle \{[\s\S]*?overflow-x: auto;/);
+    expect(css).toMatch(/\.theme-builder-command-deck \{[\s\S]*?min-height: 3\.65rem;/);
+  });
 });

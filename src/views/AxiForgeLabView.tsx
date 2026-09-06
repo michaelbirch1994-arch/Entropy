@@ -2845,8 +2845,14 @@ export default function AxiForgeLabView() {
     <div className="theme-builder-root">
       <header className="theme-builder-command-deck">
         <div className="theme-builder-title-block">
-          <div className="theme-builder-mark"><Wrench className="h-6 w-6" /></div>
-          <div><div className="theme-builder-kicker">Guild Wars 2 loadout workshop</div><h2>Entropy Builder</h2><p>Construct, verify, archive, and organize Guild Wars 2 squad doctrine. {catalogSource === "cache" ? "Cached catalog ready." : catalogSource === "live" ? "Live catalog connected." : ""}</p></div>
+          <div className="theme-builder-mark"><Wrench className="h-5 w-5" /></div>
+          <div>
+            <div className="theme-builder-kicker">Guild Wars 2 loadout workshop</div>
+            <div className="theme-builder-title-line">
+              <h2>Entropy Builder</h2>
+              {catalogSource && <span className="theme-builder-catalog-state">{catalogSource === "cache" ? "Catalog cached" : "Catalog live"}</span>}
+            </div>
+          </div>
         </div>
         <div className="theme-builder-command-actions">
           <button
