@@ -277,6 +277,10 @@ button.theme-metric-card:focus-visible::after {
   gap: 1rem;
 }
 
+.theme-player-card-row-group {
+  gap: 0;
+}
+
 .theme-player-card-row {
   display: grid;
   align-items: start;
@@ -292,6 +296,10 @@ button.theme-metric-card:focus-visible::after {
 .theme-player-source-details-motion {
   min-width: 0;
   overflow: hidden;
+}
+
+.theme-player-source-details-spacer {
+  height: 1rem;
 }
 
 .theme-player-source-details {

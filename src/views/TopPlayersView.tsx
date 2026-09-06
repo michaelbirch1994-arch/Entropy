@@ -352,6 +352,7 @@ function PlayerSourceDetails({
       transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.16, 1, 0.3, 1] }}
       className="theme-player-source-details-motion"
     >
+      <div className="theme-player-source-details-spacer" aria-hidden="true" />
       <section
         id={panelId}
         role="region"
