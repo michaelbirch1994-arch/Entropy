@@ -29,6 +29,8 @@ describe("BuildCombatBar", () => {
     expect(markup).toContain('aria-label="11,645 health"');
     expect(markup).toContain('aria-label="Show weapon set II skills"');
     expect(markup).toContain("sword + shield");
+    expect(markup).toContain('class="lucide lucide-plus theme-builder-combat-empty"');
+    expect(markup).not.toContain("<span>6</span>");
     expect(markup.match(/<button/g)).toHaveLength(11);
   });
 });

@@ -1,4 +1,4 @@
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, Plus } from "lucide-react";
 import {
   resolveProfessionMechanicSlots,
   resolveRangerPetSlots,
@@ -70,7 +70,7 @@ export default function BuildCombatBar({
                 title={skill?.name ?? `${utilityLabels[index]} not selected`}
                 aria-label={skill ? `${utilityLabels[index]}: ${skill.name}` : `${utilityLabels[index]} not selected`}
               >
-                {skill?.icon ? <img src={skill.icon} alt="" /> : <span>{index + 6 > 9 ? 0 : index + 6}</span>}
+                {skill?.icon ? <img src={skill.icon} alt="" /> : <Plus className="theme-builder-combat-empty" aria-hidden="true" />}
                 <b>{index + 6 > 9 ? 0 : index + 6}</b>
               </button>
             );
@@ -104,7 +104,7 @@ export default function BuildCombatBar({
                 title={skill?.name ?? `${key} legend not selected`}
                 aria-label={skill ? `${key}: ${skill.name}` : `${key} legend not selected`}
               >
-                {skill?.icon ? <img src={skill.icon} alt="" /> : <span>{key}</span>}
+                {skill?.icon ? <img src={skill.icon} alt="" /> : <Plus className="theme-builder-combat-empty" aria-hidden="true" />}
                 <b>{key}</b>
               </button>
             ))}
@@ -118,7 +118,7 @@ export default function BuildCombatBar({
                 title={pet?.name ?? `${key} pet not selected`}
                 aria-label={pet ? `${key}: ${pet.name}` : `${key} pet not selected`}
               >
-                {pet?.icon ? <img src={pet.icon} alt="" /> : <span>{key}</span>}
+                {pet?.icon ? <img src={pet.icon} alt="" /> : <Plus className="theme-builder-combat-empty" aria-hidden="true" />}
                 <b>{key}</b>
               </button>
             ))}
@@ -150,7 +150,7 @@ export default function BuildCombatBar({
                 title={label}
                 aria-label={skill ? `Weapon skill ${index + 1}: ${skill.name}` : label}
               >
-                {skill?.icon ? <img src={skill.icon} alt="" /> : <span>{index + 1}</span>}
+                {skill?.icon ? <img src={skill.icon} alt="" /> : <Plus className="theme-builder-combat-empty" aria-hidden="true" />}
                 <b>{index + 1}</b>
               </button>
             );
