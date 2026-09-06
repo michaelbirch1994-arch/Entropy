@@ -100,6 +100,8 @@ Progress: the shared combat bar and compact build summary card are extracted and
 
 Acceptance: a saved build opens from a stable URL, Back/Escape/focus restoration work, refresh preserves the viewed build, and no draft is mutated by viewing.
 
+Progress: the first focused viewer is implemented for Library and Squad build activation. It provides URL-addressable desktop modal and mobile sheet behavior, Build and Equipment tabs, explicit Edit and new-tab actions, browser Back support, focus trapping and restoration, reduced-motion handling, and recovery from stale saved-build links. Compact entity inspection and viewer-level copy/share actions remain to complete this phase.
+
 #### Phase C - Squad command view
 
 1. Replace the vertically stacked composer with the split party/roster layout.
@@ -192,6 +194,7 @@ Implemented in the current slice:
 - Equipment uses four focused workspaces for weapons, armor and trinkets, upgrades, and consumables; each workspace presents only its matching visual summary and controls.
 - The Builder command header keeps Import and Save visible while grouping secondary code and sharing actions into one Export menu.
 - Desktop editing opens at full canvas width; readiness and the contextual Inspector remain available in an optional detail rail, while narrow screens retain the existing mobile sheets.
+- Saved Library and Squad builds open in a focused, URL-addressable viewer with separate Build and Equipment tabs instead of silently replacing the active editing draft.
 
 Remaining in Cut 3:
 

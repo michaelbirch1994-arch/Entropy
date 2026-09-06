@@ -1750,8 +1750,135 @@ function EquipmentPreview({
   );
 }
 
+type BuildViewerTab = "build" | "equipment";
+
+function BuildViewerDialog({
+  build,
+  professions,
+  specsById,
+  legends,
+  pets,
+  items,
+  onClose,
+  onEdit,
+}: {
+  build: SavedBuilderBuild;
+  professions: Gw2Profession[];
+  specsById: Map<number, Gw2Specialization>;
+  legends: Gw2Legend[];
+  pets: Gw2Pet[];
+  items: Record<number, Gw2Item>;
+  onClose: () => void;
+  onEdit: () => void;
+}) {
+  const [tab, setTab] = useState<BuildViewerTab>("build");
+  const [traits, setTraits] = useState<Gw2Trait[]>([]);
+  const [skills, setSkills] = useState<Gw2Skill[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [weaponSet, setWeaponSet] = useState<WeaponSetNumber>(build.state.activeWeaponSet === 2 ? 2 : 1);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const reduceMotion = useReducedMotion();
+  const profession = professions.find((item) => item.id === build.state.professionId) ?? null;
+  const selectedSpecs = useMemo(
+    () => build.state.specializationIds.map((id) => id ? specsById.get(id) : null).filter((spec): spec is Gw2Specialization => Boolean(spec)),
+    [build, specsById],
+  );
+  const viewerSpecsById = useMemo(() => new Map(selectedSpecs.map((spec) => [spec.id, spec])), [selectedSpecs]);
+  const traitsBySpecId = useMemo(() => {
+    const map = new Map<number, Gw2Trait[]>();
+    traits.forEach((trait) => map.set(trait.specialization, [...(map.get(trait.specialization) ?? []), trait]));
+    return map;
+  }, [traits]);
+  const skillsById = useMemo(() => new Map(skills.map((skill) => [skill.id, skill])), [skills]);
+  const profile = useMemo(() => computeAttributeProfile(build.state, profession), [build, profession]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCatalogLoading(true);
+    const traitIds = selectedSpecs.flatMap((spec) => [...spec.major_traits, ...spec.minor_traits]);
+    const legendSkillIds = legends
+      .filter((legend) => [...build.state.selectedLegends, ...build.state.selectedUnderwaterLegends].includes(legend.id))
+      .flatMap((legend) => [legend.swap, legend.heal, legend.elite, ...(legend.utilities ?? [])].filter((id): id is number => Boolean(id)));
+    const skillIds = [
+      build.state.healSkillId,
+      ...build.state.utilitySkillIds,
+      build.state.eliteSkillId,
+      ...weaponSkillIds(profession),
+      ...legendSkillIds,
+    ].filter((id): id is number => Boolean(id));
+    Promise.all([fetchGw2Traits(traitIds), fetchGw2Skills(skillIds)]).then(([nextTraits, nextSkills]) => {
+      if (cancelled) return;
+      setTraits(nextTraits);
+      setSkills(nextSkills);
+    }).catch(() => {
+      if (cancelled) return;
+      setTraits([]);
+      setSkills([]);
+    }).finally(() => {
+      if (!cancelled) setCatalogLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [build, legends, profession, selectedSpecs]);
+
+  useEffect(() => {
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.requestAnimationFrame(() => dialogRef.current?.focus());
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      returnFocusRef.current?.focus();
+    };
+  }, []);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])') ?? [])];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  };
+
+  const viewerUrl = new URL(window.location.href);
+  viewerUrl.searchParams.set("builderBuild", build.id);
+
+  return createPortal(
+    <motion.div className="theme-builder-viewer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <motion.div ref={dialogRef} className="theme-builder-viewer" role="dialog" aria-modal="true" aria-labelledby="builder-viewer-title" tabIndex={-1} onKeyDown={handleKeyDown} initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.985 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.99 }} transition={{ duration: reduceMotion ? 0 : 0.16 }}>
+        <header className="theme-builder-viewer-head">
+          <div><ClassIcon name={resolveEliteSpecName(build.state.specializationIds, specsById, build.state.professionId)} size="lg" /><span><small>{build.state.professionId} · {build.state.gameMode.toUpperCase()}</small><h2 id="builder-viewer-title">{build.name}</h2></span></div>
+          <div>
+            <button type="button" onClick={onEdit}><Wrench className="h-4 w-4" /> Edit build</button>
+            <a href={viewerUrl.toString()} target="_blank" rel="noreferrer" title="Open build in new tab" aria-label="Open build in new tab"><ExternalLink className="h-4 w-4" /></a>
+            <button type="button" onClick={onClose} title="Close build viewer" aria-label="Close build viewer"><X className="h-4 w-4" /></button>
+          </div>
+        </header>
+        <nav className="theme-builder-viewer-tabs" role="tablist" aria-label="Build viewer sections">
+          {(["build", "equipment"] as const).map((item) => <button key={item} id={`builder-viewer-tab-${item}`} type="button" role="tab" aria-selected={tab === item} aria-controls={`builder-viewer-panel-${item}`} tabIndex={tab === item ? 0 : -1} className={tab === item ? "is-active" : ""} onClick={() => setTab(item)} onKeyDown={(event) => moveTabFocus(["build", "equipment"] as const, item, event, setTab, (next) => `builder-viewer-tab-${next}`)}>{item === "build" ? <Swords className="h-4 w-4" /> : <Shield className="h-4 w-4" />}{item}</button>)}
+        </nav>
+        <div id={`builder-viewer-panel-${tab}`} className="theme-builder-viewer-body" role="tabpanel" aria-labelledby={`builder-viewer-tab-${tab}`} aria-busy={catalogLoading}>
+          {tab === "build" ? (
+            <BuildPreview builder={build.state} profession={profession} specsById={viewerSpecsById} traitsBySpecId={traitsBySpecId} skillsById={skillsById} legends={legends} pets={pets} attributeTotals={profile.totals} attributeProfile={profile} weaponSet={weaponSet} onSwapWeaponSet={() => setWeaponSet((current) => current === 1 ? 2 : 1)} onInspectSkill={() => {}} onInspectPet={() => {}} />
+          ) : <EquipmentPreview builder={build.state} items={items} />}
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body,
+  );
+}
+
 export default function AxiForgeLabView() {
   const [workspace, setWorkspace] = useState<BuilderWorkspace>(() => loadBuilderWorkspace());
+  const [viewingBuildId, setViewingBuildId] = useState<string | null>(() => new URLSearchParams(window.location.search).get("builderBuild"));
+  const viewerHistoryPushedRef = useRef(false);
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("build");
   const [builderViewMode, setBuilderViewMode] = useState<BuilderSection>(loadBuilderSection);
   const [equipmentSection, setEquipmentSection] = useState<EquipmentSection>("weapons");
@@ -1783,11 +1910,31 @@ export default function AxiForgeLabView() {
   const [equipmentItems, setEquipmentItems] = useState<Record<number, Gw2Item>>({});
 
   const builder = workspace.draft;
+  const viewingBuild = useMemo(() => workspace.builds.find((build) => build.id === viewingBuildId) ?? null, [viewingBuildId, workspace.builds]);
   const updateBuilder = (updater: EntropyBuilderState | ((current: EntropyBuilderState) => EntropyBuilderState)) => {
     setWorkspace((current) => ({ ...current, draft: typeof updater === "function" ? updater(current.draft) : updater }));
   };
 
   useEffect(() => saveBuilderWorkspace(workspace), [workspace]);
+
+  useEffect(() => {
+    const syncViewerFromUrl = () => {
+      viewerHistoryPushedRef.current = false;
+      setViewingBuildId(new URLSearchParams(window.location.search).get("builderBuild"));
+    };
+    window.addEventListener("popstate", syncViewerFromUrl);
+    return () => window.removeEventListener("popstate", syncViewerFromUrl);
+  }, []);
+
+  useEffect(() => {
+    if (!viewingBuildId || viewingBuild) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("builderBuild");
+    window.history.replaceState(window.history.state, "", url);
+    viewerHistoryPushedRef.current = false;
+    setViewingBuildId(null);
+    setNotice({ tone: "warning", message: "That saved build is no longer available in this browser." });
+  }, [viewingBuild, viewingBuildId]);
 
   useEffect(() => {
     window.sessionStorage.setItem(BUILDER_SECTION_SESSION_KEY, builderViewMode);
@@ -2247,6 +2394,38 @@ export default function AxiForgeLabView() {
     setNotice({ tone: "success", message: `Opened ${build.name}.` });
   }
 
+  function openBuildViewer(build: SavedBuilderBuild) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("builderBuild", build.id);
+    if (viewingBuildId) window.history.replaceState(window.history.state, "", url);
+    else {
+      window.history.pushState(window.history.state, "", url);
+      viewerHistoryPushedRef.current = true;
+    }
+    setViewingBuildId(build.id);
+  }
+
+  function closeBuildViewer() {
+    if (viewerHistoryPushedRef.current) {
+      viewerHistoryPushedRef.current = false;
+      window.history.back();
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.delete("builderBuild");
+    window.history.replaceState(window.history.state, "", url);
+    setViewingBuildId(null);
+  }
+
+  function editViewedBuild(build: SavedBuilderBuild) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("builderBuild");
+    window.history.replaceState(window.history.state, "", url);
+    viewerHistoryPushedRef.current = false;
+    setViewingBuildId(null);
+    loadBuild(build);
+  }
+
   function duplicateBuild(build: SavedBuilderBuild) {
     const state = cloneBuilder(build.state);
     state.name = `${state.name} Copy`;
@@ -2446,12 +2625,12 @@ export default function AxiForgeLabView() {
 
       {activeTab === "library" && (
         <div id="builder-panel-library" role="tabpanel" aria-labelledby="builder-tab-library">
-          <BuildLibrary builds={workspace.builds} onLoad={loadBuild} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} onShare={(code) => copyText(buildAxiForgeShareUrl(code), "Share link copied.")} specsById={allSpecsById} />
+          <BuildLibrary builds={workspace.builds} onLoad={openBuildViewer} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} onShare={(code) => copyText(buildAxiForgeShareUrl(code), "Share link copied.")} specsById={allSpecsById} />
         </div>
       )}
       {activeTab === "squad" && (
         <div id="builder-panel-squad" role="tabpanel" aria-labelledby="builder-tab-squad">
-          <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} conditionCache={conditionCache} conditionComputing={conditionComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={loadBuild} onCopyCode={exportSquad} onShareCode={shareSquad} specsById={allSpecsById} />
+          <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} conditionCache={conditionCache} conditionComputing={conditionComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={openBuildViewer} onCopyCode={exportSquad} onShareCode={shareSquad} specsById={allSpecsById} />
         </div>
       )}
 
@@ -2945,6 +3124,9 @@ export default function AxiForgeLabView() {
           </aside>
         </div>
       )}
+      <AnimatePresence>
+        {viewingBuild && <BuildViewerDialog key={viewingBuild.id} build={viewingBuild} professions={professions} specsById={allSpecsById} legends={legends} pets={pets} items={equipmentItems} onClose={closeBuildViewer} onEdit={() => editViewedBuild(viewingBuild)} />}
+      </AnimatePresence>
     </div>
   );
 }
