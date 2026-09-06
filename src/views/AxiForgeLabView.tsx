@@ -143,6 +143,7 @@ type WorkbenchTab = "build" | "library" | "squad";
 type BuilderSection = "overview" | "traits" | "equipment" | "notes" | "preview";
 type EquipmentSection = "weapons" | "armor" | "upgrades" | "consumables";
 type MobileRailPanel = "readiness" | "inspector";
+const BUILDER_COMPACT_DETAILS_QUERY = "(max-width: 1180px)";
 type Notice = { tone: "success" | "warning" | "error"; message: string };
 
 const GAME_MODES = [
@@ -679,7 +680,17 @@ function DetailPanel({ selected, builder, embedded = false, showAdvanced = true 
   );
 }
 
-function BuilderMobileTools({ issues, selected, builder }: { issues: string[]; selected: BuilderSummaryItem | null; builder: EntropyBuilderState }) {
+function BuilderMobileTools({
+  issues,
+  selected,
+  builder,
+  inspectorRequest,
+}: {
+  issues: string[];
+  selected: BuilderSummaryItem | null;
+  builder: EntropyBuilderState;
+  inspectorRequest: number;
+}) {
   const [openPanel, setOpenPanel] = useState<MobileRailPanel | null>(null);
   const returnFocusRef = useRef<HTMLButtonElement | null>(null);
   const readinessButtonRef = useRef<HTMLButtonElement>(null);
@@ -688,13 +699,19 @@ function BuilderMobileTools({ issues, selected, builder }: { issues: string[]; s
   const score = Math.max(0, 6 - issues.length);
 
   useEffect(() => {
-    const query = window.matchMedia("(max-width: 760px)");
+    const query = window.matchMedia(BUILDER_COMPACT_DETAILS_QUERY);
     const closeAtDesktopWidth = (event: MediaQueryListEvent) => {
       if (!event.matches) setOpenPanel(null);
     };
     query.addEventListener("change", closeAtDesktopWidth);
     return () => query.removeEventListener("change", closeAtDesktopWidth);
   }, []);
+
+  useEffect(() => {
+    if (!inspectorRequest || !selected || !window.matchMedia(BUILDER_COMPACT_DETAILS_QUERY).matches) return;
+    returnFocusRef.current = document.activeElement instanceof HTMLButtonElement ? document.activeElement : inspectorButtonRef.current;
+    setOpenPanel("inspector");
+  }, [inspectorRequest, selected]);
 
   const showPanel = (panel: MobileRailPanel, trigger: HTMLButtonElement | null) => {
     returnFocusRef.current = trigger;
@@ -2007,6 +2024,7 @@ export default function AxiForgeLabView() {
   const [builderViewMode, setBuilderViewMode] = useState<BuilderSection>(loadBuilderSection);
   const [equipmentSection, setEquipmentSection] = useState<EquipmentSection>("weapons");
   const [detailRailOpen, setDetailRailOpen] = useState(false);
+  const [inspectorRequest, setInspectorRequest] = useState(0);
   const exportMenuRef = useRef<HTMLDetailsElement>(null);
   const [displayedWeaponSet, setDisplayedWeaponSet] = useState<WeaponSetNumber>(() => workspace.draft.activeWeaponSet === 2 ? 2 : 1);
   const [editingBuildId, setEditingBuildId] = useState<string | null>(null);
@@ -2037,6 +2055,12 @@ export default function AxiForgeLabView() {
   const viewingBuild = useMemo(() => workspace.builds.find((build) => build.id === viewingBuildId) ?? null, [viewingBuildId, workspace.builds]);
   const updateBuilder = (updater: EntropyBuilderState | ((current: EntropyBuilderState) => EntropyBuilderState)) => {
     setWorkspace((current) => ({ ...current, draft: typeof updater === "function" ? updater(current.draft) : updater }));
+  };
+
+  const inspectBuilderItem = (summary: BuilderSummaryItem) => {
+    setSelectedSummary(summary);
+    if (window.matchMedia(BUILDER_COMPACT_DETAILS_QUERY).matches) setInspectorRequest((request) => request + 1);
+    else setDetailRailOpen(true);
   };
 
   useEffect(() => saveBuilderWorkspace(workspace), [workspace]);
@@ -2872,8 +2896,8 @@ export default function AxiForgeLabView() {
                   health={attributeTotals.health}
                   weaponSet={displayedWeaponSet}
                   onSwap={() => setDisplayedWeaponSet((current) => current === 1 ? 2 : 1)}
-                  onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })}
-                  onInspectPet={(pet) => setSelectedSummary({ kind: "pet", item: pet })}
+                  onInspect={(skill) => inspectBuilderItem({ kind: "skill", item: skill })}
+                  onInspectPet={(pet) => inspectBuilderItem({ kind: "pet", item: pet })}
                 />
               </div>
 
@@ -2919,7 +2943,7 @@ export default function AxiForgeLabView() {
                         {selectedSpec?.icon && (
                           <button
                             type="button"
-                            onClick={() => setSelectedSummary({ kind: "specialization", item: selectedSpec })}
+                            onClick={() => inspectBuilderItem({ kind: "specialization", item: selectedSpec })}
                             aria-label={`Inspect ${selectedSpec.name} specialization`}
                             title={`Inspect ${selectedSpec.name} specialization`}
                           >
@@ -3240,21 +3264,22 @@ export default function AxiForgeLabView() {
                         attributeProfile={attributeProfile}
                         weaponSet={displayedWeaponSet}
                         onSwapWeaponSet={() => setDisplayedWeaponSet((current) => current === 1 ? 2 : 1)}
-                        onInspectSkill={(skill) => setSelectedSummary({ kind: "skill", item: skill })}
-                        onInspectPet={(pet) => setSelectedSummary({ kind: "pet", item: pet })}
-                        onInspectTrait={(trait) => setSelectedSummary({ kind: "trait", item: trait })}
-                        onInspectSpecialization={(specialization) => setSelectedSummary({ kind: "specialization", item: specialization })}
+                        onInspectSkill={(skill) => inspectBuilderItem({ kind: "skill", item: skill })}
+                        onInspectPet={(pet) => inspectBuilderItem({ kind: "pet", item: pet })}
+                        onInspectTrait={(trait) => inspectBuilderItem({ kind: "trait", item: trait })}
+                        onInspectSpecialization={(specialization) => inspectBuilderItem({ kind: "specialization", item: specialization })}
                       />
                       <EquipmentPreview
                         builder={builder}
                         items={equipmentItems}
+                        onInspectItem={(item) => inspectBuilderItem({ kind: "item", item })}
                       />
                     </>
             )}
           </div>
           </main>
 
-          <BuilderMobileTools issues={issues} selected={selectedSummary} builder={builder} />
+          <BuilderMobileTools issues={issues} selected={selectedSummary} builder={builder} inspectorRequest={inspectorRequest} />
 
           <button
             type="button"
