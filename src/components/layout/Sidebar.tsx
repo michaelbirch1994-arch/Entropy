@@ -63,6 +63,15 @@ export default function Sidebar({ activeView, setActiveView, hasReport = true }:
   const [query, setQuery] = useState("");
   const [compact, setCompact] = useState(() => window.innerWidth <= 720);
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const previousViewRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (activeView === "axiforge-lab" && previousViewRef.current !== activeView) {
+      setCompact(true);
+    }
+    previousViewRef.current = activeView;
+  }, [activeView]);
+
   useEffect(() => {
     const section = findSectionForView(activeView);
     if (section && section !== expanded) setExpanded(section);

@@ -605,92 +605,6 @@ function resolveEliteSpecName(
   return fallback;
 }
 
-function EquipmentLoadoutSheet({ builder, items, section }: { builder: EntropyBuilderState; items: Record<number, Gw2Item>; section: EquipmentSection }) {
-  const weaponSet = (set: 1 | 2) => {
-    const main = builder.equipment.weapons[`mainhand${set}`] || "Empty";
-    const off = builder.equipment.weapons[`offhand${set}`];
-    return off ? `${main} + ${off}` : main;
-  };
-  const slotStat = (slot: string) => builder.equipment.slots[slot] || builder.equipment.statPackage || "Unassigned";
-  const runeIds = [...new Set(Object.values(builder.equipment.runes).filter(Boolean))];
-  const runeNames = runeIds.map((id) => items[Number(id)]?.name ?? "Imported rune");
-  const sigilIds = [...new Set(Object.values(builder.equipment.sigils).flat().filter(Boolean))];
-  const sigilNames = sigilIds.map((id) => items[Number(id)]?.name ?? "Imported sigil");
-  const relicItem = items[BUILDER_RELIC_IDS[builder.equipment.relic]];
-  const foodItem = itemForNamedChoice(builder.equipment.food, BUILDER_FOOD_CHOICES, items);
-  const utilityItem = itemForNamedChoice(builder.equipment.utility, BUILDER_UTILITY_CHOICES, items);
-  const enrichmentItem = items[Number(builder.equipment.enrichment)];
-  const trinketSlots = [
-    ["amulet", "Amulet"],
-    ["ring1", "Ring I"],
-    ["ring2", "Ring II"],
-    ["accessory1", "Accessory I"],
-    ["accessory2", "Accessory II"],
-    ["backpack", "Back item"],
-  ] as const;
-  return (
-    <div className="theme-builder-equipment-board" aria-label="Current equipment loadout">
-      <div className={`theme-builder-equipment-board-grid is-${section}`}>
-        {section === "armor" && <section className="theme-builder-equipment-zone is-armor" aria-labelledby="builder-loadout-armor">
-          <div className="theme-builder-equipment-zone-head"><Shield className="h-4 w-4" /><h4 id="builder-loadout-armor">Armor</h4><span>{ARMOR_SLOTS.filter((slot) => builder.equipment.slots[slot]).length}/6 overrides</span></div>
-          <div className="theme-builder-loadout-slots">
-            {ARMOR_SLOTS.map((slot) => (
-              <div key={slot} className={builder.equipment.slots[slot] ? "is-assigned" : ""}>
-                <span><EquipmentArtwork src={BUILDER_ARMOR_SLOT_ICONS[slot]} fallback={<Shield className="h-4 w-4" />} label={`${ARMOR_SLOT_LABELS[slot]} slot`} /></span>
-                <small>{ARMOR_SLOT_LABELS[slot]}</small>
-                <strong>{slotStat(slot)}</strong>
-              </div>
-            ))}
-          </div>
-        </section>}
-        {section === "weapons" && <section className="theme-builder-equipment-zone is-weapons" aria-labelledby="builder-loadout-weapons">
-          <div className="theme-builder-equipment-zone-head"><Swords className="h-4 w-4" /><h4 id="builder-loadout-weapons">Weapon sets</h4><span>2 weapon sets</span></div>
-          <div className="theme-builder-loadout-weapons">
-            {([1, 2] as const).map((set) => (
-              <div key={set} className={builder.activeWeaponSet === set ? "is-active" : ""}>
-                <span className="theme-builder-loadout-weapon-art">
-                  {[builder.equipment.weapons[`mainhand${set}`], builder.equipment.weapons[`offhand${set}`]].filter(Boolean).map((weapon) => (
-                    <EquipmentArtwork key={weapon} src={builderWeaponIcon(weapon)} fallback={<Swords className="h-5 w-5" />} label={`${weapon} type artwork`} />
-                  ))}
-                  {!builder.equipment.weapons[`mainhand${set}`] && <Swords className="h-5 w-5" />}
-                </span>
-                <small>Set {set === 1 ? "I" : "II"}{builder.activeWeaponSet === set && <> <b>Active</b></>}</small>
-                <strong>{weaponSet(set)}</strong>
-                <em>{slotStat(`mainhand${set}`)}</em>
-              </div>
-            ))}
-          </div>
-        </section>}
-        {section === "armor" && <section className="theme-builder-equipment-zone is-trinkets" aria-labelledby="builder-loadout-trinkets">
-          <div className="theme-builder-equipment-zone-head"><Sparkles className="h-4 w-4" /><h4 id="builder-loadout-trinkets">Trinkets</h4><span>6 slots</span></div>
-          <div className="theme-builder-loadout-slots">
-            {trinketSlots.map(([slot, label]) => (
-              <div key={slot} className={builder.equipment.slots[slot] ? "is-assigned" : ""}>
-                <span><EquipmentArtwork src={BUILDER_TRINKET_SLOT_ICONS[slot]} fallback={<Sparkles className="h-4 w-4" />} label={`${label} slot`} /></span>
-                <small>{label}</small>
-                <strong>{slotStat(slot)}</strong>
-              </div>
-            ))}
-          </div>
-        </section>}
-        {section === "upgrades" && <section className="theme-builder-equipment-zone is-upgrades" aria-labelledby="builder-loadout-upgrades">
-          <div className="theme-builder-equipment-zone-head"><Sparkles className="h-4 w-4" /><h4 id="builder-loadout-upgrades">Upgrades</h4><span>Runes and sigils</span></div>
-          <div className="theme-builder-loadout-upgrades">
-            <div><EquipmentArtwork src={items[Number(runeIds[0])]?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Armor rune" /><span><small>Armor runes</small><strong>{runeNames.length ? runeNames.join(" · ") : "Unassigned"}</strong></span></div>
-            <div><EquipmentArtwork src={items[Number(sigilIds[0])]?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Weapon sigil" /><span><small>Weapon sigils</small><strong>{sigilNames.length ? sigilNames.join(" · ") : "Unassigned"}</strong></span></div>
-          </div>
-        </section>}
-      </div>
-      {section === "consumables" && <footer className="theme-builder-equipment-board-foot">
-        <div><EquipmentArtwork src={relicItem?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Relic" /><span><small>Relic</small><strong>{builder.equipment.relic || "Unassigned"}</strong></span></div>
-        <div><EquipmentArtwork src={foodItem?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Food" /><span><small>Food</small><strong>{builder.equipment.food || "Unassigned"}</strong></span></div>
-        <div><EquipmentArtwork src={utilityItem?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Utility enhancement" /><span><small>Utility</small><strong>{builder.equipment.utility || "Unassigned"}</strong></span></div>
-        <div><EquipmentArtwork src={enrichmentItem?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Enrichment" /><span><small>Enrichment</small><strong>{enrichmentItem?.name ?? (builder.equipment.enrichment || "Unassigned")}</strong></span></div>
-      </footer>}
-    </div>
-  );
-}
-
 function BuilderReadiness({ issues, embedded = false }: { issues: string[]; embedded?: boolean }) {
   const score = Math.max(0, 6 - issues.length);
   return (
@@ -2913,7 +2827,7 @@ export default function AxiForgeLabView() {
               </header>
 
               <div className="theme-builder-canvas-stage is-combat">
-                <div className="theme-builder-canvas-stage-head"><div><div className="theme-builder-kicker">Combat readout</div><h4>Equipped skill bar</h4></div><ArrowLeftRight className="h-4 w-4" /></div>
+                <div className="theme-builder-canvas-stage-head"><h4>Combat bar</h4><ArrowLeftRight className="h-4 w-4" /></div>
                 <BuildCombatBar
                   builder={builder}
                   profession={selectedProfession}
@@ -2930,7 +2844,7 @@ export default function AxiForgeLabView() {
               </div>
 
               <div className="theme-builder-canvas-stage">
-              <div className="theme-builder-canvas-stage-head"><div><div className="theme-builder-kicker">Specialization matrix</div><h4>Traits</h4></div><Layers3 className="h-4 w-4" /></div>
+              <div className="theme-builder-canvas-stage-head"><h4>Specializations</h4><Layers3 className="h-4 w-4" /></div>
               <div className="theme-builder-spec-stack">
                 {[0, 1, 2].map((trackIndex) => {
                   const selectedSpecId = builder.specializationIds[trackIndex];
@@ -2992,7 +2906,7 @@ export default function AxiForgeLabView() {
               </div>
 
               <div className="theme-builder-canvas-stage is-utility">
-              <div className="theme-builder-canvas-stage-head"><div><div className="theme-builder-kicker">Land loadout</div><h4>Utility skills</h4></div><Swords className="h-4 w-4" /></div>
+              <div className="theme-builder-canvas-stage-head"><h4>Utility skills</h4><Swords className="h-4 w-4" /></div>
               <div className="theme-builder-skill-bar">
                 <SkillPicker label="Heal" slot="Heal" selectedId={builder.healSkillId} skills={skillGroups.Heal} allSkills={professionSkills} usedIds={[]} onChange={(id) => chooseSkill("Heal", id)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />
                 {[0, 1, 2].map((index) => <SkillPicker key={index} label={`Utility ${index + 1}`} slot="Utility" selectedId={builder.utilitySkillIds[index]} skills={skillGroups.Utility} allSkills={professionSkills} usedIds={builder.utilitySkillIds} onChange={(id) => chooseSkill("Utility", id, index)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />)}
@@ -3033,7 +2947,6 @@ export default function AxiForgeLabView() {
                   </button>
                 ))}
               </nav>
-              <EquipmentLoadoutSheet builder={builder} items={equipmentItems} section={equipmentSection} />
               <div id="builder-equipment-editor" role="tabpanel" aria-labelledby={`builder-equipment-tab-${equipmentSection}`} className="theme-builder-equipment-grid is-focused">
                 <div className="theme-builder-equipment-group is-weapons" hidden={equipmentSection !== "weapons"}>
                   <h4>Weapons and stats</h4>
@@ -3062,7 +2975,7 @@ export default function AxiForgeLabView() {
                   <div className="theme-builder-weapon-sets">
                     {([1, 2] as const).map((set) => (
                       <section key={set} className="theme-builder-weapon-set" aria-labelledby={`builder-weapon-set-${set}`}>
-                        <h5 id={`builder-weapon-set-${set}`}>Weapon set {set === 1 ? "I" : "II"}</h5>
+                        <h5 id={`builder-weapon-set-${set}`}>Weapon set {set === 1 ? "I" : "II"}{builder.activeWeaponSet === set && <b>Active</b>}</h5>
                         <div className="grid grid-cols-2 gap-2">
                           {([`mainhand${set}`, `offhand${set}`] as const).map((slot) => {
                             const currentWeapon = builder.equipment.weapons[slot];

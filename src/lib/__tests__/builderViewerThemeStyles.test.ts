@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 
 const css = readFileSync("src/Styles/BuilderVisualFoundation.css", "utf8");
 const view = readFileSync("src/views/AxiForgeLabView.tsx", "utf8");
+const combatBar = readFileSync("src/components/builder/BuildCombatBar.tsx", "utf8");
+const sidebar = readFileSync("src/components/layout/Sidebar.tsx", "utf8");
 
 describe("builder viewer theme styles", () => {
   it("scopes the black-gold palette to the portaled viewer", () => {
@@ -17,6 +19,15 @@ describe("builder viewer theme styles", () => {
     expect(css).toContain(".theme-builder-catalog-state");
     expect(css).toMatch(/@container \(max-width: 42rem\)[\s\S]*?\.theme-builder-mode-toggle \{[\s\S]*?overflow-x: auto;/);
     expect(css).toMatch(/\.theme-builder-command-deck \{[\s\S]*?min-height: 3\.65rem;/);
+    expect(sidebar).toContain('activeView === "axiforge-lab"');
+  });
+
+  it("uses a compact Axiforge-style combat hierarchy", () => {
+    expect(combatBar).toMatch(/is-utility[\s\S]*?theme-builder-mechanic-skills[\s\S]*?theme-builder-combat-label/);
+    expect(css).toMatch(/\.theme-builder-combat-group\.is-utility \.theme-builder-mechanic-skills \{[\s\S]*?justify-content: flex-start;/);
+    expect(view).toContain("<h4>Combat bar</h4>");
+    expect(view).toContain("<h4>Specializations</h4>");
+    expect(view).not.toContain("Specialization matrix");
   });
 
   it("presents Overview as one loadout canvas with a compact role menu", () => {
@@ -36,13 +47,15 @@ describe("builder viewer theme styles", () => {
     expect(view).toContain('theme-builder-loadout-canvas theme-builder-equipment-workspace');
     expect(view).toContain('Equipment loadout · {builder.gameMode.toUpperCase()}');
     expect(view).not.toContain('className="theme-builder-equipment-board-head"');
-    expect(view).toContain('builder.activeWeaponSet === set && <> <b>Active</b></>');
+    expect(view).toContain('builder.activeWeaponSet === set && <b>Active</b>');
     expect(css).toMatch(/\.theme-builder-equipment-workspace \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/);
   });
 
-  it("keeps equipment summaries aligned with their editor sections", () => {
-    expect(view).toMatch(/section === "upgrades"[\s\S]*?Armor runes[\s\S]*?Weapon sigils[\s\S]*?<\/section>/);
-    expect(view).toMatch(/section === "consumables"[\s\S]*?<small>Relic<\/small>[\s\S]*?<small>Food<\/small>/);
+  it("renders each equipment item once in its image-led editor", () => {
+    expect(view).not.toContain("EquipmentLoadoutSheet");
+    expect(view).not.toContain('aria-label="Current equipment loadout"');
+    expect(view).toContain('emptyIcon={<EquipmentArtwork src={BUILDER_ARMOR_SLOT_ICONS[slot]}');
+    expect(view).toContain('emptyIcon={<EquipmentArtwork src={BUILDER_TRINKET_SLOT_ICONS[trinketSlot]}');
   });
 
   it("keeps equipment navigation to one compact row until phone widths", () => {
