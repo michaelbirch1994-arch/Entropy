@@ -5,6 +5,7 @@ import {
   builderFromAxiBuild,
   createEmptyBuilder,
   normalizeBuilderState,
+  STAT_OPTIONS,
   validateBuilder,
 } from "../axiforge/builderModel";
 import type { Gw2Skill, Gw2Specialization, Gw2Trait } from "../../types/buildEditor";
@@ -101,6 +102,13 @@ function fullEquipmentBuild() {
   state.activeWeaponSet = 1;
   return state;
 }
+
+describe("WvW equipment stat options", () => {
+  it("offers supported level-80 combinations without low-level item prefixes", () => {
+    expect(STAT_OPTIONS).toEqual(expect.arrayContaining(["Berserker's", "Celestial", "Minstrel's", "Trailblazer's"]));
+    expect(STAT_OPTIONS).not.toEqual(expect.arrayContaining(["Mighty", "Precise", "Mending", "Penetrating"]));
+  });
+});
 
 function revenantBuild() {
   const state = createEmptyBuilder("Revenant");

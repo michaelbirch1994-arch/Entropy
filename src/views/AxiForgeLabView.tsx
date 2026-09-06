@@ -2151,10 +2151,7 @@ export default function AxiForgeLabView() {
     () => availableProfessionWeapons(selectedProfession, builder.specializationIds),
     [builder.specializationIds, selectedProfession],
   );
-  const statOptions = useMemo(() => {
-    const liveNames = [...new Set(itemStats.map((stat) => stat.name).filter(Boolean))];
-    return liveNames.length ? ["", ...liveNames] : [...STAT_OPTIONS];
-  }, [itemStats]);
+  const statOptions = useMemo<string[]>(() => [...STAT_OPTIONS], []);
   const equipmentIds = useMemo(() => {
     const ids = equipmentItemIds(builder.equipment);
     const relicId = BUILDER_RELIC_IDS[builder.equipment.relic];

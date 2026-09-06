@@ -17,6 +17,10 @@ export const WEAPON_OPTIONS = [
   "greatsword", "hammer", "longbow", "rifle", "shortbow", "staff", "harpoon", "spear", "trident",
 ] as const;
 
+// Level-80 equipment combinations available in WvW and supported by the
+// Builder attribute preview. Do not populate equipment pickers directly from
+// /v2/itemstats: that endpoint also includes low-level one- and two-attribute
+// prefixes such as Mighty, Precise, Mending, and Penetrating.
 export const STAT_OPTIONS = [
   "", "Berserker's", "Marauder's", "Assassin's", "Valkyrie", "Dragon's", "Viper's", "Grieving", "Sinister",
   "Dire", "Rabid", "Carrion", "Trailblazer's", "Knight's", "Soldier's", "Cleric's", "Minstrel's", "Harrier's",
