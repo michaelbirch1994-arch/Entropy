@@ -100,7 +100,7 @@ Progress: the shared combat bar and compact build summary card are extracted and
 
 Acceptance: a saved build opens from a stable URL, Back/Escape/focus restoration work, refresh preserves the viewed build, and no draft is mutated by viewing.
 
-Progress: the first focused viewer is implemented for Library and Squad build activation. It provides URL-addressable desktop modal and mobile sheet behavior, Build and Equipment tabs, explicit Edit and new-tab actions, browser Back support, focus trapping and restoration, reduced-motion handling, and recovery from stale saved-build links. Compact entity inspection and viewer-level copy/share actions remain to complete this phase.
+Progress: the focused viewer is implemented for Library and Squad build activation. It provides URL-addressable desktop modal and mobile sheet behavior, Build and Equipment tabs, explicit Edit and new-tab actions, browser Back support, focus trapping and restoration, reduced-motion handling, recovery from stale saved-build links, grouped portable copy/share actions, and a compact catalog-backed Inspector for professions, specializations, traits, skills, pets, runes, sigils, relics, and enrichments. An optional expanded detail dialog remains for descriptions or combat facts that outgrow the compact panel.
 
 #### Phase C - Squad command view
 

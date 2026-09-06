@@ -692,7 +692,7 @@ function BuilderAdvancedData({ builder }: { builder: EntropyBuilderState }) {
   );
 }
 
-function DetailPanel({ selected, builder, embedded = false }: { selected: BuilderSummaryItem | null; builder: EntropyBuilderState; embedded?: boolean }) {
+function DetailPanel({ selected, builder, embedded = false, showAdvanced = true }: { selected: BuilderSummaryItem | null; builder: EntropyBuilderState; embedded?: boolean; showAdvanced?: boolean }) {
   const className = `theme-builder-inspector${embedded ? " is-embedded" : ""}`;
   if (!selected) {
     return (
@@ -700,7 +700,7 @@ function DetailPanel({ selected, builder, embedded = false }: { selected: Builde
         <div className="theme-builder-kicker"><BookOpen className="h-4 w-4" /> Field manual</div>
         <h3>Inspect the loadout</h3>
         <p>Focus a profession, specialization, trait, or skill to read its live Guild Wars 2 details here.</p>
-        <BuilderAdvancedData builder={builder} />
+        {showAdvanced && <BuilderAdvancedData builder={builder} />}
       </aside>
     );
   }
@@ -735,7 +735,7 @@ function DetailPanel({ selected, builder, embedded = false }: { selected: Builde
       <a href={wikiSearchUrl(item.name)} target="_blank" rel="noreferrer" className="theme-builder-link">
         Open wiki <ExternalLink className="h-3.5 w-3.5" />
       </a>
-      <BuilderAdvancedData builder={builder} />
+      {showAdvanced && <BuilderAdvancedData builder={builder} />}
     </aside>
   );
 }
@@ -1483,6 +1483,8 @@ function BuildPreview({
   onSwapWeaponSet,
   onInspectSkill,
   onInspectPet,
+  onInspectTrait,
+  onInspectSpecialization,
 }: {
   builder: EntropyBuilderState;
   profession: Gw2Profession | null;
@@ -1497,6 +1499,8 @@ function BuildPreview({
   onSwapWeaponSet: () => void;
   onInspectSkill: (skill: Gw2Skill) => void;
   onInspectPet: (pet: Gw2Pet) => void;
+  onInspectTrait: (trait: Gw2Trait) => void;
+  onInspectSpecialization: (specialization: Gw2Specialization) => void;
 }) {
   const attributeRows: Array<[string, string, React.ReactNode]> = [
     ["Power", Math.round(attributeTotals.power).toLocaleString(), <Swords className="h-4 w-4" />],
@@ -1587,10 +1591,12 @@ function BuildPreview({
           const rowStyle = spec.background ? { backgroundImage: "url(" + spec.background + ")" } : undefined;
           return (
             <div key={trackIndex} className="theme-builder-preview-spec-row" style={rowStyle}>
-              <div className="theme-builder-preview-spec-badge">
-                {spec.icon && <img src={spec.icon} alt="" />}
-              </div>
-              <span className="theme-builder-preview-spec-name">{spec.name}</span>
+              <button type="button" className="theme-builder-preview-spec-identity" onClick={() => onInspectSpecialization(spec)} title={`Inspect ${spec.name}`}>
+                <span className="theme-builder-preview-spec-badge">
+                  {spec.icon && <img src={spec.icon} alt="" />}
+                </span>
+                <span className="theme-builder-preview-spec-name">{spec.name}</span>
+              </button>
               <div className="theme-builder-preview-spec-tiers">
                 {[1, 2, 3].map((tier) => {
                   const minor = traits.find((trait) => trait.slot === "Minor" && trait.tier === tier);
@@ -1601,18 +1607,19 @@ function BuildPreview({
                   return (
                     <div key={tier} className="theme-builder-preview-tier">
                       {minor?.icon && (
-                        <img className="theme-builder-preview-tier-minor" src={minor.icon} alt="" title={minor.name} />
+                        <button type="button" className="theme-builder-preview-trait-button is-minor" onClick={() => onInspectTrait(minor)} title={`Inspect ${minor.name}`} aria-label={`Inspect ${minor.name}`}><img className="theme-builder-preview-tier-minor" src={minor.icon} alt="" /></button>
                       )}
                       <div className="theme-builder-preview-tier-majors">
                         {majors.map((trait, position) => (
                           trait.icon ? (
-                            <img
+                            <button
                               key={trait.id}
-                              className={chosenIndex === position + 1 ? "is-selected" : ""}
-                              src={trait.icon}
-                              alt=""
-                              title={trait.name}
-                            />
+                              type="button"
+                              className={`theme-builder-preview-trait-button${chosenIndex === position + 1 ? " is-selected" : ""}`}
+                              onClick={() => onInspectTrait(trait)}
+                              title={`Inspect ${trait.name}`}
+                              aria-label={`Inspect ${trait.name}`}
+                            ><img src={trait.icon} alt="" /></button>
                           ) : null
                         ))}
                       </div>
@@ -1631,9 +1638,11 @@ function BuildPreview({
 function EquipmentPreview({
   builder,
   items,
+  onInspectItem,
 }: {
   builder: EntropyBuilderState;
   items: Record<number, Gw2Item>;
+  onInspectItem?: (item: Gw2Item) => void;
 }) {
   const itemFor = (id: string | number | undefined) => (id ? items[Number(id)] : undefined);
   const trinketSlots = ["amulet", "ring1", "ring2", "accessory1", "accessory2", "backpack"];
@@ -1672,9 +1681,9 @@ function EquipmentPreview({
                   <small>{ARMOR_SLOT_LABELS[slot]}</small>
                   <strong>{builder.equipment.slots[slot] || builder.equipment.statPackage || "Unassigned"}</strong>
                 </div>
-                <div className="theme-builder-preview-armor-badge" title={rune?.name ?? "No rune"}>
+                <button type="button" className="theme-builder-preview-armor-badge" disabled={!rune || !onInspectItem} onClick={() => rune && onInspectItem?.(rune)} title={rune ? `Inspect ${rune.name}` : "No rune"} aria-label={rune ? `Inspect ${rune.name}` : "No rune"}>
                   {rune?.icon ? <img src={rune.icon} alt="" /> : <Sparkles className="h-4 w-4" />}
-                </div>
+                </button>
               </div>
             );
           })}
@@ -1700,9 +1709,9 @@ function EquipmentPreview({
                       {row.sigils.map((sigilId, sigilIndex) => {
                         const sigil = itemFor(sigilId);
                         return (
-                          <div key={sigilIndex} className="theme-builder-preview-armor-badge" title={sigil?.name ?? "No sigil"}>
+                          <button key={sigilIndex} type="button" className="theme-builder-preview-armor-badge" disabled={!sigil || !onInspectItem} onClick={() => sigil && onInspectItem?.(sigil)} title={sigil ? `Inspect ${sigil.name}` : "No sigil"} aria-label={sigil ? `Inspect ${sigil.name}` : "No sigil"}>
                             {sigil?.icon ? <img src={sigil.icon} alt="" /> : <Sparkles className="h-4 w-4" />}
-                          </div>
+                          </button>
                         );
                       })}
                     </div>
@@ -1728,7 +1737,7 @@ function EquipmentPreview({
         <h4>Relic and consumables</h4>
         <div className="theme-builder-preview-consumables">
           <div className="theme-builder-preview-consumable-row">
-            <div className="theme-builder-preview-armor-badge">{relicItem?.icon ? <img src={relicItem.icon} alt="" /> : <Sparkles className="h-4 w-4" />}</div>
+            <button type="button" className="theme-builder-preview-armor-badge" disabled={!relicItem || !onInspectItem} onClick={() => relicItem && onInspectItem?.(relicItem)} title={relicItem ? `Inspect ${relicItem.name}` : "No relic"} aria-label={relicItem ? `Inspect ${relicItem.name}` : "No relic"}>{relicItem?.icon ? <img src={relicItem.icon} alt="" /> : <Sparkles className="h-4 w-4" />}</button>
             <div className="theme-builder-preview-armor-info"><small>Relic</small><strong>{builder.equipment.relic || "Unassigned"}</strong></div>
           </div>
           <div className="theme-builder-preview-consumable-row">
@@ -1740,7 +1749,7 @@ function EquipmentPreview({
             <div className="theme-builder-preview-armor-info"><small>Utility</small><strong>{builder.equipment.utility || "Unassigned"}</strong></div>
           </div>
           <div className="theme-builder-preview-consumable-row">
-            <div className="theme-builder-preview-armor-badge">{enrichmentItem?.icon ? <img src={enrichmentItem.icon} alt="" /> : <Sparkles className="h-4 w-4" />}</div>
+            <button type="button" className="theme-builder-preview-armor-badge" disabled={!enrichmentItem || !onInspectItem} onClick={() => enrichmentItem && onInspectItem?.(enrichmentItem)} title={enrichmentItem ? `Inspect ${enrichmentItem.name}` : "No enrichment"} aria-label={enrichmentItem ? `Inspect ${enrichmentItem.name}` : "No enrichment"}>{enrichmentItem?.icon ? <img src={enrichmentItem.icon} alt="" /> : <Sparkles className="h-4 w-4" />}</button>
             <div className="theme-builder-preview-armor-info"><small>Enrichment</small><strong>{enrichmentItem?.name ?? (builder.equipment.enrichment || "Unassigned")}</strong></div>
           </div>
         </div>
@@ -1775,9 +1784,12 @@ function BuildViewerDialog({
   const [traits, setTraits] = useState<Gw2Trait[]>([]);
   const [skills, setSkills] = useState<Gw2Skill[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
+  const [selected, setSelected] = useState<BuilderSummaryItem | null>(null);
+  const [copyStatus, setCopyStatus] = useState("");
   const [weaponSet, setWeaponSet] = useState<WeaponSetNumber>(build.state.activeWeaponSet === 2 ? 2 : 1);
   const dialogRef = useRef<HTMLDivElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const exportMenuRef = useRef<HTMLDetailsElement>(null);
   const reduceMotion = useReducedMotion();
   const profession = professions.find((item) => item.id === build.state.professionId) ?? null;
   const selectedSpecs = useMemo(
@@ -1792,6 +1804,10 @@ function BuildViewerDialog({
   }, [traits]);
   const skillsById = useMemo(() => new Map(skills.map((skill) => [skill.id, skill])), [skills]);
   const profile = useMemo(() => computeAttributeProfile(build.state, profession), [build, profession]);
+
+  useEffect(() => {
+    if (profession) setSelected((current) => current ?? { kind: "profession", item: profession });
+  }, [profession]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1832,14 +1848,27 @@ function BuildViewerDialog({
     };
   }, []);
 
+  useEffect(() => {
+    const closeExportMenu = (event: PointerEvent) => {
+      if (exportMenuRef.current?.open && !exportMenuRef.current.contains(event.target as Node)) exportMenuRef.current.open = false;
+    };
+    document.addEventListener("pointerdown", closeExportMenu);
+    return () => document.removeEventListener("pointerdown", closeExportMenu);
+  }, []);
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
+      if (exportMenuRef.current?.open) {
+        exportMenuRef.current.open = false;
+        exportMenuRef.current.querySelector("summary")?.focus();
+        return;
+      }
       onClose();
       return;
     }
     if (event.key !== "Tab") return;
-    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])') ?? [])];
+    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), summary, [href], [tabindex]:not([tabindex="-1"])') ?? [])];
     if (!focusable.length) return;
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
@@ -1850,6 +1879,12 @@ function BuildViewerDialog({
   const viewerUrl = new URL(window.location.href);
   viewerUrl.searchParams.set("builderBuild", build.id);
 
+  const copyViewerValue = async (value: string, status: string) => {
+    await navigator.clipboard?.writeText(value);
+    setCopyStatus(status);
+    if (exportMenuRef.current) exportMenuRef.current.open = false;
+  };
+
   return createPortal(
     <motion.div className="theme-builder-viewer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <motion.div ref={dialogRef} className="theme-builder-viewer" role="dialog" aria-modal="true" aria-labelledby="builder-viewer-title" tabIndex={-1} onKeyDown={handleKeyDown} initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.985 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.99 }} transition={{ duration: reduceMotion ? 0 : 0.16 }}>
@@ -1857,6 +1892,14 @@ function BuildViewerDialog({
           <div><ClassIcon name={resolveEliteSpecName(build.state.specializationIds, specsById, build.state.professionId)} size="lg" /><span><small>{build.state.professionId} · {build.state.gameMode.toUpperCase()}</small><h2 id="builder-viewer-title">{build.name}</h2></span></div>
           <div>
             <button type="button" onClick={onEdit}><Wrench className="h-4 w-4" /> Edit build</button>
+            <details ref={exportMenuRef} className="theme-builder-viewer-export">
+              <summary title="Copy or share build" aria-label="Copy or share build"><Share2 className="h-4 w-4" /><span>Share</span></summary>
+              <div>
+                <button type="button" aria-label="Copy build AxiCode" disabled={!build.shareCode} onClick={() => copyViewerValue(build.shareCode, "AxiCode copied.")}><Clipboard className="h-4 w-4" /> Copy AxiCode</button>
+                <button type="button" aria-label="Copy portable build share link" disabled={!build.shareCode} onClick={() => copyViewerValue(buildAxiForgeShareUrl(build.shareCode), "Portable share link copied.")}><Link2 className="h-4 w-4" /> Copy share link</button>
+                {!build.shareCode && <small>Complete required build data to enable portable sharing.</small>}
+              </div>
+            </details>
             <a href={viewerUrl.toString()} target="_blank" rel="noreferrer" title="Open build in new tab" aria-label="Open build in new tab"><ExternalLink className="h-4 w-4" /></a>
             <button type="button" onClick={onClose} title="Close build viewer" aria-label="Close build viewer"><X className="h-4 w-4" /></button>
           </div>
@@ -1865,10 +1908,14 @@ function BuildViewerDialog({
           {(["build", "equipment"] as const).map((item) => <button key={item} id={`builder-viewer-tab-${item}`} type="button" role="tab" aria-selected={tab === item} aria-controls={`builder-viewer-panel-${item}`} tabIndex={tab === item ? 0 : -1} className={tab === item ? "is-active" : ""} onClick={() => setTab(item)} onKeyDown={(event) => moveTabFocus(["build", "equipment"] as const, item, event, setTab, (next) => `builder-viewer-tab-${next}`)}>{item === "build" ? <Swords className="h-4 w-4" /> : <Shield className="h-4 w-4" />}{item}</button>)}
         </nav>
         <div id={`builder-viewer-panel-${tab}`} className="theme-builder-viewer-body" role="tabpanel" aria-labelledby={`builder-viewer-tab-${tab}`} aria-busy={catalogLoading}>
-          {tab === "build" ? (
-            <BuildPreview builder={build.state} profession={profession} specsById={viewerSpecsById} traitsBySpecId={traitsBySpecId} skillsById={skillsById} legends={legends} pets={pets} attributeTotals={profile.totals} attributeProfile={profile} weaponSet={weaponSet} onSwapWeaponSet={() => setWeaponSet((current) => current === 1 ? 2 : 1)} onInspectSkill={() => {}} onInspectPet={() => {}} />
-          ) : <EquipmentPreview builder={build.state} items={items} />}
+          <div className="theme-builder-viewer-canvas">
+            {tab === "build" ? (
+              <BuildPreview builder={build.state} profession={profession} specsById={viewerSpecsById} traitsBySpecId={traitsBySpecId} skillsById={skillsById} legends={legends} pets={pets} attributeTotals={profile.totals} attributeProfile={profile} weaponSet={weaponSet} onSwapWeaponSet={() => setWeaponSet((current) => current === 1 ? 2 : 1)} onInspectSkill={(skill) => setSelected({ kind: "skill", item: skill })} onInspectPet={(pet) => setSelected({ kind: "pet", item: pet })} onInspectTrait={(trait) => setSelected({ kind: "trait", item: trait })} onInspectSpecialization={(specialization) => setSelected({ kind: "specialization", item: specialization })} />
+            ) : <EquipmentPreview builder={build.state} items={items} onInspectItem={(item) => setSelected({ kind: "item", item })} />}
+          </div>
+          <DetailPanel selected={selected} builder={build.state} embedded showAdvanced={false} />
         </div>
+        <span className="sr-only" role="status" aria-live="polite">{copyStatus}</span>
       </motion.div>
     </motion.div>,
     document.body,
@@ -3092,6 +3139,8 @@ export default function AxiForgeLabView() {
                         onSwapWeaponSet={() => setDisplayedWeaponSet((current) => current === 1 ? 2 : 1)}
                         onInspectSkill={(skill) => setSelectedSummary({ kind: "skill", item: skill })}
                         onInspectPet={(pet) => setSelectedSummary({ kind: "pet", item: pet })}
+                        onInspectTrait={(trait) => setSelectedSummary({ kind: "trait", item: trait })}
+                        onInspectSpecialization={(specialization) => setSelectedSummary({ kind: "specialization", item: specialization })}
                       />
                       <EquipmentPreview
                         builder={builder}

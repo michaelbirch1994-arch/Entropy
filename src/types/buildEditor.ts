@@ -210,4 +210,5 @@ export type BuilderSummaryItem =
   | { kind: "specialization"; item: Gw2Specialization }
   | { kind: "trait"; item: Gw2Trait }
   | { kind: "skill"; item: Gw2Skill }
-  | { kind: "pet"; item: Gw2Pet };
+  | { kind: "pet"; item: Gw2Pet }
+  | { kind: "item"; item: Gw2Item };
