@@ -7,6 +7,127 @@
   --builder-squad-plate: rgba(7, 18, 22, 0.92);
 }
 
+.theme-builder-root .theme-builder-squad-command {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(22rem, 1fr);
+  align-items: start;
+  gap: 0.9rem;
+}
+
+.theme-builder-root .theme-builder-squad-command-left,
+.theme-builder-root .theme-builder-squad-command-right,
+.theme-builder-root .theme-builder-squad-coverage-stack {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 0.9rem;
+}
+
+.theme-builder-root .theme-builder-squad-command-left > .theme-builder-squad-roster {
+  align-self: start;
+  min-height: 0;
+  height: auto;
+}
+
+.theme-builder-root .theme-builder-squad-command .theme-builder-squad-library,
+.theme-builder-root .theme-builder-squad-command .theme-builder-squad-matrix,
+.theme-builder-root .theme-builder-squad-command .theme-builder-boon-coverage {
+  margin-top: 0;
+}
+
+.theme-builder-root .theme-builder-squad-command-left .theme-builder-squad-toolbar {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.theme-builder-root .theme-builder-squad-command-left .theme-builder-squad-settings {
+  flex: 0 1 auto;
+}
+
+.theme-builder-root .theme-builder-squad-command-left .theme-builder-squad-actions {
+  justify-content: flex-start;
+}
+
+.theme-builder-root .theme-builder-squad-command-left .theme-builder-party-line {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.theme-builder-root .theme-builder-squad-command-left .theme-builder-party-name {
+  min-height: 2rem;
+}
+
+.theme-builder-root .theme-builder-squad-command-left .theme-builder-party-slots {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.theme-builder-root .theme-builder-squad-command-left .theme-builder-squad-slot {
+  min-height: 5.15rem;
+}
+
+.theme-builder-root .theme-builder-squad-command-left .theme-builder-squad-card {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 3.9rem;
+  place-items: center;
+  padding: 0.35rem;
+}
+
+.theme-builder-root .theme-builder-squad-command-left .theme-builder-squad-card > span:last-child {
+  display: none;
+}
+
+.theme-builder-root .theme-builder-squad-command-right .theme-builder-library-list.is-compact {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.theme-builder-root .theme-builder-squad-command-right .theme-builder-squad-matrix {
+  min-width: 0;
+}
+
+.theme-builder-root .theme-builder-squad-command-right .theme-builder-matrix-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.theme-builder-root .theme-builder-squad-library-tools {
+  display: flex;
+  min-width: min(100%, 21rem);
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.theme-builder-root .theme-builder-squad-library-tools .theme-builder-search {
+  width: min(16rem, 100%);
+}
+
+.theme-builder-root .theme-builder-coverage-disclosure {
+  overflow: hidden;
+}
+
+.theme-builder-root .theme-builder-coverage-disclosure > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.theme-builder-root .theme-builder-coverage-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.theme-builder-root .theme-builder-coverage-disclosure > summary > span {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  color: var(--theme-textMuted);
+}
+
+.theme-builder-root .theme-builder-coverage-disclosure[open] > summary > span svg:not(.animate-spin) {
+  transform: rotate(90deg);
+}
+
+.theme-builder-root .theme-builder-coverage-disclosure > .theme-builder-boon-grid {
+  padding-top: 0.8rem;
+}
+
 .theme-builder-root .theme-builder-party-stack {
   gap: 0.85rem;
 }
@@ -256,6 +377,10 @@
 }
 
 @media (max-width: 900px) {
+  .theme-builder-root .theme-builder-squad-command {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .theme-builder-root .theme-builder-squad-toolbar {
     align-items: stretch;
     flex-direction: column;
@@ -273,6 +398,10 @@
   .theme-builder-root .theme-builder-party-slots,
   .theme-builder-root .theme-builder-library-list.is-compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .theme-builder-root .theme-builder-squad-command-left .theme-builder-party-slots {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
@@ -330,6 +459,21 @@
   .theme-builder-root .theme-builder-party-slots,
   .theme-builder-root .theme-builder-library-list.is-compact {
     grid-template-columns: 1fr;
+  }
+
+  .theme-builder-root .theme-builder-squad-command-left .theme-builder-party-slots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .theme-builder-root .theme-builder-squad-library .theme-builder-section-head,
+  .theme-builder-root .theme-builder-squad-library-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .theme-builder-root .theme-builder-squad-library-tools,
+  .theme-builder-root .theme-builder-squad-library-tools .theme-builder-search {
+    width: 100%;
   }
 
   .theme-builder-root .theme-builder-squad-slot {

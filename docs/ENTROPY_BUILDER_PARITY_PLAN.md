@@ -111,6 +111,8 @@ Progress: the focused viewer is implemented for Library and Squad build activati
 
 Acceptance: assignments, moves, removals, save/reopen, and build viewing work with mouse and keyboard; a 25-player squad remains scannable without horizontal overflow.
 
+Progress: the Squad workspace now uses a responsive split command view with the subgroup roster and collapsed coverage disclosures on the left, plus a searchable saved-build roster and two-column tactical matrix on the right. Five-slot subgroup scanning, existing assignment interactions, Build Viewer activation, coverage calculations, and squad persistence remain unchanged. The live desktop view has been checked for content-height stretching and horizontal overflow; populated assignment, keyboard, and narrow-viewport verification remain before Phase C acceptance is complete.
+
 #### Phase D - Library hierarchy
 
 1. Use the shared card and Build Viewer behavior.

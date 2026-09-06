@@ -1065,11 +1065,11 @@ function SquadBoonCoverage({
   }, [composition, builds, boonCache]);
 
   return (
-    <section className="theme-builder-boon-coverage">
-      <div className="theme-builder-section-head">
+    <details className="theme-builder-boon-coverage theme-builder-coverage-disclosure">
+      <summary className="theme-builder-section-head">
         <div><div className="theme-builder-kicker">Live from assigned squad slots</div><h3>Squad boon coverage</h3></div>
-        {computing && <Loader2 className="h-4 w-4 animate-spin" />}
-      </div>
+        <span>{computing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}</span>
+      </summary>
       <div className="theme-builder-boon-grid">
         {BOON_DISPLAY_ORDER.map((boon) => {
           const entry = providers.get(boon); const list = entry?.sources ?? [];
@@ -1103,7 +1103,7 @@ function SquadBoonCoverage({
           );
         })}
       </div>
-    </section>
+    </details>
   );
 }
 
@@ -1144,11 +1144,11 @@ function SquadConditionCoverage({
   }, [composition, builds, conditionCache]);
 
   return (
-    <section className="theme-builder-boon-coverage theme-builder-condition-coverage">
-      <div className="theme-builder-section-head">
+    <details className="theme-builder-boon-coverage theme-builder-condition-coverage theme-builder-coverage-disclosure">
+      <summary className="theme-builder-section-head">
         <div><div className="theme-builder-kicker">Detected from assigned skills and traits</div><h3>Squad condition access</h3></div>
-        {computing && <Loader2 className="h-4 w-4 animate-spin" />}
-      </div>
+        <span>{computing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}</span>
+      </summary>
       <div className="theme-builder-boon-grid theme-builder-condition-grid">
         {BUILDER_CONDITION_DISPLAY_ORDER.map((condition) => {
           const entry = providers.get(condition); const list = entry?.sources ?? [];
@@ -1182,7 +1182,7 @@ function SquadConditionCoverage({
           );
         })}
       </div>
-    </section>
+    </details>
   );
 }
 
@@ -1301,6 +1301,7 @@ function SquadWorkspace({
   specsById: Map<number, Gw2Specialization>;
 }) {
   const [focusedBuildId, setFocusedBuildId] = useState<string | null>(null);
+  const [rosterQuery, setRosterQuery] = useState("");
   const assignmentCounts = useMemo(() => {
     const counts = new Map<string, number>();
     composition?.parties.forEach((party) => {
@@ -1310,6 +1311,11 @@ function SquadWorkspace({
     });
     return counts;
   }, [composition]);
+  const rosterBuilds = useMemo(() => {
+    const query = rosterQuery.trim().toLowerCase();
+    if (!query) return builds;
+    return builds.filter((build) => [build.name, build.state.professionId, build.state.role, ...build.state.tags].join(" ").toLowerCase().includes(query));
+  }, [builds, rosterQuery]);
 
   if (!composition) {
     return (
@@ -1337,7 +1343,8 @@ function SquadWorkspace({
   };
 
   return (
-    <>
+    <div className="theme-builder-squad-command">
+      <div className="theme-builder-squad-command-left">
       <section className="theme-builder-workspace theme-builder-squad-roster">
         <div className="theme-builder-section-head">
           <div><div className="theme-builder-kicker">Squad composition</div><h3>Squad roster</h3></div>
@@ -1438,14 +1445,27 @@ function SquadWorkspace({
         </div>
         <button type="button" className="theme-builder-add-line" onClick={() => update({ parties: [...composition.parties, createParty(composition.parties.length)] })}><Plus className="h-4 w-4" /> Add subgroup</button>
       </section>
+      <div className="theme-builder-squad-coverage-stack">
+        <SquadBoonCoverage composition={composition} builds={builds} boonCache={boonCache} computing={boonComputing} />
+        <SquadConditionCoverage composition={composition} builds={builds} conditionCache={conditionCache} computing={conditionComputing} />
+      </div>
+      </div>
+      <div className="theme-builder-squad-command-right">
       <section className="theme-builder-workspace theme-builder-squad-library">
         <div className="theme-builder-section-head">
           <div><div className="theme-builder-kicker">Drag cards into open squad slots</div><h3>Saved build library</h3></div>
-          <span className="theme-builder-squad-library-count">{availableBuilds.length} saved</span>
+          <div className="theme-builder-squad-library-tools">
+            <div className="theme-builder-search">
+              <Search className="h-4 w-4" aria-hidden="true" />
+              <input aria-label="Search squad build roster" value={rosterQuery} onChange={(event) => setRosterQuery(event.target.value)} placeholder="Search builds" />
+              {rosterQuery && <button type="button" onClick={() => setRosterQuery("")} title="Clear search" aria-label="Clear squad build search"><X className="h-3.5 w-3.5" /></button>}
+            </div>
+            <span className="theme-builder-squad-library-count">{rosterBuilds.length}/{availableBuilds.length}</span>
+          </div>
         </div>
-        {availableBuilds.length ? (
+        {rosterBuilds.length ? (
           <div className="theme-builder-library-list is-compact">
-            {availableBuilds.map((build, index) => (
+            {rosterBuilds.map((build, index) => (
               <BuildSummaryCard
                 key={build.id}
                 build={build}
@@ -1458,14 +1478,15 @@ function SquadWorkspace({
               />
             ))}
           </div>
+        ) : availableBuilds.length ? (
+          <div className="theme-builder-empty is-compact"><Search className="h-7 w-7" /><strong>No matching builds</strong><span>No saved build matches &quot;{rosterQuery.trim()}&quot;.</span><button type="button" className="theme-command-button" onClick={() => setRosterQuery("")}><X className="h-4 w-4" /> Clear search</button></div>
         ) : (
           <div className="theme-builder-empty is-compact"><Archive className="h-7 w-7" /><strong>No saved builds</strong><span>Save a build or draft, then drag it into as many squad slots as you need.</span></div>
         )}
       </section>
-      <SquadBoonCoverage composition={composition} builds={builds} boonCache={boonCache} computing={boonComputing} />
-      <SquadConditionCoverage composition={composition} builds={builds} conditionCache={conditionCache} computing={conditionComputing} />
       <SquadTacticalMatrix composition={composition} builds={builds} focusedBuildId={focusedBuildId} />
-    </>
+      </div>
+    </div>
   );
 }
 
