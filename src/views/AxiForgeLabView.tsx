@@ -72,6 +72,7 @@ import {
 } from "../lib/axiforge/conditionEngine";
 import { computeBuildConditionAccess } from "../lib/axiforge/squadConditions";
 import { computeSquadTacticalReadout, type BuilderPressureIdentity } from "../lib/axiforge/squadTactics";
+import { moveSquadAssignment, type SquadSlotLocation } from "../lib/axiforge/squadAssignments";
 import { matchesBuilderLibraryFilters } from "../lib/axiforge/builderLibrary";
 import {
   fetchGw2Skills,
@@ -1359,6 +1360,76 @@ function SquadTacticalMatrix({
   );
 }
 
+type SquadMoveSource = SquadSlotLocation & { buildId: string };
+const SQUAD_SLOT_DRAG_TYPE = "application/x-entropy-squad-slot";
+
+function SquadMoveDialog({
+  source,
+  composition,
+  builds,
+  onMove,
+  onClose,
+}: {
+  source: SquadMoveSource;
+  composition: BuilderComposition;
+  builds: SavedBuilderBuild[];
+  onMove: (target: SquadSlotLocation) => void;
+  onClose: () => void;
+}) {
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const build = builds.find((item) => item.id === source.buildId);
+  const sourcePartyIndex = composition.parties.findIndex((party) => party.id === source.partyId);
+
+  useModalScrollLock(true);
+
+  return createPortal(
+    <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section
+        ref={dialogRef}
+        className="theme-builder-picker-dialog theme-builder-squad-move-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="squad-move-title"
+        onKeyDown={(event) => handleModalDialogKeyDown(event, dialogRef.current, onClose)}
+      >
+        <div className="theme-builder-picker-head">
+          <div>
+            <div className="theme-builder-kicker">Squad placement</div>
+            <h3 id="squad-move-title">Move {build?.name ?? "assignment"}</h3>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close move assignment dialog"><X className="h-4 w-4" /></button>
+        </div>
+        <p className="theme-builder-squad-move-summary">
+          Currently in subgroup {sourcePartyIndex + 1}, slot {source.slotIndex + 1}. Choosing an occupied slot swaps the two assignments.
+        </p>
+        <div className="theme-builder-squad-move-list">
+          {composition.parties.flatMap((party, partyIndex) => party.slots.map((buildId, slotIndex) => {
+            const isSource = party.id === source.partyId && slotIndex === source.slotIndex;
+            const occupant = builds.find((item) => item.id === buildId);
+            return (
+              <button
+                key={`${party.id}:${slotIndex}`}
+                type="button"
+                disabled={isSource}
+                autoFocus={!isSource && partyIndex === 0 && slotIndex === (sourcePartyIndex === 0 && source.slotIndex === 0 ? 1 : 0)}
+                onClick={() => onMove({ partyId: party.id, slotIndex })}
+              >
+                <span>{String(partyIndex + 1).padStart(2, "0")}.{slotIndex + 1}</span>
+                <span>
+                  <strong>{party.name} / Slot {slotIndex + 1}</strong>
+                  <small>{isSource ? "Current slot" : occupant ? `Swap with ${occupant.name}` : "Open slot"}</small>
+                </span>
+                {occupant ? <ClassIcon name={occupant.state.professionId} size="sm" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
+              </button>
+            );
+          }))}
+        </div>
+      </section>
+    </div>,
+    document.body,
+  );
+}
+
 function SquadWorkspace({
   composition,
   builds,
@@ -1388,6 +1459,7 @@ function SquadWorkspace({
 }) {
   const [focusedBuildId, setFocusedBuildId] = useState<string | null>(null);
   const [rosterQuery, setRosterQuery] = useState("");
+  const [moveSource, setMoveSource] = useState<SquadMoveSource | null>(null);
   const assignmentCounts = useMemo(() => {
     const counts = new Map<string, number>();
     composition?.parties.forEach((party) => {
@@ -1422,10 +1494,40 @@ function SquadWorkspace({
   });
   const handleSlotDrop = (event: React.DragEvent<HTMLDivElement>, partyId: string, slotIndex: number) => {
     event.preventDefault();
+    const sourceValue = event.dataTransfer.getData(SQUAD_SLOT_DRAG_TYPE);
+    if (sourceValue) {
+      try {
+        const source = JSON.parse(sourceValue) as SquadMoveSource;
+        const parties = moveSquadAssignment(composition.parties, source, { partyId, slotIndex });
+        if (parties !== composition.parties) {
+          update({ parties });
+          setFocusedBuildId(source.buildId);
+          window.setTimeout(() => document.getElementById(`squad-slot-${partyId}-${slotIndex}-trigger`)?.focus(), 0);
+        }
+      } catch {
+        // Ignore malformed external drag data.
+      }
+      return;
+    }
     const buildId = event.dataTransfer.getData("text/plain");
     if (!buildId || !builds.some((build) => build.id === buildId)) return;
     updateSlot(partyId, slotIndex, buildId);
     setFocusedBuildId(buildId);
+  };
+  const closeMoveDialog = () => {
+    const source = moveSource;
+    setMoveSource(null);
+    if (source) window.setTimeout(() => document.getElementById(`squad-slot-${source.partyId}-${source.slotIndex}-move`)?.focus(), 0);
+  };
+  const moveAssignment = (target: SquadSlotLocation) => {
+    if (!moveSource) return;
+    const parties = moveSquadAssignment(composition.parties, moveSource, target);
+    if (parties === composition.parties) return;
+    const movedBuildId = moveSource.buildId;
+    setMoveSource(null);
+    update({ parties });
+    setFocusedBuildId(movedBuildId);
+    window.setTimeout(() => document.getElementById(`squad-slot-${target.partyId}-${target.slotIndex}-trigger`)?.focus(), 0);
   };
 
   return (
@@ -1480,7 +1582,7 @@ function SquadWorkspace({
                       className={selected ? "theme-builder-squad-slot is-filled" : "theme-builder-squad-slot"}
                       onDragOver={(event) => {
                         event.preventDefault();
-                        event.dataTransfer.dropEffect = "copy";
+                        event.dataTransfer.dropEffect = event.dataTransfer.types.includes(SQUAD_SLOT_DRAG_TYPE) ? "move" : "copy";
                       }}
                       onDrop={(event) => handleSlotDrop(event, party.id, slotIndex)}
                     >
@@ -1491,6 +1593,12 @@ function SquadWorkspace({
                             id={`${slotPickerId}-trigger`}
                             type="button"
                             className="theme-builder-squad-card"
+                            draggable
+                            onDragStart={(event) => {
+                              event.dataTransfer.effectAllowed = "move";
+                              event.dataTransfer.setData("text/plain", selected.id);
+                              event.dataTransfer.setData(SQUAD_SLOT_DRAG_TYPE, JSON.stringify({ partyId: party.id, slotIndex, buildId: selected.id }));
+                            }}
                             onClick={() => onOpenBuild(selected)}
                             onFocus={() => setFocusedBuildId(selected.id)}
                             onMouseEnter={() => setFocusedBuildId(selected.id)}
@@ -1508,17 +1616,30 @@ function SquadWorkspace({
                               )}
                             </span>
                           </button>
-                          <button
-                            type="button"
-                            className="theme-builder-squad-remove"
-                            onClick={() => {
-                              updateSlot(party.id, slotIndex, null);
-                              window.setTimeout(() => document.getElementById(`${slotPickerId}-trigger`)?.focus(), 0);
-                            }}
-                            title="Clear squad slot"
-                          >
-                            <MinusCircle className="h-3.5 w-3.5" />
-                          </button>
+                          <div className="theme-builder-squad-slot-actions">
+                            <button
+                              id={`${slotPickerId}-move`}
+                              type="button"
+                              className="theme-builder-squad-move"
+                              onClick={() => setMoveSource({ partyId: party.id, slotIndex, buildId: selected.id })}
+                              title="Move squad assignment"
+                              aria-label={`Move ${selected.name} from ${party.name}, slot ${slotIndex + 1}`}
+                            >
+                              <ArrowLeftRight className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              className="theme-builder-squad-remove"
+                              onClick={() => {
+                                updateSlot(party.id, slotIndex, null);
+                                window.setTimeout(() => document.getElementById(`${slotPickerId}-trigger`)?.focus(), 0);
+                              }}
+                              title="Clear squad slot"
+                              aria-label={`Clear ${selected.name} from ${party.name}, slot ${slotIndex + 1}`}
+                            >
+                              <MinusCircle className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </>
                       ) : (
                         <SquadSlotPicker
@@ -1577,6 +1698,15 @@ function SquadWorkspace({
       </section>
       <SquadTacticalMatrix composition={composition} builds={builds} focusedBuildId={focusedBuildId} />
       </div>
+      {moveSource && (
+        <SquadMoveDialog
+          source={moveSource}
+          composition={composition}
+          builds={builds}
+          onMove={moveAssignment}
+          onClose={closeMoveDialog}
+        />
+      )}
     </div>
   );
 }
