@@ -3091,6 +3091,8 @@ export default function AxiForgeLabView() {
                                   id={`builder-weapon-stat-${slot}`}
                                   label="Stat override"
                                   value={builder.equipment.slots[slot] || ""}
+                                  disabled={offhandDisabled}
+                                  disabledLabel="Unavailable with a two-handed weapon"
                                   choices={statOptions.filter(Boolean).map((stat) => ({ value: stat, label: stat, group: (QUICK_STAT_OPTIONS as readonly string[]).includes(stat) ? "Common" : "All stats" }))}
                                   onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, slots: { ...current.equipment.slots, [slot]: value } } }))}
                                   placeholder="Use doctrine stats"

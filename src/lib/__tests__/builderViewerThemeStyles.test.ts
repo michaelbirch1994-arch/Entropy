@@ -44,6 +44,10 @@ describe("builder viewer theme styles", () => {
     expect(view).toMatch(/section === "consumables"[\s\S]*?<small>Relic<\/small>[\s\S]*?<small>Food<\/small>/);
   });
 
+  it("disables impossible off-hand stat overrides for two-handed weapons", () => {
+    expect(view).toMatch(/id={`builder-weapon-stat-\${slot}`}[\s\S]*?disabled={offhandDisabled}[\s\S]*?disabledLabel="Unavailable with a two-handed weapon"/);
+  });
+
   it("keeps trinket artwork compact in the embedded preview and expanded viewer", () => {
     expect(css).toMatch(/\.theme-builder-preview-trinket-card > img,[\s\S]*?width: 2\.2rem;[\s\S]*?height: 2\.2rem;/);
     expect(css).not.toContain(".theme-builder-viewer .theme-builder-preview-trinket-card > img");
