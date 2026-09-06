@@ -365,6 +365,7 @@ function ChoicePickerField({
   disabled = false,
   disabledLabel,
   onPreview,
+  emptyIcon,
 }: {
   id: string;
   label: string;
@@ -376,6 +377,7 @@ function ChoicePickerField({
   disabled?: boolean;
   disabledLabel?: string;
   onPreview?: (value: string) => void;
+  emptyIcon?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -415,13 +417,15 @@ function ChoicePickerField({
         ref={triggerRef}
         className="theme-builder-picker-trigger"
         onClick={() => !disabled && setOpen(true)}
+        onFocus={() => value && onPreview?.(value)}
+        onMouseEnter={() => value && onPreview?.(value)}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={`${id}-dialog`}
         disabled={disabled}
       >
         <span className="theme-builder-picker-icon">
-          {selected?.icon ? <img src={selected.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}
+          {selected?.icon ? <img src={selected.icon} alt="" /> : emptyIcon ?? <FileCode2 className="h-4 w-4" aria-hidden="true" />}
         </span>
         <span><strong>{disabled ? (disabledLabel ?? placeholder) : (selected?.label ?? (value || placeholder))}</strong><small>{selected?.meta ?? selected?.group ?? "Open searchable picker"}</small></span>
         <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -920,14 +924,6 @@ function SkillPicker({
 
   return (
     <div className="theme-builder-skill-slot">
-      <button
-        type="button"
-        className="theme-builder-skill-icon"
-        onClick={() => selected && onInspect(selected)}
-        title={selected ? `Inspect ${selected.name}` : `Choose ${label}`}
-      >
-        {selected?.icon ? <img src={selected.icon} alt="" /> : <Plus className="h-5 w-5" />}
-      </button>
       <ChoicePickerField
         id={`builder-skill-${label.toLowerCase().replaceAll(/\W+/g, "-")}`}
         label={label}
@@ -955,6 +951,7 @@ function SkillPicker({
           const skill = options.find((item) => String(item.id) === value);
           if (skill) onInspect(skill);
         }}
+        emptyIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
         placeholder={`Choose ${label.toLowerCase()}`}
         clearLabel={`Clear ${label}`}
       />

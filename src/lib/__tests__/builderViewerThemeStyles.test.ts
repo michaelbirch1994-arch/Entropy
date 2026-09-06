@@ -24,4 +24,10 @@ describe("builder viewer theme styles", () => {
     expect(view).toContain('<select className="theme-builder-input" aria-label="Build role"');
     expect(css).toContain(".theme-builder-overview-canvas .theme-builder-professions");
   });
+
+  it("uses one icon-led picker surface for each editable utility slot", () => {
+    expect(view).toContain('emptyIcon={<Plus className="h-4 w-4" aria-hidden="true" />}');
+    expect(view).not.toContain('className="theme-builder-skill-icon"');
+    expect(css).toMatch(/\.theme-builder-loadout-canvas \.theme-builder-skill-slot \{[\s\S]*?border: 0;[\s\S]*?box-shadow: none;/);
+  });
 });

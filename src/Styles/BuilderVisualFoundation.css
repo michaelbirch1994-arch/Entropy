@@ -1887,8 +1887,24 @@
 }
 
 .theme-builder-loadout-canvas .theme-builder-skill-slot {
-  border-radius: 6px;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.theme-builder-loadout-canvas .theme-builder-skill-slot .theme-builder-picker-trigger {
+  min-height: 3.3rem;
+  border-color: rgba(123, 108, 76, 0.34);
   background: rgba(3, 5, 6, 0.92);
+}
+
+.theme-builder-loadout-canvas .theme-builder-skill-slot .theme-builder-picker-icon {
+  border-color: rgba(216, 173, 74, 0.38);
+  color: rgba(229, 190, 91, 0.78);
+  background: rgba(216, 173, 74, 0.04);
 }
 
 @container (max-width: 55rem) {
