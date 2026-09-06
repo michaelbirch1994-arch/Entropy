@@ -1125,6 +1125,11 @@
   padding-bottom: 0.85rem;
 }
 
+.theme-builder-compact-details {
+  display: grid;
+  gap: 0.85rem;
+}
+
 .theme-builder-viewer .theme-builder-inspector {
   border-color: rgba(216, 173, 74, 0.42);
   background:

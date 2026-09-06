@@ -84,9 +84,11 @@ describe("builder viewer theme styles", () => {
 
   it("reveals deliberately inspected preview items at every builder width", () => {
     expect(view).toContain('const BUILDER_COMPACT_DETAILS_QUERY = "(max-width: 1180px)"');
-    expect(view).toMatch(/const inspectBuilderItem = \(summary: BuilderSummaryItem\) => \{[\s\S]*?setSelectedSummary\(summary\);[\s\S]*?setInspectorRequest[\s\S]*?setDetailRailOpen\(true\);/);
-    expect(view).toMatch(/<BuilderMobileTools[\s\S]*?inspectorRequest=\{inspectorRequest\}/);
+    expect(view).toMatch(/const inspectBuilderItem = \(summary: BuilderSummaryItem\) => \{[\s\S]*?setSelectedSummary\(summary\);[\s\S]*?setCompactDetailsPanel\("inspector"\)[\s\S]*?setDetailRailOpen\(true\);/);
+    expect(view).toMatch(/<BuilderMobileTools[\s\S]*?openPanel=\{compactDetailsPanel\}[\s\S]*?setOpenPanel=\{setCompactDetailsPanel\}/);
+    expect(view).toContain("returnFocusRef={compactDetailsReturnFocusRef}");
     expect(view).toMatch(/<EquipmentPreview[\s\S]*?onInspectItem=\{\(item\) => inspectBuilderItem/);
-    expect(view).toMatch(/setOpenPanel\("inspector"\);[\s\S]*?\[inspectorRequest, selected\]/);
+    expect(view).toContain('panel === "details" ? null : "details"');
+    expect(view).toContain('className="theme-builder-compact-details"');
   });
 });

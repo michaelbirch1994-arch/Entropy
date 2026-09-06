@@ -142,7 +142,7 @@ import BuildSummaryCard from "../components/builder/BuildSummaryCard";
 type WorkbenchTab = "build" | "library" | "squad";
 type BuilderSection = "overview" | "traits" | "equipment" | "notes" | "preview";
 type EquipmentSection = "weapons" | "armor" | "upgrades" | "consumables";
-type MobileRailPanel = "readiness" | "inspector";
+type MobileRailPanel = "readiness" | "inspector" | "details";
 const BUILDER_COMPACT_DETAILS_QUERY = "(max-width: 1180px)";
 type Notice = { tone: "success" | "warning" | "error"; message: string };
 
@@ -684,15 +684,17 @@ function BuilderMobileTools({
   issues,
   selected,
   builder,
-  inspectorRequest,
+  openPanel,
+  setOpenPanel,
+  returnFocusRef,
 }: {
   issues: string[];
   selected: BuilderSummaryItem | null;
   builder: EntropyBuilderState;
-  inspectorRequest: number;
+  openPanel: MobileRailPanel | null;
+  setOpenPanel: React.Dispatch<React.SetStateAction<MobileRailPanel | null>>;
+  returnFocusRef: React.MutableRefObject<HTMLButtonElement | null>;
 }) {
-  const [openPanel, setOpenPanel] = useState<MobileRailPanel | null>(null);
-  const returnFocusRef = useRef<HTMLButtonElement | null>(null);
   const readinessButtonRef = useRef<HTMLButtonElement>(null);
   const inspectorButtonRef = useRef<HTMLButtonElement>(null);
   const reduceMotion = useReducedMotion();
@@ -707,18 +709,12 @@ function BuilderMobileTools({
     return () => query.removeEventListener("change", closeAtDesktopWidth);
   }, []);
 
-  useEffect(() => {
-    if (!inspectorRequest || !selected || !window.matchMedia(BUILDER_COMPACT_DETAILS_QUERY).matches) return;
-    returnFocusRef.current = document.activeElement instanceof HTMLButtonElement ? document.activeElement : inspectorButtonRef.current;
-    setOpenPanel("inspector");
-  }, [inspectorRequest, selected]);
-
   const showPanel = (panel: MobileRailPanel, trigger: HTMLButtonElement | null) => {
     returnFocusRef.current = trigger;
     setOpenPanel(panel);
   };
   const closePanel = () => setOpenPanel(null);
-  const sheetTitle = openPanel === "readiness" ? "Build readiness" : "Loadout inspector";
+  const sheetTitle = openPanel === "readiness" ? "Build readiness" : openPanel === "inspector" ? "Loadout inspector" : "Builder details";
 
   const handleSheetKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
@@ -769,7 +765,7 @@ function BuilderMobileTools({
         </button>
       </div>
       {typeof document !== "undefined" && createPortal(
-        <AnimatePresence onExitComplete={() => { if (returnFocusRef.current?.offsetParent) returnFocusRef.current.focus(); }}>
+        <AnimatePresence onExitComplete={() => { if (returnFocusRef.current?.offsetParent) returnFocusRef.current.focus(); returnFocusRef.current = null; }}>
           {openPanel && (
             <motion.div
               key="builder-mobile-sheet"
@@ -796,7 +792,16 @@ function BuilderMobileTools({
                   <button type="button" autoFocus onClick={closePanel} aria-label={`Close ${sheetTitle}`} title="Close"><X className="h-4 w-4" /></button>
                 </header>
                 <div className="theme-builder-mobile-sheet-content">
-                  {openPanel === "readiness" ? <BuilderReadiness issues={issues} embedded /> : <DetailPanel selected={selected} builder={builder} embedded />}
+                  {openPanel === "readiness" ? (
+                    <BuilderReadiness issues={issues} embedded />
+                  ) : openPanel === "inspector" ? (
+                    <DetailPanel selected={selected} builder={builder} embedded />
+                  ) : (
+                    <div className="theme-builder-compact-details">
+                      <BuilderReadiness issues={issues} embedded />
+                      <DetailPanel selected={selected} builder={builder} embedded />
+                    </div>
+                  )}
                 </div>
               </motion.section>
             </motion.div>
@@ -2024,7 +2029,8 @@ export default function AxiForgeLabView() {
   const [builderViewMode, setBuilderViewMode] = useState<BuilderSection>(loadBuilderSection);
   const [equipmentSection, setEquipmentSection] = useState<EquipmentSection>("weapons");
   const [detailRailOpen, setDetailRailOpen] = useState(false);
-  const [inspectorRequest, setInspectorRequest] = useState(0);
+  const [compactDetailsPanel, setCompactDetailsPanel] = useState<MobileRailPanel | null>(null);
+  const compactDetailsReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const exportMenuRef = useRef<HTMLDetailsElement>(null);
   const [displayedWeaponSet, setDisplayedWeaponSet] = useState<WeaponSetNumber>(() => workspace.draft.activeWeaponSet === 2 ? 2 : 1);
   const [editingBuildId, setEditingBuildId] = useState<string | null>(null);
@@ -2059,8 +2065,10 @@ export default function AxiForgeLabView() {
 
   const inspectBuilderItem = (summary: BuilderSummaryItem) => {
     setSelectedSummary(summary);
-    if (window.matchMedia(BUILDER_COMPACT_DETAILS_QUERY).matches) setInspectorRequest((request) => request + 1);
-    else setDetailRailOpen(true);
+    if (window.matchMedia(BUILDER_COMPACT_DETAILS_QUERY).matches) {
+      compactDetailsReturnFocusRef.current = document.activeElement instanceof HTMLButtonElement ? document.activeElement : null;
+      setCompactDetailsPanel("inspector");
+    } else setDetailRailOpen(true);
   };
 
   useEffect(() => saveBuilderWorkspace(workspace), [workspace]);
@@ -3279,19 +3287,32 @@ export default function AxiForgeLabView() {
           </div>
           </main>
 
-          <BuilderMobileTools issues={issues} selected={selectedSummary} builder={builder} inspectorRequest={inspectorRequest} />
+          <BuilderMobileTools
+            issues={issues}
+            selected={selectedSummary}
+            builder={builder}
+            openPanel={compactDetailsPanel}
+            setOpenPanel={setCompactDetailsPanel}
+            returnFocusRef={compactDetailsReturnFocusRef}
+          />
 
           <button
             type="button"
             className="theme-builder-rail-toggle"
-            aria-expanded={detailRailOpen}
+            aria-expanded={detailRailOpen || compactDetailsPanel === "details"}
             aria-controls="builder-detail-rail"
-            aria-label={detailRailOpen ? "Hide build readiness and inspector" : "Show build readiness and inspector"}
-            title={detailRailOpen ? "Hide build details" : "Show build details"}
-            onClick={() => setDetailRailOpen((open) => !open)}
+            aria-label={detailRailOpen || compactDetailsPanel === "details" ? "Hide build readiness and inspector" : "Show build readiness and inspector"}
+            title={detailRailOpen || compactDetailsPanel === "details" ? "Hide build details" : "Show build details"}
+            onClick={(event) => {
+              if (window.matchMedia(BUILDER_COMPACT_DETAILS_QUERY).matches) {
+                compactDetailsReturnFocusRef.current = event.currentTarget;
+                setCompactDetailsPanel((panel) => panel === "details" ? null : "details");
+              }
+              else setDetailRailOpen((open) => !open);
+            }}
           >
-            {detailRailOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
-            {!detailRailOpen && <span aria-label={`${issues.length} build issues`}>{issues.length}</span>}
+            {detailRailOpen || compactDetailsPanel === "details" ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+            {!detailRailOpen && compactDetailsPanel !== "details" && <span aria-label={`${issues.length} build issues`}>{issues.length}</span>}
           </button>
 
           <aside id="builder-detail-rail" className="theme-builder-rail" hidden={!detailRailOpen}>
