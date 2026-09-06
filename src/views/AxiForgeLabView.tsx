@@ -15,12 +15,10 @@ import {
   Check,
   ChevronRight,
   Clipboard,
-  Copy,
   Download,
   Eraser,
   ExternalLink,
   FileCode2,
-  FolderOpen,
   Layers3,
   Link2,
   Loader2,
@@ -35,7 +33,6 @@ import {
   Shield,
   Sparkles,
   Swords,
-  Trash2,
   Users,
   Wrench,
   X,
@@ -95,16 +92,9 @@ import {
   weaponFitsBuilderSlot,
   type BuilderCatalogSource,
 } from "../lib/gw2/builderCatalog";
-import {
-  resolveWeaponSkillSlots,
-  weaponSkillIds,
-  type WeaponSetNumber,
-} from "../lib/gw2/weaponSkillBar";
+import { weaponSkillIds, type WeaponSetNumber } from "../lib/gw2/weaponSkillBar";
 import {
   availableRevenantLegends,
-  resolveProfessionMechanicSlots,
-  resolveRangerPetSlots,
-  resolveRevenantLegendSlots,
   validateRevenantLegendSelection,
 } from "../lib/gw2/professionMechanics";
 import {
@@ -138,6 +128,8 @@ import type {
   SavedBuilderBuild,
 } from "../types/buildEditor";
 import ClassIcon from "../components/ui/ClassIcon";
+import BuildCombatBar from "../components/builder/BuildCombatBar";
+import BuildSummaryCard from "../components/builder/BuildSummaryCard";
 
 type WorkbenchTab = "build" | "library" | "squad";
 type BuilderSection = "overview" | "traits" | "equipment" | "notes" | "preview";
@@ -217,25 +209,6 @@ function pressureShortLabel(identity: BuilderPressureIdentity): string {
   if (identity === "condition") return "Condi";
   if (identity === "support") return "Support";
   return "Sustain";
-}
-
-function buildWeaponSummary(build: SavedBuilderBuild): string {
-  const { weapons } = build.state.equipment;
-  const setOne = [weapons.mainhand1, weapons.offhand1].filter(Boolean).join(" + ");
-  const setTwo = [weapons.mainhand2, weapons.offhand2].filter(Boolean).join(" + ");
-  return [setOne, setTwo].filter(Boolean).join(" / ") || "Weapons open";
-}
-
-function buildSkillCount(build: SavedBuilderBuild): number {
-  return [build.state.healSkillId, ...build.state.utilitySkillIds, build.state.eliteSkillId].filter(Boolean).length;
-}
-
-function buildGearCount(build: SavedBuilderBuild): number {
-  const gearSlots = Object.values(build.state.equipment.slots).filter(Boolean).length;
-  const runes = Object.values(build.state.equipment.runes).filter(Boolean).length;
-  const sigils = Object.values(build.state.equipment.sigils).flat().filter(Boolean).length;
-  const extras = [build.state.equipment.relic, build.state.equipment.food, build.state.equipment.utility, build.state.equipment.enrichment].filter(Boolean).length;
-  return gearSlots + runes + sigils + extras;
 }
 
 function contributionTotal(
@@ -946,110 +919,6 @@ function SkillPicker({
   );
 }
 
-function BuilderBuildCard({
-  build,
-  index,
-  onLoad,
-  onDuplicate,
-  onDelete,
-  onCopy,
-  onShare,
-  deletePending = false,
-  onRequestDelete,
-  onCancelDelete,
-  onFocus,
-  slotCount = 0,
-  draggable = false,
-  specsById,
-}: {
-  build: SavedBuilderBuild;
-  index?: number;
-  onLoad: (build: SavedBuilderBuild) => void;
-  onDuplicate?: (build: SavedBuilderBuild) => void;
-  onDelete?: (id: string) => void;
-  onCopy?: (code: string) => void;
-  onShare?: (code: string) => void;
-  deletePending?: boolean;
-  onRequestDelete?: (id: string) => void;
-  onCancelDelete?: () => void;
-  onFocus?: (id: string) => void;
-  slotCount?: number;
-  draggable?: boolean;
-  specsById: Map<number, Gw2Specialization>;
-}) {
-  const deleteButtonRef = useRef<HTMLButtonElement>(null);
-  const profile = useMemo(() => computeAttributeProfile(build.state, null), [build]);
-  const readinessIssues = useMemo(() => validateBuilder(build.state), [build]);
-  const isDraft = !build.shareCode || readinessIssues.length > 0;
-  const summary = [
-    build.state.role,
-    build.state.equipment.statPackage,
-    buildWeaponSummary(build),
-  ].filter(Boolean).join(" / ");
-  const cancelDelete = () => {
-    onCancelDelete?.();
-    window.requestAnimationFrame(() => deleteButtonRef.current?.focus());
-  };
-
-  return (
-    <article
-      className="theme-builder-library-card"
-      draggable={draggable}
-      onDragStart={(event) => {
-        event.dataTransfer.setData("text/plain", build.id);
-        event.dataTransfer.effectAllowed = "copy";
-      }}
-      onFocus={() => onFocus?.(build.id)}
-      onMouseEnter={() => onFocus?.(build.id)}
-    >
-      {index != null && <div className="theme-builder-index">{String(index + 1).padStart(2, "0")}</div>}
-      <button type="button" className="theme-builder-library-card-main" onClick={() => onLoad(build)} title={`Open ${build.name}`}>
-        <ClassIcon name={resolveEliteSpecName(build.state.specializationIds, specsById, build.state.professionId)} size="md" />
-        <span>
-          <strong>{build.name}</strong>
-          <small>{[build.state.professionId, pressureLabel(profile.primaryIdentity)].join(" / ")}</small>
-          <em>{summary || "No doctrine assigned"}</em>
-        </span>
-      </button>
-      <div className="theme-builder-library-card-stats">
-        <span><b>{profile.pressure[profile.primaryIdentity]}</b>{pressureShortLabel(profile.primaryIdentity)}</span>
-        <span><b>{buildSkillCount(build)}</b>Skills</span>
-        <span><b>{buildGearCount(build)}</b>Gear</span>
-      </div>
-      <div className="theme-builder-card-badges">
-        <span className={isDraft ? "is-draft" : "is-ready"}>{isDraft ? "Draft" : "Ready"}</span>
-        {slotCount > 0 && <span className="is-assigned">Squad x{slotCount}</span>}
-      </div>
-      <div className="theme-builder-row-actions">
-        {deletePending ? (
-          <div
-            className="theme-builder-delete-confirm"
-            role="group"
-            aria-label={`Confirm deletion of ${build.name}`}
-            onKeyDown={(event) => {
-              if (event.key !== "Escape") return;
-              event.preventDefault();
-              cancelDelete();
-            }}
-          >
-            <span>Delete build?</span>
-            <button type="button" className="is-confirm" onClick={() => onDelete?.(build.id)} title="Confirm delete" aria-label={`Confirm deletion of ${build.name}`} autoFocus><Check /></button>
-            <button type="button" onClick={cancelDelete} title="Cancel delete" aria-label={`Cancel deletion of ${build.name}`}><X /></button>
-          </div>
-        ) : (
-          <>
-            <button type="button" onClick={() => onLoad(build)} title="Open build" aria-label={`Open ${build.name}`}><FolderOpen /></button>
-            {onDuplicate && <button type="button" onClick={() => onDuplicate(build)} title="Duplicate build" aria-label={`Duplicate ${build.name}`}><Copy /></button>}
-            {onCopy && <button type="button" onClick={() => onCopy(build.shareCode)} title={build.shareCode ? "Copy AxiCode" : "Draft has no exportable AxiCode yet"} aria-label={build.shareCode ? `Copy AxiCode for ${build.name}` : `${build.name} has no exportable AxiCode yet`} disabled={!build.shareCode}><Clipboard /></button>}
-            {onShare && <button type="button" onClick={() => onShare(build.shareCode)} title={build.shareCode ? "Copy share link" : "Draft has no share link yet"} aria-label={build.shareCode ? `Copy share link for ${build.name}` : `${build.name} has no share link yet`} disabled={!build.shareCode}><Link2 /></button>}
-            {onDelete && <button ref={deleteButtonRef} type="button" onClick={() => onRequestDelete?.(build.id)} title="Delete build" aria-label={`Delete ${build.name}`}><Trash2 /></button>}
-          </>
-        )}
-      </div>
-    </article>
-  );
-}
-
 function BuildLibrary({
   builds,
   onLoad,
@@ -1097,11 +966,11 @@ function BuildLibrary({
       ) : (
         <div className="theme-builder-library-list">
           {filtered.map((build, index) => (
-            <BuilderBuildCard
+            <BuildSummaryCard
               key={build.id}
               build={build}
               index={index}
-              onLoad={onLoad}
+              onOpen={onLoad}
               onDuplicate={onDuplicate}
               onDelete={(id) => {
                 onDelete(id);
@@ -1577,11 +1446,11 @@ function SquadWorkspace({
         {availableBuilds.length ? (
           <div className="theme-builder-library-list is-compact">
             {availableBuilds.map((build, index) => (
-              <BuilderBuildCard
+              <BuildSummaryCard
                 key={build.id}
                 build={build}
                 index={index}
-                onLoad={onOpenBuild}
+                onOpen={onOpenBuild}
                 onFocus={setFocusedBuildId}
                 slotCount={assignmentCounts.get(build.id) ?? 0}
                 draggable
@@ -1597,151 +1466,6 @@ function SquadWorkspace({
       <SquadConditionCoverage composition={composition} builds={builds} conditionCache={conditionCache} computing={conditionComputing} />
       <SquadTacticalMatrix composition={composition} builds={builds} focusedBuildId={focusedBuildId} />
     </>
-  );
-}
-
-function BuilderCombatBar({
-  builder,
-  profession,
-  specsById,
-  skillsById,
-  legends,
-  pets,
-  health,
-  weaponSet,
-  onSwap,
-  onInspect,
-  onInspectPet,
-}: {
-  builder: EntropyBuilderState;
-  profession: Gw2Profession | null;
-  specsById: Map<number, Gw2Specialization>;
-  skillsById: Map<number, Gw2Skill>;
-  legends: Gw2Legend[];
-  pets: Gw2Pet[];
-  health: number;
-  weaponSet: WeaponSetNumber;
-  onSwap: () => void;
-  onInspect: (skill: Gw2Skill) => void;
-  onInspectPet: (pet: Gw2Pet) => void;
-}) {
-  const utilityIds = [builder.healSkillId, ...builder.utilitySkillIds, builder.eliteSkillId];
-  const utilityLabels = ["Heal", "Utility 1", "Utility 2", "Utility 3", "Elite"];
-  const weaponSlots = resolveWeaponSkillSlots(builder, profession, weaponSet, skillsById);
-  const mechanicSlots = resolveProfessionMechanicSlots(builder, profession, specsById, skillsById);
-  const legendSlots = resolveRevenantLegendSlots(builder, legends, skillsById);
-  const petSlots = resolveRangerPetSlots(builder, pets);
-  const setLabel = weaponSet === 1 ? "I" : "II";
-  const nextSetLabel = weaponSet === 1 ? "II" : "I";
-  const mainhand = builder.equipment.weapons[weaponSet === 1 ? "mainhand1" : "mainhand2"];
-  const offhand = builder.equipment.weapons[weaponSet === 1 ? "offhand1" : "offhand2"];
-  const weaponLabel = [mainhand, offhand].filter(Boolean).join(" + ") || "No weapons equipped";
-
-  return (
-    <div className="theme-builder-combat-bar" aria-label={`Combat skill bar, weapon set ${setLabel}`}>
-      <div className="theme-builder-combat-group is-utility" aria-label="Healing and utility skills">
-        <div className="theme-builder-combat-label"><span>Utility skills</span><small>6–0</small></div>
-        <div className="theme-builder-combat-skills">
-          {utilityIds.map((id, index) => {
-            const skill = id ? skillsById.get(id) : null;
-            return (
-              <button
-                key={`${utilityLabels[index]}-${id ?? "empty"}`}
-                type="button"
-                className="theme-builder-combat-skill"
-                disabled={!skill}
-                onClick={() => skill && onInspect(skill)}
-                title={skill?.name ?? `${utilityLabels[index]} not selected`}
-                aria-label={skill ? `${utilityLabels[index]}: ${skill.name}` : `${utilityLabels[index]} not selected`}
-              >
-                {skill?.icon ? <img src={skill.icon} alt="" /> : <span>{index + 6 > 9 ? 0 : index + 6}</span>}
-                <b>{index + 6 > 9 ? 0 : index + 6}</b>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="theme-builder-combat-core">
-        {(mechanicSlots.length > 0 || legendSlots.length > 0 || petSlots.length > 0) && (
-          <div className="theme-builder-mechanic-skills" aria-label="Profession mechanics">
-            {mechanicSlots.map(({ key, skill }) => (
-              <button
-                key={`${key}-${skill.id}`}
-                type="button"
-                className="theme-builder-combat-skill is-mechanic"
-                onClick={() => onInspect(skill)}
-                title={skill.name}
-                aria-label={`${key}: ${skill.name}`}
-              >
-                {skill.icon ? <img src={skill.icon} alt="" /> : <span>{key}</span>}
-                <b>{key}</b>
-              </button>
-            ))}
-            {legendSlots.map(({ key, skill }) => (
-              <button
-                key={key}
-                type="button"
-                className="theme-builder-combat-skill is-mechanic is-companion"
-                disabled={!skill}
-                onClick={() => skill && onInspect(skill)}
-                title={skill?.name ?? `${key} legend not selected`}
-                aria-label={skill ? `${key}: ${skill.name}` : `${key} legend not selected`}
-              >
-                {skill?.icon ? <img src={skill.icon} alt="" /> : <span>{key}</span>}
-                <b>{key}</b>
-              </button>
-            ))}
-            {petSlots.map(({ key, pet }) => (
-              <button
-                key={key}
-                type="button"
-                className="theme-builder-combat-skill is-mechanic is-companion"
-                disabled={!pet}
-                onClick={() => pet && onInspectPet(pet)}
-                title={pet?.name ?? `${key} pet not selected`}
-                aria-label={pet ? `${key}: ${pet.name}` : `${key} pet not selected`}
-              >
-                {pet?.icon ? <img src={pet.icon} alt="" /> : <span>{key}</span>}
-                <b>{key}</b>
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="theme-builder-preview-hp" aria-label={`${Math.round(health).toLocaleString()} health`}>
-          <strong>{Math.round(health).toLocaleString()}</strong>
-          <span>HP</span>
-        </div>
-        <button type="button" className="theme-builder-weapon-swap" onClick={onSwap} aria-label={`Show weapon set ${nextSetLabel} skills`} title={`Show weapon set ${nextSetLabel}`}>
-          <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
-          <span>Set {setLabel}</span>
-        </button>
-      </div>
-
-      <div className="theme-builder-combat-group is-weapon" aria-live="polite">
-        <div className="theme-builder-combat-label"><span>Weapon set {setLabel}</span><small>{weaponLabel}</small></div>
-        <div className="theme-builder-combat-skills">
-          {weaponSlots.map((ref, index) => {
-            const skill = ref ? skillsById.get(ref.id) : null;
-            const label = skill?.name ?? `Weapon skill ${index + 1} unavailable`;
-            return (
-              <button
-                key={`${weaponSet}-${index}-${ref?.id ?? "empty"}`}
-                type="button"
-                className="theme-builder-combat-skill is-weapon"
-                disabled={!skill}
-                onClick={() => skill && onInspect(skill)}
-                title={label}
-                aria-label={skill ? `Weapon skill ${index + 1}: ${skill.name}` : label}
-              >
-                {skill?.icon ? <img src={skill.icon} alt="" /> : <span>{index + 1}</span>}
-                <b>{index + 1}</b>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -1811,7 +1535,7 @@ function BuildPreview({
         </div>
       </div>
 
-      <BuilderCombatBar builder={builder} profession={profession} specsById={specsById} skillsById={skillsById} legends={legends} pets={pets} health={attributeTotals.health} weaponSet={weaponSet} onSwap={onSwapWeaponSet} onInspect={onInspectSkill} onInspectPet={onInspectPet} />
+      <BuildCombatBar builder={builder} profession={profession} specsById={specsById} skillsById={skillsById} legends={legends} pets={pets} health={attributeTotals.health} weaponSet={weaponSet} onSwap={onSwapWeaponSet} onInspect={onInspectSkill} onInspectPet={onInspectPet} />
 
       <div className="theme-builder-tactical-strip">
         <div className="theme-builder-tactical-card is-primary">
@@ -2820,7 +2544,7 @@ export default function AxiForgeLabView() {
 
               <div className="theme-builder-canvas-stage is-combat">
                 <div className="theme-builder-canvas-stage-head"><div><div className="theme-builder-kicker">Combat readout</div><h4>Equipped skill bar</h4></div><ArrowLeftRight className="h-4 w-4" /></div>
-                <BuilderCombatBar
+                <BuildCombatBar
                   builder={builder}
                   profession={selectedProfession}
                   specsById={specsById}

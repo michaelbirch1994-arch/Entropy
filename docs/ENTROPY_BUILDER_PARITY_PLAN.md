@@ -89,6 +89,8 @@ Existing state, catalogs, codecs, and calculations remain in `src/lib/axiforge` 
 
 Acceptance: extracted components render the same selected values, all current Builder tests pass, and no report-analysis files change.
 
+Progress: the shared combat bar and compact build summary card are extracted and covered by focused rendering tests. Specialization and equipment boards remain to be extracted as the Build Viewer is assembled.
+
 #### Phase B - Build Viewer
 
 1. Add URL-addressable viewer state using the existing Entropy query-state pattern.
