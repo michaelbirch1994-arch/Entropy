@@ -23,13 +23,19 @@ describe("BuildSummaryCard", () => {
     };
 
     const markup = renderToStaticMarkup(
-      <BuildSummaryCard build={build} onOpen={vi.fn()} specsById={new Map()} slotCount={2} />,
+      <BuildSummaryCard build={build} onOpen={vi.fn()} onDuplicate={vi.fn()} onDelete={vi.fn()} onCopy={vi.fn()} onShare={vi.fn()} specsById={new Map()} slotCount={2} />,
     );
 
     expect(markup).toContain("Support Troub");
     expect(markup).toContain("Heal support / Minstrel&#x27;s / sword + shield");
     expect(markup).toContain("Squad x2");
     expect(markup).toContain('title="Open Support Troub"');
+    expect(markup).toContain('aria-label="Actions for Support Troub"');
+    expect(markup).toContain("Duplicate");
+    expect(markup).toContain("Copy AxiCode");
+    expect(markup).toContain("Copy share link");
+    expect(markup).toContain("Delete");
+    expect(markup).toContain("disabled");
     expect(markup).toContain("Draft");
   });
 });

@@ -174,6 +174,80 @@
   background: rgba(216, 173, 74, 0.12);
 }
 
+.theme-builder-card-menu {
+  position: relative;
+}
+
+.theme-builder-card-menu > summary {
+  display: grid;
+  width: 2.15rem;
+  height: 2.15rem;
+  place-items: center;
+  border: 1px solid var(--builder-edge);
+  border-radius: 6px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--theme-textMuted);
+  background: rgba(5, 8, 9, 0.9);
+}
+
+.theme-builder-card-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.theme-builder-card-menu > summary:hover,
+.theme-builder-card-menu > summary:focus-visible,
+.theme-builder-card-menu[open] > summary {
+  border-color: var(--builder-gold-soft);
+  color: var(--builder-gold);
+}
+
+.theme-builder-card-menu > summary svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.theme-builder-card-menu > div {
+  position: absolute;
+  right: 0;
+  z-index: 40;
+  display: grid;
+  width: 10.5rem;
+  margin-top: 0.35rem;
+  padding: 0.35rem;
+  border: 1px solid var(--builder-gold-soft);
+  border-radius: 6px;
+  background: rgba(3, 6, 7, 0.98);
+  box-shadow: 0 18px 36px -18px #000;
+}
+
+.theme-builder-row-actions .theme-builder-card-menu > div button {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  width: 100%;
+  height: auto;
+  min-height: 2.15rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.42rem 0.5rem;
+  border: 0;
+  border-radius: 4px;
+  color: var(--theme-textMuted);
+  text-align: left;
+}
+
+.theme-builder-row-actions .theme-builder-card-menu > div button:hover,
+.theme-builder-row-actions .theme-builder-card-menu > div button:focus-visible {
+  color: var(--theme-text);
+  background: rgba(216, 173, 74, 0.08);
+}
+
+.theme-builder-card-menu > div button span {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .theme-builder-tabs {
   min-height: 2.75rem;
   margin: 0.55rem 0 0.7rem;

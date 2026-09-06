@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { Check, Clipboard, Copy, FolderOpen, Link2, Trash2, X } from "lucide-react";
+import { Check, Clipboard, Copy, EllipsisVertical, Link2, Trash2, X } from "lucide-react";
 import { computeAttributeProfile } from "../../lib/gw2/computeAttributes";
 import { validateBuilder } from "../../lib/axiforge/builderModel";
 import type { BuilderPressureIdentity } from "../../lib/axiforge/squadTactics";
@@ -81,14 +81,20 @@ export default function BuildSummaryCard({
   draggable = false,
   specsById,
 }: BuildSummaryCardProps) {
-  const deleteButtonRef = useRef<HTMLButtonElement>(null);
+  const actionMenuRef = useRef<HTMLDetailsElement>(null);
+  const actionMenuTriggerRef = useRef<HTMLElement>(null);
   const profile = useMemo(() => computeAttributeProfile(build.state, null), [build]);
   const readinessIssues = useMemo(() => validateBuilder(build.state), [build]);
   const isDraft = !build.shareCode || readinessIssues.length > 0;
+  const hasSecondaryActions = Boolean(onDuplicate || onCopy || onShare || onDelete);
   const summary = [build.state.role, build.state.equipment.statPackage, weaponSummary(build)].filter(Boolean).join(" / ");
   const cancelDelete = () => {
     onCancelDelete?.();
-    window.requestAnimationFrame(() => deleteButtonRef.current?.focus());
+    window.requestAnimationFrame(() => actionMenuTriggerRef.current?.focus());
+  };
+  const runMenuAction = (action: () => void) => {
+    action();
+    actionMenuRef.current?.removeAttribute("open");
   };
 
   return (
@@ -137,13 +143,15 @@ export default function BuildSummaryCard({
             <button type="button" onClick={cancelDelete} title="Cancel delete" aria-label={`Cancel deletion of ${build.name}`}><X /></button>
           </div>
         ) : (
-          <>
-            <button type="button" onClick={() => onOpen(build)} title="Open build" aria-label={`Open ${build.name}`}><FolderOpen /></button>
-            {onDuplicate && <button type="button" onClick={() => onDuplicate(build)} title="Duplicate build" aria-label={`Duplicate ${build.name}`}><Copy /></button>}
-            {onCopy && <button type="button" onClick={() => onCopy(build.shareCode)} title={build.shareCode ? "Copy AxiCode" : "Draft has no exportable AxiCode yet"} aria-label={build.shareCode ? `Copy AxiCode for ${build.name}` : `${build.name} has no exportable AxiCode yet`} disabled={!build.shareCode}><Clipboard /></button>}
-            {onShare && <button type="button" onClick={() => onShare(build.shareCode)} title={build.shareCode ? "Copy share link" : "Draft has no share link yet"} aria-label={build.shareCode ? `Copy share link for ${build.name}` : `${build.name} has no share link yet`} disabled={!build.shareCode}><Link2 /></button>}
-            {onDelete && <button ref={deleteButtonRef} type="button" onClick={() => onRequestDelete?.(build.id)} title="Delete build" aria-label={`Delete ${build.name}`}><Trash2 /></button>}
-          </>
+          hasSecondaryActions && <details ref={actionMenuRef} className="theme-builder-card-menu">
+            <summary ref={actionMenuTriggerRef} title="Build actions" aria-label={`Actions for ${build.name}`}><EllipsisVertical /></summary>
+            <div role="menu" aria-label={`Actions for ${build.name}`}>
+              {onDuplicate && <button type="button" role="menuitem" onClick={() => runMenuAction(() => onDuplicate(build))}><Copy /><span>Duplicate</span></button>}
+              {onCopy && <button type="button" role="menuitem" onClick={() => runMenuAction(() => onCopy(build.shareCode))} title={build.shareCode ? "Copy AxiCode" : "Draft has no exportable AxiCode yet"} disabled={!build.shareCode}><Clipboard /><span>Copy AxiCode</span></button>}
+              {onShare && <button type="button" role="menuitem" onClick={() => runMenuAction(() => onShare(build.shareCode))} title={build.shareCode ? "Copy share link" : "Draft has no share link yet"} disabled={!build.shareCode}><Link2 /><span>Copy share link</span></button>}
+              {onDelete && <button type="button" role="menuitem" onClick={() => runMenuAction(() => onRequestDelete?.(build.id))}><Trash2 /><span>Delete</span></button>}
+            </div>
+          </details>
         )}
       </div>
     </article>
