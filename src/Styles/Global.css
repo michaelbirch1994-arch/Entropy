@@ -3878,7 +3878,7 @@ button:disabled,
 }
 
 .animate-view {
-  animation: entropyViewFade 170ms ease-out both;
+  animation: entropyViewFade 140ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {

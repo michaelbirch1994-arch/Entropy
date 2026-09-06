@@ -139,7 +139,7 @@ export default function Sidebar({ activeView, setActiveView, hasReport = true }:
   };
 
   return (
-    <aside className={`${compact ? "w-20" : "w-64"} theme-sidebar flex-shrink-0 h-full flex flex-col z-40 overflow-y-auto custom-scrollbar transition-[width] duration-300`}>
+    <aside className={`${compact ? "w-20" : "w-64"} theme-sidebar flex-shrink-0 h-full flex flex-col z-40 overflow-y-auto custom-scrollbar`}>
       {/* Brand */}
       <div className="theme-sidebar-header p-4 sticky top-0 z-10">
         <div className={`flex items-center ${compact ? "justify-center" : "gap-3"}`}>
