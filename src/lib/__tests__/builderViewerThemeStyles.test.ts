@@ -30,4 +30,12 @@ describe("builder viewer theme styles", () => {
     expect(view).not.toContain('className="theme-builder-skill-icon"');
     expect(css).toMatch(/\.theme-builder-loadout-canvas \.theme-builder-skill-slot \{[\s\S]*?border: 0;[\s\S]*?box-shadow: none;/);
   });
+
+  it("uses one equipment identity header and keeps the active set explicit", () => {
+    expect(view).toContain('theme-builder-loadout-canvas theme-builder-equipment-workspace');
+    expect(view).toContain('Equipment loadout · {builder.gameMode.toUpperCase()}');
+    expect(view).not.toContain('className="theme-builder-equipment-board-head"');
+    expect(view).toContain('builder.activeWeaponSet === set && <> <b>Active</b></>');
+    expect(css).toMatch(/\.theme-builder-equipment-workspace \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/);
+  });
 });

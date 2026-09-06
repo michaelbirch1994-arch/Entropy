@@ -1261,16 +1261,8 @@
 }
 
 .theme-builder-equipment-workspace {
-  overflow: hidden;
-  padding: 0;
+  grid-template-columns: minmax(0, 1fr);
   border-color: rgba(216, 173, 74, 0.32);
-  background: #050708;
-}
-
-.theme-builder-equipment-workspace > .theme-builder-section-head {
-  margin: 0;
-  padding: 0.8rem 0.9rem;
-  background: rgba(10, 13, 14, 0.98);
 }
 
 .theme-builder-equipment-board {
@@ -1278,46 +1270,6 @@
   margin: 0;
   border-bottom: 1px solid rgba(216, 173, 74, 0.26);
   background: rgba(3, 5, 6, 0.98);
-}
-
-.theme-builder-equipment-board-head {
-  display: flex;
-  min-height: 4.4rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.7rem 0.9rem;
-  border-bottom: 1px solid rgba(123, 108, 76, 0.24);
-  background: rgba(216, 173, 74, 0.018);
-}
-
-.theme-builder-equipment-board-head > div:last-child {
-  display: grid;
-  min-width: 8rem;
-  gap: 0.16rem;
-  padding-left: 0.9rem;
-  border-left: 1px solid rgba(216, 173, 74, 0.24);
-  text-align: right;
-}
-
-.theme-builder-equipment-sheet-mark {
-  display: grid;
-  grid-template-columns: 2.8rem minmax(0, 1fr);
-  align-items: center;
-  gap: 0.72rem;
-  min-width: 0;
-}
-
-.theme-builder-equipment-sheet-mark > span {
-  display: grid;
-  min-width: 0;
-  gap: 0.15rem;
-}
-
-.theme-builder-equipment-sheet-mark > img,
-.theme-builder-equipment-sheet-mark > span:first-child {
-  width: 2.8rem;
-  height: 2.8rem;
 }
 
 .theme-builder-equipment-board small {
@@ -1471,6 +1423,19 @@
 .theme-builder-loadout-weapons > div.is-active {
   border-color: rgba(224, 184, 79, 0.66);
   box-shadow: inset 0 -2px 0 rgba(224, 184, 79, 0.72), 0 12px 28px -24px rgba(224, 184, 79, 0.75);
+}
+
+.theme-builder-loadout-weapons small b {
+  display: inline-flex;
+  margin-left: 0.38rem;
+  padding: 0.08rem 0.28rem;
+  border: 1px solid rgba(224, 184, 79, 0.45);
+  border-radius: 3px;
+  color: #f4d982;
+  background: rgba(216, 173, 74, 0.08);
+  font-size: 0.46rem;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .theme-builder-loadout-weapons em {
@@ -1639,20 +1604,6 @@
 }
 
 @container (max-width: 30rem) {
-  .theme-builder-equipment-board-head {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .theme-builder-equipment-board-head > div:last-child {
-    width: 100%;
-    padding-top: 0.5rem;
-    padding-left: 0;
-    border-top: 1px solid rgba(216, 173, 74, 0.2);
-    border-left: 0;
-    text-align: left;
-  }
-
   .theme-builder-loadout-slots,
   .theme-builder-loadout-weapons,
   .theme-builder-loadout-upgrades {

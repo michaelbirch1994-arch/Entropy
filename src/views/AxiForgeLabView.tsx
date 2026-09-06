@@ -633,7 +633,7 @@ function resolveEliteSpecName(
   return fallback;
 }
 
-function EquipmentLoadoutSheet({ builder, items, specsById, section }: { builder: EntropyBuilderState; items: Record<number, Gw2Item>; specsById: Map<number, Gw2Specialization>; section: EquipmentSection }) {
+function EquipmentLoadoutSheet({ builder, items, section }: { builder: EntropyBuilderState; items: Record<number, Gw2Item>; section: EquipmentSection }) {
   const weaponSet = (set: 1 | 2) => {
     const main = builder.equipment.weapons[`mainhand${set}`] || "Empty";
     const off = builder.equipment.weapons[`offhand${set}`];
@@ -654,10 +654,6 @@ function EquipmentLoadoutSheet({ builder, items, specsById, section }: { builder
   ] as const;
   return (
     <div className="theme-builder-equipment-board" aria-label="Current equipment loadout">
-      <header className="theme-builder-equipment-board-head">
-        <div className="theme-builder-equipment-sheet-mark"><ClassIcon name={resolveEliteSpecName(builder.specializationIds, specsById, builder.professionId)} size="lg" /><span><small>Field loadout</small><strong>{builder.name || builder.professionId}</strong></span></div>
-        <div><small>Stat doctrine</small><strong>{builder.equipment.statPackage || "Unassigned"}</strong></div>
-      </header>
       <div className={`theme-builder-equipment-board-grid is-${section}`}>
         {section === "armor" && <section className="theme-builder-equipment-zone is-armor" aria-labelledby="builder-loadout-armor">
           <div className="theme-builder-equipment-zone-head"><Shield className="h-4 w-4" /><h4 id="builder-loadout-armor">Armor</h4><span>{ARMOR_SLOTS.filter((slot) => builder.equipment.slots[slot]).length}/6 overrides</span></div>
@@ -672,12 +668,12 @@ function EquipmentLoadoutSheet({ builder, items, specsById, section }: { builder
           </div>
         </section>}
         {section === "weapons" && <section className="theme-builder-equipment-zone is-weapons" aria-labelledby="builder-loadout-weapons">
-          <div className="theme-builder-equipment-zone-head"><Swords className="h-4 w-4" /><h4 id="builder-loadout-weapons">Weapon sets</h4><span>{builder.activeWeaponSet === 2 ? "Set II active" : "Set I active"}</span></div>
+          <div className="theme-builder-equipment-zone-head"><Swords className="h-4 w-4" /><h4 id="builder-loadout-weapons">Weapon sets</h4><span>2 weapon sets</span></div>
           <div className="theme-builder-loadout-weapons">
             {([1, 2] as const).map((set) => (
               <div key={set} className={builder.activeWeaponSet === set ? "is-active" : ""}>
                 <span><Swords className="h-5 w-5" /></span>
-                <small>Set {set === 1 ? "I" : "II"}</small>
+                <small>Set {set === 1 ? "I" : "II"}{builder.activeWeaponSet === set && <> <b>Active</b></>}</small>
                 <strong>{weaponSet(set)}</strong>
                 <em>{slotStat(`mainhand${set}`)}</em>
               </div>
@@ -3099,8 +3095,17 @@ export default function AxiForgeLabView() {
           )}
 
           {builderViewMode === "equipment" && (
-            <section className="theme-panel theme-builder-panel theme-builder-equipment-workspace">
-              <div className="theme-builder-section-head"><div><div className="theme-builder-kicker">Field loadout</div><h3>Equipment</h3></div><Wrench className="h-5 w-5 text-theme-info" /></div>
+            <section className="theme-builder-loadout-canvas theme-builder-equipment-workspace">
+              <header className="theme-builder-canvas-header">
+                <div className="theme-builder-canvas-identity">
+                  {selectedProfession && <ClassIcon name={selectedProfession.name} size="lg" />}
+                  <div>
+                    <div className="theme-builder-kicker">Equipment loadout · {builder.gameMode.toUpperCase()}</div>
+                    <h3>{builder.name.trim() || "Untitled build"}</h3>
+                  </div>
+                </div>
+                <div className="theme-builder-canvas-status"><span>Stat doctrine</span><strong>{builder.equipment.statPackage || "Unassigned"}</strong></div>
+              </header>
               <nav className="theme-builder-equipment-nav" role="tablist" aria-label="Equipment editor sections">
                 {EQUIPMENT_SECTIONS.map((section) => (
                   <button
@@ -3120,7 +3125,7 @@ export default function AxiForgeLabView() {
                   </button>
                 ))}
               </nav>
-              <EquipmentLoadoutSheet builder={builder} items={equipmentItems} specsById={specsById} section={equipmentSection} />
+              <EquipmentLoadoutSheet builder={builder} items={equipmentItems} section={equipmentSection} />
               <div id="builder-equipment-editor" role="tabpanel" aria-labelledby={`builder-equipment-tab-${equipmentSection}`} className="theme-builder-equipment-grid is-focused">
                 <div className="theme-builder-equipment-group is-weapons" hidden={equipmentSection !== "weapons"}>
                   <h4>Weapons and stats</h4>
