@@ -81,8 +81,8 @@ import {
   fetchGw2ProfessionSkillPalette,
   fetchGw2LegendCodes,
 } from "../lib/gw2/gw2Api";
-import { encodeBuildChatCode, type ChatCodeCatalog } from "../lib/gw2/chatCode";
-import { importGw2SkillsBuild, validateGw2SkillsEditorUrl } from "../lib/gw2/gw2SkillsImport";
+import { encodeBuildChatCode, isBuildChatCode, type ChatCodeCatalog } from "../lib/gw2/chatCode";
+import { importGw2BuildChatCode, importGw2SkillsBuild, validateGw2SkillsEditorUrl } from "../lib/gw2/gw2SkillsImport";
 import {
   availableProfessionSkills,
   availableProfessionWeapons,
@@ -112,6 +112,11 @@ import {
   loadBuilderItemsByIds,
   type BuilderNamedChoice,
 } from "../lib/gw2/builderEquipmentCatalog";
+import {
+  BUILDER_ARMOR_SLOT_ICONS,
+  BUILDER_TRINKET_SLOT_ICONS,
+  builderWeaponIcon,
+} from "../lib/gw2/builderEquipmentVisuals";
 import type {
   BuilderComposition,
   BuilderSummaryItem,
@@ -235,35 +240,6 @@ function TextField(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`theme-builder-input ${props.className ?? ""}`} />;
 }
 
-function SearchableChoiceField({
-  id,
-  label,
-  value,
-  choices,
-  onChange,
-  placeholder,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  choices: readonly string[];
-  onChange: (value: string) => void;
-  placeholder: string;
-}) {
-  const supported = choiceIsCodecSupported(value, choices);
-  return (
-    <label>
-      <FieldLabel>{label}</FieldLabel>
-      <div className="theme-builder-choice-input">
-        <Search className="h-4 w-4" aria-hidden="true" />
-        <TextField list={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
-      </div>
-      <datalist id={id}>{choices.map((choice) => <option key={choice} value={choice} />)}</datalist>
-      {!supported && <span className="theme-builder-choice-note is-warning"><AlertCircle className="h-3.5 w-3.5" /> Kept in this draft, but this AxiCode version cannot encode it.</span>}
-    </label>
-  );
-}
-
 function itemChoiceGroup(label: string): string {
   const value = label.toLowerCase();
   if (/(altruism|dwayna|flock|karakosa|leadership|mercy|monk|transference|water)/.test(value)) return "Support";
@@ -311,6 +287,18 @@ function moveTabFocus<T extends string>(
   const next = items[nextIndex];
   onSelect(next);
   window.requestAnimationFrame(() => document.getElementById(buttonId(next))?.focus());
+}
+
+function itemForNamedChoice(value: string, choices: readonly BuilderNamedChoice[], items: Record<number, Gw2Item>): Gw2Item | undefined {
+  const id = choices.find((choice) => choice.label === value)?.id;
+  return id ? items[id] : undefined;
+}
+
+function EquipmentArtwork({ src, fallback, label }: { src?: string; fallback: React.ReactNode; label: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
+  if (!src || failed) return <>{fallback}</>;
+  return <img src={src} alt="" title={label} onError={() => setFailed(true)} />;
 }
 
 function handleModalDialogKeyDown(
@@ -543,6 +531,7 @@ function ItemPickerField({
     <div className="theme-builder-picker-field">
       <FieldLabel>{label}</FieldLabel>
       <button
+        id={`${id}-trigger`}
         type="button"
         ref={triggerRef}
         className="theme-builder-picker-trigger"
@@ -596,24 +585,6 @@ function ItemPickerField({
   );
 }
 
-function EquipmentItemSummary({ values, items }: { values: string[]; items: Record<number, Gw2Item> }) {
-  const uniqueValues = [...new Set(values.filter(Boolean))];
-  if (!uniqueValues.length) return null;
-  return (
-    <div className="theme-builder-item-summary">
-      {uniqueValues.map((value) => {
-        const item = items[Number(value)];
-        return (
-          <div key={value}>
-            {item?.icon ? <img src={item.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}
-            <span><strong>{item?.name ?? "Unavailable imported item"}</strong><small>{item?.type ?? "Imported item"}</small></span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function resolveEliteSpecName(
   specializationIds: (number | null | undefined)[] | undefined,
   specsById: Map<number, Gw2Specialization>,
@@ -639,6 +610,10 @@ function EquipmentLoadoutSheet({ builder, items, section }: { builder: EntropyBu
   const runeNames = runeIds.map((id) => items[Number(id)]?.name ?? "Imported rune");
   const sigilIds = [...new Set(Object.values(builder.equipment.sigils).flat().filter(Boolean))];
   const sigilNames = sigilIds.map((id) => items[Number(id)]?.name ?? "Imported sigil");
+  const relicItem = items[BUILDER_RELIC_IDS[builder.equipment.relic]];
+  const foodItem = itemForNamedChoice(builder.equipment.food, BUILDER_FOOD_CHOICES, items);
+  const utilityItem = itemForNamedChoice(builder.equipment.utility, BUILDER_UTILITY_CHOICES, items);
+  const enrichmentItem = items[Number(builder.equipment.enrichment)];
   const trinketSlots = [
     ["amulet", "Amulet"],
     ["ring1", "Ring I"],
@@ -655,7 +630,7 @@ function EquipmentLoadoutSheet({ builder, items, section }: { builder: EntropyBu
           <div className="theme-builder-loadout-slots">
             {ARMOR_SLOTS.map((slot) => (
               <div key={slot} className={builder.equipment.slots[slot] ? "is-assigned" : ""}>
-                <span><Shield className="h-4 w-4" /></span>
+                <span><EquipmentArtwork src={BUILDER_ARMOR_SLOT_ICONS[slot]} fallback={<Shield className="h-4 w-4" />} label={`${ARMOR_SLOT_LABELS[slot]} slot`} /></span>
                 <small>{ARMOR_SLOT_LABELS[slot]}</small>
                 <strong>{slotStat(slot)}</strong>
               </div>
@@ -667,7 +642,12 @@ function EquipmentLoadoutSheet({ builder, items, section }: { builder: EntropyBu
           <div className="theme-builder-loadout-weapons">
             {([1, 2] as const).map((set) => (
               <div key={set} className={builder.activeWeaponSet === set ? "is-active" : ""}>
-                <span><Swords className="h-5 w-5" /></span>
+                <span className="theme-builder-loadout-weapon-art">
+                  {[builder.equipment.weapons[`mainhand${set}`], builder.equipment.weapons[`offhand${set}`]].filter(Boolean).map((weapon) => (
+                    <EquipmentArtwork key={weapon} src={builderWeaponIcon(weapon)} fallback={<Swords className="h-5 w-5" />} label={`${weapon} type artwork`} />
+                  ))}
+                  {!builder.equipment.weapons[`mainhand${set}`] && <Swords className="h-5 w-5" />}
+                </span>
                 <small>Set {set === 1 ? "I" : "II"}{builder.activeWeaponSet === set && <> <b>Active</b></>}</small>
                 <strong>{weaponSet(set)}</strong>
                 <em>{slotStat(`mainhand${set}`)}</em>
@@ -680,7 +660,7 @@ function EquipmentLoadoutSheet({ builder, items, section }: { builder: EntropyBu
           <div className="theme-builder-loadout-slots">
             {trinketSlots.map(([slot, label]) => (
               <div key={slot} className={builder.equipment.slots[slot] ? "is-assigned" : ""}>
-                <span><Sparkles className="h-4 w-4" /></span>
+                <span><EquipmentArtwork src={BUILDER_TRINKET_SLOT_ICONS[slot]} fallback={<Sparkles className="h-4 w-4" />} label={`${label} slot`} /></span>
                 <small>{label}</small>
                 <strong>{slotStat(slot)}</strong>
               </div>
@@ -690,16 +670,16 @@ function EquipmentLoadoutSheet({ builder, items, section }: { builder: EntropyBu
         {section === "upgrades" && <section className="theme-builder-equipment-zone is-upgrades" aria-labelledby="builder-loadout-upgrades">
           <div className="theme-builder-equipment-zone-head"><Sparkles className="h-4 w-4" /><h4 id="builder-loadout-upgrades">Upgrades</h4><span>Runes and sigils</span></div>
           <div className="theme-builder-loadout-upgrades">
-            <div><small>Armor runes</small><strong>{runeNames.length ? runeNames.join(" · ") : "Unassigned"}</strong></div>
-            <div><small>Weapon sigils</small><strong>{sigilNames.length ? sigilNames.join(" · ") : "Unassigned"}</strong></div>
+            <div><EquipmentArtwork src={items[Number(runeIds[0])]?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Armor rune" /><span><small>Armor runes</small><strong>{runeNames.length ? runeNames.join(" · ") : "Unassigned"}</strong></span></div>
+            <div><EquipmentArtwork src={items[Number(sigilIds[0])]?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Weapon sigil" /><span><small>Weapon sigils</small><strong>{sigilNames.length ? sigilNames.join(" · ") : "Unassigned"}</strong></span></div>
           </div>
         </section>}
       </div>
       {section === "consumables" && <footer className="theme-builder-equipment-board-foot">
-        <div><small>Relic</small><strong>{builder.equipment.relic || "Unassigned"}</strong></div>
-        <div><small>Food</small><strong>{builder.equipment.food || "Unassigned"}</strong></div>
-        <div><small>Utility</small><strong>{builder.equipment.utility || "Unassigned"}</strong></div>
-        <div><small>Enrichment</small><strong>{items[Number(builder.equipment.enrichment)]?.name ?? (builder.equipment.enrichment || "Unassigned")}</strong></div>
+        <div><EquipmentArtwork src={relicItem?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Relic" /><span><small>Relic</small><strong>{builder.equipment.relic || "Unassigned"}</strong></span></div>
+        <div><EquipmentArtwork src={foodItem?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Food" /><span><small>Food</small><strong>{builder.equipment.food || "Unassigned"}</strong></span></div>
+        <div><EquipmentArtwork src={utilityItem?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Utility enhancement" /><span><small>Utility</small><strong>{builder.equipment.utility || "Unassigned"}</strong></span></div>
+        <div><EquipmentArtwork src={enrichmentItem?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Enrichment" /><span><small>Enrichment</small><strong>{enrichmentItem?.name ?? (builder.equipment.enrichment || "Unassigned")}</strong></span></div>
       </footer>}
     </div>
   );
@@ -1800,6 +1780,8 @@ function EquipmentPreview({
   ];
 
   const relicItem = itemFor(BUILDER_RELIC_IDS[builder.equipment.relic]);
+  const foodItem = itemForNamedChoice(builder.equipment.food, BUILDER_FOOD_CHOICES, items);
+  const utilityItem = itemForNamedChoice(builder.equipment.utility, BUILDER_UTILITY_CHOICES, items);
   const enrichmentItem = itemFor(builder.equipment.enrichment);
 
   return (
@@ -1816,7 +1798,7 @@ function EquipmentPreview({
             const rune = itemFor(builder.equipment.runes[slot]);
             return (
               <div key={slot} className="theme-builder-preview-armor-row">
-                <div className="theme-builder-preview-armor-icon"><Shield className="h-4 w-4" /></div>
+                <div className="theme-builder-preview-armor-icon"><EquipmentArtwork src={BUILDER_ARMOR_SLOT_ICONS[slot]} fallback={<Shield className="h-4 w-4" />} label={`${ARMOR_SLOT_LABELS[slot]} slot`} /></div>
                 <div className="theme-builder-preview-armor-info">
                   <small>{ARMOR_SLOT_LABELS[slot]}</small>
                   <strong>{builder.equipment.slots[slot] || builder.equipment.statPackage || "Unassigned"}</strong>
@@ -1844,7 +1826,7 @@ function EquipmentPreview({
               ) : (
                 rows.map((row, index) => (
                   <div key={index} className="theme-builder-preview-weapon-row">
-                    <span className="theme-builder-preview-weapon-name">{row.weapon}</span>
+                    <span className="theme-builder-preview-weapon-name"><EquipmentArtwork src={builderWeaponIcon(row.weapon)} fallback={<Swords className="h-4 w-4" />} label={`${row.weapon} type artwork`} />{row.weapon}</span>
                     <div className="theme-builder-preview-weapon-badges">
                       {row.sigils.map((sigilId, sigilIndex) => {
                         const sigil = itemFor(sigilId);
@@ -1868,6 +1850,7 @@ function EquipmentPreview({
         <div className="theme-builder-preview-trinkets">
           {trinketSlots.map((slot) => (
             <div key={slot} className="theme-builder-preview-trinket-card">
+              <EquipmentArtwork src={BUILDER_TRINKET_SLOT_ICONS[slot]} fallback={<Sparkles className="h-4 w-4" />} label={`${trinketLabels[slot]} slot`} />
               <small>{trinketLabels[slot]}</small>
               <strong>{builder.equipment.slots[slot] || "Unassigned"}</strong>
             </div>
@@ -1881,11 +1864,11 @@ function EquipmentPreview({
             <div className="theme-builder-preview-armor-info"><small>Relic</small><strong>{builder.equipment.relic || "Unassigned"}</strong></div>
           </div>
           <div className="theme-builder-preview-consumable-row">
-            <div className="theme-builder-preview-armor-badge"><Sparkles className="h-4 w-4" /></div>
+            <button type="button" className="theme-builder-preview-armor-badge" disabled={!foodItem || !onInspectItem} onClick={() => foodItem && onInspectItem?.(foodItem)} title={foodItem ? `Inspect ${foodItem.name}` : "No food"} aria-label={foodItem ? `Inspect ${foodItem.name}` : "No food"}>{foodItem?.icon ? <img src={foodItem.icon} alt="" /> : <Sparkles className="h-4 w-4" />}</button>
             <div className="theme-builder-preview-armor-info"><small>Food</small><strong>{builder.equipment.food || "Unassigned"}</strong></div>
           </div>
           <div className="theme-builder-preview-consumable-row">
-            <div className="theme-builder-preview-armor-badge"><Sparkles className="h-4 w-4" /></div>
+            <button type="button" className="theme-builder-preview-armor-badge" disabled={!utilityItem || !onInspectItem} onClick={() => utilityItem && onInspectItem?.(utilityItem)} title={utilityItem ? `Inspect ${utilityItem.name}` : "No utility"} aria-label={utilityItem ? `Inspect ${utilityItem.name}` : "No utility"}>{utilityItem?.icon ? <img src={utilityItem.icon} alt="" /> : <Sparkles className="h-4 w-4" />}</button>
             <div className="theme-builder-preview-armor-info"><small>Utility</small><strong>{builder.equipment.utility || "Unassigned"}</strong></div>
           </div>
           <div className="theme-builder-preview-consumable-row">
@@ -2211,6 +2194,7 @@ export default function AxiForgeLabView() {
   }, [issues]);
   const detectedKind = useMemo(() => detectAxiForgeCodeKind(importCode), [importCode]);
   const gw2SkillsInput = useMemo(() => isGw2SkillsInput(importCode), [importCode]);
+  const gw2ChatCodeInput = useMemo(() => isBuildChatCode(importCode), [importCode]);
   const activeComposition = workspace.compositions.find((composition) => composition.id === workspace.activeCompositionId) ?? null;
 
   useEffect(() => {
@@ -2546,6 +2530,22 @@ export default function AxiForgeLabView() {
   }
 
   async function importBuildInput() {
+    if (gw2ChatCodeInput) {
+      setImportBusy(true);
+      try {
+        const imported = await importGw2BuildChatCode(importCode, { legends });
+        updateBuilder(imported);
+        setEditingBuildId(null);
+        setActiveTab("build");
+        setImportOpen(false);
+        setNotice({ tone: "success", message: "GW2 build code imported with profession, traits, skills, and profession settings." });
+      } catch (error) {
+        setNotice({ tone: "error", message: error instanceof Error ? error.message : "The GW2 build code could not be imported." });
+      } finally {
+        setImportBusy(false);
+      }
+      return;
+    }
     if (!gw2SkillsInput) {
       await importAxiCode();
       return;
@@ -2799,8 +2799,8 @@ export default function AxiForgeLabView() {
 
       {importOpen && (
         <section id="builder-import-rack" className="theme-builder-import-rack">
-          <div><FieldLabel>Paste an Entropy code or gw2skills.net build URL</FieldLabel><textarea aria-label="Entropy code or gw2skills.net build URL" value={importCode} onChange={(event) => setImportCode(event.target.value)} placeholder="<AxiForge:...> or https://en.gw2skills.net/editor/?..." spellCheck={false} /></div>
-          <div className="theme-builder-import-actions"><span className={detectedKind === "unknown" && !gw2SkillsInput ? "" : "is-ready"}>{gw2SkillsInput ? "gw2skills build detected" : kindLabel(detectedKind)}</span><button type="button" onClick={() => { setImportCode(""); setImportOpen(false); }}><Eraser className="h-4 w-4" /> Clear</button><button type="button" onClick={importBuildInput} disabled={importBusy || (detectedKind === "unknown" && !gw2SkillsInput)}>{importBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Import</button></div>
+          <div><FieldLabel>Paste an Entropy code, GW2 build code, or gw2skills.net URL</FieldLabel><textarea aria-label="Entropy code, GW2 build code, or gw2skills.net URL" value={importCode} onChange={(event) => setImportCode(event.target.value)} placeholder="<AxiForge:...>, [&DQ...], or https://en.gw2skills.net/editor/?..." spellCheck={false} /></div>
+          <div className="theme-builder-import-actions"><span className={detectedKind === "unknown" && !gw2SkillsInput && !gw2ChatCodeInput ? "" : "is-ready"}>{gw2ChatCodeInput ? "GW2 build code detected" : gw2SkillsInput ? "gw2skills build detected" : kindLabel(detectedKind)}</span><button type="button" onClick={() => { setImportCode(""); setImportOpen(false); }}><Eraser className="h-4 w-4" /> Clear</button><button type="button" onClick={importBuildInput} disabled={importBusy || (detectedKind === "unknown" && !gw2SkillsInput && !gw2ChatCodeInput)}>{importBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Import</button></div>
         </section>
       )}
 
@@ -3080,6 +3080,7 @@ export default function AxiForgeLabView() {
                                     ...validWeapons.map(([name, weapon]) => ({
                                       value: name.toLowerCase(),
                                       label: name,
+                                      icon: builderWeaponIcon(name),
                                       group: weapon.flags?.includes("TwoHand") ? "Two-handed" : slot.startsWith("mainhand") ? "Main hand" : "Off hand",
                                       meta: weapon.specialization ? "Elite weapon" : "Profession weapon",
                                     })),
@@ -3087,6 +3088,7 @@ export default function AxiForgeLabView() {
                                   onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, weapons: { ...current.equipment.weapons, [slot]: value } } }))}
                                   placeholder={offhandDisabled ? "Two-handed weapon equipped" : "Choose weapon"}
                                   clearLabel="Clear weapon"
+                                  emptyIcon={<Swords className="h-4 w-4" aria-hidden="true" />}
                                 />
                                 <ChoicePickerField
                                   id={`builder-weapon-stat-${slot}`}
@@ -3120,6 +3122,7 @@ export default function AxiForgeLabView() {
                           onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, slots: { ...current.equipment.slots, [slot]: value } } }))}
                           placeholder="Use doctrine stats"
                           clearLabel="Use doctrine stats"
+                          emptyIcon={<EquipmentArtwork src={BUILDER_ARMOR_SLOT_ICONS[slot]} fallback={<Shield className="h-4 w-4" />} label={`${ARMOR_SLOT_LABELS[slot]} slot`} />}
                         />
                       ))}
                     </div>
@@ -3139,6 +3142,7 @@ export default function AxiForgeLabView() {
             onChange={(value) => updateBuilder((next) => ({ ...next, equipment: { ...next.equipment, slots: { ...next.equipment.slots, [trinketSlot]: value } } }))}
             placeholder="Use doctrine stats"
             clearLabel="Use doctrine stats"
+            emptyIcon={<EquipmentArtwork src={BUILDER_TRINKET_SLOT_ICONS[trinketSlot]} fallback={<Sparkles className="h-4 w-4" />} label={`${trinketSlot} slot`} />}
           />
           {!current && <span className="theme-builder-choice-note">Unassigned</span>}
         </div>
@@ -3156,7 +3160,6 @@ export default function AxiForgeLabView() {
                   ) : (
                     <ItemPickerField id="builder-rune-all" label="Armor rune" value={builder.equipment.runes.head} valueKind="id" choices={BUILDER_RUNE_CHOICES} items={equipmentItems} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, runes: Object.fromEntries(ARMOR_SLOTS.map((slot) => [slot, value])) as EntropyBuilderState["equipment"]["runes"] } }))} placeholder="Choose rune" />
                   )}
-                  <EquipmentItemSummary values={Object.values(builder.equipment.runes)} items={equipmentItems} />
                   {(["mainhand1", "mainhand2"] as const).map((slot) => { const current = builder.equipment.sigils[slot]; return (
   <div key={slot} className="theme-builder-sigil-pair">
     <FieldLabel>{slot === "mainhand1" ? "Weapon set I sigils" : "Weapon set II sigils"}</FieldLabel>
@@ -3179,7 +3182,6 @@ export default function AxiForgeLabView() {
         />
       ))}
     </div>
-    <EquipmentItemSummary values={current} items={equipmentItems} />
   </div>
 ); })}
                   </div>
@@ -3187,10 +3189,9 @@ export default function AxiForgeLabView() {
                 <div className="theme-builder-equipment-group is-consumables" hidden={equipmentSection !== "consumables"}>
                   <h4>Relic and consumables</h4>
                   <ItemPickerField id="builder-relics" label="Relic" value={builder.equipment.relic} valueKind="label" choices={BUILDER_RELIC_CHOICES.map((choice) => ({ label: choice, id: BUILDER_RELIC_IDS[choice] }))} items={equipmentItems} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, relic: value } }))} placeholder="Choose relic" />
-<EquipmentItemSummary values={[String(BUILDER_RELIC_IDS[builder.equipment.relic] ?? "")]} items={equipmentItems} />
-                  <SearchableChoiceField id="builder-foods" label="Food" value={builder.equipment.food} choices={BUILDER_FOOD_LABELS} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, food: value } }))} placeholder="Search supported food" />
-                  <SearchableChoiceField id="builder-utilities" label="Utility" value={builder.equipment.utility} choices={BUILDER_UTILITY_LABELS} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, utility: value } }))} placeholder="Search supported utilities" />
-                  <ItemPickerField id="builder-enrichment" label="Enrichment" value={builder.equipment.enrichment} valueKind="id" choices={BUILDER_ENRICHMENT_CHOICES} items={equipmentItems} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, enrichment: value } }))} placeholder="Choose enrichment" /><EquipmentItemSummary values={[builder.equipment.enrichment]} items={equipmentItems} />
+                  <ItemPickerField id="builder-foods" label="Food" value={builder.equipment.food} valueKind="label" choices={BUILDER_FOOD_CHOICES} items={equipmentItems} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, food: value } }))} placeholder="Choose food" />
+                  <ItemPickerField id="builder-utilities" label="Utility" value={builder.equipment.utility} valueKind="label" choices={BUILDER_UTILITY_CHOICES} items={equipmentItems} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, utility: value } }))} placeholder="Choose utility" />
+                  <ItemPickerField id="builder-enrichment" label="Enrichment" value={builder.equipment.enrichment} valueKind="id" choices={BUILDER_ENRICHMENT_CHOICES} items={equipmentItems} onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, enrichment: value } }))} placeholder="Choose enrichment" />
                   {Object.keys(builder.equipment.infusions).length > 0 && (
                     <div>
                       <FieldLabel>Imported infusions</FieldLabel>
@@ -3199,8 +3200,8 @@ export default function AxiForgeLabView() {
                           const values = (Array.isArray(value) ? value : [value]).filter(Boolean);
                           return (
                             <div key={slot}>
-                              <Sparkles className="h-4 w-4" aria-hidden="true" />
-                              <span><strong>{slot}</strong><small>{values.join(" · ")}</small></span>
+                              <EquipmentArtwork src={equipmentItems[Number(values[0])]?.icon} fallback={<Sparkles className="h-4 w-4" />} label={`${slot} infusion`} />
+                              <span><strong>{slot}</strong><small>{values.map((itemId) => equipmentItems[Number(itemId)]?.name ?? itemId).join(" · ")}</small></span>
                             </div>
                           );
                         })}

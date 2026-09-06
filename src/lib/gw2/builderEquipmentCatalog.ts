@@ -393,9 +393,15 @@ function storageAvailable(): boolean {
 }
 
 export function equipmentItemIds(equipment: BuilderEquipment): number[] {
+  const foodId = BUILDER_FOOD_CHOICES.find((choice) => choice.label === equipment.food)?.id;
+  const utilityId = BUILDER_UTILITY_CHOICES.find((choice) => choice.label === equipment.utility)?.id;
   const values = [
     ...Object.values(equipment.runes),
     ...Object.values(equipment.sigils).flat(),
+    ...Object.values(equipment.infusions).flatMap((value) => Array.isArray(value) ? value : [value]),
+    BUILDER_RELIC_IDS[equipment.relic],
+    foodId,
+    utilityId,
     equipment.enrichment,
   ];
   return [...new Set(values.map((value) => Number(value)).filter((id) => Number.isInteger(id) && id > 0))];

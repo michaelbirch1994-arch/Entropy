@@ -36,9 +36,13 @@ describe("Builder equipment catalog", () => {
     equipment.runes.head = "24836";
     equipment.runes.chest = "24836";
     equipment.sigils.mainhand1 = ["24615", "not-an-id", "24868"];
+    equipment.infusions.head = ["49432", "not-an-id"];
+    equipment.relic = "Relic of the Thief";
+    equipment.food = "Bowl of Sweet and Spicy Butternut Squash Soup";
+    equipment.utility = "Superior Sharpening Stone";
     equipment.enrichment = "49432";
 
-    expect(equipmentItemIds(equipment)).toEqual([24836, 24615, 24868, 49432]);
+    expect(equipmentItemIds(equipment)).toEqual([24836, 24615, 24868, 49432, 100916, 41569, 78305]);
     expect(equipment.sigils.mainhand1).toEqual(["24615", "not-an-id", "24868"]);
   });
 

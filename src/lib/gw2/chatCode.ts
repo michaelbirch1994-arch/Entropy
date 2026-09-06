@@ -98,6 +98,15 @@ export function professionFromBuildChatCode(code: string): string {
   return profession;
 }
 
+export function isBuildChatCode(input: string): boolean {
+  try {
+    const bytes = fromBase64(input);
+    return bytes.length >= 44 && bytes[0] === 0x0d && PROFESSION_BY_CHAT_CODE.has(bytes[1] ?? 0);
+  } catch {
+    return false;
+  }
+}
+
 /** Decode the build-template fields which GW2 chat codes actually carry. */
 export function decodeBuildChatCode(code: string, catalog: ChatCodeDecodeCatalog): EntropyBuilderState {
   const bytes = fromBase64(code);

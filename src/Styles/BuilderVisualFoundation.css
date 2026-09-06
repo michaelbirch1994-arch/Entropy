@@ -1375,6 +1375,13 @@
   background: rgba(216, 173, 74, 0.025);
 }
 
+.theme-builder-loadout-slots > div > span img {
+  width: 100%;
+  height: 100%;
+  padding: 0.12rem;
+  object-fit: contain;
+}
+
 .theme-builder-loadout-slots > div.is-assigned {
   border-color: rgba(216, 173, 74, 0.42);
   box-shadow: inset 2px 0 0 rgba(216, 173, 74, 0.58);
@@ -1420,6 +1427,23 @@
   background: rgba(216, 173, 74, 0.04);
 }
 
+.theme-builder-loadout-weapons > div > .theme-builder-loadout-weapon-art {
+  display: flex;
+  overflow: hidden;
+  padding: 0.12rem;
+}
+
+.theme-builder-loadout-weapon-art img {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  object-fit: contain;
+}
+
+.theme-builder-loadout-weapon-art img + img {
+  margin-left: -0.45rem;
+}
+
 .theme-builder-loadout-weapons > div.is-active {
   border-color: rgba(224, 184, 79, 0.66);
   box-shadow: inset 0 -2px 0 rgba(224, 184, 79, 0.72), 0 12px 28px -24px rgba(224, 184, 79, 0.75);
@@ -1461,12 +1485,78 @@
 .theme-builder-loadout-upgrades > div,
 .theme-builder-equipment-board-foot > div {
   display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  align-items: center;
   min-width: 0;
-  gap: 0.15rem;
+  gap: 0.45rem;
   padding: 0.42rem 0.5rem;
   border: 1px solid rgba(123, 108, 76, 0.22);
   border-radius: 5px;
   background: rgba(2, 4, 5, 0.78);
+}
+
+.theme-builder-loadout-upgrades > div > img,
+.theme-builder-equipment-board-foot > div > img {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(216, 173, 74, 0.34);
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.theme-builder-loadout-upgrades > div > svg,
+.theme-builder-equipment-board-foot > div > svg {
+  width: 1.1rem;
+  color: rgba(216, 173, 74, 0.55);
+}
+
+.theme-builder-loadout-upgrades > div > span,
+.theme-builder-equipment-board-foot > div > span {
+  display: grid;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.theme-builder-viewer .theme-builder-preview-armor-icon {
+  overflow: hidden;
+}
+
+.theme-builder-viewer .theme-builder-preview-armor-icon img {
+  width: 100%;
+  height: 100%;
+  padding: 0.12rem;
+  object-fit: contain;
+}
+
+.theme-builder-viewer .theme-builder-preview-weapon-name {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 0.4rem;
+}
+
+.theme-builder-viewer .theme-builder-preview-weapon-name img {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(216, 173, 74, 0.32);
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+.theme-builder-viewer .theme-builder-preview-trinket-card {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 0.08rem 0.5rem;
+}
+
+.theme-builder-viewer .theme-builder-preview-trinket-card > img,
+.theme-builder-viewer .theme-builder-preview-trinket-card > svg {
+  grid-row: 1 / span 2;
+  width: 2.2rem;
+  height: 2.2rem;
+  object-fit: contain;
 }
 
 .theme-builder-equipment-board-foot {
@@ -1913,6 +2003,30 @@
 
   .theme-builder-canvas-identity h3 {
     font-size: 0.88rem;
+  }
+
+  .theme-builder-equipment-workspace .theme-builder-canvas-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+
+  .theme-builder-equipment-workspace .theme-builder-canvas-status {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.5rem 0 0;
+    border-top: 1px solid rgba(216, 173, 74, 0.18);
+    border-left: 0;
+    text-align: left;
+  }
+
+  .theme-builder-equipment-workspace .theme-builder-canvas-status strong {
+    overflow: hidden;
+    font-size: 0.82rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .theme-builder-overview-canvas .theme-builder-canvas-header {

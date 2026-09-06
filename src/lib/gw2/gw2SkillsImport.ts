@@ -16,6 +16,21 @@ export interface Gw2SkillsImportResult {
   sourceUrl: string;
 }
 
+export async function importGw2BuildChatCode(
+  input: string,
+  options: { legends: Gw2Legend[] },
+): Promise<EntropyBuilderState> {
+  const chatCode = input.trim();
+  const profession = professionFromBuildChatCode(chatCode);
+  const paletteBySkill = await fetchGw2ProfessionSkillPalette(profession);
+  const builder = decodeBuildChatCode(chatCode, {
+    skillIdByPalette: new Map([...paletteBySkill].map(([skillId, paletteId]) => [paletteId, skillId])),
+    legendIdByCode: new Map(options.legends.filter((legend) => legend.code).map((legend) => [legend.code!, legend.id])),
+  });
+  builder.name = "Imported GW2 Build";
+  return builder;
+}
+
 function record(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {};
 }
@@ -408,12 +423,7 @@ export async function importGw2SkillsBuild(
   const preload = parseGw2SkillsPreload(html);
   const chatCode = stringValue(preload.chatlink);
   if (!chatCode) throw new Error("The gw2skills build did not include a GW2 build template.");
-  const profession = professionFromBuildChatCode(chatCode);
-  const paletteBySkill = await fetchGw2ProfessionSkillPalette(profession);
-  const builder = decodeBuildChatCode(chatCode, {
-    skillIdByPalette: new Map([...paletteBySkill].map(([skillId, paletteId]) => [paletteId, skillId])),
-    legendIdByCode: new Map(options.legends.filter((legend) => legend.code).map((legend) => [legend.code!, legend.id])),
-  });
+  const builder = await importGw2BuildChatCode(chatCode, options);
   builder.gameMode = preload.mode === "pve" || preload.mode === "pvp" || preload.mode === "wvw" ? preload.mode : "wvw";
   builder.name = "Imported gw2skills Build";
   const withEquipment = applyGw2SkillsEquipment(builder, preload, database, options.itemStatNames);

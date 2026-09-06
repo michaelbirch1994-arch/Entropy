@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeBuildChatCode, encodeBuildChatCode, professionFromBuildChatCode, type ChatCodeCatalog } from "../gw2/chatCode";
+import { decodeBuildChatCode, encodeBuildChatCode, isBuildChatCode, professionFromBuildChatCode, type ChatCodeCatalog } from "../gw2/chatCode";
 import { createEmptyBuilder } from "../axiforge/builderModel";
 
 // Decode a produced chat code back into its raw byte sequence so tests can
@@ -100,6 +100,15 @@ describe("encodeBuildChatCode", () => {
 });
 
 describe("decodeBuildChatCode", () => {
+  it("detects complete build chat codes without accepting other chat links or partial input", () => {
+    const state = createEmptyBuilder("Guardian");
+    const code = encodeBuildChatCode(state, emptyCatalog())!;
+    expect(isBuildChatCode(code)).toBe(true);
+    expect(isBuildChatCode("[&AAE=]")).toBe(false);
+    expect(isBuildChatCode("DQE=")).toBe(false);
+    expect(isBuildChatCode("not a build code")).toBe(false);
+  });
+
   it("round-trips profession, traits, skills, underwater skills, pets, and legends", () => {
     const state = createEmptyBuilder("Ranger");
     state.specializationIds = [5, 25, 55];
