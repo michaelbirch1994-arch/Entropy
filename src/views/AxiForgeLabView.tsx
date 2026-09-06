@@ -71,7 +71,6 @@ import {
   type BuilderConditionEntry,
 } from "../lib/axiforge/conditionEngine";
 import { computeBuildConditionAccess } from "../lib/axiforge/squadConditions";
-import { computeSquadTacticalReadout, type BuilderPressureIdentity } from "../lib/axiforge/squadTactics";
 import { moveSquadAssignment, type SquadSlotLocation } from "../lib/axiforge/squadAssignments";
 import { matchesBuilderLibraryFilters } from "../lib/axiforge/builderLibrary";
 import {
@@ -205,13 +204,6 @@ function pressureLabel(identity: AttributeProfile["primaryIdentity"]): string {
   if (identity === "condition") return "Condition pressure";
   if (identity === "support") return "Support uptime";
   return "Sustain core";
-}
-
-function pressureShortLabel(identity: BuilderPressureIdentity): string {
-  if (identity === "strike") return "Strike";
-  if (identity === "condition") return "Condi";
-  if (identity === "support") return "Support";
-  return "Sustain";
 }
 
 function contributionTotal(
@@ -366,6 +358,7 @@ function ChoicePickerField({
   disabledLabel,
   onPreview,
   emptyIcon,
+  triggerAriaLabel,
 }: {
   id: string;
   label: string;
@@ -378,6 +371,7 @@ function ChoicePickerField({
   disabledLabel?: string;
   onPreview?: (value: string) => void;
   emptyIcon?: React.ReactNode;
+  triggerAriaLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -422,6 +416,7 @@ function ChoicePickerField({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={`${id}-dialog`}
+        aria-label={triggerAriaLabel}
         disabled={disabled}
       >
         <span className="theme-builder-picker-icon">
@@ -1073,10 +1068,12 @@ function BuildLibrary({
 
 function SquadSlotPicker({
   id,
+  slotLabel,
   builds,
   onAssign,
 }: {
   id: string;
+  slotLabel: string;
   builds: SavedBuilderBuild[];
   onAssign: (buildId: string | null) => void;
 }) {
@@ -1088,16 +1085,19 @@ function SquadSlotPicker({
   })), [builds]);
 
   return (
-    <ChoicePickerField
-      id={id}
-      label="Open slot"
-      value=""
-      choices={choices}
-      onChange={(value) => onAssign(value || null)}
-      placeholder="Assign build"
-      clearLabel="Leave empty"
+    <div className="theme-builder-squad-picker">
+      <ChoicePickerField
+        id={id}
+        label="Open slot"
+        value=""
+        choices={choices}
+        onChange={(value) => onAssign(value || null)}
+        placeholder="Assign build"
+        clearLabel="Leave empty"
+        triggerAriaLabel={`Assign a saved build to ${slotLabel}`}
       />
-    );
+    </div>
+  );
 }
 
 function boonCacheKey(build: SavedBuilderBuild): string {
@@ -1143,6 +1143,8 @@ function SquadBoonCoverage({
     }
     return map;
   }, [composition, builds, boonCache]);
+  const coveredBoons = BOON_DISPLAY_ORDER.filter((boon) => (providers.get(boon)?.sources.length ?? 0) > 0);
+  const missingBoons = BOON_DISPLAY_ORDER.filter((boon) => !coveredBoons.includes(boon));
 
   return (
     <details className="theme-builder-boon-coverage theme-builder-coverage-disclosure">
@@ -1150,8 +1152,8 @@ function SquadBoonCoverage({
         <div><div className="theme-builder-kicker">Live from assigned squad slots</div><h3>Squad boon coverage</h3></div>
         <span>{computing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}</span>
       </summary>
-      <div className="theme-builder-boon-grid">
-        {BOON_DISPLAY_ORDER.map((boon) => {
+      <div className="theme-builder-boon-grid" role="list" aria-label="Detected squad boon coverage">
+        {coveredBoons.map((boon) => {
           const entry = providers.get(boon); const list = entry?.sources ?? [];
           const covered = list.length > 0;
           const bestUptime = list.reduce<number | undefined>(
@@ -1173,8 +1175,10 @@ function SquadBoonCoverage({
           return (
             <div
               key={boon}
-              className={covered ? "is-covered" : "is-missing"}
+              className="is-covered"
               title={tooltip}
+              role="listitem"
+              aria-label={tooltip}
             >
               <div className="theme-builder-boon-icon">{entry?.icon ? <img src={entry.icon} alt="" /> : <Sparkles className="h-5 w-5" />}{covered && <em>{list.length}</em>}</div>
               <span>{boon}</span>
@@ -1183,6 +1187,7 @@ function SquadBoonCoverage({
           );
         })}
       </div>
+      <p className="theme-builder-coverage-missing"><strong>Missing</strong><span>{missingBoons.length ? missingBoons.join(" · ") : "None"}</span></p>
     </details>
   );
 }
@@ -1222,6 +1227,8 @@ function SquadConditionCoverage({
     }
     return map;
   }, [composition, builds, conditionCache]);
+  const coveredConditions = BUILDER_CONDITION_DISPLAY_ORDER.filter((condition) => (providers.get(condition)?.sources.length ?? 0) > 0);
+  const missingConditions = BUILDER_CONDITION_DISPLAY_ORDER.filter((condition) => !coveredConditions.includes(condition));
 
   return (
     <details className="theme-builder-boon-coverage theme-builder-condition-coverage theme-builder-coverage-disclosure">
@@ -1229,8 +1236,8 @@ function SquadConditionCoverage({
         <div><div className="theme-builder-kicker">Detected from assigned skills and traits</div><h3>Squad condition access</h3></div>
         <span>{computing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}</span>
       </summary>
-      <div className="theme-builder-boon-grid theme-builder-condition-grid">
-        {BUILDER_CONDITION_DISPLAY_ORDER.map((condition) => {
+      <div className="theme-builder-boon-grid theme-builder-condition-grid" role="list" aria-label="Detected squad condition access">
+        {coveredConditions.map((condition) => {
           const entry = providers.get(condition); const list = entry?.sources ?? [];
           const covered = list.length > 0;
           const squadUptime = list.reduce<number | undefined>(
@@ -1252,8 +1259,10 @@ function SquadConditionCoverage({
           return (
             <div
               key={condition}
-              className={covered ? "is-covered" : "is-missing"}
+              className="is-covered"
               title={tooltip}
+              role="listitem"
+              aria-label={tooltip}
             >
               <div className="theme-builder-boon-icon">{entry?.icon ? <img src={entry.icon} alt="" /> : <Sparkles className="h-5 w-5" />}{covered && <em>{list.length}</em>}</div>
               <span>{condition}</span>
@@ -1262,94 +1271,8 @@ function SquadConditionCoverage({
           );
         })}
       </div>
+      <p className="theme-builder-coverage-missing"><strong>Missing</strong><span>{missingConditions.length ? missingConditions.join(" · ") : "None"}</span></p>
     </details>
-  );
-}
-
-function SquadTacticalMatrix({
-  composition,
-  builds,
-  focusedBuildId,
-}: {
-  composition: BuilderComposition;
-  builds: SavedBuilderBuild[];
-  focusedBuildId: string | null;
-}) {
-  const readout = useMemo(() => computeSquadTacticalReadout(composition, builds), [composition, builds]);
-  const focusedBuild = focusedBuildId ? builds.find((build) => build.id === focusedBuildId) ?? null : null;
-  const focusedProfile = focusedBuild ? computeAttributeProfile(focusedBuild.state, null) : null;
-  const focused = focusedBuild && focusedProfile ? {
-    name: focusedBuild.name,
-    professionId: focusedBuild.state.professionId,
-    role: focusedBuild.state.role,
-    identity: focusedProfile.primaryIdentity,
-    pressure: focusedProfile.pressure,
-    gear: `${focusedProfile.equippedSlots}/${focusedProfile.totalSlots}`,
-  } : readout.topBuilds[0] ? {
-    name: readout.topBuilds[0].name,
-    professionId: readout.topBuilds[0].professionId,
-    role: readout.topBuilds[0].role,
-    identity: readout.topBuilds[0].primaryIdentity,
-    pressure: readout.topBuilds[0].pressure,
-    gear: "Saved",
-  } : null;
-  const identities: BuilderPressureIdentity[] = ["strike", "condition", "support", "sustain"];
-
-  return (
-    <section className="theme-builder-squad-matrix">
-      <div className="theme-builder-section-head">
-        <div><div className="theme-builder-kicker">AF-style squad telemetry</div><h3>Tactical matrix</h3></div>
-        <div className="theme-builder-matrix-capacity"><strong>{readout.assignedSlots}</strong><span>of {readout.capacity} assigned</span></div>
-      </div>
-      <div className="theme-builder-matrix-grid">
-        <div className="theme-builder-matrix-panel is-focus">
-          {focused ? (
-            <>
-              <div className="theme-builder-matrix-focus-head">
-                <ClassIcon name={focused.professionId} size="md" />
-                <span><small>Focused squad card</small><strong>{focused.name}</strong><em>{[focused.role, pressureLabel(focused.identity), focused.gear].filter(Boolean).join(" / ")}</em></span>
-              </div>
-              <div className="theme-builder-matrix-bars">
-                {identities.map((identity) => (
-                  <div key={identity}>
-                    <span>{pressureShortLabel(identity)}</span>
-                    <i><b style={{ width: `${focused.pressure[identity]}%` }} /></i>
-                    <strong>{focused.pressure[identity]}</strong>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p>No squad builds assigned yet. Save builds, assign them into slots, then hover or focus a squad card.</p>
-          )}
-        </div>
-        <div className="theme-builder-matrix-panel">
-          <small>Pressure mix</small>
-          <div className="theme-builder-matrix-chips">
-            {identities.map((identity) => (
-              <span key={identity} className={`is-${identity}`}><b>{readout.identityCounts[identity]}</b>{pressureShortLabel(identity)}</span>
-            ))}
-          </div>
-          <em>{readout.openSlots} open slot{readout.openSlots === 1 ? "" : "s"}</em>
-        </div>
-        <div className="theme-builder-matrix-panel">
-          <small>Average squad pressure</small>
-          <div className="theme-builder-matrix-averages">
-            {identities.map((identity) => (
-              <div key={identity}><span>{pressureShortLabel(identity)}</span><strong>{readout.averagePressure[identity]}</strong></div>
-            ))}
-          </div>
-        </div>
-        <div className="theme-builder-matrix-panel">
-          <small>Top pressure cards</small>
-          <ol className="theme-builder-matrix-top">
-            {readout.topBuilds.length ? readout.topBuilds.map((build) => (
-              <li key={build.buildId}><span>{build.name}</span><b>{build.score}</b></li>
-            )) : <li><span>No assigned builds</span><b>0</b></li>}
-          </ol>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -1450,7 +1373,6 @@ function SquadWorkspace({
     onShareCode: () => void;
   specsById: Map<number, Gw2Specialization>;
 }) {
-  const [focusedBuildId, setFocusedBuildId] = useState<string | null>(null);
   const [rosterQuery, setRosterQuery] = useState("");
   const [moveSource, setMoveSource] = useState<SquadMoveSource | null>(null);
   const assignmentCounts = useMemo(() => {
@@ -1494,7 +1416,6 @@ function SquadWorkspace({
         const parties = moveSquadAssignment(composition.parties, source, { partyId, slotIndex });
         if (parties !== composition.parties) {
           update({ parties });
-          setFocusedBuildId(source.buildId);
           window.setTimeout(() => document.getElementById(`squad-slot-${partyId}-${slotIndex}-trigger`)?.focus(), 0);
         }
       } catch {
@@ -1505,7 +1426,6 @@ function SquadWorkspace({
     const buildId = event.dataTransfer.getData("text/plain");
     if (!buildId || !builds.some((build) => build.id === buildId)) return;
     updateSlot(partyId, slotIndex, buildId);
-    setFocusedBuildId(buildId);
   };
   const closeMoveDialog = () => {
     const source = moveSource;
@@ -1516,10 +1436,8 @@ function SquadWorkspace({
     if (!moveSource) return;
     const parties = moveSquadAssignment(composition.parties, moveSource, target);
     if (parties === composition.parties) return;
-    const movedBuildId = moveSource.buildId;
     setMoveSource(null);
     update({ parties });
-    setFocusedBuildId(movedBuildId);
     window.setTimeout(() => document.getElementById(`squad-slot-${target.partyId}-${target.slotIndex}-trigger`)?.focus(), 0);
   };
 
@@ -1567,7 +1485,6 @@ function SquadWorkspace({
               <div className="theme-builder-party-slots">
                 {party.slots.map((buildId, slotIndex) => {
                   const selected = builds.find((build) => build.id === buildId);
-                  const selectedProfile = selected ? computeAttributeProfile(selected.state, null) : null;
                   const slotPickerId = `squad-slot-${party.id}-${slotIndex}`;
                   return (
                     <div
@@ -1593,21 +1510,10 @@ function SquadWorkspace({
                               event.dataTransfer.setData(SQUAD_SLOT_DRAG_TYPE, JSON.stringify({ partyId: party.id, slotIndex, buildId: selected.id }));
                             }}
                             onClick={() => onOpenBuild(selected)}
-                            onFocus={() => setFocusedBuildId(selected.id)}
-                            onMouseEnter={() => setFocusedBuildId(selected.id)}
                             title={`Open ${selected.name}`}
+                            aria-label={`Open ${selected.name}`}
                           >
-                            <ClassIcon name={selected.state.professionId} size="md" />
-                            <span>
-                              <strong>{selected.name}</strong>
-                              <small>{[selected.state.role, selected.state.equipment.statPackage].filter(Boolean).join(" / ") || selected.state.professionId}</small>
-                              {selectedProfile && (
-                                <em className="theme-builder-squad-pressure">
-                                  {pressureLabel(selectedProfile.primaryIdentity)}
-                                  <b>{selectedProfile.pressure[selectedProfile.primaryIdentity]}</b>
-                                </em>
-                              )}
-                            </span>
+                            <ClassIcon name={resolveEliteSpecName(selected.state.specializationIds, specsById, selected.state.professionId)} size="md" />
                           </button>
                           <div className="theme-builder-squad-slot-actions">
                             <button
@@ -1637,6 +1543,7 @@ function SquadWorkspace({
                       ) : (
                         <SquadSlotPicker
                           id={slotPickerId}
+                          slotLabel={`${party.name}, slot ${slotIndex + 1}`}
                           builds={availableBuilds}
                           onAssign={(buildId) => updateSlot(party.id, slotIndex, buildId)}
                         />
@@ -1676,7 +1583,6 @@ function SquadWorkspace({
                 build={build}
                 index={index}
                 onOpen={onOpenBuild}
-                onFocus={setFocusedBuildId}
                 slotCount={assignmentCounts.get(build.id) ?? 0}
                 draggable
                 specsById={specsById}
@@ -1689,7 +1595,6 @@ function SquadWorkspace({
           <div className="theme-builder-empty is-compact"><Archive className="h-7 w-7" /><strong>No saved builds</strong><span>Save a build or draft, then drag it into as many squad slots as you need.</span></div>
         )}
       </section>
-      <SquadTacticalMatrix composition={composition} builds={builds} focusedBuildId={focusedBuildId} />
       </div>
       {moveSource && (
         <SquadMoveDialog
