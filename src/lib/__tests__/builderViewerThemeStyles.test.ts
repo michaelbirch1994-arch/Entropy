@@ -28,6 +28,7 @@ describe("builder viewer theme styles", () => {
   it("uses one icon-led picker surface for each editable utility slot", () => {
     expect(view).toContain('emptyIcon={<Plus className="h-4 w-4" aria-hidden="true" />}');
     expect(view).not.toContain('className="theme-builder-skill-icon"');
+    expect(view).not.toContain('"Open searchable picker"');
     expect(css).toMatch(/\.theme-builder-loadout-canvas \.theme-builder-skill-slot \{[\s\S]*?border: 0;[\s\S]*?box-shadow: none;/);
   });
 

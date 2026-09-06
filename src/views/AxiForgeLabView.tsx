@@ -410,7 +410,10 @@ function ChoicePickerField({
         <span className="theme-builder-picker-icon">
           {selected?.icon ? <img src={selected.icon} alt="" /> : emptyIcon ?? <FileCode2 className="h-4 w-4" aria-hidden="true" />}
         </span>
-        <span><strong>{disabled ? (disabledLabel ?? placeholder) : (selected?.label ?? (value || placeholder))}</strong><small>{selected?.meta ?? selected?.group ?? "Open searchable picker"}</small></span>
+        <span>
+          <strong>{disabled ? (disabledLabel ?? placeholder) : (selected?.label ?? (value || placeholder))}</strong>
+          {(selected?.meta ?? selected?.group) && <small>{selected?.meta ?? selected?.group}</small>}
+        </span>
         <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </button>
       {open && createPortal(
@@ -543,7 +546,10 @@ function ItemPickerField({
         <span className="theme-builder-picker-icon">
           {selectedItem?.icon ? <img src={selectedItem.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}
         </span>
-        <span><strong>{displayValue || placeholder}</strong><small>{displayValue ? itemChoiceGroup(displayValue) : "Open searchable picker"}</small></span>
+        <span>
+          <strong>{displayValue || placeholder}</strong>
+          {displayValue && <small>{itemChoiceGroup(displayValue)}</small>}
+        </span>
         <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </button>
       {!resolved && <span className="theme-builder-choice-note"><AlertCircle className="h-3.5 w-3.5" /> Imported item is not in the curated catalog.</span>}
