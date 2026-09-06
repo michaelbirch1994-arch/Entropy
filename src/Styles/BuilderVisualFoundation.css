@@ -966,6 +966,26 @@
 
   .theme-builder-viewer-head {
     align-items: flex-start;
+    gap: 0.5rem;
+    padding-inline: 0.6rem;
+  }
+
+  .theme-builder-viewer-head > div:first-child {
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  .theme-builder-viewer-head > div:last-child {
+    flex: 0 0 auto;
+    gap: 0.25rem;
+  }
+
+  .theme-builder-viewer-head > div:last-child > button,
+  .theme-builder-viewer-head > div:last-child > a,
+  .theme-builder-viewer-head > div:last-child > details > summary {
+    width: 2.15rem;
+    min-height: 2.15rem;
+    padding: 0;
   }
 
   .theme-builder-viewer-head > div:last-child button:first-child {
