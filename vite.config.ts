@@ -5,4 +5,9 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   base: process.env.GITHUB_PAGES === 'true' ? '/Entropy/' : './',
   plugins: [react(), tailwindcss()],
+  server: {
+    watch: {
+      ignored: ['**/.tmp/**'],
+    },
+  },
 })

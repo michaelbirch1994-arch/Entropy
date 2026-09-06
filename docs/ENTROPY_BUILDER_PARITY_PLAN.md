@@ -111,7 +111,7 @@ Progress: the focused viewer is implemented for Library and Squad build activati
 
 Acceptance: assignments, moves, removals, save/reopen, and build viewing work with mouse and keyboard; a 25-player squad remains scannable without horizontal overflow.
 
-Progress: the Squad workspace now uses a responsive split command view with the subgroup roster and collapsed coverage disclosures on the left, plus a searchable saved-build roster and two-column tactical matrix on the right. Five-slot subgroup scanning, existing assignment interactions, Build Viewer activation, coverage calculations, and squad persistence remain unchanged. The live desktop view has been checked for content-height stretching and horizontal overflow; populated assignment, keyboard, and narrow-viewport verification remain before Phase C acceptance is complete.
+Progress: the Squad workspace now uses a responsive split command view with the subgroup roster and collapsed coverage disclosures on the left, plus a searchable saved-build roster and two-column tactical matrix on the right. Five-slot subgroup scanning, existing assignment interactions, Build Viewer activation, coverage calculations, and squad persistence remain unchanged. Populated desktop, tablet, and phone layouts have been visually checked with assigned and open slots. The roster now steps from five columns to three, two, and one as space narrows, and the checked widths have no horizontal overflow or duplicated empty-slot decoration. Keyboard verification of assignment, move, and removal flows remains before Phase C acceptance is complete.
 
 #### Phase D - Library hierarchy
 
@@ -122,7 +122,7 @@ Progress: the Squad workspace now uses a responsive split command view with the 
 
 Acceptance: users can find, inspect, edit, duplicate, share, and delete builds without ambiguous card clicks or persistent visual clutter.
 
-Progress: Library cards use the shared Build Viewer and keep the full card as the clear primary open action. Search works across build name, profession, role, specialization, and tags, with composable data-derived profession, specialization, role, game-mode, and tag filters, result counts, a unified reset, responsive wrapping, and focused non-mutation tests. Duplicate, portable copy/share, and confirmed-delete actions are consolidated into a labeled keyboard-accessible overflow menu; draft export actions remain honestly disabled. Phase D implementation is complete, with a populated visual check retained for final acceptance QA.
+Progress: Library cards use the shared Build Viewer and keep the full card as the clear primary open action. Search works across build name, profession, role, specialization, and tags, with composable data-derived profession, specialization, role, game-mode, and tag filters, result counts, a unified reset, responsive wrapping, and focused non-mutation tests. Duplicate, portable copy/share, and confirmed-delete actions are consolidated into a labeled keyboard-accessible overflow menu; draft export actions remain honestly disabled. Populated tablet and phone checks confirm compact cards, contained layouts, and an overflow menu that paints above adjacent cards. Phase D implementation and visual acceptance are complete.
 
 #### Phase E - final polish
 
@@ -133,7 +133,7 @@ Progress: Library cards use the shared Build Viewer and keep the full card as th
 
 Acceptance: no layout shift when images load, no jerking height animations, every icon action has a tooltip and accessible name, and the full interaction suite passes at supported widths.
 
-Progress: the focused Build Viewer already handles focus trapping and restoration, browser Back, Escape, body scroll locking, reduced motion, and responsive modal-to-sheet behavior. Both searchable Builder picker variants now match those modal fundamentals by trapping forward/reverse tab movement, closing on Escape or backdrop interaction, restoring trigger focus, and locking background scroll. Cross-viewport populated-state visual QA, image layout-shift checks, motion profiling, and the remaining icon/contrast/truncation audit remain.
+Progress: the focused Build Viewer already handles focus trapping and restoration, browser Back, Escape, body scroll locking, reduced motion, and responsive modal-to-sheet behavior. Both searchable Builder picker variants now match those modal fundamentals by trapping forward/reverse tab movement, closing on Escape or backdrop interaction, restoring trigger focus, and locking background scroll. Empty and populated Builder states have been checked at 320, 390, 768, and desktop widths with no root or document-level horizontal overflow; populated Library and Squad layouts now hold their intended hierarchy at the checked widths. A source audit found no icon-only Builder button, link, or summary without an accessible name or title. Image layout-shift checks, motion profiling, interactive focus-order verification, and the remaining contrast and long-name audit remain.
 
 ### Non-negotiable boundary
 

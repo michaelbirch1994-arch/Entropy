@@ -241,28 +241,9 @@
     0 18px 38px -34px var(--theme-accent);
 }
 
-.theme-builder-root .theme-builder-squad-slot:not(.is-filled)::before {
-  content: "+";
-  position: absolute;
-  z-index: 0;
-  inset: 0.58rem;
-  display: grid;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 18%, transparent);
-  border-radius: 10px;
-  color: color-mix(in srgb, var(--builder-squad-accent) 32%, transparent);
-  font-family: var(--font-mono);
-  font-size: 2.2rem;
-  font-weight: 800;
-  pointer-events: none;
-}
-
+.theme-builder-root .theme-builder-squad-slot:not(.is-filled)::before,
 .theme-builder-root .theme-builder-squad-slot:not(.is-filled)::after {
-  content: "Assign build";
-  right: 0.62rem;
-  bottom: 0.48rem;
-  color: color-mix(in srgb, var(--builder-squad-accent) 68%, var(--theme-textMuted));
-  font-size: 0.62rem;
+  content: none;
 }
 
 .theme-builder-root .theme-builder-squad-picker,
@@ -401,7 +382,7 @@
   }
 
   .theme-builder-root .theme-builder-squad-command-left .theme-builder-party-slots {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -478,5 +459,11 @@
 
   .theme-builder-root .theme-builder-squad-slot {
     min-height: 5.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .theme-builder-root .theme-builder-squad-command-left .theme-builder-party-slots {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -8,6 +8,17 @@
   --builder-edge: rgba(123, 108, 76, 0.34);
   --builder-surface: rgba(7, 10, 11, 0.96);
   --builder-surface-raised: rgba(11, 15, 16, 0.96);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.theme-main:has(.theme-builder-root) {
+  min-width: 0;
+}
+
+.theme-builder-root > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .theme-builder-root::before {
@@ -176,6 +187,23 @@
 
 .theme-builder-card-menu {
   position: relative;
+}
+
+.theme-builder-library-card {
+  position: relative;
+  grid-template-columns: auto minmax(12rem, 1fr) auto auto auto;
+}
+
+.theme-builder-library-card:has(.theme-builder-card-menu[open]) {
+  z-index: 45;
+}
+
+@media (min-width: 641px) {
+  .theme-builder-root .theme-builder-library-card > .theme-builder-library-card-stats,
+  .theme-builder-root .theme-builder-library-card > .theme-builder-row-actions {
+    grid-column: auto;
+    width: auto;
+  }
 }
 
 .theme-builder-card-menu > summary {
@@ -629,6 +657,37 @@
   .theme-builder-library-filters label:nth-of-type(4),
   .theme-builder-library-filters label:nth-of-type(5) {
     grid-row: auto;
+  }
+
+  .theme-builder-library-card {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "index main actions"
+      ". stats stats"
+      ". badges badges";
+    align-items: center;
+  }
+
+  .theme-builder-library-card > .theme-builder-index {
+    grid-area: index;
+  }
+
+  .theme-builder-library-card > .theme-builder-library-card-main {
+    grid-area: main;
+  }
+
+  .theme-builder-library-card > .theme-builder-library-card-stats {
+    grid-area: stats;
+    width: 100%;
+  }
+
+  .theme-builder-library-card > .theme-builder-card-badges {
+    grid-area: badges;
+  }
+
+  .theme-builder-library-card > .theme-builder-row-actions {
+    grid-area: actions;
+    width: auto;
   }
 }
 
