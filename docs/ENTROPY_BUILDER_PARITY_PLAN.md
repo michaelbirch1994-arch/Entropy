@@ -17,6 +17,118 @@ The existing workspace already supports:
 - five-player subgroup composition editing;
 - readiness validation and a contextual field manual.
 
+## Target experience architecture
+
+The AxiForge 0.12.0 reference is strongest because it gives each task a dedicated surface. Entropy should adopt that hierarchy while retaining its own black-gold visual language and existing Builder data model.
+
+### 1. Squad overview
+
+- Use a two-column command view: subgroup slots and collapsible party coverage on the left; a dense, searchable build roster on the right.
+- Represent assigned builds with profession or elite-spec icons. A slot remains recognizable without requiring the full build card.
+- Use one compact build-card pattern throughout Squad and Library: identity, role, specializations, weapon sets, doctrine stats, relic, and game mode.
+- Selecting a party slot focuses its build in the roster. Activating a filled slot or build card opens the Build Viewer.
+- Keep party coverage collapsed by default. Expanded coverage shows only facts derived from selected build data and labels estimates explicitly.
+
+### 2. Build Viewer
+
+- Open as a focused modal on desktop so the user keeps their Squad or Library context.
+- Open as a full-screen sheet on narrow screens.
+- Synchronize the selected build ID into the URL. Provide a familiar external-window button that opens the same stable viewer URL in a new browser tab.
+- Use two primary tabs: `Build` and `Equipment`.
+- The `Build` tab shows identity, game mode, copyable chat code, combat bar, specialization rows, and a compact contextual reference panel.
+- The `Equipment` tab shows armor, weapon sets, weapon skills, trinkets, upgrades, consumables, and existing calculated attributes. It does not change attribute formulas.
+- Include one clear `Edit build` command. Viewing and editing remain separate modes.
+- Clicking or focusing a skill, trait, pet, legend, rune, sigil, or relic updates the compact reference panel; an expand command opens a detailed Inspector dialog.
+
+### 3. Build Editor
+
+- Keep the existing Overview, Traits & Skills, Equipment, Notes, and Preview workflow, but treat it as an editing destination rather than the universal display surface.
+- Reuse the same combat bar, specialization strip, equipment slot, item tooltip, and build identity components as the Build Viewer.
+- Keep Save visible, group secondary export actions, and preserve the optional Readiness/Inspector rail.
+- Do not duplicate complete read-only summaries above editable controls. Each editing workspace shows only the context needed for its current task.
+
+### 4. Library
+
+- Make the compact build card the default scanning unit.
+- Card-body activation opens the Build Viewer; a dedicated pencil command opens the editor.
+- Add search and filters before folders or advanced organization. Profession, elite spec, role, game mode, and tags are the first useful filters.
+- Preserve duplicate, copy, share, and delete as secondary card actions in a menu instead of displaying every command at equal weight.
+
+### Viewer interaction contract
+
+- Default activation: open the Build Viewer modal and update URL state without a page reload.
+- `Escape` closes the viewer, focus is trapped while open, and focus returns to the originating card or slot.
+- Browser Back closes the viewer before leaving Entropy.
+- `Ctrl`/`Cmd` activation and the external-window icon open the stable viewer URL in a new tab.
+- The modal uses a 140-180ms opacity and small-scale transition. Tab content uses a short opacity transition without animating height.
+- `prefers-reduced-motion` removes scale and movement while preserving instant state feedback.
+
+### Component plan
+
+Extract the current monolithic `src/views/AxiForgeLabView.tsx` before the large visual rebuild:
+
+- `src/components/builder/BuilderShell.tsx` - command header, Build/Library/Squad navigation, notices, and URL state.
+- `src/components/builder/BuildSummaryCard.tsx` - shared compact card for Library, Squad roster, and assignments.
+- `src/components/builder/BuildViewerDialog.tsx` - modal/sheet shell, focus management, Back behavior, and new-tab command.
+- `src/components/builder/BuildViewer.tsx` - identity header plus Build/Equipment tabs.
+- `src/components/builder/BuildCombatBar.tsx` - shared weapon, utility, profession mechanic, health, and weapon-swap presentation.
+- `src/components/builder/SpecializationBoard.tsx` - shared specialization artwork and trait rows.
+- `src/components/builder/EquipmentBoard.tsx` - shared armor, weapons, trinkets, upgrades, and consumables presentation.
+- `src/components/builder/BuilderInspectorDialog.tsx` - expanded entity details and focus-safe dismissal.
+- `src/components/builder/SquadComposer.tsx` - party grid, build roster, assignment interactions, and coverage accordions.
+
+Existing state, catalogs, codecs, and calculations remain in `src/lib/axiforge` and `src/lib/gw2`. This refactor must not rewrite those contracts.
+
+### Implementation sequence
+
+#### Phase A - shared visual primitives
+
+1. Extract the combat bar, specialization board, equipment board, and compact build card without changing behavior.
+2. Add Storybook-like fixture states through existing tests or a dedicated local fixture route: complete, partial, invalid import, long names, missing icons, and empty equipment.
+3. Freeze the current Builder state and codec interfaces with round-trip tests.
+
+Acceptance: extracted components render the same selected values, all current Builder tests pass, and no report-analysis files change.
+
+#### Phase B - Build Viewer
+
+1. Add URL-addressable viewer state using the existing Entropy query-state pattern.
+2. Build the modal/full-screen sheet with `Build` and `Equipment` tabs.
+3. Reuse the extracted visual components and add the compact-to-expanded Inspector flow.
+4. Add explicit Edit, Copy code, Share, Close, and Open in new tab commands.
+
+Acceptance: a saved build opens from a stable URL, Back/Escape/focus restoration work, refresh preserves the viewed build, and no draft is mutated by viewing.
+
+#### Phase C - Squad command view
+
+1. Replace the vertically stacked composer with the split party/roster layout.
+2. Use profession icons for five-slot subgroup scanning and shared compact cards for the roster.
+3. Open the Build Viewer from either side without leaving the composition.
+4. Convert coverage sections into per-party accordions and preserve explicit estimate labels.
+
+Acceptance: assignments, moves, removals, save/reopen, and build viewing work with mouse and keyboard; a 25-player squad remains scannable without horizontal overflow.
+
+#### Phase D - Library hierarchy
+
+1. Use the shared card and Build Viewer behavior.
+2. Add profession, spec, role, mode, and tag filters.
+3. Consolidate secondary actions into an accessible menu.
+4. Defer folders, multi-select, and manual ordering until real library size demonstrates the need.
+
+Acceptance: users can find, inspect, edit, duplicate, share, and delete builds without ambiguous card clicks or persistent visual clutter.
+
+#### Phase E - final polish
+
+1. Normalize spacing, icon sizes, border strength, typography, empty states, skeletons, and tooltips across all Builder surfaces.
+2. Verify desktop, tablet, and phone layouts with complete and incomplete builds.
+3. Audit focus order, visible focus, dialogs, tab semantics, reduced motion, contrast, truncation, and long localized names.
+4. Profile modal opening, catalog hydration, image loading, and large squad rendering; memoize only where measured.
+
+Acceptance: no layout shift when images load, no jerking height animations, every icon action has a tooltip and accessible name, and the full interaction suite passes at supported widths.
+
+### Non-negotiable boundary
+
+This overhaul may rearrange and restyle existing Builder values. It must not change report metrics, combat-log parsing, normalization, rankings, scoring, Builder attribute formulas, boon/condition estimation formulas, or AxiCode semantics. Any future calculation change requires a separate evidence-backed scope and review.
+
 ## Cut 1 — catalog-backed legal choices
 
 Status: implemented and present in the `v0.2.98` baseline.
