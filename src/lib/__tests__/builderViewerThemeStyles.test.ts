@@ -90,5 +90,14 @@ describe("builder viewer theme styles", () => {
     expect(view).toMatch(/<EquipmentPreview[\s\S]*?onInspectItem=\{\(item\) => inspectBuilderItem/);
     expect(view).toContain('panel === "details" ? null : "details"');
     expect(view).toContain('className="theme-builder-compact-details"');
+    expect(view).toContain("if (compact) setDetailRailOpen(false)");
+    expect(view).toContain("else setCompactDetailsPanel(null)");
+  });
+
+  it("keeps live equipment attributes beside the equipment editor", () => {
+    expect(view).toContain("function EquipmentAttributePanel");
+    expect(view).toContain("<EquipmentAttributePanel attributeTotals={attributeTotals} activeWeaponSet={builder.activeWeaponSet} />");
+    expect(css).toContain(".theme-builder-equipment-attributes");
+    expect(css).toContain("grid-template-columns: minmax(0, 1fr) minmax(16.5rem, 20rem)");
   });
 });

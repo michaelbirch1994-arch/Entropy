@@ -1698,12 +1698,103 @@
 }
 
 .theme-builder-equipment-workspace > .theme-builder-equipment-grid.is-focused {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(16.5rem, 20rem);
+  align-items: start;
 }
 
 .theme-builder-equipment-workspace > .theme-builder-equipment-grid.is-focused > *,
 .theme-builder-equipment-workspace > .theme-builder-equipment-grid.is-focused > .theme-builder-equipment-group.is-weapons {
-  grid-column: auto;
+  grid-column: 1;
+}
+
+.theme-builder-equipment-workspace > .theme-builder-equipment-grid.is-focused > .theme-builder-equipment-attributes {
+  position: sticky;
+  top: 0.75rem;
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.theme-builder-equipment-attributes {
+  overflow: hidden;
+  border: 1px solid rgba(123, 108, 76, 0.34);
+  border-top-color: rgba(216, 173, 74, 0.52);
+  border-radius: 6px;
+  background: rgba(6, 9, 10, 0.96);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.theme-builder-equipment-attributes > header {
+  display: flex;
+  min-height: 3.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid rgba(123, 108, 76, 0.25);
+}
+
+.theme-builder-equipment-attributes > header h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.12rem 0 0;
+  color: var(--theme-text);
+  font-size: 0.76rem;
+}
+
+.theme-builder-equipment-attributes > header h4 svg {
+  color: #d8ad4a;
+}
+
+.theme-builder-equipment-attributes > header > span {
+  color: #d8ad4a;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.theme-builder-equipment-attribute-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  padding: 1px;
+  background: rgba(123, 108, 76, 0.18);
+}
+
+.theme-builder-equipment-attribute {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.3rem;
+  padding: 0.4rem 0.5rem;
+  background: #06090a;
+}
+
+.theme-builder-equipment-attribute i {
+  display: inline-flex;
+  color: color-mix(in srgb, var(--builder-gold) 70%, var(--theme-textMuted));
+}
+
+.theme-builder-equipment-attribute span {
+  min-width: 0;
+  color: var(--theme-textMuted);
+  font-size: 0.54rem;
+  font-weight: 750;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.theme-builder-equipment-attribute strong {
+  color: var(--theme-text);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-builder-equipment-attribute:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 .theme-builder-equipment-workspace [hidden] {
@@ -1735,6 +1826,16 @@
 
   .theme-builder-equipment-workspace > .theme-builder-equipment-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .theme-builder-equipment-workspace > .theme-builder-equipment-grid.is-focused {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .theme-builder-equipment-workspace > .theme-builder-equipment-grid.is-focused > .theme-builder-equipment-attributes {
+    position: static;
+    grid-column: 1;
+    grid-row: auto;
   }
 
   .theme-builder-equipment-workspace > .theme-builder-equipment-grid > .theme-builder-equipment-group.is-weapons {

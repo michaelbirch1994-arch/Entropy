@@ -700,15 +700,6 @@ function BuilderMobileTools({
   const reduceMotion = useReducedMotion();
   const score = Math.max(0, 6 - issues.length);
 
-  useEffect(() => {
-    const query = window.matchMedia(BUILDER_COMPACT_DETAILS_QUERY);
-    const closeAtDesktopWidth = (event: MediaQueryListEvent) => {
-      if (!event.matches) setOpenPanel(null);
-    };
-    query.addEventListener("change", closeAtDesktopWidth);
-    return () => query.removeEventListener("change", closeAtDesktopWidth);
-  }, []);
-
   const showPanel = (panel: MobileRailPanel, trigger: HTMLButtonElement | null) => {
     returnFocusRef.current = trigger;
     setOpenPanel(panel);
@@ -1532,14 +1523,8 @@ function SquadWorkspace({
   );
 }
 
-function BuildAnalysis({
-  attributeTotals,
-  attributeProfile,
-}: {
-  attributeTotals: AttributeTotals;
-  attributeProfile: AttributeProfile;
-}) {
-  const attributeRows: Array<[string, string, React.ReactNode]> = [
+function buildAttributeRows(attributeTotals: AttributeTotals): Array<[string, string, React.ReactNode]> {
+  return [
     ["Power", Math.round(attributeTotals.power).toLocaleString(), <Swords className="h-4 w-4" />],
     ["Precision", Math.round(attributeTotals.precision).toLocaleString(), <Sparkles className="h-4 w-4" />],
     ["Toughness", Math.round(attributeTotals.toughness).toLocaleString(), <Shield className="h-4 w-4" />],
@@ -1554,6 +1539,45 @@ function BuildAnalysis({
     ["Boon Duration", attributeTotals.boonDuration.toFixed(1) + "%", <Users className="h-4 w-4" />],
     ["Condition Duration", attributeTotals.conditionDuration.toFixed(1) + "%", <Sparkles className="h-4 w-4" />],
   ];
+}
+
+function EquipmentAttributePanel({
+  attributeTotals,
+  activeWeaponSet,
+}: {
+  attributeTotals: AttributeTotals;
+  activeWeaponSet: number;
+}) {
+  return (
+    <aside className="theme-builder-equipment-attributes" aria-label="Live equipment attributes" aria-live="polite">
+      <header>
+        <div>
+          <div className="theme-builder-kicker">Live loadout</div>
+          <h4><Gauge className="h-4 w-4" /> Attributes</h4>
+        </div>
+        <span>Set {activeWeaponSet === 2 ? "II" : "I"}</span>
+      </header>
+      <div className="theme-builder-equipment-attribute-grid">
+        {buildAttributeRows(attributeTotals).map(([label, value, icon]) => (
+          <div key={label} className="theme-builder-equipment-attribute">
+            <i>{icon}</i>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+function BuildAnalysis({
+  attributeTotals,
+  attributeProfile,
+}: {
+  attributeTotals: AttributeTotals;
+  attributeProfile: AttributeProfile;
+}) {
+  const attributeRows = buildAttributeRows(attributeTotals);
   const pressureRows = [
     ["Strike", attributeProfile.pressure.strike],
     ["Condition", attributeProfile.pressure.condition],
@@ -2070,6 +2094,18 @@ export default function AxiForgeLabView() {
       setCompactDetailsPanel("inspector");
     } else setDetailRailOpen(true);
   };
+
+  useEffect(() => {
+    const query = window.matchMedia(BUILDER_COMPACT_DETAILS_QUERY);
+    const syncDetailSurface = (compact: boolean) => {
+      if (compact) setDetailRailOpen(false);
+      else setCompactDetailsPanel(null);
+    };
+    const handleWidthChange = (event: MediaQueryListEvent) => syncDetailSurface(event.matches);
+    syncDetailSurface(query.matches);
+    query.addEventListener("change", handleWidthChange);
+    return () => query.removeEventListener("change", handleWidthChange);
+  }, []);
 
   useEffect(() => saveBuilderWorkspace(workspace), [workspace]);
 
@@ -3193,6 +3229,7 @@ export default function AxiForgeLabView() {
                     </div>
                   )}
                 </div>
+                <EquipmentAttributePanel attributeTotals={attributeTotals} activeWeaponSet={builder.activeWeaponSet} />
               </div>
             </section>
           )}
