@@ -740,7 +740,8 @@
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   width: min(94rem, 100%);
-  height: min(58rem, calc(100vh - 2.5rem));
+  height: auto;
+  max-height: min(58rem, calc(100vh - 2.5rem));
   overflow: hidden;
   border: 1px solid rgba(216, 173, 74, 0.38);
   border-radius: 8px;
@@ -1048,6 +1049,82 @@
   color: var(--theme-textFaint);
 }
 
+.theme-builder-library-workspace {
+  min-height: 0;
+  padding: 0.65rem 0 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  clip-path: none;
+}
+
+.theme-builder-analysis {
+  display: grid;
+  gap: 0.85rem;
+  padding-top: 0.2rem;
+}
+
+.theme-builder-analysis-attributes {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.theme-builder-analysis-details {
+  border-top: 1px solid rgba(216, 173, 74, 0.24);
+}
+
+.theme-builder-analysis-details > summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.65rem;
+  padding: 0.75rem 0;
+  color: #d8ad4a;
+  cursor: pointer;
+  font-size: 0.66rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  list-style: none;
+}
+
+.theme-builder-analysis-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.theme-builder-analysis-details > summary:focus-visible {
+  outline: 2px solid var(--builder-gold);
+  outline-offset: 3px;
+}
+
+.theme-builder-analysis-details > summary::after {
+  content: "+";
+  grid-column: 3;
+  color: var(--theme-textMuted);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.theme-builder-analysis-details[open] > summary::after {
+  content: "-";
+}
+
+.theme-builder-analysis-details > summary small {
+  overflow: hidden;
+  color: var(--theme-textMuted);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.theme-builder-analysis-detail-body {
+  display: grid;
+  gap: 0.65rem;
+  padding-bottom: 0.85rem;
+}
+
 .theme-builder-viewer .theme-builder-inspector {
   border-color: rgba(216, 173, 74, 0.42);
   background:
@@ -1124,7 +1201,7 @@
   box-shadow: 0 0 12px -5px var(--builder-gold);
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 900px) {
   .theme-builder-viewer-body {
     grid-template-columns: minmax(0, 1fr);
   }

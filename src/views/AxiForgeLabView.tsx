@@ -19,6 +19,7 @@ import {
   Eraser,
   ExternalLink,
   FileCode2,
+  Gauge,
   ListFilter,
   Layers3,
   Link2,
@@ -908,7 +909,7 @@ function BuildLibrary({
   };
 
   return (
-    <section className="theme-builder-workspace">
+    <section className="theme-builder-workspace theme-builder-library-workspace">
       <div className="theme-builder-section-head">
         <div><div className="theme-builder-kicker">Local doctrine</div><h3>Build library</h3></div>
         <div className="theme-builder-search">
@@ -1509,38 +1510,12 @@ function SquadWorkspace({
   );
 }
 
-function BuildPreview({
-  builder,
-  profession,
-  specsById,
-  traitsBySpecId,
-  skillsById,
-  legends,
-  pets,
+function BuildAnalysis({
   attributeTotals,
   attributeProfile,
-  weaponSet,
-  onSwapWeaponSet,
-  onInspectSkill,
-  onInspectPet,
-  onInspectTrait,
-  onInspectSpecialization,
 }: {
-  builder: EntropyBuilderState;
-  profession: Gw2Profession | null;
-  specsById: Map<number, Gw2Specialization>;
-  traitsBySpecId: Map<number, Gw2Trait[]>;
-  skillsById: Map<number, Gw2Skill>;
-  legends: Gw2Legend[];
-  pets: Gw2Pet[];
   attributeTotals: AttributeTotals;
   attributeProfile: AttributeProfile;
-  weaponSet: WeaponSetNumber;
-  onSwapWeaponSet: () => void;
-  onInspectSkill: (skill: Gw2Skill) => void;
-  onInspectPet: (pet: Gw2Pet) => void;
-  onInspectTrait: (trait: Gw2Trait) => void;
-  onInspectSpecialization: (specialization: Gw2Specialization) => void;
 }) {
   const attributeRows: Array<[string, string, React.ReactNode]> = [
     ["Power", Math.round(attributeTotals.power).toLocaleString(), <Swords className="h-4 w-4" />],
@@ -1567,8 +1542,96 @@ function BuildPreview({
   const supportAttrs: Gw2Attribute[] = ["Concentration", "HealingPower", "Toughness", "Vitality"];
 
   return (
+    <div className="theme-builder-analysis">
+      <section className="theme-builder-analysis-attributes" aria-label="Build attributes">
+        <div className="theme-builder-preview-equipment-heading">
+          <Gauge className="h-4 w-4" />
+          <span>Attributes</span>
+        </div>
+        <div className="theme-builder-preview-attributes">
+          {attributeRows.map(([label, value, icon]) => (
+            <div key={label} className="theme-builder-preview-attribute">
+              <i>{icon}</i>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <details className="theme-builder-analysis-details">
+        <summary>
+          <span>Build analysis</span>
+          <small>{pressureLabel(attributeProfile.primaryIdentity)} · {attributeProfile.equippedSlots}/{attributeProfile.totalSlots} gear slots scored</small>
+        </summary>
+        <div className="theme-builder-analysis-detail-body">
+          <div className="theme-builder-tactical-strip">
+            <div className="theme-builder-tactical-card is-primary">
+              <small>Build identity</small>
+              <strong>{pressureLabel(attributeProfile.primaryIdentity)}</strong>
+              <span>Active set {attributeProfile.activeWeaponSet === 1 ? "I" : "II"} · {attributeProfile.equippedSlots}/{attributeProfile.totalSlots} gear slots scored</span>
+            </div>
+            {pressureRows.map(([label, value]) => (
+              <div key={label} className="theme-builder-tactical-meter">
+                <div><small>{label}</small><strong>{value}</strong></div>
+                <i><span style={{ width: `${value}%` }} /></i>
+              </div>
+            ))}
+          </div>
+          <div className="theme-builder-contribution-grid">
+            {attributeProfile.contributions.map((contribution) => (
+              <div key={contribution.source} className="theme-builder-contribution-card">
+                <small>{contribution.label}</small>
+                <strong>+{formatInteger(contributionTotal(contribution, offenseAttrs))}</strong>
+                <span>offense stats</span>
+                <em>+{formatInteger(contributionTotal(contribution, supportAttrs))} support/sustain</em>
+              </div>
+            ))}
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+}
+
+function BuildPreview({
+  builder,
+  profession,
+  specsById,
+  traitsBySpecId,
+  skillsById,
+  legends,
+  pets,
+  attributeTotals,
+  attributeProfile,
+  weaponSet,
+  onSwapWeaponSet,
+  onInspectSkill,
+  onInspectPet,
+  onInspectTrait,
+  onInspectSpecialization,
+  compact = false,
+}: {
+  builder: EntropyBuilderState;
+  profession: Gw2Profession | null;
+  specsById: Map<number, Gw2Specialization>;
+  traitsBySpecId: Map<number, Gw2Trait[]>;
+  skillsById: Map<number, Gw2Skill>;
+  legends: Gw2Legend[];
+  pets: Gw2Pet[];
+  attributeTotals: AttributeTotals;
+  attributeProfile: AttributeProfile;
+  weaponSet: WeaponSetNumber;
+  onSwapWeaponSet: () => void;
+  onInspectSkill: (skill: Gw2Skill) => void;
+  onInspectPet: (pet: Gw2Pet) => void;
+  onInspectTrait: (trait: Gw2Trait) => void;
+  onInspectSpecialization: (specialization: Gw2Specialization) => void;
+  compact?: boolean;
+}) {
+  return (
     <div className="theme-builder-preview">
-      <div className="theme-builder-preview-header">
+      {!compact && <div className="theme-builder-preview-header">
         {profession && <ClassIcon name={resolveEliteSpecName(builder.specializationIds, specsById, profession.name)} size="lg" />}
         <div>
           <h2>{builder.name || "Untitled Build"}</h2>
@@ -1577,44 +1640,9 @@ function BuildPreview({
             {builder.role ? " · " + builder.role : ""}
           </p>
         </div>
-      </div>
+      </div>}
 
       <BuildCombatBar builder={builder} profession={profession} specsById={specsById} skillsById={skillsById} legends={legends} pets={pets} health={attributeTotals.health} weaponSet={weaponSet} onSwap={onSwapWeaponSet} onInspect={onInspectSkill} onInspectPet={onInspectPet} />
-
-      <div className="theme-builder-tactical-strip">
-        <div className="theme-builder-tactical-card is-primary">
-          <small>Build identity</small>
-          <strong>{pressureLabel(attributeProfile.primaryIdentity)}</strong>
-          <span>Active set {attributeProfile.activeWeaponSet === 1 ? "I" : "II"} · {attributeProfile.equippedSlots}/{attributeProfile.totalSlots} gear slots scored</span>
-        </div>
-        {pressureRows.map(([label, value]) => (
-          <div key={label} className="theme-builder-tactical-meter">
-            <div><small>{label}</small><strong>{value}</strong></div>
-            <i><span style={{ width: `${value}%` }} /></i>
-          </div>
-        ))}
-      </div>
-
-      <div className="theme-builder-preview-attributes">
-        {attributeRows.map(([label, value, icon]) => (
-          <div key={label} className="theme-builder-preview-attribute">
-            <i>{icon}</i>
-            <span>{label}</span>
-            <strong>{value}</strong>
-          </div>
-        ))}
-      </div>
-
-      <div className="theme-builder-contribution-grid">
-        {attributeProfile.contributions.map((contribution) => (
-          <div key={contribution.source} className="theme-builder-contribution-card">
-            <small>{contribution.label}</small>
-            <strong>+{formatInteger(contributionTotal(contribution, offenseAttrs))}</strong>
-            <span>offense stats</span>
-            <em>+{formatInteger(contributionTotal(contribution, supportAttrs))} support/sustain</em>
-          </div>
-        ))}
-      </div>
 
       <div className="theme-builder-preview-specs">
         {[0, 1, 2].map((trackIndex) => {
@@ -1671,6 +1699,7 @@ function BuildPreview({
           );
         })}
       </div>
+      {!compact && <BuildAnalysis attributeTotals={attributeTotals} attributeProfile={attributeProfile} />}
     </div>
   );
 }
@@ -1679,10 +1708,14 @@ function EquipmentPreview({
   builder,
   items,
   onInspectItem,
+  attributeTotals,
+  attributeProfile,
 }: {
   builder: EntropyBuilderState;
   items: Record<number, Gw2Item>;
   onInspectItem?: (item: Gw2Item) => void;
+  attributeTotals?: AttributeTotals;
+  attributeProfile?: AttributeProfile;
 }) {
   const itemFor = (id: string | number | undefined) => (id ? items[Number(id)] : undefined);
   const trinketSlots = ["amulet", "ring1", "ring2", "accessory1", "accessory2", "backpack"];
@@ -1798,6 +1831,7 @@ function EquipmentPreview({
         </div>
       </div>
       </div>
+      {attributeTotals && attributeProfile && <BuildAnalysis attributeTotals={attributeTotals} attributeProfile={attributeProfile} />}
     </div>
   );
 }
@@ -1953,8 +1987,8 @@ function BuildViewerDialog({
         <div id={`builder-viewer-panel-${tab}`} className="theme-builder-viewer-body" role="tabpanel" aria-labelledby={`builder-viewer-tab-${tab}`} aria-busy={catalogLoading}>
           <div className="theme-builder-viewer-canvas">
             {tab === "build" ? (
-              <BuildPreview builder={build.state} profession={profession} specsById={viewerSpecsById} traitsBySpecId={traitsBySpecId} skillsById={skillsById} legends={legends} pets={pets} attributeTotals={profile.totals} attributeProfile={profile} weaponSet={weaponSet} onSwapWeaponSet={() => setWeaponSet((current) => current === 1 ? 2 : 1)} onInspectSkill={(skill) => setSelected({ kind: "skill", item: skill })} onInspectPet={(pet) => setSelected({ kind: "pet", item: pet })} onInspectTrait={(trait) => setSelected({ kind: "trait", item: trait })} onInspectSpecialization={(specialization) => setSelected({ kind: "specialization", item: specialization })} />
-            ) : <EquipmentPreview builder={build.state} items={items} onInspectItem={(item) => setSelected({ kind: "item", item })} />}
+              <BuildPreview builder={build.state} profession={profession} specsById={viewerSpecsById} traitsBySpecId={traitsBySpecId} skillsById={skillsById} legends={legends} pets={pets} attributeTotals={profile.totals} attributeProfile={profile} weaponSet={weaponSet} onSwapWeaponSet={() => setWeaponSet((current) => current === 1 ? 2 : 1)} onInspectSkill={(skill) => setSelected({ kind: "skill", item: skill })} onInspectPet={(pet) => setSelected({ kind: "pet", item: pet })} onInspectTrait={(trait) => setSelected({ kind: "trait", item: trait })} onInspectSpecialization={(specialization) => setSelected({ kind: "specialization", item: specialization })} compact />
+            ) : <EquipmentPreview builder={build.state} items={items} attributeTotals={profile.totals} attributeProfile={profile} onInspectItem={(item) => setSelected({ kind: "item", item })} />}
           </div>
           <DetailPanel selected={selected} builder={build.state} embedded showAdvanced={false} />
         </div>

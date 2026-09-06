@@ -72,4 +72,13 @@ describe("builder viewer theme styles", () => {
     expect(css).toMatch(/\.theme-builder-preview-trinket-card > img,[\s\S]*?width: 2\.2rem;[\s\S]*?height: 2\.2rem;/);
     expect(css).not.toContain(".theme-builder-viewer .theme-builder-preview-trinket-card > img");
   });
+
+  it("keeps the library and saved-build viewer content-led", () => {
+    expect(view).toContain('theme-builder-workspace theme-builder-library-workspace');
+    expect(css).toMatch(/\.theme-builder-library-workspace \{[\s\S]*?min-height: 0;[\s\S]*?border: 0;/);
+    expect(view).toMatch(/<BuildPreview[\s\S]*?compact \/>/);
+    expect(view).toMatch(/<EquipmentPreview[\s\S]*?attributeTotals=\{profile\.totals\}[\s\S]*?attributeProfile=\{profile\}/);
+    expect(view).toContain('className="theme-builder-analysis-details"');
+    expect(css).toMatch(/\.theme-builder-viewer \{[\s\S]*?height: auto;[\s\S]*?max-height:/);
+  });
 });
