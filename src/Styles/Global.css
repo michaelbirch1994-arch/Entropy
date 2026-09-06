@@ -232,11 +232,13 @@ kbd {
    (per-row tags in tables), and backdrop-filter is expensive at
    that scale. Uses the same wildcard-attribute pattern as the
    legacy utility translation layer above so it reaches every
-   card/panel variant without editing each one individually.
+   card/panel variant without editing each one individually. Match
+   complete class tokens so panel titles, subtitles, and controls do
+   not inherit surface chrome.
    Retains the gold-and-black royal palette — this only adds
    translucency and light, not new colors. */
-.theme-app-shell [class*="-panel"],
-.theme-app-shell [class*="-card"] {
+.theme-app-shell :is([class$="-panel"], [class*="-panel "]),
+.theme-app-shell :is([class$="-card"], [class*="-card "]) {
   backdrop-filter: blur(20px) saturate(1.15);
   -webkit-backdrop-filter: blur(20px) saturate(1.15);
   box-shadow:
