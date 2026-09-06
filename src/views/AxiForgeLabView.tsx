@@ -393,7 +393,7 @@ function ChoicePickerField({
 
   function closePicker() {
     setOpen(false);
-    triggerRef.current?.focus();
+    window.setTimeout(() => document.getElementById(`${id}-trigger`)?.focus(), 0);
   }
 
   function choose(choice: BuilderPickerChoice) {
@@ -409,6 +409,7 @@ function ChoicePickerField({
     <div className="theme-builder-picker-field">
       <FieldLabel>{label}</FieldLabel>
       <button
+        id={`${id}-trigger`}
         type="button"
         ref={triggerRef}
         className="theme-builder-picker-trigger"
@@ -1472,6 +1473,7 @@ function SquadWorkspace({
                 {party.slots.map((buildId, slotIndex) => {
                   const selected = builds.find((build) => build.id === buildId);
                   const selectedProfile = selected ? computeAttributeProfile(selected.state, null) : null;
+                  const slotPickerId = `squad-slot-${party.id}-${slotIndex}`;
                   return (
                     <div
                       key={slotIndex}
@@ -1486,6 +1488,7 @@ function SquadWorkspace({
                       {selected ? (
                         <>
                           <button
+                            id={`${slotPickerId}-trigger`}
                             type="button"
                             className="theme-builder-squad-card"
                             onClick={() => onOpenBuild(selected)}
@@ -1508,7 +1511,10 @@ function SquadWorkspace({
                           <button
                             type="button"
                             className="theme-builder-squad-remove"
-                            onClick={() => updateSlot(party.id, slotIndex, null)}
+                            onClick={() => {
+                              updateSlot(party.id, slotIndex, null);
+                              window.setTimeout(() => document.getElementById(`${slotPickerId}-trigger`)?.focus(), 0);
+                            }}
                             title="Clear squad slot"
                           >
                             <MinusCircle className="h-3.5 w-3.5" />
@@ -1516,7 +1522,7 @@ function SquadWorkspace({
                         </>
                       ) : (
                         <SquadSlotPicker
-                          id={`squad-slot-${party.id}-${slotIndex}`}
+                          id={slotPickerId}
                           builds={availableBuilds}
                           onAssign={(buildId) => updateSlot(party.id, slotIndex, buildId)}
                         />
