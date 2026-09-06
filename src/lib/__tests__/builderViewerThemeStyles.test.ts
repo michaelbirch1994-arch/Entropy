@@ -44,6 +44,12 @@ describe("builder viewer theme styles", () => {
     expect(view).toMatch(/section === "consumables"[\s\S]*?<small>Relic<\/small>[\s\S]*?<small>Food<\/small>/);
   });
 
+  it("keeps equipment navigation to one compact row until phone widths", () => {
+    expect(css).toMatch(/\.theme-builder-equipment-nav button \{[\s\S]*?min-height: 2\.5rem;/);
+    expect(css).not.toMatch(/@container \(max-width: 48rem\)[\s\S]*?\.theme-builder-equipment-nav \{[\s\S]*?grid-template-columns: repeat\(2/);
+    expect(css).toMatch(/@container \(max-width: 30rem\)[\s\S]*?\.theme-builder-equipment-nav \{[\s\S]*?overflow-x: auto;/);
+  });
+
   it("disables impossible off-hand stat overrides for two-handed weapons", () => {
     expect(view).toMatch(/id={`builder-weapon-stat-\${slot}`}[\s\S]*?disabled={offhandDisabled}[\s\S]*?disabledLabel="Unavailable with a two-handed weapon"/);
   });
