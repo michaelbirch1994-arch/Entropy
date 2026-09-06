@@ -1543,7 +1543,7 @@
   object-fit: contain;
 }
 
-.theme-builder-viewer .theme-builder-preview-trinket-card {
+.theme-builder-preview-trinket-card {
   display: grid;
   grid-template-columns: 2.2rem minmax(0, 1fr);
   grid-template-rows: auto auto;
@@ -1551,11 +1551,12 @@
   gap: 0.08rem 0.5rem;
 }
 
-.theme-builder-viewer .theme-builder-preview-trinket-card > img,
-.theme-builder-viewer .theme-builder-preview-trinket-card > svg {
+.theme-builder-preview-trinket-card > img,
+.theme-builder-preview-trinket-card > svg {
   grid-row: 1 / span 2;
   width: 2.2rem;
   height: 2.2rem;
+  border-radius: 4px;
   object-fit: contain;
 }
 
