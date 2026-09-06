@@ -38,4 +38,9 @@ describe("builder viewer theme styles", () => {
     expect(view).toContain('builder.activeWeaponSet === set && <> <b>Active</b></>');
     expect(css).toMatch(/\.theme-builder-equipment-workspace \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/);
   });
+
+  it("keeps equipment summaries aligned with their editor sections", () => {
+    expect(view).toMatch(/section === "upgrades"[\s\S]*?Armor runes[\s\S]*?Weapon sigils[\s\S]*?<\/section>/);
+    expect(view).toMatch(/section === "consumables"[\s\S]*?<small>Relic<\/small>[\s\S]*?<small>Food<\/small>/);
+  });
 });

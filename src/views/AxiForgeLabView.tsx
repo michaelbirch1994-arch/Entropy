@@ -693,15 +693,15 @@ function EquipmentLoadoutSheet({ builder, items, section }: { builder: EntropyBu
           </div>
         </section>}
         {section === "upgrades" && <section className="theme-builder-equipment-zone is-upgrades" aria-labelledby="builder-loadout-upgrades">
-          <div className="theme-builder-equipment-zone-head"><Sparkles className="h-4 w-4" /><h4 id="builder-loadout-upgrades">Upgrades</h4><span>Runes, sigils, relic</span></div>
+          <div className="theme-builder-equipment-zone-head"><Sparkles className="h-4 w-4" /><h4 id="builder-loadout-upgrades">Upgrades</h4><span>Runes and sigils</span></div>
           <div className="theme-builder-loadout-upgrades">
             <div><small>Armor runes</small><strong>{runeNames.length ? runeNames.join(" · ") : "Unassigned"}</strong></div>
             <div><small>Weapon sigils</small><strong>{sigilNames.length ? sigilNames.join(" · ") : "Unassigned"}</strong></div>
-            <div><small>Relic</small><strong>{builder.equipment.relic || "Unassigned"}</strong></div>
           </div>
         </section>}
       </div>
       {section === "consumables" && <footer className="theme-builder-equipment-board-foot">
+        <div><small>Relic</small><strong>{builder.equipment.relic || "Unassigned"}</strong></div>
         <div><small>Food</small><strong>{builder.equipment.food || "Unassigned"}</strong></div>
         <div><small>Utility</small><strong>{builder.equipment.utility || "Unassigned"}</strong></div>
         <div><small>Enrichment</small><strong>{items[Number(builder.equipment.enrichment)]?.name ?? (builder.equipment.enrichment || "Unassigned")}</strong></div>
