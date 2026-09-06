@@ -338,6 +338,23 @@ function PlayerSourceDetails({
   onClose: () => void;
 }) {
   const reduceMotion = useReducedMotion();
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      setRevealed(true);
+      return;
+    }
+
+    let revealTimer = 0;
+    const settleFrame = window.requestAnimationFrame(() => {
+      revealTimer = window.setTimeout(() => setRevealed(true), 32);
+    });
+    return () => {
+      window.cancelAnimationFrame(settleFrame);
+      window.clearTimeout(revealTimer);
+    };
+  }, [reduceMotion]);
 
   const closeAndRestoreFocus = () => {
     onClose();
@@ -346,52 +363,57 @@ function PlayerSourceDetails({
 
   return (
     <motion.div
-      initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-      animate={{ height: "auto", opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
+      initial={false}
+      animate={{
+        gridTemplateRows: reduceMotion || revealed ? "1fr" : "0fr",
+        opacity: reduceMotion || revealed ? 1 : 0,
+      }}
+      exit={{ gridTemplateRows: "0fr", opacity: 0 }}
       transition={{ duration: reduceMotion ? 0 : 0.22, ease: [0.16, 1, 0.3, 1] }}
       className="theme-player-source-details-motion"
     >
-      <div className="theme-player-source-details-spacer" aria-hidden="true" />
-      <section
-        id={panelId}
-        role="region"
-        aria-label={`${entry.account} source breakdown`}
-        aria-labelledby={triggerId}
-        onKeyDown={(event) => {
-          if (event.key !== "Escape") return;
-          event.preventDefault();
-          closeAndRestoreFocus();
-        }}
-        className="theme-player-source-details"
-      >
-        <header className="theme-player-source-details-head">
-          <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-theme-accent">Source breakdown</div>
-            <div className="mt-1 flex items-center gap-2">
-              <ProfessionIcon profession={entry.profession} className="h-5 w-5" />
-              <strong className="text-sm text-theme-text">{entry.account}</strong>
-              <span className="font-mono text-[10px] text-theme-muted">{entry.profession}</span>
+      <div className="theme-player-source-details-inner">
+        <div className="theme-player-source-details-spacer" aria-hidden="true" />
+        <section
+          id={panelId}
+          role="region"
+          aria-label={`${entry.account} source breakdown`}
+          aria-labelledby={triggerId}
+          onKeyDown={(event) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            closeAndRestoreFocus();
+          }}
+          className="theme-player-source-details"
+        >
+          <header className="theme-player-source-details-head">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-theme-accent">Source breakdown</div>
+              <div className="mt-1 flex items-center gap-2">
+                <ProfessionIcon profession={entry.profession} className="h-5 w-5" />
+                <strong className="text-sm text-theme-text">{entry.account}</strong>
+                <span className="font-mono text-[10px] text-theme-muted">{entry.profession}</span>
+              </div>
             </div>
+            <button
+              type="button"
+              className="theme-quiet-button"
+              onClick={closeAndRestoreFocus}
+              aria-label={`Close ${entry.account} source breakdown`}
+            >
+              <ChevronUp className="h-4 w-4" />
+              Close
+            </button>
+          </header>
+          <div className="theme-player-source-details-grid">
+            <SourceGroup title="Damage pressure" rows={breakdown.damage} />
+            <SourceGroup title="Healing sources" rows={breakdown.healing} />
+            <SourceGroup title="Barrier sources" rows={breakdown.barrier} />
+            <SourceGroup title="Support / control" rows={breakdown.support} />
+            <SourceGroup title="Defense context" rows={breakdown.defense} />
           </div>
-          <button
-            type="button"
-            className="theme-quiet-button"
-            onClick={closeAndRestoreFocus}
-            aria-label={`Close ${entry.account} source breakdown`}
-          >
-            <ChevronUp className="h-4 w-4" />
-            Close
-          </button>
-        </header>
-        <div className="theme-player-source-details-grid">
-          <SourceGroup title="Damage pressure" rows={breakdown.damage} />
-          <SourceGroup title="Healing sources" rows={breakdown.healing} />
-          <SourceGroup title="Barrier sources" rows={breakdown.barrier} />
-          <SourceGroup title="Support / control" rows={breakdown.support} />
-          <SourceGroup title="Defense context" rows={breakdown.defense} />
-        </div>
-      </section>
+        </section>
+      </div>
     </motion.div>
   );
 }
