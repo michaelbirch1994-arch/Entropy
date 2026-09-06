@@ -55,8 +55,8 @@ function chooseSkill(
   return candidates.sort((left, right) => {
     const leftSkill = skillsById?.get(left.id);
     const rightSkill = skillsById?.get(right.id);
-    const leftScore = Number(Boolean(left.offhand)) * 8 + Number(Boolean(leftSkill?.specialization)) * 4 + Number(Boolean(leftSkill?.dual_attunement)) * 2 + Number(Boolean(left.attunement ?? leftSkill?.attunement));
-    const rightScore = Number(Boolean(right.offhand)) * 8 + Number(Boolean(rightSkill?.specialization)) * 4 + Number(Boolean(rightSkill?.dual_attunement)) * 2 + Number(Boolean(right.attunement ?? rightSkill?.attunement));
+    const leftScore = Number(Boolean(leftSkill?.flags?.includes("NoUnderwater"))) * 16 + Number(Boolean(left.offhand)) * 8 + Number(Boolean(leftSkill?.specialization)) * 4 + Number(Boolean(leftSkill?.dual_attunement)) * 2 + Number(Boolean(left.attunement ?? leftSkill?.attunement));
+    const rightScore = Number(Boolean(rightSkill?.flags?.includes("NoUnderwater"))) * 16 + Number(Boolean(right.offhand)) * 8 + Number(Boolean(rightSkill?.specialization)) * 4 + Number(Boolean(rightSkill?.dual_attunement)) * 2 + Number(Boolean(right.attunement ?? rightSkill?.attunement));
     return rightScore - leftScore;
   })[0] ?? null;
 }
