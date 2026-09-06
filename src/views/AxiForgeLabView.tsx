@@ -320,6 +320,39 @@ function moveTabFocus<T extends string>(
   window.requestAnimationFrame(() => document.getElementById(buttonId(next))?.focus());
 }
 
+function handleModalDialogKeyDown(
+  event: React.KeyboardEvent<HTMLElement>,
+  dialog: HTMLElement | null,
+  onClose: () => void,
+) {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    onClose();
+    return;
+  }
+  if (event.key !== "Tab" || !dialog) return;
+  const focusable = [...dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [href], [tabindex]:not([tabindex="-1"])')];
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function useModalScrollLock(open: boolean) {
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [open]);
+}
+
 function ChoicePickerField({
   id,
   label,
@@ -347,6 +380,7 @@ function ChoicePickerField({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
   const selected = choices.find((choice) => choice.value === value);
   const filters = useMemo(() => ["All", ...Array.from(new Set(choices.map((choice) => choice.group).filter(Boolean) as string[])).sort()], [choices]);
   const filteredChoices = useMemo(() => {
@@ -369,6 +403,8 @@ function ChoicePickerField({
     setQuery("");
   }
 
+  useModalScrollLock(open);
+
   return (
     <div className="theme-builder-picker-field">
       <FieldLabel>{label}</FieldLabel>
@@ -390,7 +426,7 @@ function ChoicePickerField({
       </button>
       {open && createPortal(
         <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closePicker(); }}>
-          <section id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} onKeyDown={(event) => { if (event.key === "Escape") closePicker(); }}>
+          <section ref={dialogRef} id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} onKeyDown={(event) => handleModalDialogKeyDown(event, dialogRef.current, closePicker)}>
             <div className="theme-builder-picker-head">
               <div><div className="theme-builder-kicker">Builder picker</div><h3 id={`${id}-title`}>{label}</h3></div>
               <button type="button" onClick={closePicker} aria-label="Close picker"><X className="h-4 w-4" /></button>
@@ -458,6 +494,7 @@ function ItemPickerField({
   const [filter, setFilter] = useState("All");
   const [choiceItems, setChoiceItems] = useState<Record<number, Gw2Item>>({});
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
   const byId = useMemo(() => new Map(choices.filter((choice) => choice.id != null).map((choice) => [String(choice.id), choice.label])), [choices]);
   const selectedChoice = valueKind === "id"
     ? choices.find((choice) => String(choice.id) === value)
@@ -499,6 +536,8 @@ function ItemPickerField({
     setQuery("");
   }
 
+  useModalScrollLock(open);
+
   return (
     <div className="theme-builder-picker-field">
       <FieldLabel>{label}</FieldLabel>
@@ -520,7 +559,7 @@ function ItemPickerField({
       {!resolved && <span className="theme-builder-choice-note"><AlertCircle className="h-3.5 w-3.5" /> Imported item is not in the curated catalog.</span>}
       {open && createPortal(
         <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closePicker(); }}>
-          <section id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} onKeyDown={(event) => { if (event.key === "Escape") closePicker(); }}>
+          <section ref={dialogRef} id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} onKeyDown={(event) => handleModalDialogKeyDown(event, dialogRef.current, closePicker)}>
             <div className="theme-builder-picker-head">
               <div><div className="theme-builder-kicker">Equipment picker</div><h3 id={`${id}-title`}>{label}</h3></div>
               <button type="button" onClick={closePicker} aria-label="Close picker"><X className="h-4 w-4" /></button>

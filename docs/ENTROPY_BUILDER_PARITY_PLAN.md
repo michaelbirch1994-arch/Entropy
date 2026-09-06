@@ -133,6 +133,8 @@ Progress: Library cards use the shared Build Viewer and keep the full card as th
 
 Acceptance: no layout shift when images load, no jerking height animations, every icon action has a tooltip and accessible name, and the full interaction suite passes at supported widths.
 
+Progress: the focused Build Viewer already handles focus trapping and restoration, browser Back, Escape, body scroll locking, reduced motion, and responsive modal-to-sheet behavior. Both searchable Builder picker variants now match those modal fundamentals by trapping forward/reverse tab movement, closing on Escape or backdrop interaction, restoring trigger focus, and locking background scroll. Cross-viewport populated-state visual QA, image layout-shift checks, motion profiling, and the remaining icon/contrast/truncation audit remain.
+
 ### Non-negotiable boundary
 
 This overhaul may rearrange and restyle existing Builder values. It must not change report metrics, combat-log parsing, normalization, rankings, scoring, Builder attribute formulas, boon/condition estimation formulas, or AxiCode semantics. Any future calculation change requires a separate evidence-backed scope and review.
