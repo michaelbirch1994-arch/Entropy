@@ -122,6 +122,8 @@ Progress: the Squad workspace now uses a responsive split command view with the 
 
 Acceptance: users can find, inspect, edit, duplicate, share, and delete builds without ambiguous card clicks or persistent visual clutter.
 
+Progress: Library cards already use the shared Build Viewer and provide explicit open, duplicate, portable copy/share, and confirmed-delete actions. Search now works across build name, profession, role, specialization, and tags, with composable data-derived profession, specialization, role, game-mode, and tag filters, result counts, a unified reset, responsive wrapping, and focused non-mutation tests. Consolidating secondary card actions into an accessible menu remains.
+
 #### Phase E - final polish
 
 1. Normalize spacing, icon sizes, border strength, typography, empty states, skeletons, and tooltips across all Builder surfaces.

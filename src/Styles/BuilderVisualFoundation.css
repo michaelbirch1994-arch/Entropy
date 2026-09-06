@@ -310,6 +310,65 @@
   box-shadow: inset 0 -1px 0 rgba(216, 173, 74, 0.3);
 }
 
+.theme-builder-library-filters {
+  display: grid;
+  grid-template-columns: auto repeat(5, minmax(8rem, 1fr)) auto auto;
+  align-items: center;
+  gap: 0.45rem;
+  margin: -0.15rem 0 0.8rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(123, 108, 76, 0.18);
+  color: var(--theme-textMuted);
+}
+
+.theme-builder-library-filters label {
+  min-width: 0;
+}
+
+.theme-builder-library-filters select {
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.4rem 1.8rem 0.4rem 0.55rem;
+  border: 1px solid var(--builder-edge);
+  border-radius: 5px;
+  outline: none;
+  background: rgba(3, 6, 7, 0.92);
+  color: var(--theme-textMuted);
+  font-size: 0.62rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.theme-builder-library-filters select:focus-visible {
+  border-color: var(--builder-gold-soft);
+  box-shadow: 0 0 0 2px rgba(216, 173, 74, 0.1);
+}
+
+.theme-builder-library-result-count {
+  color: var(--builder-gold);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.theme-builder-library-filters > button {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 1px solid var(--builder-edge);
+  border-radius: 5px;
+  color: var(--theme-textMuted);
+  background: rgba(3, 6, 7, 0.92);
+}
+
+.theme-builder-library-filters > button:hover,
+.theme-builder-library-filters > button:focus-visible {
+  border-color: var(--builder-gold-soft);
+  color: var(--builder-gold);
+}
+
 .theme-builder-picker-icon {
   border-color: rgba(216, 173, 74, 0.34);
   color: color-mix(in srgb, var(--builder-gold) 74%, var(--theme-textMuted));
@@ -385,6 +444,15 @@
 
   .theme-builder-command-actions .theme-command-button {
     flex: 0 1 auto;
+  }
+
+  .theme-builder-library-filters {
+    grid-template-columns: auto repeat(3, minmax(8rem, 1fr)) auto auto;
+  }
+
+  .theme-builder-library-filters label:nth-of-type(4),
+  .theme-builder-library-filters label:nth-of-type(5) {
+    grid-row: 2;
   }
 }
 
@@ -474,6 +542,19 @@
 
   .theme-builder-professions button {
     min-height: 4.45rem;
+  }
+
+  .theme-builder-library-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .theme-builder-library-filters > svg {
+    display: none;
+  }
+
+  .theme-builder-library-filters label:nth-of-type(4),
+  .theme-builder-library-filters label:nth-of-type(5) {
+    grid-row: auto;
   }
 }
 

@@ -19,6 +19,7 @@ import {
   Eraser,
   ExternalLink,
   FileCode2,
+  ListFilter,
   Layers3,
   Link2,
   Loader2,
@@ -71,6 +72,7 @@ import {
 } from "../lib/axiforge/conditionEngine";
 import { computeBuildConditionAccess } from "../lib/axiforge/squadConditions";
 import { computeSquadTacticalReadout, type BuilderPressureIdentity } from "../lib/axiforge/squadTactics";
+import { matchesBuilderLibraryFilters } from "../lib/axiforge/builderLibrary";
 import {
   fetchGw2Skills,
   fetchGw2Specializations,
@@ -937,12 +939,44 @@ function BuildLibrary({
   specsById: Map<number, Gw2Specialization>;
 }) {
   const [query, setQuery] = useState("");
+  const [professionFilter, setProfessionFilter] = useState("");
+  const [specializationFilter, setSpecializationFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [modeFilter, setModeFilter] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const normalizedQuery = query.trim().toLowerCase();
-  const filtered = builds.filter((build) => {
-    const haystack = [build.name, build.state.professionId, build.state.role, ...build.state.tags].join(" ").toLowerCase();
-    return haystack.includes(normalizedQuery);
-  });
+  const professionOptions = useMemo(() => [...new Set(builds.map((build) => build.state.professionId).filter(Boolean))].sort(), [builds]);
+  const specializationOptions = useMemo(() => {
+    const options = new Map<string, string>();
+    for (const build of builds) {
+      for (const id of build.state.specializationIds) {
+        const specialization = id ? specsById.get(id) : null;
+        if (specialization) options.set(String(specialization.id), specialization.name);
+      }
+    }
+    return [...options].sort((left, right) => left[1].localeCompare(right[1]));
+  }, [builds, specsById]);
+  const roleOptions = useMemo(() => [...new Set(builds.map((build) => build.state.role).filter(Boolean))].sort(), [builds]);
+  const modeOptions = useMemo(() => [...new Set(builds.map((build) => build.state.gameMode))].sort(), [builds]);
+  const tagOptions = useMemo(() => [...new Set(builds.flatMap((build) => build.state.tags).filter(Boolean))].sort(), [builds]);
+  const hasFilters = Boolean(normalizedQuery || professionFilter || specializationFilter || roleFilter || modeFilter || tagFilter);
+  const filtered = builds.filter((build) => matchesBuilderLibraryFilters(build, {
+    query: normalizedQuery,
+    profession: professionFilter,
+    specialization: specializationFilter,
+    role: roleFilter,
+    mode: modeFilter,
+    tag: tagFilter,
+  }, specsById));
+  const clearFilters = () => {
+    setQuery("");
+    setProfessionFilter("");
+    setSpecializationFilter("");
+    setRoleFilter("");
+    setModeFilter("");
+    setTagFilter("");
+  };
 
   return (
     <section className="theme-builder-workspace">
@@ -954,6 +988,18 @@ function BuildLibrary({
           {query && <button type="button" onClick={() => setQuery("")} title="Clear search" aria-label="Clear build search"><X className="h-3.5 w-3.5" /></button>}
         </div>
       </div>
+      {builds.length > 0 && (
+        <div className="theme-builder-library-filters" aria-label="Filter saved builds">
+          <ListFilter className="h-4 w-4" aria-hidden="true" />
+          <label><span className="sr-only">Profession</span><select value={professionFilter} onChange={(event) => setProfessionFilter(event.target.value)}><option value="">All professions</option>{professionOptions.map((profession) => <option key={profession} value={profession}>{profession}</option>)}</select></label>
+          <label><span className="sr-only">Specialization</span><select value={specializationFilter} onChange={(event) => setSpecializationFilter(event.target.value)}><option value="">All specializations</option>{specializationOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+          <label><span className="sr-only">Role</span><select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}><option value="">All roles</option>{roleOptions.map((role) => <option key={role} value={role}>{role}</option>)}</select></label>
+          <label><span className="sr-only">Game mode</span><select value={modeFilter} onChange={(event) => setModeFilter(event.target.value)}><option value="">All modes</option>{modeOptions.map((mode) => <option key={mode} value={mode}>{mode.toUpperCase()}</option>)}</select></label>
+          <label><span className="sr-only">Tag</span><select value={tagFilter} onChange={(event) => setTagFilter(event.target.value)}><option value="">All tags</option>{tagOptions.map((tag) => <option key={tag} value={tag}>{tag}</option>)}</select></label>
+          <span className="theme-builder-library-result-count">{filtered.length}/{builds.length}</span>
+          {hasFilters && <button type="button" onClick={clearFilters} title="Clear library filters" aria-label="Clear all library filters"><X className="h-3.5 w-3.5" /></button>}
+        </div>
+      )}
       {builds.length === 0 ? (
         <div className="theme-builder-empty"><Archive className="h-7 w-7" /><strong>No saved builds</strong><span>Save a complete build or an unfinished draft to establish the library.</span></div>
       ) : filtered.length === 0 ? (
@@ -961,7 +1007,7 @@ function BuildLibrary({
           <Search className="h-7 w-7" />
           <strong>No matching builds</strong>
           <span>No saved build matches &quot;{query.trim()}&quot;.</span>
-          <button type="button" className="theme-command-button" onClick={() => setQuery("")}><X className="h-4 w-4" /> Clear search</button>
+          <button type="button" className="theme-command-button" onClick={clearFilters}><X className="h-4 w-4" /> Clear filters</button>
         </div>
       ) : (
         <div className="theme-builder-library-list">
