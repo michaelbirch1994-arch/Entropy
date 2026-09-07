@@ -52,6 +52,7 @@ describe("Builder condition access", () => {
 
   it("provides fallback icons for core condition names", () => {
     expect(fallbackConditionIcon("Bleeding")).toContain("Bleeding");
+    expect(fallbackConditionIcon("Burning")).toContain("render.guildwars2.com");
     expect(fallbackConditionIcon("Taunt")).toContain("Taunt");
   });
 });

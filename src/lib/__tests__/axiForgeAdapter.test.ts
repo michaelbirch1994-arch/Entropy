@@ -3,6 +3,7 @@ import {
   decodeAxiForgeCode,
   detectAxiForgeCodeKind,
   encodeAxiForgeBuildCode,
+  encodeAxiForgeCompCode,
 } from "../axiforge/axiForgeAdapter";
 
 describe("axiForgeAdapter", () => {
@@ -40,8 +41,23 @@ describe("axiForgeAdapter", () => {
 
     const decoded = decodeAxiForgeCode(code);
 
+    expect(code).toMatch(/^<Entropy:Build:/);
+    expect(code).not.toContain("AxiForge");
     expect(decoded.ok).toBe(true);
     expect(decoded.kind).toBe("build");
     expect(decoded.value).toBeTruthy();
+  });
+
+  it("exports Entropy-branded squad codes and accepts legacy codes", () => {
+    const code = encodeAxiForgeCompCode(
+      { name: "Reset Night", gameMode: "wvw", partyLines: [{ capacity: 5, slots: [] }] },
+      {},
+    );
+
+    expect(code).not.toBeNull();
+    expect(code).toMatch(/^<Entropy:Comp:/);
+    expect(code).not.toContain("AxiForge");
+    expect(decodeAxiForgeCode(code!).kind).toBe("comp");
+    expect(decodeAxiForgeCode(code!.replace("<Entropy:", "<AxiForge:")).kind).toBe("comp");
   });
 });

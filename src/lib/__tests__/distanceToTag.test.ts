@@ -10,6 +10,7 @@ function player(options: {
     profession?: string;
     commander?: boolean;
     stackDist?: number;
+    distToCom?: number;
     positions?: Array<[number, number]>;
     start?: number;
     notInSquad?: boolean;
@@ -19,7 +20,9 @@ function player(options: {
         profession: options.profession ?? 'Guardian',
         hasCommanderTag: options.commander ?? false,
         notInSquad: options.notInSquad ?? false,
-        statsAll: options.stackDist === undefined ? [] : [{ stackDist: options.stackDist }],
+        statsAll: options.stackDist === undefined && options.distToCom === undefined
+            ? []
+            : [{ stackDist: options.stackDist, distToCom: options.distToCom }],
         combatReplayData: options.positions
             ? { positions: options.positions, start: options.start ?? 0 }
             : undefined,
@@ -88,6 +91,32 @@ describe('computeDistanceToTag', () => {
             median: 300,
             p95: 400,
         });
+    });
+
+    it('prefers explicit commander distance over stack distance', () => {
+        const result = computeDistanceToTag([
+            fight('fight-1', [
+                player({ account: 'Commander.1000', commander: true, distToCom: 0 }),
+                player({ account: 'Player.1000', distToCom: 250, stackDist: 4_852_204 }),
+            ]),
+        ]);
+
+        expect(result.rows[0]).toMatchObject({
+            account: 'Player.1000',
+            avg: 250,
+            source: 'fightAvg',
+        });
+    });
+
+    it('rejects impossible fallback distances instead of displaying parser sentinels', () => {
+        const result = computeDistanceToTag([
+            fight('fight-1', [
+                player({ account: 'Commander.1000', commander: true, stackDist: 0 }),
+                player({ account: 'Player.1000', stackDist: 4_852_204 }),
+            ]),
+        ]);
+
+        expect(result.rows).toEqual([]);
     });
 
     it('aligns replay positions to the commander timeline and preserves percentile samples', () => {

@@ -19,6 +19,7 @@ import {
   Eraser,
   ExternalLink,
   FileCode2,
+  Gauge,
   ListFilter,
   Layers3,
   Link2,
@@ -43,6 +44,7 @@ import {
   detectAxiForgeCodeKind,
   encodeAxiForgeBuildCode,
   encodeAxiForgeCompCode,
+  brandEntropyCode,
   type AxiForgeDecodeResult,
 } from "../lib/axiforge/axiForgeAdapter";
 import {
@@ -64,10 +66,11 @@ import {
   validateBuilder,
 } from "../lib/axiforge/builderModel";
 import { loadBuilderWorkspace, saveBuilderWorkspace } from "../lib/axiforge/builderStorage";
-import { BOON_DISPLAY_ORDER, type BoonCoverageEntry } from "../lib/axiforge/boonEngine";
-import { computeBuildBoonCoverage } from "../lib/axiforge/squadBoons";
+import { BOON_DISPLAY_ORDER, enrichedFactsForEntity, isProvidedEffectFact, type BoonCoverageEntry } from "../lib/axiforge/boonEngine";
+import { computeBuildBoonCoverage, mergeLiveBuildForCoverage } from "../lib/axiforge/squadBoons";
 import {
   BUILDER_CONDITION_DISPLAY_ORDER,
+  fallbackConditionIcon,
   type BuilderConditionEntry,
 } from "../lib/axiforge/conditionEngine";
 import { computeBuildConditionAccess } from "../lib/axiforge/squadConditions";
@@ -141,7 +144,8 @@ import BuildSummaryCard from "../components/builder/BuildSummaryCard";
 type WorkbenchTab = "build" | "library" | "squad";
 type BuilderSection = "overview" | "traits" | "equipment" | "notes" | "preview";
 type EquipmentSection = "weapons" | "armor" | "upgrades" | "consumables";
-type MobileRailPanel = "readiness" | "inspector";
+type MobileRailPanel = "readiness" | "inspector" | "details";
+const BUILDER_COMPACT_DETAILS_QUERY = "(max-width: 1180px)";
 type Notice = { tone: "success" | "warning" | "error"; message: string };
 
 const GAME_MODES = [
@@ -197,7 +201,7 @@ function factLabel(fact: Gw2ApiFact): string {
 function kindLabel(kind: AxiForgeDecodeResult["kind"]): string {
   if (kind === "build") return "Build code detected";
   if (kind === "comp") return "Squad code detected";
-  return "Waiting for AxiCode";
+  return "Waiting for Entropy code";
 }
 
 function formatInteger(value: number | undefined): string {
@@ -287,6 +291,13 @@ function moveTabFocus<T extends string>(
   const next = items[nextIndex];
   onSelect(next);
   window.requestAnimationFrame(() => document.getElementById(buttonId(next))?.focus());
+}
+
+function providedEffectLabel(fact: Gw2ApiFact): string {
+  const details: string[] = [];
+  if ((fact.apply_count ?? 1) > 1) details.push(`${fact.apply_count} stacks`);
+  if ((fact.duration ?? 0) > 0) details.push(`${fact.duration}s`);
+  return details.join(" / ");
 }
 
 function itemForNamedChoice(value: string, choices: readonly BuilderNamedChoice[], items: Record<number, Gw2Item>): Gw2Item | undefined {
@@ -410,7 +421,10 @@ function ChoicePickerField({
         <span className="theme-builder-picker-icon">
           {selected?.icon ? <img src={selected.icon} alt="" /> : emptyIcon ?? <FileCode2 className="h-4 w-4" aria-hidden="true" />}
         </span>
-        <span><strong>{disabled ? (disabledLabel ?? placeholder) : (selected?.label ?? (value || placeholder))}</strong><small>{selected?.meta ?? selected?.group ?? "Open searchable picker"}</small></span>
+        <span>
+          <strong>{disabled ? (disabledLabel ?? placeholder) : (selected?.label ?? (value || placeholder))}</strong>
+          {(selected?.meta ?? selected?.group) && <small>{selected?.meta ?? selected?.group}</small>}
+        </span>
         <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </button>
       {open && createPortal(
@@ -543,7 +557,10 @@ function ItemPickerField({
         <span className="theme-builder-picker-icon">
           {selectedItem?.icon ? <img src={selectedItem.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}
         </span>
-        <span><strong>{displayValue || placeholder}</strong><small>{displayValue ? itemChoiceGroup(displayValue) : "Open searchable picker"}</small></span>
+        <span>
+          <strong>{displayValue || placeholder}</strong>
+          {displayValue && <small>{itemChoiceGroup(displayValue)}</small>}
+        </span>
         <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </button>
       {!resolved && <span className="theme-builder-choice-note"><AlertCircle className="h-3.5 w-3.5" /> Imported item is not in the curated catalog.</span>}
@@ -599,92 +616,6 @@ function resolveEliteSpecName(
   return fallback;
 }
 
-function EquipmentLoadoutSheet({ builder, items, section }: { builder: EntropyBuilderState; items: Record<number, Gw2Item>; section: EquipmentSection }) {
-  const weaponSet = (set: 1 | 2) => {
-    const main = builder.equipment.weapons[`mainhand${set}`] || "Empty";
-    const off = builder.equipment.weapons[`offhand${set}`];
-    return off ? `${main} + ${off}` : main;
-  };
-  const slotStat = (slot: string) => builder.equipment.slots[slot] || builder.equipment.statPackage || "Unassigned";
-  const runeIds = [...new Set(Object.values(builder.equipment.runes).filter(Boolean))];
-  const runeNames = runeIds.map((id) => items[Number(id)]?.name ?? "Imported rune");
-  const sigilIds = [...new Set(Object.values(builder.equipment.sigils).flat().filter(Boolean))];
-  const sigilNames = sigilIds.map((id) => items[Number(id)]?.name ?? "Imported sigil");
-  const relicItem = items[BUILDER_RELIC_IDS[builder.equipment.relic]];
-  const foodItem = itemForNamedChoice(builder.equipment.food, BUILDER_FOOD_CHOICES, items);
-  const utilityItem = itemForNamedChoice(builder.equipment.utility, BUILDER_UTILITY_CHOICES, items);
-  const enrichmentItem = items[Number(builder.equipment.enrichment)];
-  const trinketSlots = [
-    ["amulet", "Amulet"],
-    ["ring1", "Ring I"],
-    ["ring2", "Ring II"],
-    ["accessory1", "Accessory I"],
-    ["accessory2", "Accessory II"],
-    ["backpack", "Back item"],
-  ] as const;
-  return (
-    <div className="theme-builder-equipment-board" aria-label="Current equipment loadout">
-      <div className={`theme-builder-equipment-board-grid is-${section}`}>
-        {section === "armor" && <section className="theme-builder-equipment-zone is-armor" aria-labelledby="builder-loadout-armor">
-          <div className="theme-builder-equipment-zone-head"><Shield className="h-4 w-4" /><h4 id="builder-loadout-armor">Armor</h4><span>{ARMOR_SLOTS.filter((slot) => builder.equipment.slots[slot]).length}/6 overrides</span></div>
-          <div className="theme-builder-loadout-slots">
-            {ARMOR_SLOTS.map((slot) => (
-              <div key={slot} className={builder.equipment.slots[slot] ? "is-assigned" : ""}>
-                <span><EquipmentArtwork src={BUILDER_ARMOR_SLOT_ICONS[slot]} fallback={<Shield className="h-4 w-4" />} label={`${ARMOR_SLOT_LABELS[slot]} slot`} /></span>
-                <small>{ARMOR_SLOT_LABELS[slot]}</small>
-                <strong>{slotStat(slot)}</strong>
-              </div>
-            ))}
-          </div>
-        </section>}
-        {section === "weapons" && <section className="theme-builder-equipment-zone is-weapons" aria-labelledby="builder-loadout-weapons">
-          <div className="theme-builder-equipment-zone-head"><Swords className="h-4 w-4" /><h4 id="builder-loadout-weapons">Weapon sets</h4><span>2 weapon sets</span></div>
-          <div className="theme-builder-loadout-weapons">
-            {([1, 2] as const).map((set) => (
-              <div key={set} className={builder.activeWeaponSet === set ? "is-active" : ""}>
-                <span className="theme-builder-loadout-weapon-art">
-                  {[builder.equipment.weapons[`mainhand${set}`], builder.equipment.weapons[`offhand${set}`]].filter(Boolean).map((weapon) => (
-                    <EquipmentArtwork key={weapon} src={builderWeaponIcon(weapon)} fallback={<Swords className="h-5 w-5" />} label={`${weapon} type artwork`} />
-                  ))}
-                  {!builder.equipment.weapons[`mainhand${set}`] && <Swords className="h-5 w-5" />}
-                </span>
-                <small>Set {set === 1 ? "I" : "II"}{builder.activeWeaponSet === set && <> <b>Active</b></>}</small>
-                <strong>{weaponSet(set)}</strong>
-                <em>{slotStat(`mainhand${set}`)}</em>
-              </div>
-            ))}
-          </div>
-        </section>}
-        {section === "armor" && <section className="theme-builder-equipment-zone is-trinkets" aria-labelledby="builder-loadout-trinkets">
-          <div className="theme-builder-equipment-zone-head"><Sparkles className="h-4 w-4" /><h4 id="builder-loadout-trinkets">Trinkets</h4><span>6 slots</span></div>
-          <div className="theme-builder-loadout-slots">
-            {trinketSlots.map(([slot, label]) => (
-              <div key={slot} className={builder.equipment.slots[slot] ? "is-assigned" : ""}>
-                <span><EquipmentArtwork src={BUILDER_TRINKET_SLOT_ICONS[slot]} fallback={<Sparkles className="h-4 w-4" />} label={`${label} slot`} /></span>
-                <small>{label}</small>
-                <strong>{slotStat(slot)}</strong>
-              </div>
-            ))}
-          </div>
-        </section>}
-        {section === "upgrades" && <section className="theme-builder-equipment-zone is-upgrades" aria-labelledby="builder-loadout-upgrades">
-          <div className="theme-builder-equipment-zone-head"><Sparkles className="h-4 w-4" /><h4 id="builder-loadout-upgrades">Upgrades</h4><span>Runes and sigils</span></div>
-          <div className="theme-builder-loadout-upgrades">
-            <div><EquipmentArtwork src={items[Number(runeIds[0])]?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Armor rune" /><span><small>Armor runes</small><strong>{runeNames.length ? runeNames.join(" · ") : "Unassigned"}</strong></span></div>
-            <div><EquipmentArtwork src={items[Number(sigilIds[0])]?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Weapon sigil" /><span><small>Weapon sigils</small><strong>{sigilNames.length ? sigilNames.join(" · ") : "Unassigned"}</strong></span></div>
-          </div>
-        </section>}
-      </div>
-      {section === "consumables" && <footer className="theme-builder-equipment-board-foot">
-        <div><EquipmentArtwork src={relicItem?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Relic" /><span><small>Relic</small><strong>{builder.equipment.relic || "Unassigned"}</strong></span></div>
-        <div><EquipmentArtwork src={foodItem?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Food" /><span><small>Food</small><strong>{builder.equipment.food || "Unassigned"}</strong></span></div>
-        <div><EquipmentArtwork src={utilityItem?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Utility enhancement" /><span><small>Utility</small><strong>{builder.equipment.utility || "Unassigned"}</strong></span></div>
-        <div><EquipmentArtwork src={enrichmentItem?.icon} fallback={<Sparkles className="h-4 w-4" />} label="Enrichment" /><span><small>Enrichment</small><strong>{enrichmentItem?.name ?? (builder.equipment.enrichment || "Unassigned")}</strong></span></div>
-      </footer>}
-    </div>
-  );
-}
-
 function BuilderReadiness({ issues, embedded = false }: { issues: string[]; embedded?: boolean }) {
   const score = Math.max(0, 6 - issues.length);
   return (
@@ -725,6 +656,14 @@ function DetailPanel({ selected, builder, embedded = false, showAdvanced = true 
 
   const item = selected.item;
   const facts = "facts" in item ? item.facts ?? [] : [];
+  const enrichedFacts = selected.kind === "skill" || selected.kind === "trait"
+    ? enrichedFactsForEntity(selected.item, builder.gameMode)
+    : facts;
+  const providedEffects = selected.kind === "skill" || selected.kind === "trait"
+    ? enrichedFacts.filter(isProvidedEffectFact)
+    : [];
+  const providedStatuses = new Set(providedEffects.map((fact) => fact.status));
+  const combatFacts = enrichedFacts.filter((fact) => !fact.status || !providedStatuses.has(fact.status));
   const description = "description" in item ? item.description : "";
 
   return (
@@ -739,10 +678,28 @@ function DetailPanel({ selected, builder, embedded = false, showAdvanced = true 
         </div>
       </div>
       {description && <p className="whitespace-pre-line">{description}</p>}
-      {facts.length > 0 && (
+      {providedEffects.length > 0 && (
+        <div className="theme-builder-provided-effects">
+          <FieldLabel>Provides</FieldLabel>
+          <div className="theme-builder-provided-effects-grid">
+            {providedEffects.map((fact, index) => (
+              <div key={`${fact.status ?? "effect"}-${index}`} className="theme-builder-provided-effect">
+                {fact.icon || fallbackConditionIcon(fact.status ?? "")
+                  ? <img src={fact.icon ?? fallbackConditionIcon(fact.status ?? "")} alt="" />
+                  : <Sparkles className="h-4 w-4" />}
+                <span>
+                  <strong>{fact.status}</strong>
+                  {providedEffectLabel(fact) && <small>{providedEffectLabel(fact)}</small>}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {combatFacts.length > 0 && (
         <div className="mt-4 space-y-2">
           <FieldLabel>Combat facts</FieldLabel>
-          {facts.slice(0, 8).map((fact, index) => (
+          {combatFacts.slice(0, 8).map((fact, index) => (
             <div key={`${fact.type ?? "fact"}-${index}`} className="theme-builder-fact">
               {fact.icon && <img src={fact.icon} alt="" />}
               <span>{factLabel(fact) || fact.type || "Effect"}</span>
@@ -758,29 +715,32 @@ function DetailPanel({ selected, builder, embedded = false, showAdvanced = true 
   );
 }
 
-function BuilderMobileTools({ issues, selected, builder }: { issues: string[]; selected: BuilderSummaryItem | null; builder: EntropyBuilderState }) {
-  const [openPanel, setOpenPanel] = useState<MobileRailPanel | null>(null);
-  const returnFocusRef = useRef<HTMLButtonElement | null>(null);
+function BuilderMobileTools({
+  issues,
+  selected,
+  builder,
+  openPanel,
+  setOpenPanel,
+  returnFocusRef,
+}: {
+  issues: string[];
+  selected: BuilderSummaryItem | null;
+  builder: EntropyBuilderState;
+  openPanel: MobileRailPanel | null;
+  setOpenPanel: React.Dispatch<React.SetStateAction<MobileRailPanel | null>>;
+  returnFocusRef: React.MutableRefObject<HTMLButtonElement | null>;
+}) {
   const readinessButtonRef = useRef<HTMLButtonElement>(null);
   const inspectorButtonRef = useRef<HTMLButtonElement>(null);
   const reduceMotion = useReducedMotion();
   const score = Math.max(0, 6 - issues.length);
-
-  useEffect(() => {
-    const query = window.matchMedia("(max-width: 760px)");
-    const closeAtDesktopWidth = (event: MediaQueryListEvent) => {
-      if (!event.matches) setOpenPanel(null);
-    };
-    query.addEventListener("change", closeAtDesktopWidth);
-    return () => query.removeEventListener("change", closeAtDesktopWidth);
-  }, []);
 
   const showPanel = (panel: MobileRailPanel, trigger: HTMLButtonElement | null) => {
     returnFocusRef.current = trigger;
     setOpenPanel(panel);
   };
   const closePanel = () => setOpenPanel(null);
-  const sheetTitle = openPanel === "readiness" ? "Build readiness" : "Loadout inspector";
+  const sheetTitle = openPanel === "readiness" ? "Build readiness" : openPanel === "inspector" ? "Loadout inspector" : "Builder details";
 
   const handleSheetKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
@@ -831,7 +791,7 @@ function BuilderMobileTools({ issues, selected, builder }: { issues: string[]; s
         </button>
       </div>
       {typeof document !== "undefined" && createPortal(
-        <AnimatePresence onExitComplete={() => { if (returnFocusRef.current?.offsetParent) returnFocusRef.current.focus(); }}>
+        <AnimatePresence onExitComplete={() => { if (returnFocusRef.current?.offsetParent) returnFocusRef.current.focus(); returnFocusRef.current = null; }}>
           {openPanel && (
             <motion.div
               key="builder-mobile-sheet"
@@ -858,7 +818,16 @@ function BuilderMobileTools({ issues, selected, builder }: { issues: string[]; s
                   <button type="button" autoFocus onClick={closePanel} aria-label={`Close ${sheetTitle}`} title="Close"><X className="h-4 w-4" /></button>
                 </header>
                 <div className="theme-builder-mobile-sheet-content">
-                  {openPanel === "readiness" ? <BuilderReadiness issues={issues} embedded /> : <DetailPanel selected={selected} builder={builder} embedded />}
+                  {openPanel === "readiness" ? (
+                    <BuilderReadiness issues={issues} embedded />
+                  ) : openPanel === "inspector" ? (
+                    <DetailPanel selected={selected} builder={builder} embedded />
+                  ) : (
+                    <div className="theme-builder-compact-details">
+                      <BuilderReadiness issues={issues} embedded />
+                      <DetailPanel selected={selected} builder={builder} embedded />
+                    </div>
+                  )}
                 </div>
               </motion.section>
             </motion.div>
@@ -988,7 +957,7 @@ function BuildLibrary({
   };
 
   return (
-    <section className="theme-builder-workspace">
+    <section className="theme-builder-workspace theme-builder-library-workspace">
       <div className="theme-builder-section-head">
         <div><div className="theme-builder-kicker">Local doctrine</div><h3>Build library</h3></div>
         <div className="theme-builder-search">
@@ -1102,7 +1071,7 @@ function SquadBoonCoverage({
   const providers = useMemo(() => {
     const map = new Map<
       string,
-      { icon?: string; sources: Array<{ buildName: string; profession: string; estimatedUptimePercent?: number }> }
+      { icon?: string; sources: Array<{ buildName: string; profession: string; sourceNames: string[]; estimatedUptimePercent?: number }> }
     >();
     const referenced = composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id));
     for (const buildId of referenced) {
@@ -1115,7 +1084,8 @@ function SquadBoonCoverage({
         const existing = map.get(entry.name) ?? { icon: entry.icon, sources: [] }; if (!existing.icon && entry.icon) existing.icon = entry.icon;
         existing.sources.push({
           buildName: build.name,
-         profession: build.state.professionId,
+          profession: build.state.professionId,
+          sourceNames: [...new Set(entry.sources.filter((source) => source.isAlly).map((source) => source.sourceName))],
           estimatedUptimePercent: entry.estimatedUptimePercent,
         });
         map.set(entry.name, existing);
@@ -1127,11 +1097,11 @@ function SquadBoonCoverage({
   const missingBoons = BOON_DISPLAY_ORDER.filter((boon) => !coveredBoons.includes(boon));
 
   return (
-    <details className="theme-builder-boon-coverage theme-builder-coverage-disclosure">
-      <summary className="theme-builder-section-head">
+    <section className="theme-builder-boon-coverage theme-builder-coverage-disclosure">
+      <div className="theme-builder-section-head">
         <div><div className="theme-builder-kicker">Live from assigned squad slots</div><h3>Squad boon coverage</h3></div>
-        <span>{computing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}</span>
-      </summary>
+        {computing && <Loader2 className="h-4 w-4 animate-spin" aria-label="Updating boon coverage" />}
+      </div>
       <div className="theme-builder-boon-grid" role="list" aria-label="Detected squad boon coverage">
         {coveredBoons.map((boon) => {
           const entry = providers.get(boon); const list = entry?.sources ?? [];
@@ -1147,8 +1117,8 @@ function SquadBoonCoverage({
             ? list
                 .map((source) =>
                   source.estimatedUptimePercent != null
-                    ? `${source.buildName} (${source.profession}) - ~${Math.round(source.estimatedUptimePercent)}% uptime`
-                    : `${source.buildName} (${source.profession})`,
+                    ? `${source.buildName} (${source.profession}): ${source.sourceNames.join(" + ")} - ~${Math.round(source.estimatedUptimePercent)}% uptime`
+                    : `${source.buildName} (${source.profession}): ${source.sourceNames.join(" + ")}`,
                 )
                 .join(", ")
             : "No assigned build grants this to allies";
@@ -1168,7 +1138,7 @@ function SquadBoonCoverage({
         })}
       </div>
       <p className="theme-builder-coverage-missing"><strong>Missing</strong><span>{missingBoons.length ? missingBoons.join(" · ") : "None"}</span></p>
-    </details>
+    </section>
   );
 }
 
@@ -1211,11 +1181,11 @@ function SquadConditionCoverage({
   const missingConditions = BUILDER_CONDITION_DISPLAY_ORDER.filter((condition) => !coveredConditions.includes(condition));
 
   return (
-    <details className="theme-builder-boon-coverage theme-builder-condition-coverage theme-builder-coverage-disclosure">
-      <summary className="theme-builder-section-head">
+    <section className="theme-builder-boon-coverage theme-builder-condition-coverage theme-builder-coverage-disclosure">
+      <div className="theme-builder-section-head">
         <div><div className="theme-builder-kicker">Detected from assigned skills and traits</div><h3>Squad condition access</h3></div>
-        <span>{computing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}</span>
-      </summary>
+        {computing && <Loader2 className="h-4 w-4 animate-spin" aria-label="Updating condition access" />}
+      </div>
       <div className="theme-builder-boon-grid theme-builder-condition-grid" role="list" aria-label="Detected squad condition access">
         {coveredConditions.map((condition) => {
           const entry = providers.get(condition); const list = entry?.sources ?? [];
@@ -1252,7 +1222,7 @@ function SquadConditionCoverage({
         })}
       </div>
       <p className="theme-builder-coverage-missing"><strong>Missing</strong><span>{missingConditions.length ? missingConditions.join(" · ") : "None"}</span></p>
-    </details>
+    </section>
   );
 }
 
@@ -1329,6 +1299,7 @@ function SquadMoveDialog({
 function SquadWorkspace({
   composition,
   builds,
+  coverageBuilds,
   boonCache,
   boonComputing,
   conditionCache,
@@ -1342,6 +1313,7 @@ function SquadWorkspace({
 }: {
   composition: BuilderComposition | null;
   builds: SavedBuilderBuild[];
+  coverageBuilds: SavedBuilderBuild[];
   boonCache: Record<string, BoonCoverageEntry[]>;
   boonComputing: boolean;
   conditionCache: Record<string, BuilderConditionEntry[]>;
@@ -1538,8 +1510,8 @@ function SquadWorkspace({
         <button type="button" className="theme-builder-add-line" onClick={() => update({ parties: [...composition.parties, createParty(composition.parties.length)] })}><Plus className="h-4 w-4" /> Add subgroup</button>
       </section>
       <div className="theme-builder-squad-coverage-stack">
-        <SquadBoonCoverage composition={composition} builds={builds} boonCache={boonCache} computing={boonComputing} />
-        <SquadConditionCoverage composition={composition} builds={builds} conditionCache={conditionCache} computing={conditionComputing} />
+        <SquadBoonCoverage composition={composition} builds={coverageBuilds} boonCache={boonCache} computing={boonComputing} />
+        <SquadConditionCoverage composition={composition} builds={coverageBuilds} conditionCache={conditionCache} computing={conditionComputing} />
       </div>
       </div>
       <div className="theme-builder-squad-command-right">
@@ -1589,6 +1561,136 @@ function SquadWorkspace({
   );
 }
 
+function buildAttributeRows(attributeTotals: AttributeTotals): Array<[string, string, React.ReactNode]> {
+  return [
+    ["Power", Math.round(attributeTotals.power).toLocaleString(), <Swords className="h-4 w-4" />],
+    ["Precision", Math.round(attributeTotals.precision).toLocaleString(), <Sparkles className="h-4 w-4" />],
+    ["Toughness", Math.round(attributeTotals.toughness).toLocaleString(), <Shield className="h-4 w-4" />],
+    ["Vitality", Math.round(attributeTotals.vitality).toLocaleString(), <Shield className="h-4 w-4" />],
+    ["Ferocity", Math.round(attributeTotals.ferocity).toLocaleString(), <Swords className="h-4 w-4" />],
+    ["Condition Damage", Math.round(attributeTotals.conditionDamage).toLocaleString(), <Sparkles className="h-4 w-4" />],
+    ["Expertise", Math.round(attributeTotals.expertise).toLocaleString(), <Sparkles className="h-4 w-4" />],
+    ["Concentration", Math.round(attributeTotals.concentration).toLocaleString(), <Users className="h-4 w-4" />],
+    ["Healing Power", Math.round(attributeTotals.healingPower).toLocaleString(), <Users className="h-4 w-4" />],
+    ["Crit Chance", attributeTotals.critChance.toFixed(1) + "%", <Swords className="h-4 w-4" />],
+    ["Crit Damage", attributeTotals.critDamage.toFixed(1) + "%", <Swords className="h-4 w-4" />],
+    ["Boon Duration", attributeTotals.boonDuration.toFixed(1) + "%", <Users className="h-4 w-4" />],
+    ["Condition Duration", attributeTotals.conditionDuration.toFixed(1) + "%", <Sparkles className="h-4 w-4" />],
+  ];
+}
+
+function EquipmentAttributePanel({
+  attributeProfile,
+}: {
+  attributeProfile: AttributeProfile;
+}) {
+  const bonusSources = attributeProfile.contributions.filter((contribution) =>
+    ["rune", "infusion", "relic", "food", "utility", "enrichment"].includes(contribution.source)
+      && Object.keys(contribution.stats).length > 0,
+  );
+  return (
+    <aside className="theme-builder-equipment-attributes" aria-label="Live equipment attributes" aria-live="polite">
+      <header>
+        <div>
+          <div className="theme-builder-kicker">Live loadout</div>
+          <h4><Gauge className="h-4 w-4" /> Attributes</h4>
+        </div>
+        <span>Set {attributeProfile.activeWeaponSet === 2 ? "II" : "I"}</span>
+      </header>
+      <div className="theme-builder-equipment-attribute-grid">
+        {buildAttributeRows(attributeProfile.totals).map(([label, value, icon]) => (
+          <div key={label} className="theme-builder-equipment-attribute">
+            <i>{icon}</i>
+            <span>{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+      {bonusSources.length > 0 && (
+        <div className="theme-builder-equipment-bonuses">
+          <span>Applied bonuses</span>
+          {bonusSources.map((contribution) => (
+            <div key={contribution.source}>
+              <strong>{contribution.label}</strong>
+              <small>{Object.entries(contribution.stats).map(([attribute, value]) => `+${formatInteger(value)} ${attribute.replace(/([a-z])([A-Z])/g, "$1 $2")}`).join(" · ")}</small>
+            </div>
+          ))}
+        </div>
+      )}
+    </aside>
+  );
+}
+
+function BuildAnalysis({
+  attributeTotals,
+  attributeProfile,
+}: {
+  attributeTotals: AttributeTotals;
+  attributeProfile: AttributeProfile;
+}) {
+  const attributeRows = buildAttributeRows(attributeTotals);
+  const pressureRows = [
+    ["Strike", attributeProfile.pressure.strike],
+    ["Condition", attributeProfile.pressure.condition],
+    ["Support", attributeProfile.pressure.support],
+    ["Sustain", attributeProfile.pressure.sustain],
+  ] as const;
+  const offenseAttrs: Gw2Attribute[] = ["Power", "Precision", "Ferocity", "ConditionDamage", "Expertise"];
+  const supportAttrs: Gw2Attribute[] = ["Concentration", "HealingPower", "Toughness", "Vitality"];
+
+  return (
+    <div className="theme-builder-analysis">
+      <section className="theme-builder-analysis-attributes" aria-label="Build attributes">
+        <div className="theme-builder-preview-equipment-heading">
+          <Gauge className="h-4 w-4" />
+          <span>Attributes</span>
+        </div>
+        <div className="theme-builder-preview-attributes">
+          {attributeRows.map(([label, value, icon]) => (
+            <div key={label} className="theme-builder-preview-attribute">
+              <i>{icon}</i>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <details className="theme-builder-analysis-details">
+        <summary>
+          <span>Build analysis</span>
+          <small>{pressureLabel(attributeProfile.primaryIdentity)} · {attributeProfile.equippedSlots}/{attributeProfile.totalSlots} gear slots scored</small>
+        </summary>
+        <div className="theme-builder-analysis-detail-body">
+          <div className="theme-builder-tactical-strip">
+            <div className="theme-builder-tactical-card is-primary">
+              <small>Build identity</small>
+              <strong>{pressureLabel(attributeProfile.primaryIdentity)}</strong>
+              <span>Active set {attributeProfile.activeWeaponSet === 1 ? "I" : "II"} · {attributeProfile.equippedSlots}/{attributeProfile.totalSlots} gear slots scored</span>
+            </div>
+            {pressureRows.map(([label, value]) => (
+              <div key={label} className="theme-builder-tactical-meter">
+                <div><small>{label}</small><strong>{value}</strong></div>
+                <i><span style={{ width: `${value}%` }} /></i>
+              </div>
+            ))}
+          </div>
+          <div className="theme-builder-contribution-grid">
+            {attributeProfile.contributions.map((contribution) => (
+              <div key={contribution.source} className="theme-builder-contribution-card">
+                <small>{contribution.label}</small>
+                <strong>+{formatInteger(contributionTotal(contribution, offenseAttrs))}</strong>
+                <span>offense stats</span>
+                <em>+{formatInteger(contributionTotal(contribution, supportAttrs))} support/sustain</em>
+              </div>
+            ))}
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+}
+
 function BuildPreview({
   builder,
   profession,
@@ -1605,6 +1707,7 @@ function BuildPreview({
   onInspectPet,
   onInspectTrait,
   onInspectSpecialization,
+  compact = false,
 }: {
   builder: EntropyBuilderState;
   profession: Gw2Profession | null;
@@ -1621,34 +1724,11 @@ function BuildPreview({
   onInspectPet: (pet: Gw2Pet) => void;
   onInspectTrait: (trait: Gw2Trait) => void;
   onInspectSpecialization: (specialization: Gw2Specialization) => void;
+  compact?: boolean;
 }) {
-  const attributeRows: Array<[string, string, React.ReactNode]> = [
-    ["Power", Math.round(attributeTotals.power).toLocaleString(), <Swords className="h-4 w-4" />],
-    ["Precision", Math.round(attributeTotals.precision).toLocaleString(), <Sparkles className="h-4 w-4" />],
-    ["Toughness", Math.round(attributeTotals.toughness).toLocaleString(), <Shield className="h-4 w-4" />],
-    ["Vitality", Math.round(attributeTotals.vitality).toLocaleString(), <Shield className="h-4 w-4" />],
-    ["Ferocity", Math.round(attributeTotals.ferocity).toLocaleString(), <Swords className="h-4 w-4" />],
-    ["Condition Damage", Math.round(attributeTotals.conditionDamage).toLocaleString(), <Sparkles className="h-4 w-4" />],
-    ["Expertise", Math.round(attributeTotals.expertise).toLocaleString(), <Sparkles className="h-4 w-4" />],
-    ["Concentration", Math.round(attributeTotals.concentration).toLocaleString(), <Users className="h-4 w-4" />],
-    ["Healing Power", Math.round(attributeTotals.healingPower).toLocaleString(), <Users className="h-4 w-4" />],
-    ["Crit Chance", attributeTotals.critChance.toFixed(1) + "%", <Swords className="h-4 w-4" />],
-    ["Crit Damage", attributeTotals.critDamage.toFixed(1) + "%", <Swords className="h-4 w-4" />],
-    ["Boon Duration", attributeTotals.boonDuration.toFixed(1) + "%", <Users className="h-4 w-4" />],
-    ["Condition Duration", attributeTotals.conditionDuration.toFixed(1) + "%", <Sparkles className="h-4 w-4" />],
-  ];
-  const pressureRows = [
-    ["Strike", attributeProfile.pressure.strike],
-    ["Condition", attributeProfile.pressure.condition],
-    ["Support", attributeProfile.pressure.support],
-    ["Sustain", attributeProfile.pressure.sustain],
-  ] as const;
-  const offenseAttrs: Gw2Attribute[] = ["Power", "Precision", "Ferocity", "ConditionDamage", "Expertise"];
-  const supportAttrs: Gw2Attribute[] = ["Concentration", "HealingPower", "Toughness", "Vitality"];
-
   return (
     <div className="theme-builder-preview">
-      <div className="theme-builder-preview-header">
+      {!compact && <div className="theme-builder-preview-header">
         {profession && <ClassIcon name={resolveEliteSpecName(builder.specializationIds, specsById, profession.name)} size="lg" />}
         <div>
           <h2>{builder.name || "Untitled Build"}</h2>
@@ -1657,44 +1737,9 @@ function BuildPreview({
             {builder.role ? " · " + builder.role : ""}
           </p>
         </div>
-      </div>
+      </div>}
 
-      <BuildCombatBar builder={builder} profession={profession} specsById={specsById} skillsById={skillsById} legends={legends} pets={pets} health={attributeTotals.health} weaponSet={weaponSet} onSwap={onSwapWeaponSet} onInspect={onInspectSkill} onInspectPet={onInspectPet} />
-
-      <div className="theme-builder-tactical-strip">
-        <div className="theme-builder-tactical-card is-primary">
-          <small>Build identity</small>
-          <strong>{pressureLabel(attributeProfile.primaryIdentity)}</strong>
-          <span>Active set {attributeProfile.activeWeaponSet === 1 ? "I" : "II"} · {attributeProfile.equippedSlots}/{attributeProfile.totalSlots} gear slots scored</span>
-        </div>
-        {pressureRows.map(([label, value]) => (
-          <div key={label} className="theme-builder-tactical-meter">
-            <div><small>{label}</small><strong>{value}</strong></div>
-            <i><span style={{ width: `${value}%` }} /></i>
-          </div>
-        ))}
-      </div>
-
-      <div className="theme-builder-preview-attributes">
-        {attributeRows.map(([label, value, icon]) => (
-          <div key={label} className="theme-builder-preview-attribute">
-            <i>{icon}</i>
-            <span>{label}</span>
-            <strong>{value}</strong>
-          </div>
-        ))}
-      </div>
-
-      <div className="theme-builder-contribution-grid">
-        {attributeProfile.contributions.map((contribution) => (
-          <div key={contribution.source} className="theme-builder-contribution-card">
-            <small>{contribution.label}</small>
-            <strong>+{formatInteger(contributionTotal(contribution, offenseAttrs))}</strong>
-            <span>offense stats</span>
-            <em>+{formatInteger(contributionTotal(contribution, supportAttrs))} support/sustain</em>
-          </div>
-        ))}
-      </div>
+      <BuildCombatBar builder={builder} profession={profession} specsById={specsById} skillsById={skillsById} legends={legends} pets={pets} health={attributeTotals.health} weaponSet={weaponSet} onSwap={onSwapWeaponSet} onInspect={onInspectSkill} onInspectPet={onInspectPet} showUtilityNames={compact} />
 
       <div className="theme-builder-preview-specs">
         {[0, 1, 2].map((trackIndex) => {
@@ -1751,6 +1796,7 @@ function BuildPreview({
           );
         })}
       </div>
+      {!compact && <BuildAnalysis attributeTotals={attributeTotals} attributeProfile={attributeProfile} />}
     </div>
   );
 }
@@ -1759,10 +1805,14 @@ function EquipmentPreview({
   builder,
   items,
   onInspectItem,
+  attributeTotals,
+  attributeProfile,
 }: {
   builder: EntropyBuilderState;
   items: Record<number, Gw2Item>;
   onInspectItem?: (item: Gw2Item) => void;
+  attributeTotals?: AttributeTotals;
+  attributeProfile?: AttributeProfile;
 }) {
   const itemFor = (id: string | number | undefined) => (id ? items[Number(id)] : undefined);
   const trinketSlots = ["amulet", "ring1", "ring2", "accessory1", "accessory2", "backpack"];
@@ -1878,6 +1928,7 @@ function EquipmentPreview({
         </div>
       </div>
       </div>
+      {attributeTotals && attributeProfile && <BuildAnalysis attributeTotals={attributeTotals} attributeProfile={attributeProfile} />}
     </div>
   );
 }
@@ -1926,7 +1977,7 @@ function BuildViewerDialog({
     return map;
   }, [traits]);
   const skillsById = useMemo(() => new Map(skills.map((skill) => [skill.id, skill])), [skills]);
-  const profile = useMemo(() => computeAttributeProfile(build.state, profession), [build, profession]);
+  const profile = useMemo(() => computeAttributeProfile(build.state, profession, items), [build, profession, items]);
 
   useEffect(() => {
     if (profession) setSelected((current) => current ?? { kind: "profession", item: profession });
@@ -2018,7 +2069,7 @@ function BuildViewerDialog({
             <details ref={exportMenuRef} className="theme-builder-viewer-export">
               <summary title="Copy or share build" aria-label="Copy or share build"><Share2 className="h-4 w-4" /><span>Share</span></summary>
               <div>
-                <button type="button" aria-label="Copy build AxiCode" disabled={!build.shareCode} onClick={() => copyViewerValue(build.shareCode, "AxiCode copied.")}><Clipboard className="h-4 w-4" /> Copy AxiCode</button>
+                <button type="button" aria-label="Copy Entropy build code" disabled={!build.shareCode} onClick={() => copyViewerValue(brandEntropyCode(build.shareCode), "Entropy code copied.")}><Clipboard className="h-4 w-4" /> Copy Entropy code</button>
                 <button type="button" aria-label="Copy portable build share link" disabled={!build.shareCode} onClick={() => copyViewerValue(buildAxiForgeShareUrl(build.shareCode), "Portable share link copied.")}><Link2 className="h-4 w-4" /> Copy share link</button>
                 {!build.shareCode && <small>Complete required build data to enable portable sharing.</small>}
               </div>
@@ -2033,8 +2084,8 @@ function BuildViewerDialog({
         <div id={`builder-viewer-panel-${tab}`} className="theme-builder-viewer-body" role="tabpanel" aria-labelledby={`builder-viewer-tab-${tab}`} aria-busy={catalogLoading}>
           <div className="theme-builder-viewer-canvas">
             {tab === "build" ? (
-              <BuildPreview builder={build.state} profession={profession} specsById={viewerSpecsById} traitsBySpecId={traitsBySpecId} skillsById={skillsById} legends={legends} pets={pets} attributeTotals={profile.totals} attributeProfile={profile} weaponSet={weaponSet} onSwapWeaponSet={() => setWeaponSet((current) => current === 1 ? 2 : 1)} onInspectSkill={(skill) => setSelected({ kind: "skill", item: skill })} onInspectPet={(pet) => setSelected({ kind: "pet", item: pet })} onInspectTrait={(trait) => setSelected({ kind: "trait", item: trait })} onInspectSpecialization={(specialization) => setSelected({ kind: "specialization", item: specialization })} />
-            ) : <EquipmentPreview builder={build.state} items={items} onInspectItem={(item) => setSelected({ kind: "item", item })} />}
+              <BuildPreview builder={build.state} profession={profession} specsById={viewerSpecsById} traitsBySpecId={traitsBySpecId} skillsById={skillsById} legends={legends} pets={pets} attributeTotals={profile.totals} attributeProfile={profile} weaponSet={weaponSet} onSwapWeaponSet={() => setWeaponSet((current) => current === 1 ? 2 : 1)} onInspectSkill={(skill) => setSelected({ kind: "skill", item: skill })} onInspectPet={(pet) => setSelected({ kind: "pet", item: pet })} onInspectTrait={(trait) => setSelected({ kind: "trait", item: trait })} onInspectSpecialization={(specialization) => setSelected({ kind: "specialization", item: specialization })} compact />
+            ) : <EquipmentPreview builder={build.state} items={items} attributeTotals={profile.totals} attributeProfile={profile} onInspectItem={(item) => setSelected({ kind: "item", item })} />}
           </div>
           <DetailPanel selected={selected} builder={build.state} embedded showAdvanced={false} />
         </div>
@@ -2053,6 +2104,8 @@ export default function AxiForgeLabView() {
   const [builderViewMode, setBuilderViewMode] = useState<BuilderSection>(loadBuilderSection);
   const [equipmentSection, setEquipmentSection] = useState<EquipmentSection>("weapons");
   const [detailRailOpen, setDetailRailOpen] = useState(false);
+  const [compactDetailsPanel, setCompactDetailsPanel] = useState<MobileRailPanel | null>(null);
+  const compactDetailsReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const exportMenuRef = useRef<HTMLDetailsElement>(null);
   const [displayedWeaponSet, setDisplayedWeaponSet] = useState<WeaponSetNumber>(() => workspace.draft.activeWeaponSet === 2 ? 2 : 1);
   const [editingBuildId, setEditingBuildId] = useState<string | null>(null);
@@ -2084,6 +2137,26 @@ export default function AxiForgeLabView() {
   const updateBuilder = (updater: EntropyBuilderState | ((current: EntropyBuilderState) => EntropyBuilderState)) => {
     setWorkspace((current) => ({ ...current, draft: typeof updater === "function" ? updater(current.draft) : updater }));
   };
+
+  const inspectBuilderItem = (summary: BuilderSummaryItem) => {
+    setSelectedSummary(summary);
+    if (window.matchMedia(BUILDER_COMPACT_DETAILS_QUERY).matches) {
+      compactDetailsReturnFocusRef.current = document.activeElement instanceof HTMLButtonElement ? document.activeElement : null;
+      setCompactDetailsPanel("inspector");
+    } else setDetailRailOpen(true);
+  };
+
+  useEffect(() => {
+    const query = window.matchMedia(BUILDER_COMPACT_DETAILS_QUERY);
+    const syncDetailSurface = (compact: boolean) => {
+      if (compact) setDetailRailOpen(false);
+      else setCompactDetailsPanel(null);
+    };
+    const handleWidthChange = (event: MediaQueryListEvent) => syncDetailSurface(event.matches);
+    syncDetailSurface(query.matches);
+    query.addEventListener("change", handleWidthChange);
+    return () => query.removeEventListener("change", handleWidthChange);
+  }, []);
 
   useEffect(() => saveBuilderWorkspace(workspace), [workspace]);
 
@@ -2119,7 +2192,13 @@ export default function AxiForgeLabView() {
     if (!sharedCode) return;
     const result = decodeAxiForgeCode(sharedCode);
     if (result.ok && result.value && result.kind === "comp") {
-    hydrateSharedComposition(result.value);
+    void hydrateSharedComposition(result.value).catch((error) => {
+      setNotice({
+        tone: "error",
+        message: error instanceof Error ? error.message : "The shared squad could not be restored.",
+      });
+      clearAxiForgeShareQuery();
+    });
     return;
     }
     if (!result.ok || !result.value || result.kind !== "build") {
@@ -2138,9 +2217,17 @@ export default function AxiForgeLabView() {
   }, []);
 
   const selectedProfession = useMemo(() => professions.find((profession) => profession.id === builder.professionId) ?? null, [builder.professionId, professions]);
-  const attributeProfile = useMemo(() => computeAttributeProfile(builder, selectedProfession), [builder, selectedProfession]);
+  const attributeProfile = useMemo(() => computeAttributeProfile(builder, selectedProfession, equipmentItems), [builder, selectedProfession, equipmentItems]);
   const attributeTotals = attributeProfile.totals;
   const specsById = useMemo(() => new Map(professionSpecs.map((spec) => [spec.id, spec])), [professionSpecs]);
+  const equipmentSpecialization = resolveEliteSpecName(builder.specializationIds, specsById, selectedProfession?.name ?? "Build");
+  const activeEquipmentWeapons = useMemo(() => {
+    const set = builder.activeWeaponSet === 2 ? 2 : 1;
+    return [builder.equipment.weapons[`mainhand${set}`], builder.equipment.weapons[`offhand${set}`]]
+      .filter(Boolean)
+      .map((weapon) => weapon.charAt(0).toUpperCase() + weapon.slice(1))
+      .join(" + ");
+  }, [builder.activeWeaponSet, builder.equipment.weapons]);
   const traitsBySpecId = useMemo(() => {
     const map = new Map<number, Gw2Trait[]>();
     selectedSpecTraits.forEach((trait) => map.set(trait.specialization, [...(map.get(trait.specialization) ?? []), trait]));
@@ -2167,9 +2254,9 @@ export default function AxiForgeLabView() {
       ...validateBuilderSkillsAgainstCatalog(builder, professionSkills),
       ...validateRevenantLegendSelection(builder, legends, skillsById),
     ];
-    if (!choiceIsCodecSupported(builder.equipment.relic, BUILDER_RELIC_CHOICES)) next.push("Relic is not supported by the installed AxiCode format.");
-    if (!choiceIsCodecSupported(builder.equipment.food, BUILDER_FOOD_LABELS)) next.push("Food is not supported by the installed AxiCode format.");
-    if (!choiceIsCodecSupported(builder.equipment.utility, BUILDER_UTILITY_LABELS)) next.push("Utility is not supported by the installed AxiCode format.");
+    if (!choiceIsCodecSupported(builder.equipment.relic, BUILDER_RELIC_CHOICES)) next.push("Relic is not supported by the current Entropy code format.");
+    if (!choiceIsCodecSupported(builder.equipment.food, BUILDER_FOOD_LABELS)) next.push("Food is not supported by the current Entropy code format.");
+    if (!choiceIsCodecSupported(builder.equipment.utility, BUILDER_UTILITY_LABELS)) next.push("Utility is not supported by the current Entropy code format.");
     return next;
   }, [builder, legends, professionSkills, selectedProfession, skillsById]);
   const builderSectionIssueCounts = useMemo<Record<BuilderSection, number>>(() => {
@@ -2193,6 +2280,10 @@ export default function AxiForgeLabView() {
   const gw2SkillsInput = useMemo(() => isGw2SkillsInput(importCode), [importCode]);
   const gw2ChatCodeInput = useMemo(() => isBuildChatCode(importCode), [importCode]);
   const activeComposition = workspace.compositions.find((composition) => composition.id === workspace.activeCompositionId) ?? null;
+  const squadCoverageBuilds = useMemo(
+    () => mergeLiveBuildForCoverage(workspace.builds, editingBuildId, builder),
+    [builder, editingBuildId, workspace.builds],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -2271,7 +2362,7 @@ export default function AxiForgeLabView() {
       activeComposition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id)),
     );
     const targets = [...referencedIds]
-      .map((id) => workspace.builds.find((build) => build.id === id))
+      .map((id) => squadCoverageBuilds.find((build) => build.id === id))
       .filter((build): build is SavedBuilderBuild => Boolean(build));
     const missing = targets.filter((build) => !(boonCacheKey(build) in boonCache));
     if (!missing.length) return;
@@ -2296,7 +2387,7 @@ export default function AxiForgeLabView() {
       setBoonComputing(false);
     });
     return () => { cancelled = true; };
-  }, [activeComposition, workspace.builds, boonCache]);
+  }, [activeComposition, squadCoverageBuilds, boonCache]);
 
   useEffect(() => {
     if (!activeComposition) return;
@@ -2304,7 +2395,7 @@ export default function AxiForgeLabView() {
       activeComposition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id)),
     );
     const targets = [...referencedIds]
-      .map((id) => workspace.builds.find((build) => build.id === id))
+      .map((id) => squadCoverageBuilds.find((build) => build.id === id))
       .filter((build): build is SavedBuilderBuild => Boolean(build));
     const missing = targets.filter((build) => !(conditionCacheKey(build) in conditionCache));
     if (!missing.length) return;
@@ -2329,7 +2420,7 @@ export default function AxiForgeLabView() {
       setConditionComputing(false);
     });
     return () => { cancelled = true; };
-  }, [activeComposition, workspace.builds, conditionCache]);
+  }, [activeComposition, squadCoverageBuilds, conditionCache]);
 
   function chooseProfession(profession: Gw2Profession) {
     const next = createEmptyBuilder(profession.id);
@@ -2415,7 +2506,7 @@ export default function AxiForgeLabView() {
       const readinessMessage = issues.length ? `Saved with ${issues.length} readiness item${issues.length === 1 ? "" : "s"}.` : "Build saved to the local library.";
       setNotice({
         tone: encoded && !issues.length ? "success" : "warning",
-        message: encoded ? readinessMessage : `${readinessMessage} AxiCode export is unavailable until the missing build data or catalog entries are resolved.`,
+        message: encoded ? readinessMessage : `${readinessMessage} Entropy code export is unavailable until the missing build data or catalog entries are resolved.`,
       });
     } catch {
       setNotice({ tone: "error", message: "This build could not be saved." });
@@ -2426,7 +2517,7 @@ export default function AxiForgeLabView() {
     try {
       const code = createCurrentCode();
       setExportCode(code);
-      await copyText(code, "Build AxiCode copied.");
+      await copyText(code, "Entropy build code copied.");
     } catch {
       setNotice({ tone: "error", message: "Build code could not be created yet." });
     }
@@ -2463,21 +2554,15 @@ export default function AxiForgeLabView() {
     }
   }
 
-  async function hydrateImportedBuild(value: unknown, name?: string): Promise<SavedBuilderBuild> {
+  function hydrateImportedBuild(value: unknown, name?: string): SavedBuilderBuild {
     const state = builderFromAxiBuild(value, { name: name ?? "Imported Build" });
-    const specIds = state.specializationIds.filter((id): id is number => Boolean(id));
-    const specs = await fetchGw2Specializations(specIds);
-    const traits = await fetchGw2Traits(specs.flatMap((spec) => spec.major_traits));
-    const specMap = new Map(specs.map((spec) => [spec.id, spec]));
-    const traitMap = new Map<number, Gw2Trait[]>();
-    traits.forEach((trait) => traitMap.set(trait.specialization, [...(traitMap.get(trait.specialization) ?? []), trait]));
-    const code = encodeAxiForgeBuildCode(buildAxiShape(state, specMap, traitMap, new Map()));
+    const code = encodeAxiForgeBuildCode(value);
     return createSavedBuild(state, code);
   }
 
   async function hydrateSharedComposition(value: unknown) {
     const decoded = value as { name?: string; gameMode?: string; builds?: unknown[]; partyLines?: Array<{ capacity?: number; slots?: unknown[] }>; failedBuildCount?: number };
-    const importedBuilds = await Promise.all((decoded.builds ?? []).map((entry, index) => hydrateImportedBuild(entry, `Imported ${index + 1}`)));
+    const importedBuilds = (decoded.builds ?? []).map((entry, index) => hydrateImportedBuild(entry, `Imported ${index + 1}`));
     const fingerprint = (entry: unknown) => JSON.stringify(entry);
     const sourceByFingerprint = new Map((decoded.builds ?? []).map((entry, index) => [fingerprint(entry), importedBuilds[index]?.id ?? null]));
     const composition = createComposition(decoded.name || "Shared Squad");
@@ -2496,7 +2581,7 @@ export default function AxiForgeLabView() {
     async function importAxiCode() {
     const result = decodeAxiForgeCode(importCode);
     if (!result.ok || !result.value) {
-      setNotice({ tone: "error", message: result.error ?? "Unsupported AxiCode." });
+      setNotice({ tone: "error", message: result.error ?? "Unsupported Entropy code." });
       return;
     }
     if (result.kind === "build") {
@@ -2510,7 +2595,7 @@ export default function AxiForgeLabView() {
     }
 
     const decoded = result.value as { name?: string; gameMode?: string; builds?: unknown[]; partyLines?: Array<{ capacity?: number; slots?: unknown[] }>; failedBuildCount?: number };
-    const importedBuilds = await Promise.all((decoded.builds ?? []).map((value, index) => hydrateImportedBuild(value, `Imported ${index + 1}`)));
+    const importedBuilds = (decoded.builds ?? []).map((value, index) => hydrateImportedBuild(value, `Imported ${index + 1}`));
     const fingerprint = (value: unknown) => JSON.stringify(value);
     const sourceByFingerprint = new Map((decoded.builds ?? []).map((value, index) => [fingerprint(value), importedBuilds[index]?.id ?? null]));
     const composition = createComposition(decoded.name || "Imported Squad");
@@ -2651,18 +2736,17 @@ export default function AxiForgeLabView() {
     setWorkspace((current) => ({ ...current, compositions: current.compositions.map((item) => item.id === composition.id ? composition : item) }));
   }
 
-  async function exportSquad() {
-    if (!activeComposition) return;
+  async function createSquadCode(): Promise<string | null> {
+    if (!activeComposition) return null;
     const referencedIds = new Set(activeComposition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id)));
     const decodedBuilds: Record<string, unknown> = {};
     for (const id of referencedIds) {
       const saved = workspace.builds.find((build) => build.id === id);
-      const result = saved ? decodeAxiForgeCode(saved.shareCode) : null;
-      if (!result?.ok || !result.value) {
-        setNotice({ tone: "error", message: "One assigned build has no valid saved AxiCode. Open and save that build first." });
-        return;
-      }
-      const state = builderFromAxiBuild(result.value, saved?.state);
+      if (!saved) throw new Error("One assigned build is no longer available in the library.");
+      const result = decodeAxiForgeCode(saved.shareCode);
+      const state = result.ok && result.value
+        ? builderFromAxiBuild(result.value, saved.state)
+        : cloneBuilder(saved.state);
       const specIds = state.specializationIds.filter((value): value is number => Boolean(value));
       const specs = await fetchGw2Specializations(specIds);
       const traits = await fetchGw2Traits(specs.flatMap((spec) => spec.major_traits));
@@ -2670,46 +2754,34 @@ export default function AxiForgeLabView() {
       traits.forEach((trait) => bySpec.set(trait.specialization, [...(bySpec.get(trait.specialization) ?? []), trait]));
       decodedBuilds[id] = buildAxiShape(state, new Map(specs.map((spec) => [spec.id, spec])), bySpec, new Map());
     }
-    const code = encodeAxiForgeCompCode({ name: activeComposition.name, gameMode: activeComposition.gameMode, partyLines: activeComposition.parties.map((party) => ({ capacity: party.slots.length, slots: party.slots.filter((id): id is string => Boolean(id)) })) }, decodedBuilds);
-    if (!code) {
-      setNotice({ tone: "error", message: "Squad code could not be created." });
-      return;
+    return encodeAxiForgeCompCode({ name: activeComposition.name, gameMode: activeComposition.gameMode, partyLines: activeComposition.parties.map((party) => ({ capacity: party.slots.length, slots: party.slots.filter((id): id is string => Boolean(id)) })) }, decodedBuilds);
+  }
+
+  async function exportSquad() {
+    try {
+      const code = await createSquadCode();
+      if (!code) throw new Error("Squad code could not be created.");
+      setExportCode(code);
+      await copyText(code, "Entropy squad code copied.");
+    } catch (error) {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Squad code could not be created." });
     }
-    setExportCode(code);
-    await copyText(code, "Squad AxiCode copied.");
   }
 
   async function shareSquad() {
-    if (!activeComposition) return;
-    const referencedIds = new Set(activeComposition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id)));
-    const decodedBuilds: Record<string, unknown> = {};
-    for (const id of referencedIds) {
-    const saved = workspace.builds.find((build) => build.id === id);
-    const result = saved ? decodeAxiForgeCode(saved.shareCode) : null;
-    if (!result?.ok || !result.value) {
-    setNotice({ tone: "error", message: "One assigned build has no valid saved AxiCode. Open and save that build first." });
-    return;
+    try {
+      const code = await createSquadCode();
+      if (!code) throw new Error("Squad code could not be created.");
+      setExportCode(code);
+      const url = buildAxiForgeShareUrl(code);
+      if (url.length > 7500) {
+        setNotice({ tone: "warning", message: 'This squad is too large for a share link. Use "Copy squad code" and share the Entropy code instead.' });
+        return;
+      }
+      await copyText(url, "Squad share link copied.");
+    } catch (error) {
+      setNotice({ tone: "error", message: error instanceof Error ? error.message : "Squad share link could not be created." });
     }
-    const state = builderFromAxiBuild(result.value, saved?.state);
-    const specIds = state.specializationIds.filter((value): value is number => Boolean(value));
-    const specs = await fetchGw2Specializations(specIds);
-    const traits = await fetchGw2Traits(specs.flatMap((spec) => spec.major_traits));
-    const bySpec = new Map<number, Gw2Trait[]>();
-    traits.forEach((trait) => bySpec.set(trait.specialization, [...(bySpec.get(trait.specialization) ?? []), trait]));
-    decodedBuilds[id] = buildAxiShape(state, new Map(specs.map((spec) => [spec.id, spec])), bySpec, new Map());
-    }
-    const code = encodeAxiForgeCompCode({ name: activeComposition.name, gameMode: activeComposition.gameMode, partyLines: activeComposition.parties.map((party) => ({ capacity: party.slots.length, slots: party.slots.filter((id): id is string => Boolean(id)) })) }, decodedBuilds);
-    if (!code) {
-    setNotice({ tone: "error", message: "Squad code could not be created." });
-    return;
-    }
-    setExportCode(code);
-    const url = buildAxiForgeShareUrl(code);
-    if (url.length > 7500) {
-    setNotice({ tone: "warning", message: 'This squad is too large for a share link. Use "Copy squad code" and share the AxiCode text instead.' });
-    return;
-    }
-    await copyText(url, "Squad share link copied.");
     }
     
     const availableSkills = useMemo(
@@ -2796,7 +2868,7 @@ export default function AxiForgeLabView() {
 
       {importOpen && (
         <section id="builder-import-rack" className="theme-builder-import-rack">
-          <div><FieldLabel>Paste an Entropy code, GW2 build code, or gw2skills.net URL</FieldLabel><textarea aria-label="Entropy code, GW2 build code, or gw2skills.net URL" value={importCode} onChange={(event) => setImportCode(event.target.value)} placeholder="<AxiForge:...>, [&DQ...], or https://en.gw2skills.net/editor/?..." spellCheck={false} /></div>
+          <div><FieldLabel>Paste an Entropy code, GW2 build code, or gw2skills.net URL</FieldLabel><textarea aria-label="Entropy code, GW2 build code, or gw2skills.net URL" value={importCode} onChange={(event) => setImportCode(event.target.value)} placeholder="<Entropy:...>, [&DQ...], or https://en.gw2skills.net/editor/?..." spellCheck={false} /></div>
           <div className="theme-builder-import-actions"><span className={detectedKind === "unknown" && !gw2SkillsInput && !gw2ChatCodeInput ? "" : "is-ready"}>{gw2ChatCodeInput ? "GW2 build code detected" : gw2SkillsInput ? "gw2skills build detected" : kindLabel(detectedKind)}</span><button type="button" onClick={() => { setImportCode(""); setImportOpen(false); }}><Eraser className="h-4 w-4" /> Clear</button><button type="button" onClick={importBuildInput} disabled={importBusy || (detectedKind === "unknown" && !gw2SkillsInput && !gw2ChatCodeInput)}>{importBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Import</button></div>
         </section>
       )}
@@ -2815,12 +2887,12 @@ export default function AxiForgeLabView() {
 
       {activeTab === "library" && (
         <div id="builder-panel-library" role="tabpanel" aria-labelledby="builder-tab-library">
-          <BuildLibrary builds={workspace.builds} onLoad={openBuildViewer} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(code, "Build AxiCode copied.")} onShare={(code) => copyText(buildAxiForgeShareUrl(code), "Share link copied.")} specsById={allSpecsById} />
+          <BuildLibrary builds={workspace.builds} onLoad={openBuildViewer} onDuplicate={duplicateBuild} onDelete={removeBuild} onCopy={(code) => copyText(brandEntropyCode(code), "Entropy build code copied.")} onShare={(code) => copyText(buildAxiForgeShareUrl(code), "Share link copied.")} specsById={allSpecsById} />
         </div>
       )}
       {activeTab === "squad" && (
         <div id="builder-panel-squad" role="tabpanel" aria-labelledby="builder-tab-squad">
-          <SquadWorkspace composition={activeComposition} builds={workspace.builds} boonCache={boonCache} boonComputing={boonComputing} conditionCache={conditionCache} conditionComputing={conditionComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={openBuildViewer} onCopyCode={exportSquad} onShareCode={shareSquad} specsById={allSpecsById} />
+          <SquadWorkspace composition={activeComposition} builds={workspace.builds} coverageBuilds={squadCoverageBuilds} boonCache={boonCache} boonComputing={boonComputing} conditionCache={conditionCache} conditionComputing={conditionComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={openBuildViewer} onCopyCode={exportSquad} onShareCode={shareSquad} specsById={allSpecsById} />
         </div>
       )}
 
@@ -2897,17 +2969,21 @@ export default function AxiForgeLabView() {
             <div className="theme-panel theme-builder-loadout-canvas">
               <header className="theme-builder-canvas-header">
                 <div className="theme-builder-canvas-identity">
-                  {selectedProfession && <ClassIcon name={selectedProfession.name} size="lg" />}
+                  {selectedProfession && <ClassIcon name={equipmentSpecialization} size="lg" />}
                   <div>
-                    <div className="theme-builder-kicker">{selectedProfession?.name ?? "Build"} · {builder.gameMode.toUpperCase()}</div>
-                    <h3>{resolveEliteSpecName(builder.specializationIds, specsById, selectedProfession?.name ?? "Combat loadout")}</h3>
+                    <div className="theme-builder-kicker">{equipmentSpecialization} · {builder.gameMode.toUpperCase()}</div>
+                    <h3>{builder.name.trim() || "Untitled build"}</h3>
+                    <div className="theme-builder-canvas-meta" aria-label="Build loadout summary">
+                      <span>{builder.role || "Role open"}</span>
+                      <span>{activeEquipmentWeapons || "Weapons open"}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="theme-builder-canvas-status"><span>Loadout</span><strong>{6 - Math.min(6, issues.length)}/6</strong></div>
               </header>
 
               <div className="theme-builder-canvas-stage is-combat">
-                <div className="theme-builder-canvas-stage-head"><div><div className="theme-builder-kicker">Combat readout</div><h4>Equipped skill bar</h4></div><ArrowLeftRight className="h-4 w-4" /></div>
+                <div className="theme-builder-canvas-stage-head"><h4>Combat bar</h4><ArrowLeftRight className="h-4 w-4" /></div>
                 <BuildCombatBar
                   builder={builder}
                   profession={selectedProfession}
@@ -2918,13 +2994,13 @@ export default function AxiForgeLabView() {
                   health={attributeTotals.health}
                   weaponSet={displayedWeaponSet}
                   onSwap={() => setDisplayedWeaponSet((current) => current === 1 ? 2 : 1)}
-                  onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })}
-                  onInspectPet={(pet) => setSelectedSummary({ kind: "pet", item: pet })}
+                  onInspect={(skill) => inspectBuilderItem({ kind: "skill", item: skill })}
+                  onInspectPet={(pet) => inspectBuilderItem({ kind: "pet", item: pet })}
                 />
               </div>
 
               <div className="theme-builder-canvas-stage">
-              <div className="theme-builder-canvas-stage-head"><div><div className="theme-builder-kicker">Specialization matrix</div><h4>Traits</h4></div><Layers3 className="h-4 w-4" /></div>
+              <div className="theme-builder-canvas-stage-head"><h4>Specializations</h4><Layers3 className="h-4 w-4" /></div>
               <div className="theme-builder-spec-stack">
                 {[0, 1, 2].map((trackIndex) => {
                   const selectedSpecId = builder.specializationIds[trackIndex];
@@ -2964,19 +3040,27 @@ export default function AxiForgeLabView() {
                         />
                         {selectedSpec?.icon && (
                           <button
+                            className="theme-builder-spec-inspect"
                             type="button"
-                            onClick={() => setSelectedSummary({ kind: "specialization", item: selectedSpec })}
+                            onClick={() => inspectBuilderItem({ kind: "specialization", item: selectedSpec })}
                             aria-label={`Inspect ${selectedSpec.name} specialization`}
                             title={`Inspect ${selectedSpec.name} specialization`}
                           >
-                            <img src={selectedSpec.icon} alt="" />
+                            <BookOpen className="h-4 w-4" aria-hidden="true" />
                           </button>
                         )}
                       </div>
                       <div className="theme-builder-trait-grid">
                         {[1, 2, 3].map((tier) => {
                           const traits = (selectedSpecId ? traitsBySpecId.get(selectedSpecId) ?? [] : []).filter((trait) => trait.slot === "Major" && trait.tier === tier).sort((a, b) => a.order - b.order);
-                          return <div key={tier} className="theme-builder-trait-tier"><FieldLabel>Tier {tier}</FieldLabel><div>{traits.map((trait, position) => <button key={trait.id} type="button" aria-label={`Choose ${trait.name} trait`} aria-pressed={builder.traitChoices[trackIndex][tier - 1] === position + 1} className={builder.traitChoices[trackIndex][tier - 1] === position + 1 ? "is-active" : ""} onClick={() => chooseTrait(trackIndex, tier, position + 1, trait)} onFocus={() => setSelectedSummary({ kind: "trait", item: trait })} onMouseEnter={() => setSelectedSummary({ kind: "trait", item: trait })} title={trait.name}>{trait.icon ? <img src={trait.icon} alt="" /> : position + 1}</button>)}</div></div>;
+                          const selectedPosition = builder.traitChoices[trackIndex][tier - 1];
+                          const selectedTrait = selectedPosition ? traits[selectedPosition - 1] : null;
+                          return (
+                            <div key={tier} className={`theme-builder-trait-tier ${selectedTrait ? "has-selection" : ""}`}>
+                              <div className="theme-builder-trait-tier-head"><span>Tier {tier}</span><strong>{selectedTrait?.name ?? "Choose trait"}</strong></div>
+                              <div>{traits.map((trait, position) => <button key={trait.id} type="button" aria-label={`Choose ${trait.name} trait`} aria-pressed={selectedPosition === position + 1} className={selectedPosition === position + 1 ? "is-active" : ""} onClick={() => chooseTrait(trackIndex, tier, position + 1, trait)} onFocus={() => setSelectedSummary({ kind: "trait", item: trait })} onMouseEnter={() => setSelectedSummary({ kind: "trait", item: trait })} title={trait.name}>{trait.icon ? <img src={trait.icon} alt="" /> : position + 1}</button>)}</div>
+                            </div>
+                          );
                         })}
                       </div>
                     </div>
@@ -2986,7 +3070,7 @@ export default function AxiForgeLabView() {
               </div>
 
               <div className="theme-builder-canvas-stage is-utility">
-              <div className="theme-builder-canvas-stage-head"><div><div className="theme-builder-kicker">Land loadout</div><h4>Utility skills</h4></div><Swords className="h-4 w-4" /></div>
+              <div className="theme-builder-canvas-stage-head"><h4>Utility skills</h4><Swords className="h-4 w-4" /></div>
               <div className="theme-builder-skill-bar">
                 <SkillPicker label="Heal" slot="Heal" selectedId={builder.healSkillId} skills={skillGroups.Heal} allSkills={professionSkills} usedIds={[]} onChange={(id) => chooseSkill("Heal", id)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />
                 {[0, 1, 2].map((index) => <SkillPicker key={index} label={`Utility ${index + 1}`} slot="Utility" selectedId={builder.utilitySkillIds[index]} skills={skillGroups.Utility} allSkills={professionSkills} usedIds={builder.utilitySkillIds} onChange={(id) => chooseSkill("Utility", id, index)} onInspect={(skill) => setSelectedSummary({ kind: "skill", item: skill })} />)}
@@ -3000,13 +3084,21 @@ export default function AxiForgeLabView() {
             <section className="theme-builder-loadout-canvas theme-builder-equipment-workspace">
               <header className="theme-builder-canvas-header">
                 <div className="theme-builder-canvas-identity">
-                  {selectedProfession && <ClassIcon name={selectedProfession.name} size="lg" />}
+                  {selectedProfession && <ClassIcon name={equipmentSpecialization} size="lg" />}
                   <div>
-                    <div className="theme-builder-kicker">Equipment loadout · {builder.gameMode.toUpperCase()}</div>
+                    <div className="theme-builder-kicker">{equipmentSpecialization} · {builder.gameMode.toUpperCase()}</div>
                     <h3>{builder.name.trim() || "Untitled build"}</h3>
+                    <div className="theme-builder-canvas-meta" aria-label="Build loadout summary">
+                      <span>{builder.role || "Role open"}</span>
+                      <span>{activeEquipmentWeapons || "Weapons open"}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="theme-builder-canvas-status"><span>Stat doctrine</span><strong>{builder.equipment.statPackage || "Unassigned"}</strong></div>
+                <div className="theme-builder-canvas-status">
+                  <span>Stat doctrine</span>
+                  <strong>{builder.equipment.statPackage || "Unassigned"}</strong>
+                  <small>Active set {builder.activeWeaponSet === 2 ? "II" : "I"}</small>
+                </div>
               </header>
               <nav className="theme-builder-equipment-nav" role="tablist" aria-label="Equipment editor sections">
                 {EQUIPMENT_SECTIONS.map((section) => (
@@ -3027,7 +3119,6 @@ export default function AxiForgeLabView() {
                   </button>
                 ))}
               </nav>
-              <EquipmentLoadoutSheet builder={builder} items={equipmentItems} section={equipmentSection} />
               <div id="builder-equipment-editor" role="tabpanel" aria-labelledby={`builder-equipment-tab-${equipmentSection}`} className="theme-builder-equipment-grid is-focused">
                 <div className="theme-builder-equipment-group is-weapons" hidden={equipmentSection !== "weapons"}>
                   <h4>Weapons and stats</h4>
@@ -3056,7 +3147,7 @@ export default function AxiForgeLabView() {
                   <div className="theme-builder-weapon-sets">
                     {([1, 2] as const).map((set) => (
                       <section key={set} className="theme-builder-weapon-set" aria-labelledby={`builder-weapon-set-${set}`}>
-                        <h5 id={`builder-weapon-set-${set}`}>Weapon set {set === 1 ? "I" : "II"}</h5>
+                        <h5 id={`builder-weapon-set-${set}`}>Weapon set {set === 1 ? "I" : "II"}{builder.activeWeaponSet === set && <b>Active</b>}</h5>
                         <div className="grid grid-cols-2 gap-2">
                           {([`mainhand${set}`, `offhand${set}`] as const).map((slot) => {
                             const currentWeapon = builder.equipment.weapons[slot];
@@ -3091,6 +3182,8 @@ export default function AxiForgeLabView() {
                                   id={`builder-weapon-stat-${slot}`}
                                   label="Stat override"
                                   value={builder.equipment.slots[slot] || ""}
+                                  disabled={offhandDisabled}
+                                  disabledLabel="Unavailable with a two-handed weapon"
                                   choices={statOptions.filter(Boolean).map((stat) => ({ value: stat, label: stat, group: (QUICK_STAT_OPTIONS as readonly string[]).includes(stat) ? "Common" : "All stats" }))}
                                   onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, slots: { ...current.equipment.slots, [slot]: value } } }))}
                                   placeholder="Use doctrine stats"
@@ -3206,6 +3299,7 @@ export default function AxiForgeLabView() {
                     </div>
                   )}
                 </div>
+                <EquipmentAttributePanel attributeProfile={attributeProfile} />
               </div>
             </section>
           )}
@@ -3285,39 +3379,53 @@ export default function AxiForgeLabView() {
                         attributeProfile={attributeProfile}
                         weaponSet={displayedWeaponSet}
                         onSwapWeaponSet={() => setDisplayedWeaponSet((current) => current === 1 ? 2 : 1)}
-                        onInspectSkill={(skill) => setSelectedSummary({ kind: "skill", item: skill })}
-                        onInspectPet={(pet) => setSelectedSummary({ kind: "pet", item: pet })}
-                        onInspectTrait={(trait) => setSelectedSummary({ kind: "trait", item: trait })}
-                        onInspectSpecialization={(specialization) => setSelectedSummary({ kind: "specialization", item: specialization })}
+                        onInspectSkill={(skill) => inspectBuilderItem({ kind: "skill", item: skill })}
+                        onInspectPet={(pet) => inspectBuilderItem({ kind: "pet", item: pet })}
+                        onInspectTrait={(trait) => inspectBuilderItem({ kind: "trait", item: trait })}
+                        onInspectSpecialization={(specialization) => inspectBuilderItem({ kind: "specialization", item: specialization })}
                       />
                       <EquipmentPreview
                         builder={builder}
                         items={equipmentItems}
+                        onInspectItem={(item) => inspectBuilderItem({ kind: "item", item })}
                       />
                     </>
             )}
           </div>
           </main>
 
-          <BuilderMobileTools issues={issues} selected={selectedSummary} builder={builder} />
+          <BuilderMobileTools
+            issues={issues}
+            selected={selectedSummary}
+            builder={builder}
+            openPanel={compactDetailsPanel}
+            setOpenPanel={setCompactDetailsPanel}
+            returnFocusRef={compactDetailsReturnFocusRef}
+          />
 
           <button
             type="button"
             className="theme-builder-rail-toggle"
-            aria-expanded={detailRailOpen}
+            aria-expanded={detailRailOpen || compactDetailsPanel === "details"}
             aria-controls="builder-detail-rail"
-            aria-label={detailRailOpen ? "Hide build readiness and inspector" : "Show build readiness and inspector"}
-            title={detailRailOpen ? "Hide build details" : "Show build details"}
-            onClick={() => setDetailRailOpen((open) => !open)}
+            aria-label={detailRailOpen || compactDetailsPanel === "details" ? "Hide build readiness and inspector" : "Show build readiness and inspector"}
+            title={detailRailOpen || compactDetailsPanel === "details" ? "Hide build details" : "Show build details"}
+            onClick={(event) => {
+              if (window.matchMedia(BUILDER_COMPACT_DETAILS_QUERY).matches) {
+                compactDetailsReturnFocusRef.current = event.currentTarget;
+                setCompactDetailsPanel((panel) => panel === "details" ? null : "details");
+              }
+              else setDetailRailOpen((open) => !open);
+            }}
           >
-            {detailRailOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
-            {!detailRailOpen && <span aria-label={`${issues.length} build issues`}>{issues.length}</span>}
+            {detailRailOpen || compactDetailsPanel === "details" ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+            {!detailRailOpen && compactDetailsPanel !== "details" && <span aria-label={`${issues.length} build issues`}>{issues.length}</span>}
           </button>
 
           <aside id="builder-detail-rail" className="theme-builder-rail" hidden={!detailRailOpen}>
             <BuilderReadiness issues={issues} />
             <DetailPanel selected={selectedSummary} builder={builder} />
-            {exportCode && <div className="theme-builder-code-output"><div className="flex items-center justify-between"><FieldLabel>Last exported code</FieldLabel><button type="button" title="Copy code" aria-label="Copy last exported AxiCode" onClick={() => copyText(exportCode, "AxiCode copied.")}><Clipboard className="h-4 w-4" /></button></div><code>{exportCode}</code></div>}
+            {exportCode && <div className="theme-builder-code-output"><div className="flex items-center justify-between"><FieldLabel>Last exported code</FieldLabel><button type="button" title="Copy code" aria-label="Copy last exported Entropy code" onClick={() => copyText(brandEntropyCode(exportCode), "Entropy code copied.")}><Clipboard className="h-4 w-4" /></button></div><code>{brandEntropyCode(exportCode)}</code></div>}
           </aside>
         </div>
       )}

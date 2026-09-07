@@ -1,4 +1,5 @@
 import type { DistanceToTagResult, DistanceToTagRow } from '../../types/report';
+import { resolveCommanderDistance } from './dashboardMetrics';
 
 export type DistanceContributionSource = 'replay' | 'fightAvg';
 
@@ -27,10 +28,17 @@ const validPoint = (value: unknown): value is [number, number] =>
     && finiteNumber(value[1]) !== null;
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+const MAX_VALID_DISTANCE = 5000;
 
 function getFightAverage(player: any): number | null {
-    const value = finiteNumber(player?.statsAll?.[0]?.stackDist);
-    return value !== null && value >= 0 ? value : null;
+    const stats = player?.statsAll?.[0];
+    const commanderDistance = resolveCommanderDistance(stats?.distToCom);
+    if (commanderDistance !== null && commanderDistance <= MAX_VALID_DISTANCE) return commanderDistance;
+
+    const stackDistance = finiteNumber(stats?.stackDist);
+    return stackDistance !== null && stackDistance >= 0 && stackDistance <= MAX_VALID_DISTANCE
+        ? stackDistance
+        : null;
 }
 
 export function ingestDistanceFight(fight: DistanceFightInput, fightIndex: number): DistanceContribution[] {

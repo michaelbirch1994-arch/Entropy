@@ -32,7 +32,7 @@ describe("BuildSummaryCard", () => {
     expect(markup).toContain('title="Open Support Troub"');
     expect(markup).toContain('aria-label="Actions for Support Troub"');
     expect(markup).toContain("Duplicate");
-    expect(markup).toContain("Copy AxiCode");
+    expect(markup).toContain("Copy Entropy code");
     expect(markup).toContain("Copy share link");
     expect(markup).toContain("Delete");
     expect(markup).toContain("disabled");

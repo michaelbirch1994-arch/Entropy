@@ -19,7 +19,7 @@
 // food/utility attribute bonuses are modeled. Proc/on-kill effects and
 // flat-stat traits are intentionally left out of the totals.
 
-import type { EntropyBuilderState, Gw2Profession } from "../../types/buildEditor";
+import type { EntropyBuilderState, Gw2Item, Gw2Profession } from "../../types/buildEditor";
 import { isTwoHandedWeapon } from "./builderCatalog";
 
 export type Gw2Attribute =
@@ -45,7 +45,7 @@ export interface AttributeTotals {
 
 export interface AttributeContribution {
   label: string;
-  source: "base" | "armor" | "trinket" | "weapon" | "rune" | "food" | "utility";
+  source: "base" | "armor" | "trinket" | "weapon" | "rune" | "infusion" | "relic" | "food" | "utility" | "enrichment";
   stats: Partial<Record<Gw2Attribute, number>>;
 }
 
@@ -364,8 +364,8 @@ function applyStatPiece(totals: Record<Gw2Attribute, number>, statName: string, 
 
 /**
  * Compute base + equipment attribute totals for a build, assuming full
- * Ascended gear in the build's chosen stat package. Runes, food/utility,
- * and trait bonuses are not included yet -- see the file header.
+ * Ascended gear in the build's chosen stat package. See the file header for
+ * the supported bonus sources and deliberate exclusions.
  */
 function slotStat(builder: EntropyBuilderState, slot: string): string {
   return builder.equipment.slots[slot] || builder.equipment.statPackage;
@@ -381,6 +381,44 @@ function applyFullRuneSet(totals: Record<Gw2Attribute, number>, builder: Entropy
   const runeId = sixPieceRuneId(builder);
   if (!runeId) return emptyContributionStats();
   return applyAttributeBonuses(totals, RUNE_ATTRIBUTE_BONUSES[runeId] ?? {});
+}
+
+const ITEM_ATTRIBUTE_MAP: Record<string, Gw2Attribute | undefined> = {
+  Power: "Power",
+  Precision: "Precision",
+  Toughness: "Toughness",
+  Vitality: "Vitality",
+  ConditionDamage: "ConditionDamage",
+  CritDamage: "Ferocity",
+  Healing: "HealingPower",
+  BoonDuration: "Concentration",
+  ConditionDuration: "Expertise",
+};
+
+function applyItemAttributes(
+  totals: Record<Gw2Attribute, number>,
+  itemIds: number[],
+  items: Record<number, Gw2Item>,
+): Record<Gw2Attribute, number> {
+  const bonuses = emptyContributionStats();
+  itemIds.forEach((itemId) => {
+    items[itemId]?.details?.infix_upgrade?.attributes?.forEach(({ attribute, modifier }) => {
+      const mapped = ITEM_ATTRIBUTE_MAP[attribute];
+      if (!mapped || !Number.isFinite(modifier)) return;
+      bonuses[mapped] += modifier;
+    });
+  });
+  return applyAttributeBonuses(totals, bonuses);
+}
+
+function activeInfusionIds(builder: EntropyBuilderState, activeSet: 1 | 2): number[] {
+  return Object.entries(builder.equipment.infusions).flatMap(([slot, value]) => {
+    if (/^(mainhand|offhand)[12]$/.test(slot) && !slot.endsWith(String(activeSet))) return [];
+    if (slot.startsWith("aquatic")) return [];
+    return (Array.isArray(value) ? value : [value])
+      .map(Number)
+      .filter((id) => Number.isInteger(id) && id > 0);
+  });
 }
 
 function applyFood(totals: Record<Gw2Attribute, number>, builder: EntropyBuilderState): Record<Gw2Attribute, number> {
@@ -447,7 +485,11 @@ function primaryIdentity(pressure: AttributePressureScores): keyof AttributePres
  * Builder UI. This keeps combat-facing labels separate from the raw math so
  * the stat engine can evolve without changing saved AxiCode payloads.
  */
-export function computeAttributeProfile(builder: EntropyBuilderState, profession: Gw2Profession | null): AttributeProfile {
+export function computeAttributeProfile(
+  builder: EntropyBuilderState,
+  profession: Gw2Profession | null,
+  items: Record<number, Gw2Item> = {},
+): AttributeProfile {
     const totals: Record<Gw2Attribute, number> = {
           Power: BASE_PRIMARY.Power,
           Precision: BASE_PRIMARY.Precision,
@@ -468,8 +510,11 @@ export function computeAttributeProfile(builder: EntropyBuilderState, profession
   const trinketStats = emptyContributionStats();
   const weaponStats = emptyContributionStats();
   let runeStats = emptyContributionStats();
+  let infusionStats = emptyContributionStats();
+  let relicStats = emptyContributionStats();
   let foodStats = emptyContributionStats();
   let utilityStats = emptyContributionStats();
+  let enrichmentStats = emptyContributionStats();
 
   ARMOR_SLOTS.forEach((slot) => mergeContribution(armorStats, applyStatPiece(totals, slotStat(builder, slot), slot)));
   TRINKET_SLOTS.forEach(([slot, budgetKey]) => mergeContribution(trinketStats, applyStatPiece(totals, slotStat(builder, slot), budgetKey)));
@@ -486,6 +531,11 @@ export function computeAttributeProfile(builder: EntropyBuilderState, profession
   }
 
   runeStats = applyFullRuneSet(totals, builder);
+  infusionStats = applyItemAttributes(totals, activeInfusionIds(builder, activeSet), items);
+  const relicItem = Object.values(items).find((item) => item.name === builder.equipment.relic);
+  relicStats = applyItemAttributes(totals, relicItem ? [relicItem.id] : [], items);
+  const enrichmentId = Number(builder.equipment.enrichment);
+  enrichmentStats = applyItemAttributes(totals, Number.isInteger(enrichmentId) ? [enrichmentId] : [], items);
   foodStats = applyFood(totals, builder);
   utilityStats = applyUtility(totals, builder);
 
@@ -525,8 +575,11 @@ export function computeAttributeProfile(builder: EntropyBuilderState, profession
       { label: "Trinkets", source: "trinket", stats: cleanStats(trinketStats) },
       { label: `Weapon set ${activeSet === 1 ? "I" : "II"}`, source: "weapon", stats: cleanStats(weaponStats) },
       { label: "Rune set", source: "rune", stats: cleanStats(runeStats) },
+      { label: "Infusions", source: "infusion", stats: cleanStats(infusionStats) },
+      { label: "Relic", source: "relic", stats: cleanStats(relicStats) },
       { label: "Food", source: "food", stats: cleanStats(foodStats) },
       { label: "Utility", source: "utility", stats: cleanStats(utilityStats) },
+      { label: "Enrichment", source: "enrichment", stats: cleanStats(enrichmentStats) },
     ],
     equippedSlots,
     totalSlots: ARMOR_SLOTS.length + TRINKET_SLOTS.length + 2,

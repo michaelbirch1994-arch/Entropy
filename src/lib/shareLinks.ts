@@ -30,6 +30,10 @@ function isLoadableExternalUrl(value: string): boolean {
   }
 }
 
+function isLocalViewerHost(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
 export function getConfiguredShareViewerUrl(currentHref?: string): string {
   if (currentHref) return currentHref;
 
@@ -41,7 +45,8 @@ export function getConfiguredShareViewerUrl(currentHref?: string): string {
   if (
     typeof window !== "undefined" &&
     /^https?:$/i.test(window.location.protocol) &&
-    !isTauri()
+    !isTauri() &&
+    !isLocalViewerHost(new URL(window.location.href).hostname)
   ) {
     return window.location.href;
   }

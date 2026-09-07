@@ -26,6 +26,7 @@ interface BuildCombatBarProps {
   onSwap: () => void;
   onInspect: (skill: Gw2Skill) => void;
   onInspectPet: (pet: Gw2Pet) => void;
+  showUtilityNames?: boolean;
 }
 
 export default function BuildCombatBar({
@@ -40,6 +41,7 @@ export default function BuildCombatBar({
   onSwap,
   onInspect,
   onInspectPet,
+  showUtilityNames = false,
 }: BuildCombatBarProps) {
   const utilityIds = [builder.healSkillId, ...builder.utilitySkillIds, builder.eliteSkillId];
   const utilityLabels = ["Heal", "Utility 1", "Utility 2", "Utility 3", "Elite"];
@@ -56,29 +58,6 @@ export default function BuildCombatBar({
   return (
     <div className="theme-builder-combat-bar" aria-label={`Combat skill bar, weapon set ${setLabel}`}>
       <div className="theme-builder-combat-group is-utility" aria-label="Healing and utility skills">
-        <div className="theme-builder-combat-label"><span>Utility skills</span><small>6–0</small></div>
-        <div className="theme-builder-combat-skills">
-          {utilityIds.map((id, index) => {
-            const skill = id ? skillsById.get(id) : null;
-            return (
-              <button
-                key={`${utilityLabels[index]}-${id ?? "empty"}`}
-                type="button"
-                className="theme-builder-combat-skill"
-                disabled={!skill}
-                onClick={() => skill && onInspect(skill)}
-                title={skill?.name ?? `${utilityLabels[index]} not selected`}
-                aria-label={skill ? `${utilityLabels[index]}: ${skill.name}` : `${utilityLabels[index]} not selected`}
-              >
-                {skill?.icon ? <img src={skill.icon} alt="" /> : <Plus className="theme-builder-combat-empty" aria-hidden="true" />}
-                <b>{index + 6 > 9 ? 0 : index + 6}</b>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="theme-builder-combat-core">
         {(mechanicSlots.length > 0 || legendSlots.length > 0 || petSlots.length > 0) && (
           <div className="theme-builder-mechanic-skills" aria-label="Profession mechanics">
             {mechanicSlots.map(({ key, skill }) => (
@@ -124,6 +103,42 @@ export default function BuildCombatBar({
             ))}
           </div>
         )}
+        <div className="theme-builder-combat-label"><span>Utility skills</span><small>6–0</small></div>
+        <div className="theme-builder-combat-skills">
+          {utilityIds.map((id, index) => {
+            const skill = id ? skillsById.get(id) : null;
+            return (
+              <button
+                key={`${utilityLabels[index]}-${id ?? "empty"}`}
+                type="button"
+                className="theme-builder-combat-skill"
+                disabled={!skill}
+                onClick={() => skill && onInspect(skill)}
+                title={skill?.name ?? `${utilityLabels[index]} not selected`}
+                aria-label={skill ? `${utilityLabels[index]}: ${skill.name}` : `${utilityLabels[index]} not selected`}
+              >
+                {skill?.icon ? <img src={skill.icon} alt="" /> : <Plus className="theme-builder-combat-empty" aria-hidden="true" />}
+                <b>{index + 6 > 9 ? 0 : index + 6}</b>
+              </button>
+            );
+          })}
+        </div>
+        {showUtilityNames && (
+          <div className="theme-builder-combat-skill-names" aria-label="Equipped healing and utility skill names">
+            {utilityIds.map((id, index) => {
+              const skill = id ? skillsById.get(id) : null;
+              return (
+                <span key={`${utilityLabels[index]}-name-${id ?? "empty"}`} title={skill?.name ?? `${utilityLabels[index]} not selected`}>
+                  <small>{utilityLabels[index]}</small>
+                  <strong>{skill?.name ?? "Not selected"}</strong>
+                </span>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="theme-builder-combat-core">
         <div className="theme-builder-preview-hp" aria-label={`${Math.round(health).toLocaleString()} health`}>
           <strong>{Math.round(health).toLocaleString()}</strong>
           <span>HP</span>

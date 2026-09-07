@@ -258,4 +258,34 @@ describe("computeAttributeTotals", () => {
                  expect(profile.totals.boonDuration).toBeCloseTo(profile.totals.concentration / 15, 6);
                  expect(profile.pressure.support).toBeGreaterThan(profile.pressure.strike);
            });
+
+           it("applies imported stat infusions from item metadata and preserves duplicate copies", () => {
+                 const builder = equipFullSet(createEmptyBuilder("Guardian"), "Berserker's", "oneHand");
+                 builder.equipment.infusions = {
+                       head: ["9001", "9001"],
+                       mainhand1: "9002",
+                       mainhand2: "9003",
+                 };
+                 const profile = computeAttributeProfile(builder, makeProfession("Guardian"), {
+                       9001: { id: 9001, name: "Power Infusion", details: { infix_upgrade: { attributes: [{ attribute: "Power", modifier: 5 }] } } },
+                       9002: { id: 9002, name: "Healing Infusion", details: { infix_upgrade: { attributes: [{ attribute: "Healing", modifier: 5 }] } } },
+                       9003: { id: 9003, name: "Inactive Infusion", details: { infix_upgrade: { attributes: [{ attribute: "Power", modifier: 50 }] } } },
+                 });
+
+                 expect(profile.totals.power).toBe(2391);
+                 expect(profile.totals.healingPower).toBe(5);
+                 expect(profile.contributions.find((entry) => entry.source === "infusion")?.stats).toEqual({ Power: 10, HealingPower: 5 });
+           });
+
+           it("only applies explicit relic item attributes", () => {
+                 const builder = equipFullSet(createEmptyBuilder("Guardian"), "Berserker's", "oneHand");
+                 builder.equipment.relic = "Relic with stats";
+                 const profile = computeAttributeProfile(builder, makeProfession("Guardian"), {
+                       9100: { id: 9100, name: "Relic with stats", details: { infix_upgrade: { attributes: [{ attribute: "Vitality", modifier: 25 }] } } },
+                 });
+
+                 expect(profile.totals.vitality).toBe(1025);
+                 expect(profile.totals.health).toBe(11895);
+                 expect(profile.contributions.find((entry) => entry.source === "relic")?.stats).toEqual({ Vitality: 25 });
+           });
 });
