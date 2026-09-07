@@ -18,6 +18,7 @@ import type { IncomingHealingBreakdown, HealingContributor } from '../../lib/bri
 import type { AttributionConfidence } from '../../lib/bridge-metrics/allyIndex';
 import type { HealingCoverage } from '../../types/report';
 import { fmtCompact } from '../../utils/format';
+import ProfessionIdentity from './ProfessionIdentity';
 
 const COVERAGE_TEXT: Record<HealingCoverage, { label: string; tone: string; title: string }> = {
     full: {
@@ -143,8 +144,10 @@ export default function SurvivalSupport({
                                 onClick={onSelectContributor ? () => onSelectContributor(c) : undefined}
                             >
                                 <td className="py-1.5 text-slate-200">
-                                    {c.name}
-                                    <span className="ml-2 text-[10px] text-slate-500">{c.profession}</span>
+                                    <span className="flex min-w-0 items-center gap-2">
+                                        <span className="truncate">{c.name}</span>
+                                        <ProfessionIdentity profession={c.profession} size="sm" className="shrink-0" />
+                                    </span>
                                     {!c.contributorHasAddon && (
                                         <span
                                             className="ml-1.5 text-[10px] text-slate-600"

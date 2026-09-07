@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useReport } from "../store/ReportContext";
+import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import { fmtCompact, fmtNum } from "../utils/format";
 import type { TopSkill, TopHealingSource } from "../types/report";
 import { getSampleReliability, sampleReliabilityClasses } from "../lib/sampleReliability";
@@ -196,10 +197,14 @@ function ExtremeHitLine({ label, hit, tone }: { label: string; hit: ExtremeConte
   const context = fightContextLabel(hit);
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <span className="text-theme-muted">{label}</span>
-        <span className={`${tone} text-right font-bold`}>
-          {fmtCompact(hit.value)} - {hit.account} ({hit.profession})
+        <span className="flex min-w-0 flex-col items-end gap-1 text-right">
+          <span className={`${tone} font-bold`}>{fmtCompact(hit.value)}</span>
+          <span className="flex min-w-0 items-center justify-end gap-1.5">
+            <span className="truncate font-bold text-theme-text">{hit.account}</span>
+            <ProfessionIdentity profession={hit.profession} size="sm" />
+          </span>
         </span>
       </div>
       {context && (

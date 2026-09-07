@@ -2,6 +2,7 @@ import { Activity, ArrowRight, Clock3, Radar, Users } from "lucide-react";
 import { useMemo } from "react";
 import { useReport } from "../../store/ReportContext";
 import { useView } from "../../store/ViewContext";
+import ProfessionIdentity from "../ui/ProfessionIdentity";
 import { buildEventMechanicEvidence, type EventMechanicEvidence } from "../../lib/intelligence/eventMechanicEvidence";
 import { buildEventReplaySnapshotEvidence } from "../../lib/intelligence/eventReplayEvidence";
 import type { IntelligenceEventWindow } from "../../lib/intelligence/eventInspection";
@@ -110,7 +111,10 @@ export default function IntelligenceMechanicEvidencePanel({ fightId, window, rel
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-black text-slate-100">{player.account}</div>
-                    <div className="mt-1 text-[11px] text-slate-500">{player.name} · {player.profession}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                      <span>{player.name}</span>
+                      <ProfessionIdentity profession={player.profession} size="sm" />
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {player.isCommander && <span className="rounded-full border border-amber-400/20 bg-amber-500/[0.06] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-200">tag</span>}
@@ -133,7 +137,7 @@ export default function IntelligenceMechanicEvidencePanel({ fightId, window, rel
                       <div className="mt-2 grid gap-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
                         {player.nearestSquadmates.map((nearby) => (
                           <div key={nearby.account} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.04] bg-black/20 px-2.5 py-2 text-[10px]">
-                            <div className="min-w-0"><div className="truncate font-bold text-slate-300">{nearby.account}</div><div className="truncate text-slate-600">{nearby.name} · {nearby.profession}{nearby.isDown ? " · down" : ""}</div></div>
+                            <div className="min-w-0"><div className="truncate font-bold text-slate-300">{nearby.account}</div><div className="flex min-w-0 items-center gap-1.5 text-slate-600"><span className="truncate">{nearby.name}</span><ProfessionIdentity profession={nearby.profession} size="sm" />{nearby.isDown ? <span className="shrink-0">down</span> : null}</div></div>
                             <span className="shrink-0 font-mono font-bold text-slate-300">{Math.round(nearby.distance)}</span>
                           </div>
                         ))}
