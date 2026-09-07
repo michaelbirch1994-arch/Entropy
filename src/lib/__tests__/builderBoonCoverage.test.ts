@@ -45,6 +45,27 @@ describe("builder squad boon coverage", () => {
     expect(mergeLiveBuildForCoverage([saved], null, draft)[0]).toBe(saved);
   });
 
+  it("does not include self-only sources in squad uptime", () => {
+    const coverage = analyzeBuildBoons([
+      {
+        id: 124,
+        name: "Shared Guard",
+        slot: "Utility",
+        description: "Grant protection to nearby allies.",
+        facts: [{ type: "Buff", status: "Protection", duration: 4 }, { type: "Recharge", value: 20 }],
+      },
+      {
+        id: 125,
+        name: "Private Guard",
+        slot: "Utility",
+        description: "Grant yourself protection.",
+        facts: [{ type: "Buff", status: "Protection", duration: 10 }, { type: "Recharge", value: 20 }],
+      },
+    ] as Gw2Skill[], [], 0);
+
+    expect(coverage[0].estimatedUptimePercent).toBe(20);
+  });
+
   it("invalidates live coverage when profession-specific skill sources change", () => {
     const saved = createSavedBuild(createEmptyBuilder("Ranger"), "");
     const first = mergeLiveBuildForCoverage([saved], saved.id, {

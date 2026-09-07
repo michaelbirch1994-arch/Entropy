@@ -17,6 +17,7 @@ import {
 } from "../gw2/gw2Api";
 import { resolveProfessionMechanicSlots } from "../gw2/professionMechanics";
 import { resolveWeaponSkillSlots, weaponSkillIds } from "../gw2/weaponSkillBar";
+import { resolveNestedMechanicSkills } from "./nestedMechanicSkills";
 
 export interface BuildCombatKit {
   profession: Gw2Profession | null;
@@ -133,10 +134,15 @@ export async function fetchBuildCombatKit(state: EntropyBuilderState): Promise<B
   const skillCatalog = await fetchGw2Skills(candidateSkillIds);
   const skillsById = new Map(skillCatalog.map((skill) => [skill.id, skill]));
   const activeSkillIds = resolveBuildCombatSkillIds(state, profession, specializations, skillsById, legends, pets);
+  const nestedMechanicSkills = resolveNestedMechanicSkills(state);
+  const activeSkills = activeSkillIds
+    .map((id) => skillsById.get(id))
+    .filter((skill): skill is Gw2Skill => Boolean(skill));
+  const uniqueSkills = new Map([...activeSkills, ...nestedMechanicSkills].map((skill) => [skill.id, skill]));
 
   return {
     profession,
-    skills: activeSkillIds.map((id) => skillsById.get(id)).filter((skill): skill is Gw2Skill => Boolean(skill)),
+    skills: [...uniqueSkills.values()],
     traits: resolveSelectedTraits(state, specializations, traits),
   };
 }

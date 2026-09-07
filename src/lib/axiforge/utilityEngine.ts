@@ -60,7 +60,7 @@ function detectsUtility(kind: BuildUtilityKind, entity: UtilityEntity): boolean 
   const facts = factText(entity.facts ?? []);
   switch (kind) {
     case "cleanse":
-      return /conditions? removed/.test(facts) || /(?:remove|removes|cure|cures|cleanse|cleanses) (?:\w+ )?conditions?/.test(description);
+      return /conditions? (?:removed|converted)/.test(facts) || /(?:remove|removes|cure|cures|cleanse|cleanses|convert|converts) (?:\w+ )?conditions?/.test(description);
     case "stunBreak":
       return /breaks? stuns?|stun break/.test(description + " " + facts);
     case "boonRemoval":

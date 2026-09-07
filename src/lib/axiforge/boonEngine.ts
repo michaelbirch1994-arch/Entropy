@@ -220,6 +220,7 @@ export function analyzeBuildBoons(
   return [...boonMap.values()]
     .map((entry) => {
       const knownUptimes = entry.sources
+        .filter((source) => source.isAlly)
         .map((source) => source.estimatedUptimePercent)
         .filter((value): value is number => value != null);
       const estimatedUptimePercent = knownUptimes.length

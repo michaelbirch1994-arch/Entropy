@@ -43,10 +43,9 @@ export function mergeLiveBuildForCoverage(
 /**
  * Resolve the live GW2 API data a build actually uses right now - its chosen
  * major trait per tier plus every auto-granted minor trait across its three
- * specialization lines, and its heal/utility/elite skills - then run that
- * through the boon-coverage engine. This mirrors the same "sort majors by
- * tier/order, then pick by traitChoices index" trait-resolution logic that
- * buildAxiShape() already uses for AxiCode export.
+ * specialization lines, both weapon sets, slot skills, pets, legends, direct
+ * profession mechanics, and curated nested mechanics - then run that through
+ * the boon-coverage engine.
  */
 export async function computeBuildBoonCoverage(state: EntropyBuilderState): Promise<BoonCoverageEntry[]> {
   const kit = await fetchBuildCombatKit(state);

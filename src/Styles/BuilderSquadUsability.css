@@ -580,20 +580,34 @@
   border-top: 1px solid rgba(123, 108, 76, 0.2);
 }
 
-.theme-builder-root .theme-builder-boon-grid > div {
+.theme-builder-root .theme-builder-boon-grid > :is(div, button) {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
   min-width: 0;
   min-height: 5.2rem;
   gap: 0.3rem;
   padding: 0.58rem 0.35rem 0.48rem;
+  border: 1px solid rgba(73, 138, 111, 0.6);
   border-radius: 8px;
   background: rgba(3, 14, 15, 0.9);
+  color: inherit;
+  font: inherit;
   box-shadow: none;
   transform: none;
+  cursor: pointer;
 }
 
-.theme-builder-root .theme-builder-boon-grid > div:hover {
+.theme-builder-root .theme-builder-boon-grid > :is(div, button):hover,
+.theme-builder-root .theme-builder-boon-grid > button:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-accentStrong) 58%, var(--theme-border));
   transform: none;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accentStrong) 18%, transparent);
+}
+
+.theme-builder-root .theme-builder-condition-grid > button.is-covered {
+  border-color: rgba(255, 106, 50, 0.58);
+  background: rgba(255, 106, 50, 0.1);
 }
 
 .theme-builder-root .theme-builder-boon-icon {
@@ -606,7 +620,7 @@
   padding: 0.18rem 0.34rem;
 }
 
-.theme-builder-root .theme-builder-boon-grid > div span {
+.theme-builder-root .theme-builder-boon-grid > :is(div, button) span {
   max-width: 100%;
   overflow: hidden;
   font-size: 0.56rem;
@@ -614,7 +628,7 @@
   white-space: nowrap;
 }
 
-.theme-builder-root .theme-builder-boon-grid > div .theme-builder-boon-uptime {
+.theme-builder-root .theme-builder-boon-grid > :is(div, button) .theme-builder-boon-uptime {
   color: color-mix(in srgb, var(--theme-accentStrong) 76%, var(--theme-textMuted));
   font-size: 0.52rem;
 }
@@ -623,7 +637,7 @@
   grid-template-columns: repeat(auto-fill, minmax(7.25rem, 1fr));
 }
 
-.theme-builder-root .theme-builder-utility-grid > div span {
+.theme-builder-root .theme-builder-utility-grid > :is(div, button) span {
   overflow: visible;
   white-space: normal;
   text-align: center;
@@ -652,6 +666,157 @@
 
 .theme-builder-root .theme-builder-coverage-missing span {
   min-width: 0;
+}
+
+.theme-builder-coverage-dialog {
+  width: min(38rem, calc(100vw - 2rem));
+  height: auto;
+  min-height: 0;
+  max-height: min(44rem, calc(100vh - 2rem));
+  padding: 0;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.theme-builder-coverage-dialog-head {
+  padding: 0.9rem 1rem;
+}
+
+.theme-builder-coverage-dialog-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.theme-builder-coverage-dialog-title > span {
+  display: grid;
+  width: 2.6rem;
+  height: 2.6rem;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--theme-accentStrong) 42%, var(--theme-border));
+  border-radius: 50%;
+  background: var(--theme-surfaceInset);
+}
+
+.theme-builder-coverage-dialog-title img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.theme-builder-coverage-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--theme-border);
+  border-bottom: 1px solid var(--theme-border);
+  background: color-mix(in srgb, var(--theme-accent) 7%, var(--theme-surfaceInset));
+}
+
+.theme-builder-coverage-summary strong {
+  color: var(--theme-accentStrong);
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+}
+
+.theme-builder-coverage-summary span {
+  color: var(--theme-textMuted);
+  font-size: 0.67rem;
+  text-transform: uppercase;
+}
+
+.theme-builder-coverage-provider-list {
+  display: grid;
+  gap: 0.55rem;
+  max-height: 32rem;
+  padding: 0.75rem;
+  overflow-y: auto;
+}
+
+.theme-builder-coverage-provider-list > section {
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 7px;
+  background: var(--theme-surfaceInset);
+}
+
+.theme-builder-coverage-provider-list header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 0.7rem;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.theme-builder-coverage-provider-list header span,
+.theme-builder-coverage-provider-list article div {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.theme-builder-coverage-provider-list header strong,
+.theme-builder-coverage-provider-list article strong {
+  overflow: hidden;
+  color: var(--theme-text);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theme-builder-coverage-provider-list header small,
+.theme-builder-coverage-provider-list article small {
+  color: var(--theme-textMuted);
+  font-family: var(--font-mono);
+  font-size: 0.54rem;
+  text-transform: uppercase;
+}
+
+.theme-builder-coverage-provider-list header em {
+  color: var(--theme-accentStrong);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-style: normal;
+}
+
+.theme-builder-coverage-provider-list > section > div {
+  display: grid;
+}
+
+.theme-builder-coverage-provider-list article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 3rem;
+  padding: 0.48rem 0.7rem;
+}
+
+.theme-builder-coverage-provider-list article + article {
+  border-top: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
+}
+
+.theme-builder-coverage-provider-list article > span {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 5px;
+  color: var(--theme-textMuted);
+  background: var(--theme-surfaceRaised);
+}
+
+.theme-builder-coverage-provider-list article img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Compact composition board: the roster stays icon-first while the library

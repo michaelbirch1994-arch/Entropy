@@ -1063,6 +1063,101 @@ function utilityCacheKey(build: SavedBuilderBuild): string {
   return `${build.id}:${build.updatedAt}`;
 }
 
+interface CoverageDetailSource {
+  sourceName: string;
+  type: "skill" | "trait";
+  icon?: string;
+  stacks?: number;
+  duration?: number;
+  recharge?: number;
+  estimatedUptimePercent?: number;
+}
+
+interface CoverageDetailProvider {
+  buildName: string;
+  profession: string;
+  sources: CoverageDetailSource[];
+  estimatedUptimePercent?: number;
+}
+
+interface CoverageBreakdown {
+  category: string;
+  name: string;
+  icon?: string;
+  estimatedUptimePercent?: number;
+  providers: CoverageDetailProvider[];
+}
+
+function CoverageBreakdownDialog({ detail, onClose }: { detail: CoverageBreakdown; onClose: () => void }) {
+  const dialogRef = useRef<HTMLElement | null>(null);
+  useModalScrollLock(true);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => dialogRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+  const groupedProviders = new Map<string, CoverageDetailProvider & { copies: number }>();
+  for (const provider of detail.providers) {
+    const sourceKey = provider.sources.map((source) => `${source.type}:${source.sourceName}`).sort().join("|");
+    const key = `${provider.buildName}:${provider.profession}:${sourceKey}`;
+    const existing = groupedProviders.get(key);
+    if (existing) existing.copies += 1;
+    else groupedProviders.set(key, { ...provider, copies: 1 });
+  }
+
+  return createPortal(
+    <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section
+        ref={dialogRef}
+        className="theme-builder-picker-dialog theme-builder-coverage-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="coverage-breakdown-title"
+        tabIndex={-1}
+        onKeyDown={(event) => handleModalDialogKeyDown(event, dialogRef.current, onClose)}
+      >
+        <div className="theme-builder-picker-head theme-builder-coverage-dialog-head">
+          <div className="theme-builder-coverage-dialog-title">
+            <span>{detail.icon ? <img src={detail.icon} alt="" /> : <Sparkles className="h-5 w-5" />}</span>
+            <div><div className="theme-builder-kicker">{detail.category} breakdown</div><h3 id="coverage-breakdown-title">{detail.name}</h3></div>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close coverage breakdown"><X className="h-4 w-4" /></button>
+        </div>
+        {detail.estimatedUptimePercent != null && (
+          <div className="theme-builder-coverage-summary"><strong>~{Math.round(detail.estimatedUptimePercent)}%</strong><span>estimated squad uptime</span></div>
+        )}
+        <div className="theme-builder-coverage-provider-list">
+          {[...groupedProviders.values()].map((provider) => (
+            <section key={`${provider.buildName}:${provider.profession}:${provider.sources.map(({ sourceName }) => sourceName).join("|")}`}>
+              <header>
+                <ClassIcon name={provider.profession} size="sm" />
+                <span><strong>{provider.buildName}</strong><small>{provider.profession}{provider.copies > 1 ? ` · ${provider.copies} squad slots` : ""}</small></span>
+                {provider.estimatedUptimePercent != null && <em>~{Math.round(provider.estimatedUptimePercent)}%</em>}
+              </header>
+              <div>
+                {provider.sources.map((source) => {
+                  const facts = [
+                    source.stacks && source.stacks > 1 ? `${source.stacks} stacks` : null,
+                    source.duration ? `${source.duration}s duration` : null,
+                    source.recharge ? `${source.recharge}s recharge` : null,
+                    source.estimatedUptimePercent != null ? `~${Math.round(source.estimatedUptimePercent)}% uptime` : null,
+                  ].filter(Boolean);
+                  return (
+                    <article key={`${source.type}:${source.sourceName}`}>
+                      <span>{source.icon ? <img src={source.icon} alt="" /> : source.type === "trait" ? <Layers3 className="h-4 w-4" /> : <Swords className="h-4 w-4" />}</span>
+                      <div><strong>{source.sourceName}</strong><small>{source.type}{facts.length ? ` · ${facts.join(" · ")}` : ""}</small></div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      </section>
+    </div>,
+    document.body,
+  );
+}
+
 function SquadBoonCoverage({
   composition,
   builds,
@@ -1074,10 +1169,11 @@ function SquadBoonCoverage({
   boonCache: Record<string, BoonCoverageEntry[]>;
   computing: boolean;
 }) {
+  const [selectedCoverage, setSelectedCoverage] = useState<CoverageBreakdown | null>(null);
   const providers = useMemo(() => {
     const map = new Map<
       string,
-      { icon?: string; sources: Array<{ buildName: string; profession: string; sourceNames: string[]; estimatedUptimePercent?: number }> }
+      { icon?: string; sources: CoverageDetailProvider[] }
     >();
     const referenced = composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id));
     for (const buildId of referenced) {
@@ -1091,7 +1187,7 @@ function SquadBoonCoverage({
         existing.sources.push({
           buildName: build.name,
           profession: build.state.professionId,
-          sourceNames: [...new Set(entry.sources.filter((source) => source.isAlly).map((source) => source.sourceName))],
+          sources: entry.sources.filter((source) => source.isAlly).map((source) => ({ ...source })),
           estimatedUptimePercent: entry.estimatedUptimePercent,
         });
         map.set(entry.name, existing);
@@ -1108,7 +1204,7 @@ function SquadBoonCoverage({
         <div><div className="theme-builder-kicker">Live from assigned squad slots</div><h3>Squad boon coverage</h3></div>
         {computing && <Loader2 className="h-4 w-4 animate-spin" aria-label="Updating boon coverage" />}
       </div>
-      <div className="theme-builder-boon-grid" role="list" aria-label="Detected squad boon coverage">
+      <div className="theme-builder-boon-grid" role="group" aria-label="Detected squad boon coverage">
         {coveredBoons.map((boon) => {
           const entry = providers.get(boon); const list = entry?.sources ?? [];
           const covered = list.length > 0;
@@ -1119,31 +1215,31 @@ function SquadBoonCoverage({
                 : sum,
             undefined,
           );
-          const tooltip = covered
-            ? list
-                .map((source) =>
-                  source.estimatedUptimePercent != null
-                    ? `${source.buildName} (${source.profession}): ${source.sourceNames.join(" + ")} - ~${Math.round(source.estimatedUptimePercent)}% uptime`
-                    : `${source.buildName} (${source.profession}): ${source.sourceNames.join(" + ")}`,
-                )
-                .join(", ")
-            : "No assigned build grants this to allies";
+          const tooltip = `Open ${boon} provider breakdown`;
           return (
-            <div
+            <button
               key={boon}
+              type="button"
               className="is-covered"
               title={tooltip}
-              role="listitem"
               aria-label={tooltip}
+              onClick={() => setSelectedCoverage({
+                category: "Squad boon",
+                name: boon,
+                icon: entry?.icon,
+                estimatedUptimePercent: bestUptime,
+                providers: list,
+              })}
             >
               <div className="theme-builder-boon-icon">{entry?.icon ? <img src={entry.icon} alt="" /> : <Sparkles className="h-5 w-5" />}{covered && <em>{list.length}</em>}</div>
               <span>{boon}</span>
               {bestUptime != null && <span className="theme-builder-boon-uptime">~{Math.round(bestUptime)}%</span>}
-            </div>
+            </button>
           );
         })}
       </div>
       <p className="theme-builder-coverage-missing"><strong>Missing</strong><span>{missingBoons.length ? missingBoons.join(" · ") : "None"}</span></p>
+      {selectedCoverage && <CoverageBreakdownDialog detail={selectedCoverage} onClose={() => setSelectedCoverage(null)} />}
     </section>
   );
 }
@@ -1159,10 +1255,11 @@ function SquadConditionCoverage({
   conditionCache: Record<string, BuilderConditionEntry[]>;
   computing: boolean;
 }) {
+  const [selectedCoverage, setSelectedCoverage] = useState<CoverageBreakdown | null>(null);
   const providers = useMemo(() => {
     const map = new Map<
       string,
-      { icon?: string; sources: Array<{ buildName: string; profession: string; estimatedUptimePercent?: number }> }
+      { icon?: string; sources: CoverageDetailProvider[] }
     >();
     const referenced = composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id));
     for (const buildId of referenced) {
@@ -1176,6 +1273,7 @@ function SquadConditionCoverage({
         existing.sources.push({
           buildName: build.name,
           profession: build.state.professionId,
+          sources: entry.sources.map((source) => ({ ...source })),
           estimatedUptimePercent: entry.estimatedUptimePercent,
         });
         map.set(entry.name, existing);
@@ -1192,7 +1290,7 @@ function SquadConditionCoverage({
         <div><div className="theme-builder-kicker">Detected from assigned skills and traits</div><h3>Squad condition access</h3></div>
         {computing && <Loader2 className="h-4 w-4 animate-spin" aria-label="Updating condition access" />}
       </div>
-      <div className="theme-builder-boon-grid theme-builder-condition-grid" role="list" aria-label="Detected squad condition access">
+      <div className="theme-builder-boon-grid theme-builder-condition-grid" role="group" aria-label="Detected squad condition access">
         {coveredConditions.map((condition) => {
           const entry = providers.get(condition); const list = entry?.sources ?? [];
           const covered = list.length > 0;
@@ -1203,31 +1301,31 @@ function SquadConditionCoverage({
                 : sum,
             undefined,
           );
-          const tooltip = covered
-            ? list
-                .map((source) =>
-                  source.estimatedUptimePercent != null
-                    ? `${source.buildName} (${source.profession}) - ~${Math.round(source.estimatedUptimePercent)}% uptime`
-                    : `${source.buildName} (${source.profession})`,
-                )
-                .join(", ")
-            : "No assigned build exposes this condition";
+          const tooltip = `Open ${condition} source breakdown`;
           return (
-            <div
+            <button
               key={condition}
+              type="button"
               className="is-covered"
               title={tooltip}
-              role="listitem"
               aria-label={tooltip}
+              onClick={() => setSelectedCoverage({
+                category: "Squad condition",
+                name: condition,
+                icon: entry?.icon,
+                estimatedUptimePercent: squadUptime,
+                providers: list,
+              })}
             >
               <div className="theme-builder-boon-icon">{entry?.icon ? <img src={entry.icon} alt="" /> : <Sparkles className="h-5 w-5" />}{covered && <em>{list.length}</em>}</div>
               <span>{condition}</span>
               {squadUptime != null && <span className="theme-builder-boon-uptime">~{Math.round(squadUptime)}%</span>}
-            </div>
+            </button>
           );
         })}
       </div>
       <p className="theme-builder-coverage-missing"><strong>Missing</strong><span>{missingConditions.length ? missingConditions.join(" · ") : "None"}</span></p>
+      {selectedCoverage && <CoverageBreakdownDialog detail={selectedCoverage} onClose={() => setSelectedCoverage(null)} />}
     </section>
   );
 }
@@ -1313,11 +1411,12 @@ function SquadUtilityCoverage({
   utilityCache: Record<string, BuildUtilityEntry[]>;
   computing: boolean;
 }) {
+  const [selectedCoverage, setSelectedCoverage] = useState<CoverageBreakdown | null>(null);
   const providers = useMemo(() => {
     const map = new Map<string, {
       label: string;
       icon?: string;
-      sources: Array<{ buildName: string; profession: string; sourceNames: string[] }>;
+      sources: CoverageDetailProvider[];
     }>();
     const referenced = composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id));
     for (const buildId of referenced) {
@@ -1329,7 +1428,7 @@ function SquadUtilityCoverage({
         existing.sources.push({
           buildName: build.name,
           profession: build.state.professionId,
-          sourceNames: [...new Set(entry.sources.map((source) => source.sourceName))],
+          sources: entry.sources.map((source) => ({ ...source })),
         });
         map.set(entry.kind, existing);
       }
@@ -1345,20 +1444,30 @@ function SquadUtilityCoverage({
         <div><div className="theme-builder-kicker">Resolved from each complete combat kit</div><h3>Squad utility access</h3></div>
         {computing && <Loader2 className="h-4 w-4 animate-spin" aria-label="Updating utility access" />}
       </div>
-      <div className="theme-builder-boon-grid theme-builder-utility-grid" role="list" aria-label="Detected squad utility access">
+      <div className="theme-builder-boon-grid theme-builder-utility-grid" role="group" aria-label="Detected squad utility access">
         {coveredUtilities.map((kind) => {
           const entry = providers.get(kind)!;
-          const tooltip = entry.sources.map((source) =>
-            `${source.buildName} (${source.profession}): ${source.sourceNames.join(" + ")}`,
-          ).join(", ");
+          const tooltip = `Open ${entry.label} source breakdown`;
           return (
-            <div key={kind} className="is-covered" title={tooltip} role="listitem" aria-label={tooltip}>
+            <button
+              key={kind}
+              type="button"
+              className="is-covered"
+              title={tooltip}
+              aria-label={tooltip}
+              onClick={() => setSelectedCoverage({
+                category: "Squad utility",
+                name: entry.label,
+                icon: entry.icon,
+                providers: entry.sources,
+              })}
+            >
               <div className="theme-builder-boon-icon">
                 {entry.icon ? <img src={entry.icon} alt="" /> : <Wrench className="h-5 w-5" />}
                 <em>{entry.sources.length}</em>
               </div>
               <span>{entry.label}</span>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -1366,6 +1475,7 @@ function SquadUtilityCoverage({
         <strong>Missing</strong>
         <span>{missingUtilities.length ? missingUtilities.map((kind) => BUILD_UTILITY_LABELS[kind]).join(" · ") : "None"}</span>
       </p>
+      {selectedCoverage && <CoverageBreakdownDialog detail={selectedCoverage} onClose={() => setSelectedCoverage(null)} />}
     </section>
   );
 }
