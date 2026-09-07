@@ -26,6 +26,7 @@ interface BuildCombatBarProps {
   onSwap: () => void;
   onInspect: (skill: Gw2Skill) => void;
   onInspectPet: (pet: Gw2Pet) => void;
+  showUtilityNames?: boolean;
 }
 
 export default function BuildCombatBar({
@@ -40,6 +41,7 @@ export default function BuildCombatBar({
   onSwap,
   onInspect,
   onInspectPet,
+  showUtilityNames = false,
 }: BuildCombatBarProps) {
   const utilityIds = [builder.healSkillId, ...builder.utilitySkillIds, builder.eliteSkillId];
   const utilityLabels = ["Heal", "Utility 1", "Utility 2", "Utility 3", "Elite"];
@@ -121,6 +123,19 @@ export default function BuildCombatBar({
             );
           })}
         </div>
+        {showUtilityNames && (
+          <div className="theme-builder-combat-skill-names" aria-label="Equipped healing and utility skill names">
+            {utilityIds.map((id, index) => {
+              const skill = id ? skillsById.get(id) : null;
+              return (
+                <span key={`${utilityLabels[index]}-name-${id ?? "empty"}`} title={skill?.name ?? `${utilityLabels[index]} not selected`}>
+                  <small>{utilityLabels[index]}</small>
+                  <strong>{skill?.name ?? "Not selected"}</strong>
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="theme-builder-combat-core">

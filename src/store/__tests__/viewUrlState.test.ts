@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { buildViewUrl, normalizeViewId, parseViewUrlState } from "../viewUrlState";
 
 describe("viewUrlState", () => {
+  it("uses the Entropy Builder public route while preserving the internal view id", () => {
+    expect(parseViewUrlState("?view=entropy-builder").view).toBe("axiforge-lab");
+    expect(buildViewUrl("http://localhost:5173/?view=overview", "axiforge-lab", null)).toBe("/?view=entropy-builder");
+  });
+
   it("normalizes known views and falls back from unknown views", () => {
     expect(normalizeViewId("fight-replay")).toBe("fight-replay");
     expect(normalizeViewId("missing-view")).toBe("overview");

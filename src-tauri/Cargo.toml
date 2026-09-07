@@ -1,6 +1,6 @@
 [package]
 name = "entropy"
-version = "0.2.100"
+version = "0.2.101"
 description = "GW2 WvW combat analytics desktop app"
 edition = "2021"
 

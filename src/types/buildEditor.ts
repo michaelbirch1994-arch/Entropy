@@ -60,6 +60,13 @@ export interface Gw2Item {
   subtype?: string;
   rarity?: string;
   level?: number;
+  details?: {
+    infix_upgrade?: {
+      attributes?: Array<{ attribute: string; modifier: number }>;
+    };
+    bonuses?: string[];
+    type?: string;
+  };
 }
 
 export interface Gw2Legend {

@@ -275,7 +275,7 @@ export function applyGw2SkillsEquipment(
   const recordUnresolvedInfusions = (values: string[]) => {
     const unresolved = values.filter((value) => !/^\d+$/.test(value));
     if (unresolved.length && !warnings.some((warning) => warning.startsWith("Some imported infusions"))) {
-      warnings.push("Some imported infusions do not expose official item IDs in the source catalog. Their names remain saved in this draft, but the current AxiCode format cannot export those exact infusion entries.");
+      warnings.push("Some imported infusions do not expose official item IDs in the source catalog. Their names remain saved in this draft, but the current Entropy code format cannot export those exact infusion entries.");
     }
   };
 
@@ -343,7 +343,7 @@ export function applyGw2SkillsEquipment(
   if (enrichmentName) {
     state.equipment.enrichment = choiceIdForLabel(enrichmentName, BUILDER_ENRICHMENT_CHOICES) || enrichmentName;
     if (!/^\d+$/.test(state.equipment.enrichment)) {
-      warnings.push("The imported enrichment name was preserved, but its official item ID was not available in the source catalog and cannot be exported by the current AxiCode format.");
+      warnings.push("The imported enrichment name was preserved, but its official item ID was not available in the source catalog and cannot be exported by the current Entropy code format.");
     }
   }
 

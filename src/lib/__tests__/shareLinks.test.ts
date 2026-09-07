@@ -4,6 +4,7 @@ import {
   buildEntropyArtifactShareLink,
   buildEntropyShareLink,
   DEFAULT_SHARE_VIEWER_URL,
+  getConfiguredShareViewerUrl,
   getReportPermalinks,
   parseReportLoadQuery,
 } from "../shareLinks";
@@ -116,5 +117,13 @@ describe("share links inside the desktop app", () => {
     const report = reportWithPermalinks(["one", "two"]);
 
     expect(buildEntropyShareLink(report)).toBe("https://entropy-um58.vercel.app/?permalinks=one%2Ctwo");
+  });
+
+  it("uses the hosted viewer instead of a local development address", () => {
+    vi.mocked(isTauri).mockReturnValue(false);
+    // @ts-expect-error - partial window stub is enough for this code path
+    globalThis.window = { location: { protocol: "http:", href: "http://127.0.0.1:5191/?view=axiforge-lab" } };
+
+    expect(getConfiguredShareViewerUrl()).toBe(DEFAULT_SHARE_VIEWER_URL);
   });
 });

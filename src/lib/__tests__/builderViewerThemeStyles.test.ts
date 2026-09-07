@@ -28,6 +28,12 @@ describe("builder viewer theme styles", () => {
     expect(view).toContain("<h4>Combat bar</h4>");
     expect(view).toContain("<h4>Specializations</h4>");
     expect(view).not.toContain("Specialization matrix");
+    expect(view).toContain('className="theme-builder-trait-tier-head"');
+    expect(view).toContain('{selectedTrait?.name ?? "Choose trait"}');
+    expect(view).toContain('className="theme-builder-spec-inspect"');
+    expect(css).toContain('.theme-builder-loadout-canvas .theme-builder-trait-grid::before');
+    expect(css).toContain('grid-template-rows: repeat(3, 2.35rem)');
+    expect(css).toContain('.theme-builder-canvas-stage.is-utility .theme-builder-skill-bar');
   });
 
   it("presents Overview as one loadout canvas with a compact role menu", () => {
@@ -45,10 +51,14 @@ describe("builder viewer theme styles", () => {
 
   it("uses one equipment identity header and keeps the active set explicit", () => {
     expect(view).toContain('theme-builder-loadout-canvas theme-builder-equipment-workspace');
-    expect(view).toContain('Equipment loadout · {builder.gameMode.toUpperCase()}');
+    expect(view).toContain('{equipmentSpecialization} · {builder.gameMode.toUpperCase()}');
+    expect(view).toContain('className="theme-builder-canvas-meta"');
+    expect(view).toContain('{activeEquipmentWeapons || "Weapons open"}');
+    expect(view).toContain('Active set {builder.activeWeaponSet === 2 ? "II" : "I"}');
     expect(view).not.toContain('className="theme-builder-equipment-board-head"');
     expect(view).toContain('builder.activeWeaponSet === set && <b>Active</b>');
     expect(css).toMatch(/\.theme-builder-equipment-workspace \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/);
+    expect(css).toContain('.theme-builder-equipment-workspace .theme-builder-weapon-set > .grid > div > .theme-builder-picker-field + .theme-builder-picker-field');
   });
 
   it("renders each equipment item once in its image-led editor", () => {
@@ -96,8 +106,10 @@ describe("builder viewer theme styles", () => {
 
   it("keeps live equipment attributes beside the equipment editor", () => {
     expect(view).toContain("function EquipmentAttributePanel");
-    expect(view).toContain("<EquipmentAttributePanel attributeTotals={attributeTotals} activeWeaponSet={builder.activeWeaponSet} />");
+    expect(view).toContain("<EquipmentAttributePanel attributeProfile={attributeProfile} />");
+    expect(view).toContain("Applied bonuses");
     expect(css).toContain(".theme-builder-equipment-attributes");
+    expect(css).toContain(".theme-builder-equipment-bonuses");
     expect(css).toContain("grid-template-columns: minmax(0, 1fr) minmax(16.5rem, 20rem)");
   });
 });

@@ -87,28 +87,12 @@
 }
 
 .theme-builder-root .theme-builder-coverage-disclosure {
-  overflow: hidden;
+  overflow: visible;
 }
 
-.theme-builder-root .theme-builder-coverage-disclosure > summary {
-  cursor: pointer;
-  list-style: none;
-}
-
-.theme-builder-root .theme-builder-coverage-disclosure > summary::-webkit-details-marker {
-  display: none;
-}
-
-.theme-builder-root .theme-builder-coverage-disclosure > summary > span {
-  display: grid;
-  width: 2rem;
-  height: 2rem;
-  place-items: center;
+.theme-builder-root .theme-builder-coverage-disclosure > .theme-builder-section-head > svg {
+  flex: 0 0 auto;
   color: var(--theme-textMuted);
-}
-
-.theme-builder-root .theme-builder-coverage-disclosure[open] > summary > span svg:not(.animate-spin) {
-  transform: rotate(90deg);
 }
 
 .theme-builder-root .theme-builder-coverage-disclosure > .theme-builder-boon-grid {
@@ -568,40 +552,40 @@
 
 .theme-builder-root .theme-builder-coverage-disclosure {
   margin: 0;
-  padding: 0;
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 28%, var(--theme-border));
-  border-radius: 8px;
-  background: rgba(4, 11, 13, 0.94);
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--builder-squad-accent) 52%, transparent);
+  padding: 0 0 0.15rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   clip-path: none;
 }
 
 .theme-builder-root .theme-builder-condition-coverage {
-  border-color: color-mix(in srgb, var(--theme-warning) 24%, var(--theme-border));
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--theme-warning) 54%, transparent);
+  border: 0;
+  box-shadow: none;
 }
 
-.theme-builder-root .theme-builder-coverage-disclosure > summary {
-  min-height: 3.35rem;
+.theme-builder-root .theme-builder-coverage-disclosure > .theme-builder-section-head {
+  min-height: 2.9rem;
   align-items: center;
   margin: 0;
-  padding: 0.62rem 0.75rem;
+  padding: 0.25rem 0 0.65rem;
 }
 
 .theme-builder-root .theme-builder-coverage-disclosure > .theme-builder-boon-grid {
-  grid-template-columns: repeat(auto-fill, minmax(4.2rem, 1fr));
-  gap: 0.38rem;
+  grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
+  gap: 0.55rem;
   margin: 0;
-  padding: 0.65rem 0.75rem 0.5rem;
-  border-top: 1px solid rgba(123, 108, 76, 0.16);
+  padding: 0.7rem 0 0.65rem;
+  border-top: 1px solid rgba(123, 108, 76, 0.2);
 }
 
 .theme-builder-root .theme-builder-boon-grid > div {
   min-width: 0;
-  min-height: 4rem;
-  gap: 0.22rem;
-  padding: 0.38rem 0.25rem 0.32rem;
-  border-radius: 6px;
+  min-height: 5.2rem;
+  gap: 0.3rem;
+  padding: 0.58rem 0.35rem 0.48rem;
+  border-radius: 8px;
   background: rgba(3, 14, 15, 0.9);
   box-shadow: none;
   transform: none;
@@ -613,28 +597,33 @@
 }
 
 .theme-builder-root .theme-builder-boon-icon {
-  width: 1.9rem;
-  height: 1.9rem;
+  width: 2.7rem;
+  height: 2.7rem;
+}
+
+.theme-builder-root .theme-builder-boon-icon em {
+  font-size: 0.62rem;
+  padding: 0.18rem 0.34rem;
 }
 
 .theme-builder-root .theme-builder-boon-grid > div span {
   max-width: 100%;
   overflow: hidden;
-  font-size: 0.48rem;
+  font-size: 0.56rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .theme-builder-root .theme-builder-boon-grid > div .theme-builder-boon-uptime {
   color: color-mix(in srgb, var(--theme-accentStrong) 76%, var(--theme-textMuted));
-  font-size: 0.46rem;
+  font-size: 0.52rem;
 }
 
 .theme-builder-root .theme-builder-coverage-missing {
   display: flex;
   gap: 0.55rem;
   margin: 0;
-  padding: 0.45rem 0.75rem 0.58rem;
+  padding: 0.48rem 0 0.2rem;
   border-top: 1px solid rgba(123, 108, 76, 0.12);
   color: var(--theme-textFaint);
   font-family: var(--font-mono);

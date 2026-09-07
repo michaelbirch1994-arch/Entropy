@@ -1,4 +1,4 @@
-import type { Gw2ApiFact, Gw2Skill, Gw2Trait } from "../../types/buildEditor";
+import type { Gw2ApiFact, Gw2GameMode, Gw2Skill, Gw2Trait } from "../../types/buildEditor";
 
 /**
  * Squad boon-coverage engine. Scans a build's selected skills and active
@@ -10,6 +10,10 @@ import type { Gw2ApiFact, Gw2Skill, Gw2Trait } from "../../types/buildEditor";
  */
 
 const BUFF_FACT_TYPES = new Set(["Buff", "ApplyBuffCondition", "PrefixedBuff"]);
+
+export function isProvidedEffectFact(fact: Gw2ApiFact): boolean {
+  return Boolean(fact.status && fact.type && BUFF_FACT_TYPES.has(fact.type));
+}
 
 export const BOON_NAMES = new Set([
   "Aegis",
@@ -97,9 +101,50 @@ function isAllyTargeted(description: string | undefined, statusName: string, all
 }
 
 interface BoonScanEntity {
+  id?: number;
   name: string;
   description?: string;
   facts?: Gw2ApiFact[];
+}
+
+const SKILL_FACT_OVERRIDES: Record<number, Record<Gw2GameMode, Gw2ApiFact[]>> = {
+  // ArenaNet's API currently omits the boon facts for this skill. Values mirror
+  // the live mode splits documented at wiki.guildwars2.com/wiki/Tale_of_the_Soulkeeper.
+  76850: {
+    pve: [
+      { type: "Recharge", value: 20 },
+      { type: "Buff", status: "Might", apply_count: 10, duration: 15, icon: "https://render.guildwars2.com/file/2FA9DF9D6BC17839BBEA14723F1C53D645DDB5E1/102852.png" },
+      { type: "Buff", status: "Fury", duration: 10, icon: "https://render.guildwars2.com/file/96D90DF84CAFE008233DD1C2606A12C1A0E68048/102842.png" },
+      { type: "Buff", status: "Quickness", duration: 4, icon: "https://render.guildwars2.com/file/D4AB6401A6D6917C3D4F230764452BCCE1035B0D/1012835.png" },
+    ],
+    pvp: [
+      { type: "Recharge", value: 30 },
+      { type: "Buff", status: "Might", apply_count: 10, duration: 6, icon: "https://render.guildwars2.com/file/2FA9DF9D6BC17839BBEA14723F1C53D645DDB5E1/102852.png" },
+      { type: "Buff", status: "Fury", duration: 6, icon: "https://render.guildwars2.com/file/96D90DF84CAFE008233DD1C2606A12C1A0E68048/102842.png" },
+      { type: "Buff", status: "Quickness", duration: 3, icon: "https://render.guildwars2.com/file/D4AB6401A6D6917C3D4F230764452BCCE1035B0D/1012835.png" },
+    ],
+    wvw: [
+      { type: "Recharge", value: 30 },
+      { type: "Buff", status: "Might", apply_count: 10, duration: 6, icon: "https://render.guildwars2.com/file/2FA9DF9D6BC17839BBEA14723F1C53D645DDB5E1/102852.png" },
+      { type: "Buff", status: "Fury", duration: 6, icon: "https://render.guildwars2.com/file/96D90DF84CAFE008233DD1C2606A12C1A0E68048/102842.png" },
+      { type: "Buff", status: "Quickness", duration: 3, icon: "https://render.guildwars2.com/file/D4AB6401A6D6917C3D4F230764452BCCE1035B0D/1012835.png" },
+    ],
+  },
+};
+
+function factIdentity(fact: Gw2ApiFact): string {
+  return fact.status ? `${fact.type ?? "fact"}:${fact.status}` : fact.type ?? "fact";
+}
+
+export function enrichedFactsForEntity(entity: BoonScanEntity, gameMode: Gw2GameMode = "wvw"): Gw2ApiFact[] {
+  const facts = entity.facts ?? [];
+  const override = entity.id ? SKILL_FACT_OVERRIDES[entity.id]?.[gameMode] ?? [] : [];
+  const overriddenFacts = new Set(override.map(factIdentity));
+  const mergedOverrides = override.map((fact) => ({
+    ...facts.find((existing) => factIdentity(existing) === factIdentity(fact)),
+    ...fact,
+  }));
+  return [...facts.filter((fact) => !overriddenFacts.has(factIdentity(fact))), ...mergedOverrides];
 }
 
 function findRechargeSeconds(facts: Gw2ApiFact[]): number | undefined {
@@ -112,8 +157,9 @@ function scanEntity(
   type: "skill" | "trait",
   boonMap: Map<string, BoonCoverageEntry>,
   boonDurationPercent: number,
+  gameMode: Gw2GameMode,
 ) {
-  const facts = entity.facts ?? [];
+  const facts = enrichedFactsForEntity(entity, gameMode);
   const description = entity.description ?? "";
 
   const entityBoonNames: string[] = [];
@@ -164,10 +210,11 @@ export function analyzeBuildBoons(
   skills: Gw2Skill[],
   traits: Gw2Trait[],
   boonDurationPercent = 0,
+  gameMode: Gw2GameMode = "wvw",
 ): BoonCoverageEntry[] {
   const boonMap = new Map<string, BoonCoverageEntry>();
-  for (const skill of skills) if (skill) scanEntity(skill, "skill", boonMap, boonDurationPercent);
-  for (const trait of traits) if (trait) scanEntity(trait, "trait", boonMap, boonDurationPercent);
+  for (const skill of skills) if (skill) scanEntity(skill, "skill", boonMap, boonDurationPercent, gameMode);
+  for (const trait of traits) if (trait) scanEntity(trait, "trait", boonMap, boonDurationPercent, gameMode);
 
   const order = new Map(BOON_DISPLAY_ORDER.map((name, index) => [name, index]));
   return [...boonMap.values()]

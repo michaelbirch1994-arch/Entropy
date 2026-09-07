@@ -45,7 +45,7 @@ const CONDITION_ALIASES = new Map([
 
 const FALLBACK_CONDITION_ICONS: Record<string, string> = {
   Bleeding: "https://wiki.guildwars2.com/images/3/33/Bleeding.png",
-  Burning: "https://wiki.guildwars2.com/images/7/79/Burning.png",
+  Burning: "https://render.guildwars2.com/file/B47BF5803FED2718D7474EAF9617629AD068EE10/102849.png",
   Torment: "https://wiki.guildwars2.com/images/0/08/Torment.png",
   Poison: "https://wiki.guildwars2.com/images/1/11/Poison.png",
   Confusion: "https://wiki.guildwars2.com/images/6/68/Confusion.png",

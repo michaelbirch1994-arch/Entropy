@@ -147,7 +147,7 @@ export default function BuildSummaryCard({
             <summary ref={actionMenuTriggerRef} title="Build actions" aria-label={`Actions for ${build.name}`}><EllipsisVertical /></summary>
             <div role="menu" aria-label={`Actions for ${build.name}`}>
               {onDuplicate && <button type="button" role="menuitem" onClick={() => runMenuAction(() => onDuplicate(build))}><Copy /><span>Duplicate</span></button>}
-              {onCopy && <button type="button" role="menuitem" onClick={() => runMenuAction(() => onCopy(build.shareCode))} title={build.shareCode ? "Copy AxiCode" : "Draft has no exportable AxiCode yet"} disabled={!build.shareCode}><Clipboard /><span>Copy AxiCode</span></button>}
+              {onCopy && <button type="button" role="menuitem" onClick={() => runMenuAction(() => onCopy(build.shareCode))} title={build.shareCode ? "Copy Entropy code" : "Draft has no exportable Entropy code yet"} disabled={!build.shareCode}><Clipboard /><span>Copy Entropy code</span></button>}
               {onShare && <button type="button" role="menuitem" onClick={() => runMenuAction(() => onShare(build.shareCode))} title={build.shareCode ? "Copy share link" : "Draft has no share link yet"} disabled={!build.shareCode}><Link2 /><span>Copy share link</span></button>}
               {onDelete && <button type="button" role="menuitem" onClick={() => runMenuAction(() => onRequestDelete?.(build.id))}><Trash2 /><span>Delete</span></button>}
             </div>

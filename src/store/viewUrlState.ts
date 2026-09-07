@@ -21,6 +21,7 @@ export interface ParsedViewUrlState {
 const KNOWN_VIEW_SET = new Set<string>(KNOWN_VIEW_IDS);
 
 export function normalizeViewId(view: string | null | undefined, fallback: KnownViewId = "overview"): KnownViewId {
+  if (view === "entropy-builder") return "axiforge-lab";
   if (view && KNOWN_VIEW_SET.has(view)) return view as KnownViewId;
   return fallback;
 }
@@ -56,7 +57,7 @@ export function parseViewUrlState(search: string, fallback: KnownViewId = "overv
 export function buildViewUrl(baseHref: string, view: string, target: ViewNavigationTarget | null): string {
   const url = new URL(baseHref);
   const normalizedView = normalizeViewId(view);
-  url.searchParams.set("view", normalizedView);
+  url.searchParams.set("view", normalizedView === "axiforge-lab" ? "entropy-builder" : normalizedView);
 
   for (const param of NAVIGATION_TARGET_PARAMS) {
     url.searchParams.delete(param);
