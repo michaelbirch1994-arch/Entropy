@@ -45,6 +45,20 @@ describe("builder squad boon coverage", () => {
     expect(mergeLiveBuildForCoverage([saved], null, draft)[0]).toBe(saved);
   });
 
+  it("invalidates live coverage when profession-specific skill sources change", () => {
+    const saved = createSavedBuild(createEmptyBuilder("Ranger"), "");
+    const first = mergeLiveBuildForCoverage([saved], saved.id, {
+      ...saved.state,
+      selectedPets: { ...saved.state.selectedPets, terrestrial1: 4 },
+    });
+    const second = mergeLiveBuildForCoverage([saved], saved.id, {
+      ...saved.state,
+      selectedPets: { ...saved.state.selectedPets, terrestrial1: 5 },
+    });
+
+    expect(first[0].updatedAt).not.toBe(second[0].updatedAt);
+  });
+
   it("enriches Tale of the Soulkeeper with its mode-specific provided boons", () => {
     const skill = {
       id: 76850,

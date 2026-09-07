@@ -1,12 +1,7 @@
-import {
-  fetchGw2Professions,
-  fetchGw2Skills,
-  fetchGw2Specializations,
-  fetchGw2Traits,
-} from "../gw2/gw2Api";
 import type { EntropyBuilderState, SavedBuilderBuild } from "../../types/buildEditor";
 import { analyzeBuildBoons, type BoonCoverageEntry } from "./boonEngine";
 import { computeAttributeTotals } from "../gw2/computeAttributes";
+import { fetchBuildCombatKit } from "./buildCombatKit";
 
 function coverageRevision(state: EntropyBuilderState): string {
   const value = JSON.stringify({
@@ -16,6 +11,10 @@ function coverageRevision(state: EntropyBuilderState): string {
     healSkillId: state.healSkillId,
     utilitySkillIds: state.utilitySkillIds,
     eliteSkillId: state.eliteSkillId,
+    selectedLegends: state.selectedLegends,
+    selectedPets: state.selectedPets,
+    activeAttunement: state.activeAttunement,
+    activeAttunement2: state.activeAttunement2,
     equipment: state.equipment,
   });
   let hash = 2166136261;
@@ -50,64 +49,7 @@ export function mergeLiveBuildForCoverage(
  * buildAxiShape() already uses for AxiCode export.
  */
 export async function computeBuildBoonCoverage(state: EntropyBuilderState): Promise<BoonCoverageEntry[]> {
-  const specIds = state.specializationIds.filter((id): id is number => Boolean(id));
-  if (!specIds.length) return [];
-
-  const specs = await fetchGw2Specializations(specIds);
-  const specsById = new Map(specs.map((spec) => [spec.id, spec]));
-
-  const minorTraitIds = new Set<number>();
-  for (const spec of specs) for (const id of spec.minor_traits) minorTraitIds.add(id);
-
-  const allMajorIds = specs.flatMap((spec) => spec.major_traits);
-  const majorTraits = allMajorIds.length ? await fetchGw2Traits(allMajorIds) : [];
-  const majorsBySpec = new Map<number, typeof majorTraits>();
-  for (const trait of majorTraits) {
-    const list = majorsBySpec.get(trait.specialization) ?? [];
-    list.push(trait);
-    majorsBySpec.set(trait.specialization, list);
-  }
-
-  const chosenMajorIds = new Set<number>();
-  state.specializationIds.forEach((specId, trackIndex) => {
-    if (!specId || !specsById.has(specId)) return;
-    for (const tier of [1, 2, 3] as const) {
-      const tierTraits = (majorsBySpec.get(specId) ?? [])
-        .filter((trait) => trait.tier === tier)
-        .sort((a, b) => a.order - b.order);
-      const choice = state.traitChoices[trackIndex][tier - 1];
-      const chosen = choice ? tierTraits[choice - 1] : null;
-      if (chosen) chosenMajorIds.add(chosen.id);
-    }
-  });
-
-  const traitIds = [...minorTraitIds, ...chosenMajorIds];
-  const traits = traitIds.length ? await fetchGw2Traits(traitIds) : [];
-
-  const professions = await fetchGw2Professions();
-  const profession = professions.find((item) => item.id === state.professionId) ?? null;
-  const weaponSkillIds = new Set<number>();
-  if (profession?.weapons) {
-    const equippedWeapons = Object.values(state.equipment.weapons).filter(Boolean);
-    for (const weaponName of equippedWeapons) {
-      const entry = Object.entries(profession.weapons).find(
-        ([name]) => name.toLowerCase() === weaponName.toLowerCase(),
-      );
-      for (const skillRef of entry?.[1]?.skills ?? []) {
-        if (skillRef.id) weaponSkillIds.add(skillRef.id);
-      }
-    }
-  }
-
-  const skillIds = [
-    state.healSkillId,
-    ...state.utilitySkillIds,
-    state.eliteSkillId,
-    ...weaponSkillIds,
-  ].filter((id): id is number => Boolean(id));
-  const skills = skillIds.length ? await fetchGw2Skills(skillIds) : [];
-
-  const boonDurationPercent = computeAttributeTotals(state, profession).boonDuration;
-
-  return analyzeBuildBoons(skills, traits, boonDurationPercent, state.gameMode);
+  const kit = await fetchBuildCombatKit(state);
+  const boonDurationPercent = computeAttributeTotals(state, kit.profession).boonDuration;
+  return analyzeBuildBoons(kit.skills, kit.traits, boonDurationPercent, state.gameMode);
 }
