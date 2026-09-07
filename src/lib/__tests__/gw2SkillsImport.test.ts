@@ -43,16 +43,54 @@ describe("gw2skills import boundary", () => {
     };
     const result = applyGw2SkillsEquipment(createEmptyBuilder("Elementalist"), preload, database, ["Marauder's"]);
     expect(result.state.equipment.statPackage).toBe("Marauder's");
+    expect(result.state.equipment.slots.head).toBe("Marauder's");
+    expect(result.state.equipment.slots.mainhand1).toBe("Marauder's");
     expect(result.state.equipment.weapons.mainhand1).toBe("dagger");
     expect(result.state.equipment.runes.head).toBe("82791");
     expect(result.state.equipment.sigils.mainhand1).toEqual(["82876"]);
-    expect(result.state.equipment.slots.accessory1).toBe("Marauder's stats");
+    expect(result.state.equipment.slots.accessory1).toBe("Marauder's");
     expect(result.state.equipment.infusions.head).toBe("49424");
     expect(result.state.equipment.infusions.mainhand1).toEqual(["49424"]);
     expect(result.state.equipment.infusions.accessory1).toBe("49424");
     expect(result.state.equipment.enrichment).toBe("39330");
     expect(result.state.equipment.relic).toBe("Relic of Fireworks");
     expect(result.state.equipment.food).toBe("Peppercorn-Crusted Sous-Vide Steak");
+  });
+
+  it("preserves scalar infusion ids and per-slot stats from live gw2skills payloads", () => {
+    const database = {
+      profile: { desc: ["id", "profile"], rows: [[192, 33], [274, 33], [357, 33]] },
+      prfltype: { desc: ["id", "name"], rows: [[33, "Minstrel"]] },
+      weapon: { desc: ["id", "name"], rows: [[6, "Staff"]] },
+      upgrade: { desc: ["id", "name"], rows: [[358, "Healing WvW Infusion"], [364, "Magical Enrichment"]] },
+    };
+    const result = applyGw2SkillsEquipment(
+      createEmptyBuilder("Ranger"),
+      {
+        weapon: [6, 0],
+        equipment: {
+          armor: { helm: { item: [274, 1], inf: [358] } },
+          weapon: { w11: { item: [192, 1], inf: [358, 358] } },
+          trinket: {
+            amulet: { item: [357, 1], inf: [364, 0] },
+            ring1: { item: [357, 1], inf: [358, 358, 358] },
+          },
+        },
+      },
+      database,
+      ["Minstrel's"],
+    );
+
+    expect(result.state.equipment.weapons.mainhand1).toBe("staff");
+    expect(result.state.equipment.slots.head).toBe("Minstrel's");
+    expect(result.state.equipment.slots.mainhand1).toBe("Minstrel's");
+    expect(result.state.equipment.slots.ring1).toBe("Minstrel's");
+    expect(result.state.equipment.infusions.head).toBe("Healing WvW Infusion");
+    expect(result.state.equipment.infusions.mainhand1).toEqual(["Healing WvW Infusion", "Healing WvW Infusion"]);
+    expect(result.state.equipment.infusions.amulet).toBeUndefined();
+    expect(result.state.equipment.infusions.ring1).toEqual(["Healing WvW Infusion", "Healing WvW Infusion", "Healing WvW Infusion"]);
+    expect(result.state.equipment.enrichment).toBe("39333");
+    expect(result.warnings).toHaveLength(1);
   });
 
   it("maps the compact positional rows used by the live gw2skills catalog", () => {

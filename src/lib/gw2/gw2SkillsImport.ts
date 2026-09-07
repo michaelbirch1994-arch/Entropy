@@ -263,7 +263,7 @@ export function applyGw2SkillsEquipment(
     return normalizeStat(displayName(profileTypes.get(typeId) ?? {}), itemStatNames);
   };
   const upgradeEntries = (entry: JsonRecord, field: "up" | "inf") => (Array.isArray(entry[field]) ? entry[field] : [])
-    .map((value) => Array.isArray(value) ? upgrades.get(numberValue(value[0])) : undefined)
+    .map((value) => upgrades.get(numberValue(Array.isArray(value) ? value[0] : value)))
     .filter((value): value is JsonRecord => Boolean(value));
   const equipmentChoiceIds = (entry: JsonRecord, kind: "rune" | "sigil") => upgradeEntries(entry, "up")
     .map((value) => superiorName(displayName(value), kind))
@@ -286,7 +286,10 @@ export function applyGw2SkillsEquipment(
   for (const [sourceSlot, targetSlot] of Object.entries(armorSlots)) {
     const entry = record(armor[sourceSlot]);
     const stat = statFor(entry.item);
-    if (stat) statBySlot.push(stat);
+    if (stat) {
+      statBySlot.push(stat);
+      state.equipment.slots[targetSlot] = stat;
+    }
     state.equipment.runes[targetSlot] = equipmentChoiceIds(entry, "rune")[0] ?? "";
     const infusions = infusionValues(entry);
     recordUnresolvedInfusions(infusions);
@@ -304,7 +307,10 @@ export function applyGw2SkillsEquipment(
     if (weaponName) state.equipment.weapons[targetSlot] = weaponName;
     const entry = record(weaponEquipment[sourceSlot]);
     const stat = statFor(entry.item);
-    if (stat) statBySlot.push(stat);
+    if (stat) {
+      statBySlot.push(stat);
+      state.equipment.slots[targetSlot] = stat;
+    }
     state.equipment.sigils[targetSlot] = equipmentChoiceIds(entry, "sigil");
     const infusions = infusionValues(entry);
     recordUnresolvedInfusions(infusions);
@@ -322,15 +328,20 @@ export function applyGw2SkillsEquipment(
     accessory1: "accessory1",
     accessory2: "accessory2",
   };
+  let enrichmentName = displayName(upgradeEntries(record(trinkets.amulet), "up")[0] ?? {});
   for (const [sourceSlot, targetSlot] of Object.entries(trinketSlots)) {
     const entry = record(trinkets[sourceSlot]);
     if (!Object.keys(entry).length || state.equipment.slots[targetSlot]) continue;
     const stat = statFor(entry.item);
     if (stat) {
       statBySlot.push(stat);
-      state.equipment.slots[targetSlot] = `${stat} stats`;
+      state.equipment.slots[targetSlot] = stat;
     }
-    const infusions = infusionValues(entry);
+    const importedInfusions = infusionValues(entry);
+    if (targetSlot === "amulet") {
+      enrichmentName ||= importedInfusions.find((value) => /enrichment$/i.test(value)) ?? "";
+    }
+    const infusions = importedInfusions.filter((value) => !/enrichment$/i.test(value));
     recordUnresolvedInfusions(infusions);
     if (infusions.length) {
       state.equipment.infusions[targetSlot] = targetSlot === "accessory1" || targetSlot === "accessory2"
@@ -339,7 +350,6 @@ export function applyGw2SkillsEquipment(
     }
   }
 
-  const enrichmentName = displayName(upgradeEntries(record(trinkets.amulet), "up")[0] ?? {});
   if (enrichmentName) {
     state.equipment.enrichment = choiceIdForLabel(enrichmentName, BUILDER_ENRICHMENT_CHOICES) || enrichmentName;
     if (!/^\d+$/.test(state.equipment.enrichment)) {

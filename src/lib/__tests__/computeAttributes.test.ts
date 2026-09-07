@@ -44,6 +44,25 @@ function equipRuneSet(builder: EntropyBuilderState, runeId: string) {
 }
 
 describe("computeAttributeTotals", () => {
+    it("applies named WvW infusion attributes preserved by gw2skills imports", () => {
+          const builder = createEmptyBuilder("Ranger");
+          builder.equipment.infusions = {
+                head: "Healing WvW Infusion",
+                ring1: ["Healing WvW Infusion", "Healing WvW Infusion"],
+                mainhand1: "Mighty WvW Infusion",
+                mainhand2: "Mighty WvW Infusion",
+          };
+
+          const profile = computeAttributeProfile(builder, null);
+
+          expect(profile.totals.healingPower).toBe(15);
+          expect(profile.totals.power).toBe(1005);
+          expect(profile.contributions.find((entry) => entry.source === "infusion")?.stats).toMatchObject({
+                HealingPower: 15,
+                Power: 5,
+          });
+    });
+
     it("returns base 1000 primary stats with no gear and no profession passed", () => {
           const builder = createEmptyBuilder("Guardian");
           const totals = computeAttributeTotals(builder, null);

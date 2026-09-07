@@ -411,14 +411,31 @@ function applyItemAttributes(
   return applyAttributeBonuses(totals, bonuses);
 }
 
-function activeInfusionIds(builder: EntropyBuilderState, activeSet: 1 | 2): number[] {
+function activeInfusionValues(builder: EntropyBuilderState, activeSet: 1 | 2): string[] {
   return Object.entries(builder.equipment.infusions).flatMap(([slot, value]) => {
     if (/^(mainhand|offhand)[12]$/.test(slot) && !slot.endsWith(String(activeSet))) return [];
     if (slot.startsWith("aquatic")) return [];
-    return (Array.isArray(value) ? value : [value])
-      .map(Number)
-      .filter((id) => Number.isInteger(id) && id > 0);
+    return (Array.isArray(value) ? value : [value]).filter(Boolean);
   });
+}
+
+const NAMED_INFUSION_ATTRIBUTES: Record<string, Gw2Attribute | undefined> = {
+  "Healing WvW Infusion": "HealingPower",
+  "Malign WvW Infusion": "ConditionDamage",
+  "Mighty WvW Infusion": "Power",
+  "Precise WvW Infusion": "Precision",
+  "Resilient WvW Infusion": "Toughness",
+  "Vital WvW Infusion": "Vitality",
+};
+
+function applyNamedInfusions(totals: Record<Gw2Attribute, number>, values: string[]): Record<Gw2Attribute, number> {
+  const bonuses = emptyContributionStats();
+  values.forEach((value) => {
+    if (/^\d+$/.test(value)) return;
+    const attribute = NAMED_INFUSION_ATTRIBUTES[value];
+    if (attribute) bonuses[attribute] += 5;
+  });
+  return applyAttributeBonuses(totals, bonuses);
 }
 
 function applyFood(totals: Record<Gw2Attribute, number>, builder: EntropyBuilderState): Record<Gw2Attribute, number> {
@@ -531,7 +548,9 @@ export function computeAttributeProfile(
   }
 
   runeStats = applyFullRuneSet(totals, builder);
-  infusionStats = applyItemAttributes(totals, activeInfusionIds(builder, activeSet), items);
+  const activeInfusions = activeInfusionValues(builder, activeSet);
+  infusionStats = applyItemAttributes(totals, activeInfusions.map(Number).filter((id) => Number.isInteger(id) && id > 0), items);
+  mergeContribution(infusionStats, applyNamedInfusions(totals, activeInfusions));
   const relicItem = Object.values(items).find((item) => item.name === builder.equipment.relic);
   relicStats = applyItemAttributes(totals, relicItem ? [relicItem.id] : [], items);
   const enrichmentId = Number(builder.equipment.enrichment);
