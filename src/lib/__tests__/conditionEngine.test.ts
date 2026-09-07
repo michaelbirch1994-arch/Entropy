@@ -55,4 +55,15 @@ describe("Builder condition access", () => {
     expect(fallbackConditionIcon("Burning")).toContain("render.guildwars2.com");
     expect(fallbackConditionIcon("Taunt")).toContain("Taunt");
   });
+
+  it("does not duplicate a structured condition mentioned in the description", () => {
+    const result = analyzeBuildConditions([skill({
+      id: 30504,
+      name: "Soul Spiral",
+      description: "Inflict poison with each strike.",
+      facts: [{ type: "Buff", status: "Poisoned", duration: 2, apply_count: 12 }],
+    })], []);
+
+    expect(result[0].sources).toHaveLength(1);
+  });
 });

@@ -79,6 +79,9 @@ function isAllyTargeted(description: string | undefined, statusName: string, all
     const hasBoon = trimmed.includes(statusLower);
     if (hasBoon) foundInDescription = true;
     if (hasBoon && hasAlly) foundInAllySentence = true;
+    if (hasBoon && /\b(?:area|nearby)\b/.test(trimmed) && !/\b(?:self|yourself|caster)\b/.test(trimmed)) {
+      foundInAllySentence = true;
+    }
   }
 
   if (foundInAllySentence) return true;

@@ -149,13 +149,18 @@ function scanEntity(
   conditionMap: Map<string, BuilderConditionEntry>,
   conditionDurationPercent: number,
 ) {
+  const structuredNames = new Set<string>();
   for (const fact of entity.facts ?? []) {
     if (!fact.type || !CONDITION_FACT_TYPES.has(fact.type)) continue;
     const name = normalizeConditionName(fact.status);
-    if (name) addCondition(conditionMap, name, entity, type, conditionDurationPercent, fact);
+    if (name) {
+      structuredNames.add(name);
+      addCondition(conditionMap, name, entity, type, conditionDurationPercent, fact);
+    }
   }
 
   for (const name of textConditionNames(entity)) {
+    if (structuredNames.has(name)) continue;
     addCondition(conditionMap, name, entity, type, conditionDurationPercent);
   }
 }

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
+import type { Gw2Skill } from "../../types/buildEditor";
 import { analyzeBuildBoons } from "../axiforge/boonEngine";
 import { createEmptyBuilder } from "../axiforge/builderModel";
-import { resolveNestedMechanicSkills } from "../axiforge/nestedMechanicSkills";
+import { analyzeBuildConditions } from "../axiforge/conditionEngine";
+import {
+  nestedMechanicSkillIds,
+  resolveNestedMechanicSkills,
+} from "../axiforge/nestedMechanicSkills";
+import { analyzeBuildUtility } from "../axiforge/utilityEngine";
 
 describe("nested profession mechanic skills", () => {
   it("adds the complete Firebrand tome kit when Firebrand is active", () => {
@@ -30,5 +36,47 @@ describe("nested profession mechanic skills", () => {
 
   it("does not add Firebrand chapters for a core Guardian", () => {
     expect(resolveNestedMechanicSkills(createEmptyBuilder("Guardian"))).toEqual([]);
+  });
+
+  it("loads the complete Reaper shroud bar from the API catalog", () => {
+    const build = createEmptyBuilder("Necromancer");
+    build.specializationIds = [34, null, null];
+    const ids = nestedMechanicSkillIds(build);
+    const skillsById = new Map<number, Gw2Skill>(ids.map((id) => [id, {
+      id,
+      name: id === 30504 ? "Soul Spiral" : id === 30825 ? "Death's Charge" : `Shroud ${id}`,
+      description: id === 30825 ? "Slide forward, destroying projectiles in your path. Blind foes at your destination." : "",
+      slot: "Profession",
+      facts: id === 30504 ? [{ type: "Buff", status: "Poisoned", duration: 2, apply_count: 12 }] : [],
+    } as Gw2Skill]));
+
+    const skills = resolveNestedMechanicSkills(build, skillsById);
+
+    expect(skills).toHaveLength(7);
+    expect(analyzeBuildConditions(skills, []).find(({ name }) => name === "Poison")?.sources)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ sourceName: "Soul Spiral" })]));
+    expect(analyzeBuildUtility(skills, []).map(({ kind }) => kind).includes("projectileDefense")).toBe(true);
+  });
+
+  it("loads all Tempest overloads and includes their ally support", () => {
+    const build = createEmptyBuilder("Elementalist");
+    build.specializationIds = [48, null, null];
+    const ids = nestedMechanicSkillIds(build);
+    const skillsById = new Map<number, Gw2Skill>(ids.map((id) => [id, {
+      id,
+      name: id === 29415 ? "Overload Water" : `Overload ${id}`,
+      description: id === 29415 ? "Heal and cleanse allies, then apply regeneration." : "",
+      slot: "Profession",
+      facts: id === 29415 ? [
+        { type: "Buff", status: "Regeneration", duration: 8 },
+        { type: "Number", text: "Conditions Removed per Pulse", value: 1 },
+      ] : [],
+    } as Gw2Skill]));
+
+    const skills = resolveNestedMechanicSkills(build, skillsById);
+
+    expect(skills).toHaveLength(4);
+    expect(analyzeBuildBoons(skills, []).find(({ name }) => name === "Regeneration")?.hasAllySource).toBe(true);
+    expect(analyzeBuildUtility(skills, []).map(({ kind }) => kind).includes("cleanse")).toBe(true);
   });
 });

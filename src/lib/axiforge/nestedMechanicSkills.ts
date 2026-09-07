@@ -1,6 +1,13 @@
 import type { EntropyBuilderState, Gw2ApiFact, Gw2Skill } from "../../types/buildEditor";
 
 const FIREBRAND_SPECIALIZATION_ID = 62;
+const REAPER_SPECIALIZATION_ID = 34;
+const TEMPEST_SPECIALIZATION_ID = 48;
+
+const API_NESTED_SKILL_IDS: Record<number, number[]> = {
+  [REAPER_SPECIALIZATION_ID]: [29442, 29458, 30278, 30825, 29958, 30504, 30557],
+  [TEMPEST_SPECIALIZATION_ID]: [29706, 29415, 29719, 29618],
+};
 
 const EFFECT_ICONS: Record<string, string> = {
   Aegis: "https://render.guildwars2.com/file/DFB4D1B50AE4D6A275B349E15B179261EE3EB0AF/102854.png",
@@ -101,9 +108,22 @@ const FIREBRAND_TOME_SKILLS: Gw2Skill[] = [
   ]),
 ];
 
-export function resolveNestedMechanicSkills(state: EntropyBuilderState): Gw2Skill[] {
-  if (state.professionId === "Guardian" && state.specializationIds.includes(FIREBRAND_SPECIALIZATION_ID)) {
-    return FIREBRAND_TOME_SKILLS;
-  }
-  return [];
+export function nestedMechanicSkillIds(state: EntropyBuilderState): number[] {
+  return state.specializationIds.flatMap((specializationId) => (
+    specializationId ? API_NESTED_SKILL_IDS[specializationId] ?? [] : []
+  ));
+}
+
+export function resolveNestedMechanicSkills(
+  state: EntropyBuilderState,
+  skillsById: Map<number, Gw2Skill> = new Map(),
+): Gw2Skill[] {
+  const apiSkills = nestedMechanicSkillIds(state)
+    .map((id) => skillsById.get(id))
+    .filter((skill): skill is Gw2Skill => Boolean(skill));
+  const curatedSkills = state.professionId === "Guardian"
+    && state.specializationIds.includes(FIREBRAND_SPECIALIZATION_ID)
+    ? FIREBRAND_TOME_SKILLS
+    : [];
+  return [...apiSkills, ...curatedSkills];
 }

@@ -46,6 +46,16 @@ describe("builder utility coverage", () => {
     expect(analyzeBuildUtility([skill], []).map(({ kind }) => kind)).toEqual(["stunBreak"]);
   });
 
+  it("recognizes ArenaNet's gerund wording for projectile destruction", () => {
+    const skill = {
+      id: 5,
+      name: "Death's Charge",
+      slot: "Profession",
+      description: "Slide forward, destroying projectiles in your path.",
+    } as Gw2Skill;
+    expect(analyzeBuildUtility([skill], []).map(({ kind }) => kind)).toEqual(["projectileDefense"]);
+  });
+
   it("deduplicates trait sources and recognizes barrier, stealth, and superspeed", () => {
     const trait = {
       id: 3,

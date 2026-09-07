@@ -70,7 +70,7 @@ function detectsUtility(kind: BuildUtilityKind, entity: UtilityEntity): boolean 
     case "barrier":
       return /\bbarrier\b/.test(facts) || /(?:grant|grants|apply|applies) (?:\w+ )?barrier/.test(description);
     case "projectileDefense":
-      return /blocks? missiles?/.test(facts) || /(?:block|blocks|destroy|destroys|absorb|absorbs) (?:\w+ )?(?:projectiles?|missiles?)/.test(description);
+      return /blocks? missiles?/.test(facts) || /(?:block(?:s|ing)?|destroy(?:s|ing)?|absorb(?:s|ing)?) (?:\w+ )?(?:projectiles?|missiles?)/.test(description);
     case "reflect":
       return /reflects? (?:\w+ )?(?:projectiles?|missiles?)/.test(description + " " + facts);
     case "crowdControl":

@@ -66,6 +66,22 @@ describe("builder squad boon coverage", () => {
     expect(coverage[0].estimatedUptimePercent).toBe(20);
   });
 
+  it("recognizes area boons described separately from allied healing", () => {
+    const overload = {
+      id: 29415,
+      name: "Overload Water",
+      slot: "Profession_2",
+      description: "Create a surge of water magic, healing and cleansing allies. When the cast ends, heal the area and apply regeneration.",
+      facts: [{ type: "Buff", status: "Regeneration", duration: 8 }, { type: "Recharge", value: 20 }],
+    } as Gw2Skill;
+
+    expect(analyzeBuildBoons([overload], [], 0)[0]).toMatchObject({
+      name: "Regeneration",
+      hasAllySource: true,
+      estimatedUptimePercent: 40,
+    });
+  });
+
   it("invalidates live coverage when profession-specific skill sources change", () => {
     const saved = createSavedBuild(createEmptyBuilder("Ranger"), "");
     const first = mergeLiveBuildForCoverage([saved], saved.id, {
