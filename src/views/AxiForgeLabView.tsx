@@ -74,6 +74,8 @@ import {
   type BuilderConditionEntry,
 } from "../lib/axiforge/conditionEngine";
 import { computeBuildConditionAccess } from "../lib/axiforge/squadConditions";
+import { BUILD_UTILITY_LABELS, BUILD_UTILITY_ORDER, type BuildUtilityEntry } from "../lib/axiforge/utilityEngine";
+import { computeBuildUtilityCoverage } from "../lib/axiforge/squadUtility";
 import { moveSquadAssignment, type SquadSlotLocation } from "../lib/axiforge/squadAssignments";
 import { matchesBuilderLibraryFilters } from "../lib/axiforge/builderLibrary";
 import {
@@ -1057,6 +1059,10 @@ function conditionCacheKey(build: SavedBuilderBuild): string {
   return `${build.id}:${build.updatedAt}`;
 }
 
+function utilityCacheKey(build: SavedBuilderBuild): string {
+  return `${build.id}:${build.updatedAt}`;
+}
+
 function SquadBoonCoverage({
   composition,
   builds,
@@ -1296,6 +1302,74 @@ function SquadMoveDialog({
   );
 }
 
+function SquadUtilityCoverage({
+  composition,
+  builds,
+  utilityCache,
+  computing,
+}: {
+  composition: BuilderComposition;
+  builds: SavedBuilderBuild[];
+  utilityCache: Record<string, BuildUtilityEntry[]>;
+  computing: boolean;
+}) {
+  const providers = useMemo(() => {
+    const map = new Map<string, {
+      label: string;
+      icon?: string;
+      sources: Array<{ buildName: string; profession: string; sourceNames: string[] }>;
+    }>();
+    const referenced = composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id));
+    for (const buildId of referenced) {
+      const build = builds.find((item) => item.id === buildId);
+      if (!build) continue;
+      for (const entry of utilityCache[utilityCacheKey(build)] ?? []) {
+        const existing = map.get(entry.kind) ?? { label: entry.label, icon: entry.icon, sources: [] };
+        if (!existing.icon && entry.icon) existing.icon = entry.icon;
+        existing.sources.push({
+          buildName: build.name,
+          profession: build.state.professionId,
+          sourceNames: [...new Set(entry.sources.map((source) => source.sourceName))],
+        });
+        map.set(entry.kind, existing);
+      }
+    }
+    return map;
+  }, [builds, composition, utilityCache]);
+  const coveredUtilities = BUILD_UTILITY_ORDER.filter((kind) => providers.has(kind));
+  const missingUtilities = BUILD_UTILITY_ORDER.filter((kind) => !providers.has(kind));
+
+  return (
+    <section className="theme-builder-boon-coverage theme-builder-utility-coverage theme-builder-coverage-disclosure">
+      <div className="theme-builder-section-head">
+        <div><div className="theme-builder-kicker">Resolved from each complete combat kit</div><h3>Squad utility access</h3></div>
+        {computing && <Loader2 className="h-4 w-4 animate-spin" aria-label="Updating utility access" />}
+      </div>
+      <div className="theme-builder-boon-grid theme-builder-utility-grid" role="list" aria-label="Detected squad utility access">
+        {coveredUtilities.map((kind) => {
+          const entry = providers.get(kind)!;
+          const tooltip = entry.sources.map((source) =>
+            `${source.buildName} (${source.profession}): ${source.sourceNames.join(" + ")}`,
+          ).join(", ");
+          return (
+            <div key={kind} className="is-covered" title={tooltip} role="listitem" aria-label={tooltip}>
+              <div className="theme-builder-boon-icon">
+                {entry.icon ? <img src={entry.icon} alt="" /> : <Wrench className="h-5 w-5" />}
+                <em>{entry.sources.length}</em>
+              </div>
+              <span>{entry.label}</span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="theme-builder-coverage-missing">
+        <strong>Missing</strong>
+        <span>{missingUtilities.length ? missingUtilities.map((kind) => BUILD_UTILITY_LABELS[kind]).join(" · ") : "None"}</span>
+      </p>
+    </section>
+  );
+}
+
 function SquadWorkspace({
   composition,
   builds,
@@ -1304,6 +1378,8 @@ function SquadWorkspace({
   boonComputing,
   conditionCache,
   conditionComputing,
+  utilityCache,
+  utilityComputing,
   onCreate,
   onChange,
   onOpenBuild,
@@ -1318,6 +1394,8 @@ function SquadWorkspace({
   boonComputing: boolean;
   conditionCache: Record<string, BuilderConditionEntry[]>;
   conditionComputing: boolean;
+  utilityCache: Record<string, BuildUtilityEntry[]>;
+  utilityComputing: boolean;
   onCreate: () => void;
   onChange: (composition: BuilderComposition) => void;
   onOpenBuild: (build: SavedBuilderBuild) => void;
@@ -1512,6 +1590,7 @@ function SquadWorkspace({
       <div className="theme-builder-squad-coverage-stack">
         <SquadBoonCoverage composition={composition} builds={coverageBuilds} boonCache={boonCache} computing={boonComputing} />
         <SquadConditionCoverage composition={composition} builds={coverageBuilds} conditionCache={conditionCache} computing={conditionComputing} />
+        <SquadUtilityCoverage composition={composition} builds={coverageBuilds} utilityCache={utilityCache} computing={utilityComputing} />
       </div>
       </div>
       <div className="theme-builder-squad-command-right">
@@ -2130,6 +2209,8 @@ export default function AxiForgeLabView() {
   const [boonComputing, setBoonComputing] = useState(false);
   const [conditionCache, setConditionCache] = useState<Record<string, BuilderConditionEntry[]>>({});
   const [conditionComputing, setConditionComputing] = useState(false);
+  const [utilityCache, setUtilityCache] = useState<Record<string, BuildUtilityEntry[]>>({});
+  const [utilityComputing, setUtilityComputing] = useState(false);
   const [equipmentItems, setEquipmentItems] = useState<Record<number, Gw2Item>>({});
 
   const builder = workspace.draft;
@@ -2421,6 +2502,39 @@ export default function AxiForgeLabView() {
     });
     return () => { cancelled = true; };
   }, [activeComposition, squadCoverageBuilds, conditionCache]);
+
+  useEffect(() => {
+    if (!activeComposition) return;
+    const referencedIds = new Set(
+      activeComposition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id)),
+    );
+    const targets = [...referencedIds]
+      .map((id) => squadCoverageBuilds.find((build) => build.id === id))
+      .filter((build): build is SavedBuilderBuild => Boolean(build));
+    const missing = targets.filter((build) => !(utilityCacheKey(build) in utilityCache));
+    if (!missing.length) return;
+    let cancelled = false;
+    setUtilityComputing(true);
+    Promise.all(
+      missing.map(async (build) => {
+        try {
+          const coverage = await computeBuildUtilityCoverage(build.state);
+          return [utilityCacheKey(build), coverage] as const;
+        } catch {
+          return [utilityCacheKey(build), [] as BuildUtilityEntry[]] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      setUtilityCache((current) => {
+        const next = { ...current };
+        for (const [key, coverage] of entries) next[key] = coverage;
+        return next;
+      });
+      setUtilityComputing(false);
+    });
+    return () => { cancelled = true; };
+  }, [activeComposition, squadCoverageBuilds, utilityCache]);
 
   function chooseProfession(profession: Gw2Profession) {
     const next = createEmptyBuilder(profession.id);
@@ -2892,7 +3006,7 @@ export default function AxiForgeLabView() {
       )}
       {activeTab === "squad" && (
         <div id="builder-panel-squad" role="tabpanel" aria-labelledby="builder-tab-squad">
-          <SquadWorkspace composition={activeComposition} builds={workspace.builds} coverageBuilds={squadCoverageBuilds} boonCache={boonCache} boonComputing={boonComputing} conditionCache={conditionCache} conditionComputing={conditionComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={openBuildViewer} onCopyCode={exportSquad} onShareCode={shareSquad} specsById={allSpecsById} />
+          <SquadWorkspace composition={activeComposition} builds={workspace.builds} coverageBuilds={squadCoverageBuilds} boonCache={boonCache} boonComputing={boonComputing} conditionCache={conditionCache} conditionComputing={conditionComputing} utilityCache={utilityCache} utilityComputing={utilityComputing} onCreate={createSquad} onChange={updateComposition} onOpenBuild={openBuildViewer} onCopyCode={exportSquad} onShareCode={shareSquad} specsById={allSpecsById} />
         </div>
       )}
 

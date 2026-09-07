@@ -23,10 +23,12 @@ describe("builder squad composition layout", () => {
   it("keeps detected coverage prominent and missing effects compact", () => {
     expect(view).toContain('const coveredBoons = BOON_DISPLAY_ORDER.filter');
     expect(view).toContain('const coveredConditions = BUILDER_CONDITION_DISPLAY_ORDER.filter');
+    expect(view).toContain('const coveredUtilities = BUILD_UTILITY_ORDER.filter');
     expect(view).toContain('className="theme-builder-coverage-missing"');
     expect(view).toContain('<section className="theme-builder-boon-coverage theme-builder-coverage-disclosure">');
     expect(view).not.toContain('<details className="theme-builder-boon-coverage');
     expect(css).toMatch(/\.theme-builder-coverage-disclosure \{[\s\S]*?border: 0;/);
     expect(css).toMatch(/\.theme-builder-coverage-disclosure > \.theme-builder-boon-grid \{[\s\S]*?minmax\(5\.25rem, 1fr\)/);
+    expect(css).toMatch(/\.theme-builder-coverage-disclosure > \.theme-builder-utility-grid \{[\s\S]*?minmax\(7\.25rem, 1fr\)/);
   });
 });

@@ -619,6 +619,18 @@
   font-size: 0.52rem;
 }
 
+.theme-builder-root .theme-builder-coverage-disclosure > .theme-builder-utility-grid {
+  grid-template-columns: repeat(auto-fill, minmax(7.25rem, 1fr));
+}
+
+.theme-builder-root .theme-builder-utility-grid > div span {
+  overflow: visible;
+  white-space: normal;
+  text-align: center;
+  text-overflow: clip;
+  line-height: 1.25;
+}
+
 .theme-builder-root .theme-builder-coverage-missing {
   display: flex;
   gap: 0.55rem;
