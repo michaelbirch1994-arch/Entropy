@@ -34,4 +34,10 @@ describe("builder squad composition layout", () => {
     expect(css).toMatch(/\.theme-builder-coverage-disclosure > \.theme-builder-utility-grid \{[\s\S]*?minmax\(7\.25rem, 1fr\)/);
     expect(css).toMatch(/\.theme-builder-boon-grid > :is\(div, button\) \{[\s\S]*?cursor: pointer;/);
   });
+
+  it("keeps every coverage source visible inside a scrollable dialog", () => {
+    expect(css).toMatch(/\.theme-builder-coverage-dialog \{[\s\S]*?display: flex;[\s\S]*?flex-direction: column;/);
+    expect(css).toMatch(/\.theme-builder-coverage-provider-list \{[\s\S]*?grid-auto-rows: max-content;[\s\S]*?overflow-y: auto;/);
+    expect(css).toMatch(/\.theme-builder-coverage-provider-list article strong \{[\s\S]*?overflow-wrap: anywhere;/);
+  });
 });

@@ -669,6 +669,8 @@
 }
 
 .theme-builder-coverage-dialog {
+  display: flex;
+  flex-direction: column;
   width: min(38rem, calc(100vw - 2rem));
   height: auto;
   min-height: 0;
@@ -731,10 +733,12 @@
 
 .theme-builder-coverage-provider-list {
   display: grid;
+  grid-auto-rows: max-content;
   gap: 0.55rem;
-  max-height: 32rem;
+  min-height: 0;
   padding: 0.75rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .theme-builder-coverage-provider-list > section {
@@ -762,11 +766,9 @@
 
 .theme-builder-coverage-provider-list header strong,
 .theme-builder-coverage-provider-list article strong {
-  overflow: hidden;
   color: var(--theme-text);
   font-size: 0.72rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .theme-builder-coverage-provider-list header small,
@@ -774,6 +776,8 @@
   color: var(--theme-textMuted);
   font-family: var(--font-mono);
   font-size: 0.54rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
 }
 
