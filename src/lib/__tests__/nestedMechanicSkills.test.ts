@@ -79,4 +79,63 @@ describe("nested profession mechanic skills", () => {
     expect(analyzeBuildBoons(skills, []).find(({ name }) => name === "Regeneration")?.hasAllySource).toBe(true);
     expect(analyzeBuildUtility(skills, []).map(({ kind }) => kind).includes("cleanse")).toBe(true);
   });
+
+  it.each([
+    ["Ranger", 5, 5, "Celestial Avatar"],
+    ["Necromancer", 64, 5, "Harbinger Shroud"],
+    ["Necromancer", 76, 5, "Ritualist's Shroud"],
+  ])("loads the complete %s nested bar for specialization %i", (profession, specializationId, expectedCount, label) => {
+    const build = createEmptyBuilder(profession);
+    build.specializationIds = [specializationId, null, null];
+    const ids = nestedMechanicSkillIds(build);
+    const skillsById = new Map<number, Gw2Skill>(ids.map((id, index) => [id, {
+      id,
+      name: `${label} ${index + 1}`,
+      slot: `Profession_${index + 1}`,
+    } as Gw2Skill]));
+
+    expect(resolveNestedMechanicSkills(build, skillsById)).toHaveLength(expectedCount);
+  });
+
+  it("includes Druid avatar cleanse and healing in squad utility", () => {
+    const build = createEmptyBuilder("Ranger");
+    build.specializationIds = [5, null, null];
+    const skillsById = new Map<number, Gw2Skill>([
+      [31406, {
+        id: 31406,
+        name: "Seed of Life",
+        slot: "Profession_2",
+        description: "Summon a seed that heals and cleanses nearby allies of conditions.",
+        facts: [
+          { type: "AttributeAdjust", text: "Healing", value: 216 },
+          { type: "Number", text: "Conditions Removed", value: 2 },
+        ],
+      }],
+    ]);
+
+    expect(analyzeBuildUtility(resolveNestedMechanicSkills(build, skillsById), []).map(({ kind }) => kind))
+      .toEqual(["cleanse", "healing"]);
+  });
+
+  it("fills the missing WvW facts for Ritualist Preservation", () => {
+    const build = createEmptyBuilder("Necromancer");
+    build.specializationIds = [76, null, null];
+    build.gameMode = "wvw";
+    const skillsById = new Map<number, Gw2Skill>([[76684, {
+      id: 76684,
+      name: "Preservation",
+      slot: "Profession_4",
+      description: "Grant boons to nearby allies, then heal and remove conditions from nearby allies.",
+    }]]);
+
+    const skills = resolveNestedMechanicSkills(build, skillsById);
+    const boons = analyzeBuildBoons(skills, [], 0, "wvw");
+
+    expect(boons.find(({ name }) => name === "Protection")).toMatchObject({
+      hasAllySource: true,
+      estimatedUptimePercent: 12.5,
+    });
+    expect(boons.find(({ name }) => name === "Vigor")?.hasAllySource).toBe(true);
+    expect(analyzeBuildUtility(skills, []).map(({ kind }) => kind)).toEqual(["cleanse", "healing"]);
+  });
 });

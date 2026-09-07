@@ -1,12 +1,18 @@
 import type { EntropyBuilderState, Gw2ApiFact, Gw2Skill } from "../../types/buildEditor";
 
+const DRUID_SPECIALIZATION_ID = 5;
 const FIREBRAND_SPECIALIZATION_ID = 62;
+const HARBINGER_SPECIALIZATION_ID = 64;
 const REAPER_SPECIALIZATION_ID = 34;
 const TEMPEST_SPECIALIZATION_ID = 48;
+const RITUALIST_SPECIALIZATION_ID = 76;
 
 const API_NESTED_SKILL_IDS: Record<number, number[]> = {
+  [DRUID_SPECIALIZATION_ID]: [31796, 31406, 31318, 31894, 31503],
   [REAPER_SPECIALIZATION_ID]: [29442, 29458, 30278, 30825, 29958, 30504, 30557],
   [TEMPEST_SPECIALIZATION_ID]: [29706, 29415, 29719, 29618],
+  [HARBINGER_SPECIALIZATION_ID]: [62611, 62621, 62672, 62539, 62563],
+  [RITUALIST_SPECIALIZATION_ID]: [77061, 76864, 76741, 76684, 76607],
 };
 
 const EFFECT_ICONS: Record<string, string> = {
@@ -108,6 +114,18 @@ const FIREBRAND_TOME_SKILLS: Gw2Skill[] = [
   ]),
 ];
 
+const RITUALIST_WVW_FACT_OVERRIDES: Record<number, Gw2ApiFact[]> = {
+  // ArenaNet exposes Preservation but currently omits its effect facts.
+  76684: [
+    buff("Protection", 2.5),
+    buff("Vigor", 4),
+    fact("AttributeAdjust", "Healing", 1970),
+    fact("Number", "Conditions Removed", 3),
+    fact("Number", "Number of Targets", 5),
+    recharge(20),
+  ],
+};
+
 export function nestedMechanicSkillIds(state: EntropyBuilderState): number[] {
   return state.specializationIds.flatMap((specializationId) => (
     specializationId ? API_NESTED_SKILL_IDS[specializationId] ?? [] : []
@@ -120,7 +138,10 @@ export function resolveNestedMechanicSkills(
 ): Gw2Skill[] {
   const apiSkills = nestedMechanicSkillIds(state)
     .map((id) => skillsById.get(id))
-    .filter((skill): skill is Gw2Skill => Boolean(skill));
+    .filter((skill): skill is Gw2Skill => Boolean(skill))
+    .map((skill) => state.gameMode === "wvw" && RITUALIST_WVW_FACT_OVERRIDES[skill.id]
+      ? { ...skill, facts: RITUALIST_WVW_FACT_OVERRIDES[skill.id] }
+      : skill);
   const curatedSkills = state.professionId === "Guardian"
     && state.specializationIds.includes(FIREBRAND_SPECIALIZATION_ID)
     ? FIREBRAND_TOME_SKILLS
