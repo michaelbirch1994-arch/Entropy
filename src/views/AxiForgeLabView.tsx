@@ -76,6 +76,7 @@ import {
 import { computeBuildConditionAccess } from "../lib/axiforge/squadConditions";
 import { BUILD_UTILITY_LABELS, BUILD_UTILITY_ORDER, type BuildUtilityEntry } from "../lib/axiforge/utilityEngine";
 import { computeBuildUtilityCoverage } from "../lib/axiforge/squadUtility";
+import { estimateSquadBoonUptime } from "../lib/axiforge/squadCoverageMath";
 import { moveSquadAssignment, type SquadSlotLocation } from "../lib/axiforge/squadAssignments";
 import { matchesBuilderLibraryFilters } from "../lib/axiforge/builderLibrary";
 import {
@@ -1076,6 +1077,9 @@ interface CoverageDetailSource {
 interface CoverageDetailProvider {
   buildName: string;
   profession: string;
+  partyId?: string;
+  partyName?: string;
+  slotIndex?: number;
   sources: CoverageDetailSource[];
   estimatedUptimePercent?: number;
 }
@@ -1098,7 +1102,7 @@ function CoverageBreakdownDialog({ detail, onClose }: { detail: CoverageBreakdow
   const groupedProviders = new Map<string, CoverageDetailProvider & { copies: number }>();
   for (const provider of detail.providers) {
     const sourceKey = provider.sources.map((source) => `${source.type}:${source.sourceName}`).sort().join("|");
-    const key = `${provider.buildName}:${provider.profession}:${sourceKey}`;
+    const key = `${provider.partyId ?? "squad"}:${provider.buildName}:${provider.profession}:${sourceKey}`;
     const existing = groupedProviders.get(key);
     if (existing) existing.copies += 1;
     else groupedProviders.set(key, { ...provider, copies: 1 });
@@ -1127,10 +1131,10 @@ function CoverageBreakdownDialog({ detail, onClose }: { detail: CoverageBreakdow
         )}
         <div className="theme-builder-coverage-provider-list">
           {[...groupedProviders.values()].map((provider) => (
-            <section key={`${provider.buildName}:${provider.profession}:${provider.sources.map(({ sourceName }) => sourceName).join("|")}`}>
+            <section key={`${provider.partyId ?? "squad"}:${provider.buildName}:${provider.profession}:${provider.sources.map(({ sourceName }) => sourceName).join("|")}`}>
               <header>
                 <ClassIcon name={provider.profession} size="sm" />
-                <span><strong>{provider.buildName}</strong><small>{provider.profession}{provider.copies > 1 ? ` · ${provider.copies} squad slots` : ""}</small></span>
+                <span><strong>{provider.buildName}</strong><small>{[provider.profession, provider.partyName, provider.copies > 1 ? `${provider.copies} slots` : provider.slotIndex != null ? `slot ${provider.slotIndex + 1}` : null].filter(Boolean).join(" · ")}</small></span>
                 {provider.estimatedUptimePercent != null && <em>~{Math.round(provider.estimatedUptimePercent)}%</em>}
               </header>
               <div>
@@ -1175,22 +1179,27 @@ function SquadBoonCoverage({
       string,
       { icon?: string; sources: CoverageDetailProvider[] }
     >();
-    const referenced = composition.parties.flatMap((party) => party.slots).filter((id): id is string => Boolean(id));
-    for (const buildId of referenced) {
-      const build = builds.find((item) => item.id === buildId);
-      if (!build) continue;
-      const coverage = boonCache[boonCacheKey(build)];
-      if (!coverage) continue;
-      for (const entry of coverage) {
-        if (!entry.hasAllySource) continue;
-        const existing = map.get(entry.name) ?? { icon: entry.icon, sources: [] }; if (!existing.icon && entry.icon) existing.icon = entry.icon;
-        existing.sources.push({
-          buildName: build.name,
-          profession: build.state.professionId,
-          sources: entry.sources.filter((source) => source.isAlly).map((source) => ({ ...source })),
-          estimatedUptimePercent: entry.estimatedUptimePercent,
-        });
-        map.set(entry.name, existing);
+    for (const party of composition.parties) {
+      for (const [slotIndex, buildId] of party.slots.entries()) {
+        if (!buildId) continue;
+        const build = builds.find((item) => item.id === buildId);
+        if (!build) continue;
+        const coverage = boonCache[boonCacheKey(build)];
+        if (!coverage) continue;
+        for (const entry of coverage) {
+          if (!entry.hasAllySource) continue;
+          const existing = map.get(entry.name) ?? { icon: entry.icon, sources: [] }; if (!existing.icon && entry.icon) existing.icon = entry.icon;
+          existing.sources.push({
+            buildName: build.name,
+            profession: build.state.professionId,
+            partyId: party.id,
+            partyName: party.name,
+            slotIndex,
+            sources: entry.sources.filter((source) => source.isAlly).map((source) => ({ ...source })),
+            estimatedUptimePercent: entry.estimatedUptimePercent,
+          });
+          map.set(entry.name, existing);
+        }
       }
     }
     return map;
@@ -1208,12 +1217,9 @@ function SquadBoonCoverage({
         {coveredBoons.map((boon) => {
           const entry = providers.get(boon); const list = entry?.sources ?? [];
           const covered = list.length > 0;
-          const bestUptime = list.reduce<number | undefined>(
-            (sum, source) =>
-              source.estimatedUptimePercent != null
-                ? Math.min(100, (sum ?? 0) + source.estimatedUptimePercent)
-                : sum,
-            undefined,
+          const bestUptime = estimateSquadBoonUptime(
+            composition.parties,
+            list.filter((source): source is CoverageDetailProvider & { partyId: string } => Boolean(source.partyId)),
           );
           const tooltip = `Open ${boon} provider breakdown`;
           return (
