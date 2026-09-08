@@ -15,7 +15,7 @@ import {
   fetchGw2Specializations,
   fetchGw2Traits,
 } from "../gw2/gw2Api";
-import { resolveProfessionMechanicSlots } from "../gw2/professionMechanics";
+import { resolveProfessionMechanicSlots, resolveWarriorMechanicSkills } from "../gw2/professionMechanics";
 import { resolveWeaponSkillSlots, weaponSkillIds } from "../gw2/weaponSkillBar";
 import { nestedMechanicSkillIds, resolveNestedMechanicSkills } from "./nestedMechanicSkills";
 
@@ -107,6 +107,7 @@ export function resolveBuildCombatSkillIds(
     });
   }
   resolveProfessionMechanicSlots(state, profession, specsById, skillsById).forEach(({ skill }) => ids.add(skill.id));
+  resolveWarriorMechanicSkills(state, profession, skillsById).forEach(({ id }) => ids.add(id));
 
   if (state.professionId === "Revenant") {
     const selectedLegends = new Set(state.selectedLegends.filter(Boolean));

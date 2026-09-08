@@ -19,6 +19,10 @@ export interface RevenantLegendSlot {
 const HIDDEN_MECHANIC_NAME = /^(?:exit|leave|locked|stow)\b/i;
 const PROFESSION_SLOT = /^Profession_([1-5])$/;
 const DERIVED_MECHANIC_PROFESSIONS = new Set(["Ranger", "Revenant", "Warrior"]);
+const BERSERKER_SPECIALIZATION_ID = 18;
+const SPELLBREAKER_SPECIALIZATION_ID = 61;
+const BLADESWORN_SPECIALIZATION_ID = 68;
+const PARAGON_SPECIALIZATION_ID = 74;
 
 /**
  * Resolve only mechanic buttons explicitly identified by the profession API.
@@ -73,6 +77,56 @@ export function resolveRangerPetSlots(
     key: index === 0 ? "P1" : "P2",
     pet: id ? petsById.get(id) ?? null : null,
   }));
+}
+
+export function resolveWarriorMechanicSkills(
+  builder: EntropyBuilderState,
+  profession: Gw2Profession | null,
+  skillsById: Map<number, Gw2Skill>,
+): Gw2Skill[] {
+  if (builder.professionId !== "Warrior" || profession?.id !== "Warrior") return [];
+
+  const activeSpecializations = new Set(builder.specializationIds.filter((id): id is number => id != null));
+  const activeEliteId = [BERSERKER_SPECIALIZATION_ID, SPELLBREAKER_SPECIALIZATION_ID, BLADESWORN_SPECIALIZATION_ID, PARAGON_SPECIALIZATION_ID]
+    .find((id) => activeSpecializations.has(id));
+  const terrestrialWeapons = new Set([
+    builder.equipment.weapons.mainhand1,
+    builder.equipment.weapons.mainhand2,
+  ].filter(Boolean).map((weapon) => weapon.toLowerCase()));
+  const professionSkills = profession.skills
+    .map(({ id }) => skillsById.get(id))
+    .filter((skill): skill is Gw2Skill => skill != null && !HIDDEN_MECHANIC_NAME.test(skill.name));
+
+  const weaponSpec = activeEliteId === BERSERKER_SPECIALIZATION_ID || activeEliteId === SPELLBREAKER_SPECIALIZATION_ID
+    ? activeEliteId
+    : null;
+  const weaponBursts = professionSkills.filter((skill) => (
+    skill.slot === "Profession_1"
+    && Boolean(skill.weapon_type && terrestrialWeapons.has(skill.weapon_type.toLowerCase()))
+    && (weaponSpec ? skill.specialization === weaponSpec : !skill.specialization)
+    && !skill.flags?.includes("Underwater")
+  ));
+
+  const directMechanics = professionSkills.filter((skill) => {
+    if (!activeEliteId || skill.specialization !== activeEliteId || skill.weapon_type !== "None") return false;
+    if (activeEliteId === BERSERKER_SPECIALIZATION_ID) return skill.name === "Berserk";
+    if (activeEliteId === SPELLBREAKER_SPECIALIZATION_ID) return skill.name === "Full Counter";
+    return activeEliteId === BLADESWORN_SPECIALIZATION_ID || activeEliteId === PARAGON_SPECIALIZATION_ID;
+  });
+  const preferredDirectMechanics = activeEliteId === BERSERKER_SPECIALIZATION_ID
+    ? directMechanics.sort((left, right) => {
+      const leftRecharge = left.facts?.find(({ type }) => type === "Recharge")?.value ?? 0;
+      const rightRecharge = right.facts?.find(({ type }) => type === "Recharge")?.value ?? 0;
+      return builder.gameMode === "pve" ? leftRecharge - rightRecharge : rightRecharge - leftRecharge;
+    }).slice(0, 1)
+    : directMechanics;
+
+  const uniqueSkills = new Map<string, Gw2Skill>();
+  for (const skill of [...weaponBursts, ...preferredDirectMechanics]) {
+    const key = `${skill.slot}:${skill.weapon_type ?? "None"}:${skill.name}`;
+    if (!uniqueSkills.has(key)) uniqueSkills.set(key, skill);
+  }
+  return [...uniqueSkills.values()];
 }
 
 export function availableRevenantLegends(

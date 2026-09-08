@@ -6,6 +6,7 @@ import {
   resolveProfessionMechanicSlots,
   resolveRangerPetSlots,
   resolveRevenantLegendSlots,
+  resolveWarriorMechanicSkills,
   validateRevenantLegendSelection,
 } from "../gw2/professionMechanics";
 
@@ -80,6 +81,57 @@ describe("resolveProfessionMechanicSlots", () => {
 
     expect(resolveProfessionMechanicSlots(builder, engineer, holosmithSpecs, engineerSkills))
       .toEqual([{ key: "F5", skill: engineerSkills.get(42938)! }]);
+  });
+
+  it("resolves equipped Warrior bursts for core and Berserker builds", () => {
+    const warrior: Gw2Profession = { ...profession, id: "Warrior", name: "Warrior", skills: [
+      { id: 14353, slot: "Profession_1" },
+      { id: 14375, slot: "Profession_1" },
+      { id: 30851, slot: "Profession_1" },
+      { id: 29852, slot: "Profession_1" },
+      { id: 30435, slot: "Profession_2" },
+      { id: 30185, slot: "Profession_2" },
+    ] };
+    const warriorSkills = new Map<number, Gw2Skill>([
+      [14353, { id: 14353, name: "Eviscerate", slot: "Profession_1", weapon_type: "Axe" }],
+      [14375, { id: 14375, name: "Arcing Slice", slot: "Profession_1", weapon_type: "Greatsword" }],
+      [30851, { id: 30851, name: "Decapitate", slot: "Profession_1", weapon_type: "Axe", specialization: 18 }],
+      [29852, { id: 29852, name: "Arc Divider", slot: "Profession_1", weapon_type: "Greatsword", specialization: 18 }],
+      [30435, { id: 30435, name: "Berserk", slot: "Profession_2", weapon_type: "None", specialization: 18, facts: [{ type: "Recharge", text: "Recharge", value: 8 }] }],
+      [30185, { id: 30185, name: "Berserk", slot: "Profession_2", weapon_type: "None", specialization: 18, facts: [{ type: "Recharge", text: "Recharge", value: 15 }] }],
+    ]);
+    const builder = createEmptyBuilder("Warrior");
+    builder.equipment.weapons.mainhand1 = "Axe";
+    builder.equipment.weapons.mainhand2 = "Greatsword";
+
+    expect(resolveWarriorMechanicSkills(builder, warrior, warriorSkills).map(({ name }) => name))
+      .toEqual(["Eviscerate", "Arcing Slice"]);
+
+    builder.specializationIds = [18, null, null];
+    builder.gameMode = "wvw";
+    expect(resolveWarriorMechanicSkills(builder, warrior, warriorSkills).map(({ id }) => id))
+      .toEqual([30851, 29852, 30185]);
+  });
+
+  it("adds Paragon chants alongside its equipped core burst", () => {
+    const warrior: Gw2Profession = { ...profession, id: "Warrior", name: "Warrior", skills: [
+      { id: 14353, slot: "Profession_1" },
+      { id: 77342, slot: "Profession_2" },
+      { id: 76782, slot: "Profession_3" },
+      { id: 77155, slot: "Profession_4" },
+    ] };
+    const warriorSkills = new Map<number, Gw2Skill>([
+      [14353, { id: 14353, name: "Eviscerate", slot: "Profession_1", weapon_type: "Axe" }],
+      [77342, { id: 77342, name: "Chant of Action", slot: "Profession_2", weapon_type: "None", specialization: 74 }],
+      [76782, { id: 76782, name: "Chant of Recuperation", slot: "Profession_3", weapon_type: "None", specialization: 74 }],
+      [77155, { id: 77155, name: "Chant of Freedom", slot: "Profession_4", weapon_type: "None", specialization: 74 }],
+    ]);
+    const builder = createEmptyBuilder("Warrior");
+    builder.specializationIds = [74, null, null];
+    builder.equipment.weapons.mainhand1 = "Axe";
+
+    expect(resolveWarriorMechanicSkills(builder, warrior, warriorSkills).map(({ name }) => name))
+      .toEqual(["Eviscerate", "Chant of Action", "Chant of Recuperation", "Chant of Freedom"]);
   });
 
   it("maps only explicitly selected terrestrial Ranger pets", () => {
