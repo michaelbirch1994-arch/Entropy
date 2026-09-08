@@ -82,6 +82,7 @@ describe("nested profession mechanic skills", () => {
 
   it.each([
     ["Ranger", 5, 5, "Celestial Avatar"],
+    ["Engineer", 57, 7, "Photon Forge"],
     ["Necromancer", 64, 5, "Harbinger Shroud"],
     ["Necromancer", 76, 5, "Ritualist's Shroud"],
   ])("loads the complete %s nested bar for specialization %i", (profession, specializationId, expectedCount, label) => {

@@ -63,6 +63,25 @@ describe("resolveProfessionMechanicSlots", () => {
     expect(resolveProfessionMechanicSlots(createEmptyBuilder("Warrior"), warrior, new Map(), skills)).toEqual([]);
   });
 
+  it("resolves explicit Engineer elite mechanic buttons", () => {
+    const engineer: Gw2Profession = { ...profession, id: "Engineer", name: "Engineer", skills: [
+      { id: 42938, slot: "Profession_5" },
+      { id: 41123, slot: "Profession_5" },
+    ] };
+    const holosmithSpecs = new Map<number, Gw2Specialization>([[57, {
+      id: 57, name: "Holosmith", profession: "Engineer", elite: true, major_traits: [], minor_traits: [],
+    }]]);
+    const engineerSkills = new Map<number, Gw2Skill>([
+      [42938, { id: 42938, name: "Engage Photon Forge", slot: "Profession_5", specialization: 57, flip_skill: 41123 }],
+      [41123, { id: 41123, name: "Deactivate Photon Forge", slot: "Profession_5", specialization: 57 }],
+    ]);
+    const builder = createEmptyBuilder("Engineer");
+    builder.specializationIds = [57, null, null];
+
+    expect(resolveProfessionMechanicSlots(builder, engineer, holosmithSpecs, engineerSkills))
+      .toEqual([{ key: "F5", skill: engineerSkills.get(42938)! }]);
+  });
+
   it("maps only explicitly selected terrestrial Ranger pets", () => {
     const builder = createEmptyBuilder("Ranger");
     builder.selectedPets.terrestrial1 = 4;

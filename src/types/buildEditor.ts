@@ -122,6 +122,9 @@ export interface Gw2Skill {
   dual_attunement?: string;
   specialization?: number;
   flip_skill?: number;
+  toolbelt_skill?: number;
+  bundle_skills?: number[];
+  transform_skills?: number[];
   flags?: string[];
   facts?: Gw2ApiFact[];
 }

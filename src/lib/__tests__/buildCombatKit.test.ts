@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Gw2Legend, Gw2Pet, Gw2Profession, Gw2Skill, Gw2Specialization, Gw2Trait } from "../../types/buildEditor";
 import { createEmptyBuilder } from "../axiforge/builderModel";
-import { resolveBuildCombatSkillIds, resolveSelectedTraits } from "../axiforge/buildCombatKit";
+import {
+  linkedSelectedCombatSkillIds,
+  resolveBuildCombatSkillIds,
+  resolveSelectedTraits,
+} from "../axiforge/buildCombatKit";
 
 const guardian: Gw2Profession = {
   id: "Guardian",
@@ -63,5 +67,32 @@ describe("build combat kit resolution", () => {
       { id: 8, name: "Other", skills: [{ id: 103 }] },
     ];
     expect(resolveBuildCombatSkillIds(ranger, null, [], new Map(), [], pets)).toEqual([101, 102]);
+  });
+
+  it("includes Engineer tool belt and equipped kit skills", () => {
+    const engineer = createEmptyBuilder("Engineer");
+    engineer.healSkillId = 10;
+    engineer.utilitySkillIds = [20, null, null];
+    engineer.eliteSkillId = 30;
+    const engineerSkills = new Map<number, Gw2Skill>([
+      [10, { id: 10, name: "Heal", slot: "Heal", toolbelt_skill: 11 }],
+      [20, { id: 20, name: "Elixir Gun", slot: "Utility", toolbelt_skill: 21, bundle_skills: [22, 23] }],
+      [30, { id: 30, name: "Elite", slot: "Elite", toolbelt_skill: 31 }],
+    ]);
+
+    expect(linkedSelectedCombatSkillIds(engineer, engineerSkills)).toEqual([11, 22, 23, 21, 31]);
+  });
+
+  it("omits the replaced elite Tool Belt skill on Engineer elite specializations", () => {
+    const engineer = createEmptyBuilder("Engineer");
+    engineer.specializationIds = [43, null, null];
+    engineer.healSkillId = 10;
+    engineer.eliteSkillId = 30;
+    const engineerSkills = new Map<number, Gw2Skill>([
+      [10, { id: 10, name: "Heal", slot: "Heal", toolbelt_skill: 11 }],
+      [30, { id: 30, name: "Elite", slot: "Elite", toolbelt_skill: 31 }],
+    ]);
+
+    expect(linkedSelectedCombatSkillIds(engineer, engineerSkills)).toEqual([11]);
   });
 });

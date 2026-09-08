@@ -25,6 +25,36 @@ export interface BuildCombatKit {
   traits: Gw2Trait[];
 }
 
+const ENGINEER_ELITE_SPECIALIZATION_IDS = new Set([43, 57, 70, 75]);
+
+function selectedSlotSkillIds(state: EntropyBuilderState): number[] {
+  return [state.healSkillId, ...state.utilitySkillIds, state.eliteSkillId]
+    .filter((id): id is number => Boolean(id));
+}
+
+export function linkedSelectedCombatSkillIds(
+  state: EntropyBuilderState,
+  skillsById: Map<number, Gw2Skill>,
+): number[] {
+  const selectedIds = selectedSlotSkillIds(state);
+  const engineerEliteActive = state.professionId === "Engineer"
+    && state.specializationIds.some((id) => id != null && ENGINEER_ELITE_SPECIALIZATION_IDS.has(id));
+  const linkedIds = new Set<number>();
+
+  for (const id of selectedIds) {
+    const skill = skillsById.get(id);
+    if (!skill) continue;
+    skill.bundle_skills?.forEach((linkedId) => linkedIds.add(linkedId));
+    skill.transform_skills?.forEach((linkedId) => linkedIds.add(linkedId));
+    const eliteToolbeltIsReplaced = engineerEliteActive && id === state.eliteSkillId;
+    if (state.professionId === "Engineer" && skill.toolbelt_skill && !eliteToolbeltIsReplaced) {
+      linkedIds.add(skill.toolbelt_skill);
+    }
+  }
+
+  return [...linkedIds];
+}
+
 export function resolveSelectedTraits(
   state: EntropyBuilderState,
   specializations: Gw2Specialization[],
@@ -132,14 +162,20 @@ export async function fetchBuildCombatKit(state: EntropyBuilderState): Promise<B
     ...petSkillIds,
     ...nestedMechanicSkillIds(state),
   ].filter((id): id is number => Boolean(id));
-  const skillCatalog = await fetchGw2Skills(candidateSkillIds);
+  const baseSkillCatalog = await fetchGw2Skills(candidateSkillIds);
+  const baseSkillsById = new Map(baseSkillCatalog.map((skill) => [skill.id, skill]));
+  const linkedSkillIds = linkedSelectedCombatSkillIds(state, baseSkillsById);
+  const linkedSkillCatalog = await fetchGw2Skills(linkedSkillIds);
+  const skillCatalog = [...baseSkillCatalog, ...linkedSkillCatalog];
   const skillsById = new Map(skillCatalog.map((skill) => [skill.id, skill]));
   const activeSkillIds = resolveBuildCombatSkillIds(state, profession, specializations, skillsById, legends, pets);
   const nestedMechanicSkills = resolveNestedMechanicSkills(state, skillsById);
   const activeSkills = activeSkillIds
     .map((id) => skillsById.get(id))
     .filter((skill): skill is Gw2Skill => Boolean(skill));
-  const uniqueSkills = new Map([...activeSkills, ...nestedMechanicSkills].map((skill) => [skill.id, skill]));
+  const uniqueSkills = new Map(
+    [...activeSkills, ...linkedSkillCatalog, ...nestedMechanicSkills].map((skill) => [skill.id, skill]),
+  );
 
   return {
     profession,

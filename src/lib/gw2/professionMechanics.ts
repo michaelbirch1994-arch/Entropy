@@ -16,9 +16,9 @@ export interface RevenantLegendSlot {
   skill: Gw2Skill | null;
 }
 
-const HIDDEN_MECHANIC_NAME = /^(?:exit|leave|stow)\b/i;
+const HIDDEN_MECHANIC_NAME = /^(?:exit|leave|locked|stow)\b/i;
 const PROFESSION_SLOT = /^Profession_([1-5])$/;
-const DERIVED_MECHANIC_PROFESSIONS = new Set(["Engineer", "Ranger", "Revenant", "Warrior"]);
+const DERIVED_MECHANIC_PROFESSIONS = new Set(["Ranger", "Revenant", "Warrior"]);
 
 /**
  * Resolve only mechanic buttons explicitly identified by the profession API.
