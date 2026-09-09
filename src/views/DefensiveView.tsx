@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useReport } from "../store/ReportContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
-import { fmtNum, fmtCompact, fmtFixed } from "../utils/format";
+import { fmtNum, fmtCompact, fmtFixed, PROFESSION_FAMILY, normalizeProfessionLabel } from "../utils/format";
 import { Shield, Heart, Droplet, Zap, Wind, Target } from "lucide-react";
 import { useStatsDisplay, pickStatsDisplayValue } from "../store/StatsDisplayContext";
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
@@ -257,7 +257,7 @@ export default function DefensiveView() {
   );
 
   return (
-    <div className="space-y-5 animate-view pb-12">
+    <div className="entropy-defensive-report entropy-player-gallery space-y-5 animate-view pb-12">
       {/* Summary */}
       <div className="theme-defensive-summary-grid grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-9 gap-4">
         <StatCard label={lbl("Total Healing")} value={fmtStat(pickStatsDisplayValue(mode, totals.totalHealing, totals.healingActiveSec))} icon={<Heart className="w-3.5 h-3.5 text-emerald-400" />} accent="text-emerald-400" />
@@ -283,9 +283,9 @@ export default function DefensiveView() {
         value={tab}
         onChange={setTab}
         options={[
-          { value: "support", label: "Support" },
-          { value: "healing", label: "Healing" },
-          { value: "defense", label: "Defensive Stats" },
+          { value: "support", label: "Support", icon: <Droplet size={15} /> },
+          { value: "healing", label: "Healing", icon: <Heart size={15} /> },
+          { value: "defense", label: "Defensive Stats", icon: <Shield size={15} /> },
         ]}
       />
 
@@ -328,27 +328,29 @@ export default function DefensiveView() {
 
       {tab === "healing" && (
         <Panel
-          title="Healing MVP Player Cards"
-          subtitle="Top sustain output by player. This replaces the per-target attribution overview until that data path is reliable."
+          title="Healing Leaders"
+          subtitle="Total sustain by player. Per-target attribution is unavailable."
           icon={<Heart className="w-4 h-4" />}
+          className="entropy-healing-leaders"
         >
           {healingMvpRows.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="entropy-healing-grid grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {healingMvpRows.map((p, i) => {
                 const share = topHealingSustain > 0 ? Math.max(5, (p.sustain / topHealingSustain) * 100) : 5;
                 return (
-                  <article key={p.account} className="theme-player-card neon-healing group flex min-h-[12.5rem] flex-col justify-between overflow-hidden border p-4 transition-colors">
+                  <article key={p.account} data-profession-family={PROFESSION_FAMILY[normalizeProfessionLabel(p.profession)] ?? "default"} className="theme-player-card neon-healing group flex min-h-[12.5rem] flex-col justify-between overflow-hidden border p-4 transition-colors">
+                    <span className="entropy-player-watermark" aria-hidden="true"><ProfessionIcon profession={p.profession} /></span>
                     <div className="theme-player-card-head flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-visible rounded-xl border border-emerald-400/15 bg-emerald-500/[0.045]">
+                        <div className="entropy-player-emblem flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-visible">
                           <ProfessionIcon profession={p.profession} className="h-9 w-9" />
                         </div>
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-black text-theme-text">{p.account}</div>
+                          <div className="entropy-player-account text-sm font-black text-theme-text">{p.account}</div>
                           <div className="mt-1"><ClassCell profession={p.profession} /></div>
                         </div>
                       </div>
-                      <span className={`font-mono text-xs font-black ${i < 3 ? "text-theme-accent-strong" : "text-theme-muted"}`}>
+                      <span className={`entropy-player-rank font-mono text-xs font-black ${i < 3 ? "text-theme-accent-strong" : "text-theme-muted"}`}>
                         #{i + 1}
                       </span>
                     </div>
@@ -357,18 +359,18 @@ export default function DefensiveView() {
                       <div className="flex items-end justify-between gap-3">
                         <div>
                           <div className="text-[10px] font-black uppercase tracking-wider text-theme-muted">Sustain output</div>
-                          <div className={`mt-1 font-mono text-2xl font-black leading-none ${i < 3 ? "text-emerald-300" : "text-theme-text"}`}>
+                          <div className={`entropy-player-value mt-1 font-mono text-2xl font-black leading-none ${i < 3 ? "text-emerald-300" : "text-theme-text"}`}>
                             {fmtCompact(p.sustain)}
                           </div>
                         </div>
                       </div>
-                      <div className="theme-progress-track mt-3 h-2 overflow-hidden rounded-full">
-                        <div className="theme-progress-fill h-full rounded-full bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 transition-all duration-500" style={{ width: `${share}%` }} />
+                      <div className="entropy-player-meter theme-progress-track mt-3 h-2 overflow-hidden rounded-full">
+                        <div className="theme-progress-fill h-full rounded-full bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300" style={{ width: `${share}%` }} />
                       </div>
                       <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-theme-muted">Share of healing leader</div>
                     </div>
 
-                    <div className="mt-4 grid grid-cols-4 gap-1.5 text-[10px] uppercase tracking-wider text-theme-muted">
+                    <div className="entropy-healing-facts mt-4 grid grid-cols-4 gap-1.5 text-[10px] uppercase tracking-wider text-theme-muted">
                       <div className="rounded-lg border border-white/[0.05] bg-black/20 px-2 py-1.5">
                         <div>Heal</div>
                         <div className="mt-0.5 font-mono text-[12px] font-black text-emerald-300">{fmtCompact(p.healing)}</div>

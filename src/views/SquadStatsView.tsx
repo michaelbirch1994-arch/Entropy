@@ -341,7 +341,7 @@ export default function SquadStatsView() {
   );
 
   return (
-    <div className="theme-view-layout space-y-5 animate-view pb-12">
+    <div className="entropy-squad-report theme-view-layout space-y-5 animate-view pb-12">
       {/* Summary */}
       <div className="theme-stat-grid grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard label="Total Damage" value={fmtCompact(totalDamage)} icon={<Swords className="w-3.5 h-3.5 text-orange-400" />} accent="text-orange-400" />
@@ -352,7 +352,7 @@ export default function SquadStatsView() {
         <StatCard label="Strips" value={fmtNum(totalStrips)} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
       </div>
 
-      <div className="theme-stat-grid grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="entropy-context-readouts theme-stat-grid grid grid-cols-1 xl:grid-cols-3 gap-4">
         <StatCard
           label="Kill Pressure"
           value={pressureLeader ? `${pressureLeader.pressureScore}%` : "n/a"}

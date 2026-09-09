@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
 export type SortDirection = "asc" | "desc";
 
@@ -35,7 +36,9 @@ export function SortableHeader<T extends string>({
         className={`theme-sortable-header-button ${buttonAlignmentClass}`}
       >
         <span>{label ?? children}</span>
-        <span className="theme-sortable-header-state">{sortLabel}</span>
+        <span className="theme-sortable-header-state" aria-label={sortLabel}>
+          {!active ? <ArrowUpDown size={12} /> : state.dir === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+        </span>
       </button>
     </th>
   );

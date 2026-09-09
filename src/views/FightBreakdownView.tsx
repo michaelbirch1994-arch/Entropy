@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useReport } from "../store/ReportContext";
 import { useView } from "../store/ViewContext";
@@ -41,7 +41,7 @@ function compareValues(a: string | number, b: string | number, dir: "desc" | "as
 
 export default function FightBreakdownView() {
   const { report } = useReport();
-  const { setActiveView } = useView();
+  const { setActiveView, navigationTarget, clearNavigationTarget } = useView();
   const [showAll, setShowAll] = useState(false);
   const [sort, setSort] = useState<SortState>(null);
   const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>("all");
@@ -49,6 +49,27 @@ export default function FightBreakdownView() {
   const [comparisonFightId, setComparisonFightId] = useState<string | null>(null);
   const s = report?.stats;
   const fights = s?.fightBreakdown ?? [];
+  const dossierRef = useRef<HTMLElement>(null);
+  const [navigationSelection, setNavigationSelection] = useState<string | null>(null);
+  useEffect(() => {
+    if (!s || navigationTarget?.targetView !== "fight-breakdown") return;
+    const fight = navigationTarget.fightId
+      ? fights.find((entry) => entry.id === navigationTarget.fightId)
+      : typeof navigationTarget.fightIndex === "number" ? fights[navigationTarget.fightIndex] : undefined;
+    if (fight) {
+      setSelectedFightId(fight.id);
+      setNavigationSelection(fight.id);
+      setOutcomeFilter("all");
+      setShowAll(true);
+    }
+    clearNavigationTarget();
+  }, [s, fights, navigationTarget, clearNavigationTarget]);
+  useEffect(() => {
+    if (!navigationSelection) return;
+    dossierRef.current?.scrollIntoView({ block: "start" });
+    dossierRef.current?.focus({ preventScroll: true });
+    setNavigationSelection(null);
+  }, [navigationSelection]);
   const sortedFights = useMemo(() => {
     const base = fights
       .map((fight, index) => ({ fight, index }))
@@ -252,7 +273,7 @@ export default function FightBreakdownView() {
       </Panel>
 
       {selectedRow && (
-        <section className="theme-fight-dossier grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
+        <section ref={dossierRef} tabIndex={-1} aria-label={`Fight ${selectedRow.index + 1} dossier`} className="theme-fight-dossier grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
           <div className="theme-selected-fight border border-theme-accent/25 bg-theme-surface/90 p-5 shadow-[inset_2px_0_0_var(--theme-accent)]">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>

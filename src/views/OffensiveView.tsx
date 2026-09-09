@@ -4,6 +4,9 @@ import { useDamageScope, pickDamageScopeValue, type DamageScope } from "../store
 import { useStatsDisplay } from "../store/StatsDisplayContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
+import RankedMetricList from "../components/ui/RankedMetricList";
+import { useView } from "../store/ViewContext";
+import { SortableHeader } from "../components/ui/SortableHeader";
 import PlayerSampleCell from "../components/ui/PlayerSampleCell";
 import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import { fmtNum, fmtCompact, fmtFixed, fmtFixedGrouped } from "../utils/format";
@@ -13,21 +16,12 @@ import { rateByActiveMs } from "../lib/playerRate";
 import { hasNonPlayerObjectiveDamage, nonPlayerObjectiveDamage } from "../lib/offenseColumns";
 import { normalizeOffensePlayers } from "../lib/offensivePlayerNormalization";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
-import {
   Swords,
   Target,
   Crosshair,
   Zap,
   Flame,
   ShieldOff,
-  ArrowUpDown,
   TrendingUp,
   Building2,
 } from "lucide-react";
@@ -114,22 +108,10 @@ function numVal(row: Row, key: SortKey, scope: DamageScope, perSecond: boolean):
   return RATE_AWARE_COLUMNS.has(key) ? rateByActiveMs(raw, row.totalFightMs, perSecond) : raw;
 }
 
-function ChartTooltip({ active, payload, unit }: { active?: boolean; payload?: { name: string; value: number }[]; unit: string }) {
-  if (!active || !payload || payload.length === 0) return null;
-  const p = payload[0];
-  return (
-    <div className="rounded-xl border border-white/[0.08] bg-black/80 backdrop-blur-xl px-3.5 py-2.5 shadow-2xl">
-      <div className="text-[11px] font-bold text-slate-100">{p.name}</div>
-      <div className="text-xs font-mono text-slate-100 mt-0.5">
-        {Math.round(p.value).toLocaleString()} {unit}
-      </div>
-    </div>
-  );
-}
-
 export default function OffensiveView() {
   const { report, loading } = useReport();
   const { scope } = useDamageScope();
+  const { navigateToView } = useView();
   const { mode } = useStatsDisplay();
   const isPerSecond = mode === "perSecond";
   // Per-player cells divide by that player's own tracked fight time, not a
@@ -208,6 +190,8 @@ export default function OffensiveView() {
     );
     const top5Dmg = byDamage.slice(0, 5).map((r) => ({
       name: r.account.split(".")[0],
+      account: r.account,
+      profession: r.profession,
       value: pickDamageScopeValue(scope, r.offenseTotals.damage, r.offenseTotals.damageAll),
       dps: Math.round(r.dps),
     }));
@@ -217,6 +201,8 @@ export default function OffensiveView() {
       .slice(0, 5)
       .map((r) => ({
         name: r.account.split(".")[0],
+      account: r.account,
+      profession: r.profession,
         value: r.offenseTotals.boonStrips ?? 0,
       }));
 
@@ -254,9 +240,9 @@ export default function OffensiveView() {
   }
 
   return (
-    <div className="space-y-5 animate-view pb-12">
+    <div className="entropy-performance-report space-y-5 animate-view pb-12">
       {/* Summary stat cards */}
-      <div className={`grid grid-cols-2 gap-4 ${derived.hasSiegeData ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+      <div className={`entropy-primary-metrics grid grid-cols-2 gap-4 ${derived.hasSiegeData ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
         <StatCard label="Total Damage" value={fmtCompact(derived.totalDamage)} icon={<Swords className="w-3.5 h-3.5 text-orange-400" />} accent="text-orange-400" />
         <StatCard label="Down Contrib" value={fmtCompact(derived.totalDown)} icon={<Target className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-300" />
         <StatCard label="Boon Strips" value={fmtNum(derived.totalStrips)} icon={<Zap className="w-3.5 h-3.5 text-amber-400" />} accent="text-amber-400" />
@@ -271,52 +257,12 @@ export default function OffensiveView() {
         )}
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <Panel title="Top 5 Damage Output" icon={<TrendingUp className="w-4 h-4" />}>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={derived.top5Dmg} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
-                <defs>
-                  <linearGradient id="dmgGradient" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#f97316" stopOpacity={0.8} />
-                    <stop offset="100%" stopColor="#ef4444" stopOpacity={1} />
-                  </linearGradient>
-                </defs>
-                <XAxis type="number" hide />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={90}
-                  tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: 600 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip content={<ChartTooltip unit="dmg" />} cursor={{ fill: "rgba(249,115,22,0.06)" }} />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={22} fill="url(#dmgGradient)" animationDuration={600} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        <Panel title="Top 5 Damage Output" icon={<TrendingUp className="w-4 h-4" />} className="entropy-ranking-panel" tone="danger">
+          <RankedMetricList entries={derived.top5Dmg} metric="Total Damage" onOpen={(entry) => navigateToView("top-players", { source: "other", metric: "damage", account: entry.account })} />
         </Panel>
-
-        <Panel title="Top 5 Boon Strips" icon={<ShieldOff className="w-4 h-4" />}>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={derived.top5Strips} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>
-                <XAxis type="number" hide />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={90}
-                  tick={{ fill: "#94a3b8", fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip content={<ChartTooltip unit="strips" />} cursor={{ fill: "rgba(245,158,11,0.08)" }} />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20} fill="#f59e0b" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        <Panel title="Top 5 Boon Strips" icon={<ShieldOff className="w-4 h-4" />} className="entropy-ranking-panel" tone="warning">
+          <RankedMetricList entries={derived.top5Strips} metric="Boon Strips" onOpen={(entry) => navigateToView("top-players", { source: "other", metric: "strips", account: entry.account })} />
         </Panel>
       </div>
 
@@ -333,18 +279,7 @@ export default function OffensiveView() {
                 {COLUMNS.map((col) => {
                   const label = isPerSecond && RATE_AWARE_COLUMNS.has(col.key) ? `${col.label}/s` : col.label;
                   return (
-                    <th
-                      key={col.key}
-                      onClick={() => toggleSort(col.key)}
-                      className={`p-2.5 cursor-pointer select-none hover:text-slate-300 transition-colors ${
-                        col.align === "right" ? "text-right" : ""
-                      } ${sortKey === col.key ? "text-theme-accentStrong" : ""}`}
-                    >
-                      <span className={`inline-flex items-center gap-1 ${col.align === "right" ? "flex-row-reverse" : ""}`}>
-                        {label}
-                        <ArrowUpDown className={`w-3 h-3 ${sortKey === col.key ? "opacity-100" : "opacity-30"}`} />
-                      </span>
-                    </th>
+                    <SortableHeader key={col.key} label={label} sortKey={col.key} state={{ key: sortKey, dir: sortDir }} onSort={toggleSort} align={col.align} />
                   );
                 })}
                 {derived.hasSiegeData && <th className="p-2.5 text-right">Siege/NPC/Gate</th>}

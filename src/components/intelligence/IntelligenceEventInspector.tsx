@@ -138,7 +138,7 @@ export default function IntelligenceEventInspector({
         </button>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-4">
+      <div className="entropy-evidence-summary mt-4 grid gap-3 md:grid-cols-4">
         <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase text-slate-500"><Clock3 className="h-3.5 w-3.5" /> Anchor</div>
           <div className="mt-2 font-mono text-lg font-black text-slate-100">{formatTime(window.anchorTimestampMs)}</div>
@@ -157,7 +157,7 @@ export default function IntelligenceEventInspector({
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 xl:grid-cols-3">
+      <div className="entropy-evidence-timeline mt-5 grid gap-4 xl:grid-cols-3">
         <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-4">
           <div className="text-xs font-black uppercase tracking-wider text-slate-400">Before</div>
           <div className="mt-3 grid gap-2 max-h-80 overflow-y-auto custom-scrollbar pr-1">
@@ -197,7 +197,7 @@ export default function IntelligenceEventInspector({
       </div>
 
       {replaySnapshot && (
-        <div className="mt-4 rounded-2xl border border-theme-border bg-black/20 p-4">
+        <div className="entropy-evidence-replay mt-4 rounded-2xl border border-theme-border bg-black/20 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-theme-accentStrong">
               <MapPin className="h-4 w-4" /> Replay state at {formatTime(replaySnapshot.timestampMs)}
@@ -207,7 +207,7 @@ export default function IntelligenceEventInspector({
           <p className="mt-2 text-[11px] leading-5 text-slate-500">
             This is a frozen read of the same replay tracks used by Fight Replay at the selected Intelligence timestamp. Unknown positioning stays unknown; this panel does not infer movement or causation.
           </p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="entropy-evidence-replay-stats mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Squad alive</div><div className="mt-1 font-mono text-lg font-black text-slate-100">{replaySnapshot.squadAlive}</div></div>
             <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Squad down</div><div className="mt-1 font-mono text-lg font-black text-amber-200">{replaySnapshot.squadDown}</div></div>
             <div className="rounded-xl border border-white/[0.06] bg-black/25 p-3"><div className="text-[10px] font-bold uppercase text-slate-500">Enemies alive</div><div className="mt-1 font-mono text-lg font-black text-slate-100">{replaySnapshot.enemiesAlive}</div></div>
@@ -216,7 +216,7 @@ export default function IntelligenceEventInspector({
           </div>
           <div className="mt-3 rounded-xl border border-white/[0.06] bg-black/20 p-3"><div className="flex flex-wrap items-center justify-between gap-2"><div className="text-[10px] font-black uppercase tracking-wider text-slate-500">Commander state</div><div className="font-mono text-[11px] font-bold text-slate-300">{replaySnapshot.commanderAccount ?? "commander unavailable/dead"}</div></div></div>
           {replaySnapshot.linkedPlayers.length > 0 && (
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
+            <div className="entropy-evidence-players mt-3 grid gap-2 md:grid-cols-2">
               {replaySnapshot.linkedPlayers.map((player) => (
                 <div key={player.account} className="rounded-xl border border-white/[0.06] bg-black/25 p-3">
                   <div className="flex flex-wrap items-start justify-between gap-2"><div><div className="text-xs font-black text-slate-100">{player.account}</div><div className="mt-0.5 text-[10px] text-slate-500">{player.name} · {player.profession}</div></div><div className="flex gap-1.5">{player.isCommander && <span className="rounded-full border border-amber-400/20 bg-amber-500/[0.06] px-2 py-0.5 text-[9px] font-bold uppercase text-amber-200">tag</span>}{player.isDown && <span className="rounded-full border border-rose-400/20 bg-rose-500/[0.06] px-2 py-0.5 text-[9px] font-bold uppercase text-rose-200">down</span>}{player.isDead && <span className="rounded-full border border-rose-400/30 bg-rose-500/[0.08] px-2 py-0.5 text-[9px] font-bold uppercase text-rose-100">dead</span>}</div></div>

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useReport } from "../store/ReportContext";
+import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
 import { fmtNum, fmtDur, profStyle } from "../utils/format";
@@ -12,6 +13,19 @@ type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
 
 export default function RosterView() {
   const { report } = useReport();
+  const { navigationTarget, clearNavigationTarget } = useView();
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
+  const selectedRowRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    if (!report || navigationTarget?.targetView !== "roster") return;
+    const account = navigationTarget.account;
+    setSelectedAccount(account && report.stats.attendanceData.some((player) => player.account === account) ? account : null);
+    clearNavigationTarget();
+  }, [report, navigationTarget, clearNavigationTarget]);
+  useEffect(() => {
+    selectedRowRef.current?.scrollIntoView({ block: "center" });
+    selectedRowRef.current?.focus({ preventScroll: true });
+  }, [selectedAccount]);
   // Default matches the previous hard-coded ordering so nothing shifts on load.
   const [sort, setSort] = useState<SortState>(null);
   if (!report) return null;
@@ -156,7 +170,10 @@ export default function RosterView() {
                   const mainProf = p.classTimes[0]?.profession ?? "Unknown";
                   const st = profStyle(mainProf);
                   return (
-                    <tr key={p.account} className="theme-table-row transition-colors">
+                    <tr key={p.account} ref={p.account === selectedAccount ? selectedRowRef : undefined}
+                      tabIndex={p.account === selectedAccount ? -1 : undefined}
+                      data-selected={p.account === selectedAccount || undefined}
+                      className="theme-table-row transition-colors">
                       <td className="p-2.5 text-theme-text font-semibold whitespace-nowrap">{p.account}</td>
                       <td className="p-2.5 text-theme-text/70">{p.characterNames.join(", ") || "-"}</td>
                       <td className="p-2.5">

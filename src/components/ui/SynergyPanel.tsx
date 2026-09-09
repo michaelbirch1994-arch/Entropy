@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { CircleCheck, CircleAlert, TriangleAlert, Info, Sparkles } from "lucide-react";
 import type { SynergyInsight } from "../../types/report";
 import Panel from "./Panel";
@@ -25,22 +24,18 @@ export default function SynergyPanel({ insights }: { insights: SynergyInsight[] 
       className="theme-synergy-panel"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-        {sorted.map((insight, i) => {
+        {sorted.map((insight) => {
           const s = SEVERITY_STYLE[insight.severity];
           return (
-            <motion.div
-              key={insight.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className={`theme-alert-plate flex items-start gap-2.5 rounded-xl border ${s.border} ${s.bg} px-3.5 py-3`}
+            <div
+              key={insight.id}              className={`theme-alert-plate flex items-start gap-2.5 rounded-xl border ${s.border} ${s.bg} px-3.5 py-3`}
             >
               <span className={`${s.text} flex-shrink-0 mt-0.5`}>{s.icon}</span>
               <div>
                 <p className={`text-xs font-bold ${s.text}`}>{insight.title}</p>
                 <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">{insight.detail}</p>
               </div>
-            </motion.div>
+            </div>
           );
         })}
       </div>

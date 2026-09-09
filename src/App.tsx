@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import Sidebar, { VIEW_ICONS } from "./components/layout/Sidebar";
+import CommandPalette, { type WorkspaceDestination } from "./components/layout/CommandPalette";
+import AppearanceDialog from "./components/layout/AppearanceDialog";
+import { Search, ChevronRight, Files } from "lucide-react";
 import { VIEW_TITLES, VIEW_TONES } from "./lib/viewRegistry";
 import { ReportProvider, useReport } from "./store/ReportContext";
 import { ViewProvider, useView } from "./store/ViewContext";
@@ -300,7 +303,30 @@ function ReportShell() {
   const [hostedShareOpen, setHostedShareOpen] = useState(false);
   const [discordStatus, setDiscordStatus] = useState<DiscordShareStatus>("idle");
   const [discordError, setDiscordError] = useState("");
-  const { activeView, setActiveView } = useView(); function handleSetActiveView(view: string) { setAtHome(false); setActiveView(view); }
+  const { activeView, setActiveView, navigateToView } = useView();
+  const workspaceRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    // Reset the old page position before destination evidence effects focus a target.
+    if (workspaceRef.current) workspaceRef.current.scrollTop = 0;
+  }, [activeView]);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
+  function handleSetActiveView(view: string) { setAtHome(false); setActiveView(view); }
+  function handleCommandNavigate(view: string, target?: WorkspaceDestination) {
+    setAtHome(false);
+    navigateToView(view, target);
+  }
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setAppearanceOpen(false);
+        setCommandOpen((open) => !open);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
 
 
@@ -445,35 +471,39 @@ function ReportShell() {
 
   return (
     <div className="theme-app-shell flex h-screen w-full overflow-hidden">
+      <a href="#workspace-content" className="entropy-skip-link">Skip to workspace</a>
       <div className="entropy-bg" />
+      <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} onNavigate={handleCommandNavigate} />
+      <AppearanceDialog open={appearanceOpen} onClose={() => setAppearanceOpen(false)} />
 
 
 
 
       {/* Only show sidebar when a report is loaded */}
-      {(report || showTool) && <Sidebar activeView={activeView} setActiveView={handleSetActiveView} hasReport={!!report} />}
+      {(report || showTool) && <Sidebar activeView={activeView} setActiveView={handleSetActiveView} hasReport={!!report}
+        onSearch={() => setCommandOpen(true)} onSettings={() => setAppearanceOpen(true)} />}
 
 
 
 
       <main
+        ref={workspaceRef}
         className="theme-main flex-1 overflow-y-auto h-full scroll-smooth custom-scrollbar"
         data-workspace-tone={VIEW_TONES[activeView] ?? "overview"}
+        data-view={activeView}
       >
         {/* Header - only when report is active */}
         {report && (
           <header className="theme-topbar sticky top-0 z-30 px-6 py-4">
             <div className="theme-topbar-inner flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="text-theme-accent">{viewIcon}</span>
-                <div>
-                  <h1 className="theme-view-title text-lg font-black text-theme-text uppercase font-display">{viewTitle}</h1>
-                  <p className="theme-view-meta text-xs text-theme-accent/80 font-medium">
-                    {headerInfo?.title} - {headerInfo?.dateLabel}
-                  </p>
-                </div>
+              <div key={activeView} className="entropy-workspace-location">
+                <span className="entropy-workspace-label">Workspace</span>
+                <ChevronRight size={14} aria-hidden="true" />
+                <span className="entropy-location-icon">{viewIcon}</span>
+                <h1 className="theme-view-title">{atHome ? "Open combat record" : viewTitle}</h1>
               </div>
               <div className="theme-topbar-actions flex flex-wrap items-center justify-end gap-2">
+                <button type="button" className="entropy-icon-button" onClick={() => setCommandOpen(true)} aria-label="Search workspace" title="Search workspace"><Search size={18} /></button>
                 {/* These toggles only actually affect Offensive/Squad Stats (damage scope) and Defensive (per-second + squad-only) - hidden elsewhere so they stay honest about which views they change. */}
                 {(activeView === "offensive" || activeView === "squad-stats" || activeView === "defensive") && (
                   <div className="theme-topbar-scope-group" aria-label="View metric display options">
@@ -564,12 +594,16 @@ function ReportShell() {
                     {exportStatus !== "idle" ? exportLabel : source === "upload" ? "Uploaded" : "Shared link"}
                   </button>
                 )}
-                {headerInfo && (
-                  <div className="theme-status-pill flex items-center gap-3 px-4 py-2 text-xs font-mono">
-                    <span>v{headerInfo.version}</span>
-                  </div>
-                )}
               </div>
+            </div>
+            <div className="entropy-session-context" aria-label="Loaded combat session">
+              <Files size={14} aria-hidden="true" />
+              <span className="entropy-session-title" title={headerInfo?.title}>{headerInfo?.title}</span>
+              <span className="entropy-session-date">{headerInfo?.dateLabel}</span>
+              <button type="button" onClick={() => handleSetActiveView("fight-breakdown")} title="Open fights in this report">
+                {report.stats.fightBreakdown?.length ?? report.stats.total} fights <ChevronRight size={13} />
+              </button>
+              <span className="entropy-session-version" title={`Report methodology version: ${headerInfo?.version}`}>WvW</span>
             </div>
           </header>
         )}
@@ -699,7 +733,7 @@ function ReportShell() {
 
 
         {/* Content */}
-        <div className={showImport ? "min-h-full" : report || showTool ? "theme-content p-6" : "min-h-full"}>
+        <div className={showImport ? "min-h-full" : report || showTool ? "theme-content p-6" : "min-h-full"} id="workspace-content" tabIndex={-1}>
           {showTool ? (
             <AxiForgeLabView />
           ) : showLoading ? (
@@ -735,7 +769,7 @@ function ReportShell() {
               </div>
             </motion.div>
           ) : report ? (
-            <div className="min-h-full w-full">
+            <div key={activeView} className="entropy-route-stage min-h-full w-full">
               <ReportRouter activeView={activeView} />
             </div>
           ) : null}

@@ -8,8 +8,10 @@ import Panel from "../components/ui/Panel";
 import PeakDamagePanel from "../components/ui/PeakDamagePanel";
 import LeaderboardTable from "../components/ui/LeaderboardTable";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
+import SelectionIndicator from "../components/ui/SelectionIndicator";
+import { useWorkspacePreferences } from "../theme/WorkspacePreferences";
 import type { DefensePlayer, HealingPlayer, LeaderboardEntry, OffensePlayer, PlayerSkillBreakdown, SupportPlayer } from "../types/report";
-import { fmtCompact, fmtDur, fmtNum, profStyle } from "../utils/format";
+import { fmtCompact, fmtDur, fmtNum, profStyle, PROFESSION_FAMILY, normalizeProfessionLabel } from "../utils/format";
 import { getSampleReliability, sampleReliabilityClasses } from "../lib/sampleReliability";
 import { buildNormalizedTopPlayerSources, mergePlayerSkillBreakdownsForAccount, normalizeTopPlayersLeaderboard } from "../lib/topPlayersNormalization";
 import { buildNormalizedTopPlayerSourceLeaderboards } from "../lib/topPlayerSourceLeaderboards";
@@ -232,7 +234,7 @@ function SourceGroup({ title, rows }: { title: string; rows: SourceRow[] }) {
   );
 }
 
-function PlayerMetricCard({
+export function PlayerMetricCard({
   entry,
   index,
   max,
@@ -268,19 +270,21 @@ function PlayerMetricCard({
       onClick={onToggle}
       aria-expanded={expanded}
       aria-controls={controlsId}
+      data-profession-family={PROFESSION_FAMILY[normalizeProfessionLabel(entry.profession)] ?? "default"}
       className={`theme-player-card ${glowClass} rounded-2xl p-4 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-theme-accent/40`}
     >
+      <span className="entropy-player-watermark" aria-hidden="true"><ProfessionIcon profession={entry.profession} /></span>
       <div className="theme-player-card-head flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-visible">
+          <div className="entropy-player-emblem flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-visible">
             <ProfessionIcon profession={entry.profession} className="h-9 w-9" />
           </div>
           <div className="min-w-0">
-            <div className="truncate text-sm font-bold text-theme-text">{entry.account}</div>
+            <div className="entropy-player-account text-sm font-bold text-theme-text">{entry.account}</div>
             <div className="mt-0.5 text-[10px] font-mono text-theme-muted">{entry.profession}</div>
           </div>
         </div>
-        <span className={`font-mono text-xs font-black ${entry.rank <= 3 ? "text-theme-accent-strong" : "text-theme-muted"}`}>
+        <span className={`entropy-player-rank font-mono text-xs font-black ${entry.rank <= 3 ? "text-theme-accent-strong" : "text-theme-muted"}`}>
           #{entry.rank || index + 1}
         </span>
       </div>
@@ -289,22 +293,22 @@ function PlayerMetricCard({
         <div className="flex items-end justify-between gap-3">
           <div>
             <div className="text-[10px] font-bold uppercase tracking-wider text-theme-muted">{metricLabel}</div>
-            <div className="mt-1 font-mono text-2xl font-black text-theme-text">
+            <div className="entropy-player-value mt-1 font-mono text-2xl font-black text-theme-text">
               {formatMetricValue(entry, unit)}
               {unit && <span className="ml-1 text-[10px] font-bold text-theme-muted">{unit}</span>}
             </div>
           </div>
-          <div className="text-right text-[10px] font-mono text-theme-muted">
+          <div className="entropy-player-sample text-right text-[10px] font-mono text-theme-muted">
             {sample.fights}/{sample.totalFights} fights
           </div>
         </div>
-        <div className="theme-progress-track mt-3 h-2 overflow-hidden rounded-full">
-          <div className={`theme-progress-fill h-full rounded-full ${style.dot} transition-all duration-500`} style={{ width: `${share}%` }} />
+        <div className="entropy-player-meter theme-progress-track mt-3 h-2 overflow-hidden rounded-full">
+          <div className={`theme-progress-fill h-full rounded-full ${style.dot}`} style={{ width: `${share}%` }} />
         </div>
         <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-theme-muted">
           Share of current leader
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-mono text-theme-muted">
+        <div className="entropy-player-provenance mt-3 flex flex-wrap items-center gap-2 text-[10px] font-mono text-theme-muted">
           <span>{fmtDur(sample.combatTimeMs)} active</span>
           <span>·</span>
           <span>{Math.round(reliability.coverage * 100)}% participation</span>
@@ -316,7 +320,7 @@ function PlayerMetricCard({
           </span>
         </div>
       </div>
-      <div className="mt-3 flex items-center justify-between border-t border-theme-border/50 pt-3 text-[10px] font-bold uppercase tracking-wider text-theme-accent">
+      <div className="entropy-player-card-action mt-3 flex items-center justify-between border-t border-theme-border/50 pt-3 text-[10px] font-bold uppercase tracking-wider text-theme-accent">
         <span>{expanded ? "Hide source breakdown" : "Show source breakdown"}</span>
         {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
       </div>
@@ -337,7 +341,9 @@ function PlayerSourceDetails({
   triggerId: string;
   onClose: () => void;
 }) {
-  const reduceMotion = useReducedMotion();
+  const systemReducedMotion = useReducedMotion();
+  const { preferences } = useWorkspacePreferences();
+  const reduceMotion = systemReducedMotion || preferences.motion === "reduced";
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
@@ -476,7 +482,7 @@ export default function TopPlayersView() {
   );
 
   return (
-    <div className="theme-view-layout space-y-5 animate-view pb-12">
+    <div className="entropy-player-gallery theme-view-layout space-y-5 animate-view pb-12">
       <div className="theme-filter-strip flex flex-wrap gap-2">
         {METRICS.map((m) => {
           const Icon = m.icon;
@@ -489,6 +495,7 @@ export default function TopPlayersView() {
               aria-pressed={isActive}
               className={`theme-filter-button flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 border ${isActive ? "is-active" : ""}`}
             >
+              {isActive && <SelectionIndicator id="top-player-metric" />}
               <Icon className="w-3.5 h-3.5" />
               {m.label}
             </button>
@@ -503,11 +510,13 @@ export default function TopPlayersView() {
           return (
             <div
               key={`${metric}:podium:${e.account}:${e.profession}:${e.rank}:${e.value}`}
+              data-profession-family={PROFESSION_FAMILY[normalizeProfessionLabel(e.profession)] ?? "default"}
               className={`theme-podium-card ${METRIC_GLOW[metric]} is-rank-${place} rounded-2xl p-4 flex items-center gap-4`}
             >
+              <span className="entropy-podium-emblem" aria-hidden="true"><ProfessionIcon profession={e.profession} /></span>
               <div className="theme-podium-rank text-3xl font-black font-mono">#{place}</div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold text-theme-text truncate">{e.account}</div>
+                <div className="entropy-podium-account text-sm font-bold text-theme-text">{e.account}</div>
                 <div className="mt-1 flex items-center gap-1.5 text-[10px] text-theme-muted font-mono">
                   <ProfessionIcon profession={e.profession} className="h-5 w-5" />
                   {e.profession}
@@ -524,8 +533,7 @@ export default function TopPlayersView() {
 
       <Panel
         key={`panel:${snapshotKey}`}
-        title={`${active.label} Player Cards`}
-        subtitle="These cards are driven by the same selected metric as the podium and table."
+        title={`${active.label} Leaders`}
         icon={<active.icon className="w-4 h-4" />}
         accent="text-amber-400"
       >

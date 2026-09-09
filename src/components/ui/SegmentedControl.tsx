@@ -1,4 +1,5 @@
-import { useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import SelectionIndicator from "./SelectionIndicator";
 
 export interface SegmentedControlOption<T extends string> {
   value: T;
@@ -18,6 +19,7 @@ export function SegmentedControl<T extends string>({
   value: T;
 }) {
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const indicatorId = useId();
 
   function focusOption(index: number) {
     const nextIndex = (index + options.length) % options.length;
@@ -67,6 +69,7 @@ export function SegmentedControl<T extends string>({
             onClick={() => onChange(option.value)}
             className="theme-segmented-control-option"
           >
+            {active && <SelectionIndicator id={indicatorId} />}
             {option.icon}
             <span>{option.label}</span>
           </button>

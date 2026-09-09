@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useReport } from "../store/ReportContext";
+import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { fmtCompact, fmtNum } from "../utils/format";
 import type { TopSkill, TopHealingSource } from "../types/report";
 import { getSampleReliability, sampleReliabilityClasses } from "../lib/sampleReliability";
@@ -39,7 +40,7 @@ function SkillIcon({ src, index }: { src?: string; index: number }) {
   const [failed, setFailed] = useState(false);
   if (!src || failed) {
     return (
-      <div className="w-9 h-9 rounded-lg bg-theme-surface-inset border border-theme-border flex items-center justify-center text-[10px] font-bold text-theme-muted font-mono">
+      <div className="entropy-skill-art w-9 h-9 rounded-lg bg-theme-surface-inset border border-theme-border flex items-center justify-center text-[10px] font-bold text-theme-muted font-mono">
         {index + 1}
       </div>
     );
@@ -50,48 +51,18 @@ function SkillIcon({ src, index }: { src?: string; index: number }) {
       alt=""
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
-      className="w-9 h-9 rounded-lg border border-theme-border"
+      className="entropy-skill-art w-9 h-9 rounded-lg border border-theme-border"
       loading="lazy"
     />
   );
 }
 
 function TabRow({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
-  const inactive = "bg-theme-surface text-theme-muted border-theme-border hover:border-theme-accent/20 hover:text-theme-text";
-  return (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => setTab("outgoing")}
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-          tab === "outgoing"
-            ? "bg-orange-500/15 text-orange-400 border-orange-500/40"
-            : inactive
-        }`}
-      >
-        <Zap className="w-3.5 h-3.5" /> Outgoing
-      </button>
-      <button
-        onClick={() => setTab("incoming")}
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-          tab === "incoming"
-            ? "bg-rose-500/15 text-rose-400 border-rose-500/40"
-            : inactive
-        }`}
-      >
-        <ArrowDownLeft className="w-3.5 h-3.5" /> Incoming
-      </button>
-      <button
-        onClick={() => setTab("healing")}
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-          tab === "healing"
-            ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/40"
-            : inactive
-        }`}
-      >
-        <HeartPulse className="w-3.5 h-3.5" /> Healing
-      </button>
-    </div>
-  );
+  return <SegmentedControl ariaLabel="Skill report sections" value={tab} onChange={setTab} options={[
+    { value: "outgoing", label: "Outgoing", icon: <Zap size={15} /> },
+    { value: "incoming", label: "Incoming", icon: <ArrowDownLeft size={15} /> },
+    { value: "healing", label: "Healing", icon: <HeartPulse size={15} /> },
+  ]} />;
 }
 
 function buildHealingById(healingSources: TopHealingSource[]) {
@@ -356,7 +327,7 @@ function LifeStealSpotlight({
   if (topSources.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4 shadow-lg">
+    <section className="entropy-siphon-summary rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4 shadow-lg">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-4">
         <div>
           <div className="flex items-center gap-2 text-sm font-black text-emerald-300">
@@ -440,7 +411,7 @@ export default function TopSkillsView() {
     // No `sort` in this key - it used to force a full remount (and replay
     // the animate-view entrance animation) on every "Sort by" click.
     return (
-      <div className="space-y-5 animate-view pb-12">
+      <div className="entropy-skills-report space-y-5 animate-view pb-12" data-skill-tab={tab}>
         <TabRow tab={tab} setTab={setTab} />
 
         <div className="flex items-center gap-2 text-[11px]">
@@ -485,9 +456,9 @@ export default function TopSkillsView() {
                   key={`healing:${sort}:${hs.isTrait ? "trait" : "skill"}:${hs.id}:${hs.name}:${hs.healing}:${hs.hits}`}
                   onClick={() => setExpandedKey(expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}` ? null : `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}`)}
                   aria-expanded={expandedKey === `healing:${hs.isTrait ? "trait" : "skill"}:${hs.id}`}
-                  className="w-full bg-theme-surface border border-theme-border rounded-2xl p-4 text-left shadow-lg hover:border-theme-accent/25 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-theme-accent-strong/50"
+                  className="entropy-skill-card w-full bg-theme-surface border border-theme-border rounded-2xl p-4 text-left shadow-lg hover:border-theme-accent/25 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-theme-accent-strong/50"
                 >
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="entropy-skill-card-head flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <SkillIcon src={hs.icon} index={i} />
                       <div>
@@ -509,7 +480,7 @@ export default function TopSkillsView() {
                       #{i + 1}
                     </span>
                   </div>
-                  <div>
+                  <div className="entropy-skill-primary">
                     <div className="flex justify-between text-[10px] font-mono mb-1">
                       <span className="text-theme-muted">Sorted by {sort === "hits" ? "Hits" : "Healing"}</span>
                       <span className="text-emerald-400 font-bold">{sort === "hits" ? fmtNum(activeValue) : fmtCompact(activeValue)}</span>
@@ -561,7 +532,7 @@ export default function TopSkillsView() {
     // `tab` stays in the key (outgoing/incoming genuinely swap to different
     // content), but `sort` was dropped - it used to force a full remount
     // (and replay the entrance animation) on every "Sort by" click.
-    <div className="space-y-5 animate-view pb-12" key={`${tab}-view`}>
+    <div className="entropy-skills-report space-y-5 animate-view pb-12" data-skill-tab={tab} key={`${tab}-view`}>
       <TabRow tab={tab} setTab={setTab} />
 
       {/* Sort selector */}
@@ -603,9 +574,9 @@ export default function TopSkillsView() {
               key={`${tab}:${sort}:${sk.id}:${sk.name}:${sk.damage}:${sk.downContribution}:${sk.hits}`}
               onClick={() => setExpandedKey(expandedKey === `${tab}:${sk.id}` ? null : `${tab}:${sk.id}`)}
               aria-expanded={expandedKey === `${tab}:${sk.id}`}
-              className="w-full bg-theme-surface border border-theme-border rounded-2xl p-4 text-left shadow-lg hover:border-theme-accent/25 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-theme-accent-strong/50"
+              className="entropy-skill-card w-full bg-theme-surface border border-theme-border rounded-2xl p-4 text-left shadow-lg hover:border-theme-accent/25 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-theme-accent-strong/50"
             >
-              <div className="flex items-start justify-between mb-3">
+              <div className="entropy-skill-card-head flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <SkillIcon src={sk.icon || healingMatch?.icon} index={i} />
                   <div>
@@ -630,7 +601,7 @@ export default function TopSkillsView() {
                 </span>
               </div>
 
-              <div className={`mb-3 rounded-xl border ${accent.border} ${accent.bg} p-3`}>
+              <div className={`entropy-skill-primary mb-3 rounded-xl border ${accent.border} ${accent.bg} p-3`}>
                 <div className="flex justify-between text-[10px] font-mono mb-1">
                   <span className="text-theme-text/70">Sorted by {SORT_LABEL[sort]}</span>
                   <span className={`${accent.text} font-bold`}>{sort === "hits" ? fmtNum(activeValue) : fmtCompact(activeValue)}</span>

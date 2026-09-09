@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import SelectionIndicator from "../components/ui/SelectionIndicator";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   computeAttributeProfile,
@@ -2274,7 +2275,7 @@ function BuildViewerDialog({
           </div>
         </header>
         <nav className="theme-builder-viewer-tabs" role="tablist" aria-label="Build viewer sections">
-          {(["build", "equipment"] as const).map((item) => <button key={item} id={`builder-viewer-tab-${item}`} type="button" role="tab" aria-selected={tab === item} aria-controls={`builder-viewer-panel-${item}`} tabIndex={tab === item ? 0 : -1} className={tab === item ? "is-active" : ""} onClick={() => setTab(item)} onKeyDown={(event) => moveTabFocus(["build", "equipment"] as const, item, event, setTab, (next) => `builder-viewer-tab-${next}`)}>{item === "build" ? <Swords className="h-4 w-4" /> : <Shield className="h-4 w-4" />}{item}</button>)}
+          {(["build", "equipment"] as const).map((item) => <button key={item} id={`builder-viewer-tab-${item}`} type="button" role="tab" aria-selected={tab === item} aria-controls={`builder-viewer-panel-${item}`} tabIndex={tab === item ? 0 : -1} className={tab === item ? "is-active" : ""} onClick={() => setTab(item)} onKeyDown={(event) => moveTabFocus(["build", "equipment"] as const, item, event, setTab, (next) => `builder-viewer-tab-${next}`)}>{tab === item && <SelectionIndicator id="builder-viewer-tab" />}{item === "build" ? <Swords className="h-4 w-4" /> : <Shield className="h-4 w-4" />}{item}</button>)}
         </nav>
         <div id={`builder-viewer-panel-${tab}`} className="theme-builder-viewer-body" role="tabpanel" aria-labelledby={`builder-viewer-tab-${tab}`} aria-busy={catalogLoading}>
           <div className="theme-builder-viewer-canvas">
@@ -3088,7 +3089,7 @@ export default function AxiForgeLabView() {
             onClick={() => setActiveTab(tab.id)}
             onKeyDown={(event) => moveTabFocus(workbenchTabs.map((item) => item.id), tab.id, event, setActiveTab, (item) => `builder-tab-${item}`)}
           >
-            <tab.icon className="h-4 w-4" /><span>{tab.label}</span><strong>{tab.count}</strong>
+            {activeTab === tab.id && <SelectionIndicator id="builder-workspace-tab" />}<tab.icon className="h-4 w-4" /><span>{tab.label}</span><strong>{tab.count}</strong>
           </button>
         ))}
         <div className="theme-builder-mode-switch" role="group" aria-label="Build game mode">
@@ -3143,7 +3144,7 @@ export default function AxiForgeLabView() {
                 onClick={() => setBuilderViewMode(section.id)}
                 onKeyDown={(event) => moveTabFocus(builderViewModes, section.id, event, setBuilderViewMode, (item) => `builder-view-tab-${item}`)}
               >
-                <span>{section.label}</span>
+                {builderViewMode === section.id && <SelectionIndicator id="builder-editor-tab" />}<span>{section.label}</span>
                 {section.id !== "notes" && (
                   <span
                     className={`theme-builder-mode-status ${builderSectionIssueCounts[section.id] === 0 ? "is-complete" : ""}`}
@@ -3344,6 +3345,7 @@ export default function AxiForgeLabView() {
                     onClick={() => setEquipmentSection(section.id)}
                     onKeyDown={(event) => moveTabFocus(EQUIPMENT_SECTIONS.map((item) => item.id), section.id, event, setEquipmentSection, (item) => `builder-equipment-tab-${item}`)}
                   >
+                    {equipmentSection === section.id && <SelectionIndicator id="builder-equipment-tab" />}
                     {section.id === "weapons" ? <Swords className="h-4 w-4" /> : section.id === "armor" ? <Shield className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
                     <span>{section.label}</span>
                   </button>

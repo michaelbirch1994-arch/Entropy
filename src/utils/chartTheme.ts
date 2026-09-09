@@ -1,16 +1,16 @@
 import type { CSSProperties } from "react";
 
 export const TOOLTIP_STYLE: CSSProperties = {
-  background: "rgba(3, 12, 18, 0.98)",
-  border: "1px solid rgba(77, 200, 255, 0.58)",
+  background: "var(--entropy-surface-2)",
+  border: "1px solid var(--entropy-border)",
   borderRadius: 8,
   fontSize: 12,
-  boxShadow: "inset 3px 0 0 #4dc8ff, 0 14px 38px rgba(0, 0, 0, 0.58), 0 0 24px rgba(77, 200, 255, 0.12)",
+  boxShadow: "var(--entropy-shadow-overlay)",
   padding: "9px 12px",
 };
 
-export const TOOLTIP_ITEM_STYLE: CSSProperties = { color: "#e8fcff" };
-export const TOOLTIP_LABEL_STYLE: CSSProperties = { color: "#9ec3cb", fontWeight: 700, marginBottom: 5, fontSize: 11 };
+export const TOOLTIP_ITEM_STYLE: CSSProperties = { color: "var(--entropy-text-primary)" };
+export const TOOLTIP_LABEL_STYLE: CSSProperties = { color: "var(--entropy-text-muted)", fontWeight: 600, marginBottom: 5, fontSize: 11 };
 
 export const CHART_COLORS = {
   blue: "#6f9eff",

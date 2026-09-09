@@ -36,10 +36,10 @@ export default function Panel({
       {title && (
         <header className="theme-panel-header flex min-h-[3.75rem] items-center justify-between gap-4 border-b border-theme-border/50 px-5 py-3.5">
           <div className="min-w-0 flex flex-col gap-1">
-            <div className="theme-panel-title flex min-w-0 items-center gap-2 text-[11px] font-bold uppercase leading-[1.35] tracking-[0.045em] text-theme-text">
+            <h2 className="theme-panel-title flex min-w-0 items-center gap-2 text-[11px] font-bold uppercase leading-[1.35] tracking-[0.045em] text-theme-text">
               {icon && <span className="theme-panel-icon shrink-0 text-theme-accent-strong">{icon}</span>}
               <span className="min-w-0">{title}</span>
-            </div>
+            </h2>
             {subtitle && (
               <p className="theme-panel-subtitle max-w-[68ch] text-[12px] font-normal leading-[1.55] text-theme-muted">{subtitle}</p>
             )}
