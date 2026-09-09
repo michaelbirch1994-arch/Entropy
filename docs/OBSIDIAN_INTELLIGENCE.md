@@ -202,13 +202,59 @@ Verification:
   connector cannot accept the full artwork/source payload; use the normal
   Git-connected deployment and dashboard promotion instead.
 
+### Production and Squad Follow-up
+
+- Published commit 28c58de through the existing Vercel project, with a production
+  rebuild and the entropy-um58.vercel.app alias. Deployment
+  dpl_EWvf6QE7ozgLJe3VVMJQ2LkyZxYA reached Ready; the public page returns HTTP 200.
+- The subsequent local squad pass keeps the same top-ten DPS selection and
+  rounded values, with complete account names, profession artwork and keyboard
+  navigation to the corresponding DPS player view.
+- Squad source rows now show larger artwork, full wrapping names, and separate
+  primary/secondary evidence. No evidence rows or calculation inputs changed.
+- Corrected summary grid density so numbers remain on one line. Verified 1280px
+  and 390px layouts with no page or source-row horizontal overflow. Verified
+  keyboard activation opens Hazken.8769 in the DPS view.
+- All 634 tests across 111 files pass; TypeScript and production build pass.
+  The squad follow-up is local and has not yet been deployed.
+
+### Roster Identity Follow-up
+
+- Replaced nested party/player boxes with unframed party blocks, larger
+  profession artwork, full account/character names and prominent uptime.
+- Party members are keyboard-operable buttons that select and focus the matching
+  roster table row, including repeat activation of the same account.
+- Preserved party membership, player ordering, summary calculations and uptime
+  rounding. Decorative meters retain the previous bounds.
+- Verified all 33 entries at 390px with no row or page overflow. Selecting
+  Deadly Gargoyle.8342 focuses the correct table row. No browser errors observed.
+- TypeScript and 14 focused presentation tests pass, including three new roster
+  cases. This follow-up remains local rather than part of the public deployment.
+
+### Arrival and Intake Follow-up
+
+- Added a centered Entropy arrival and a unified intake surface with Files,
+  Report Link and Watch Folder modes. Existing queue, retry, combination and
+  folder permission behavior remains intact. Raw-upload disclosure stays visible.
+- Nested drag targets now use a depth counter so the drop highlight does not
+  flicker between child elements. The active drop state changes its label.
+- Created public/images/entropy-arrival-hall-v2.png using the built-in image
+  generator, retaining the old sanctuary artwork. Prompt: a wide, elegant
+  obsidian architectural hall with brushed champagne-gold inlays, verdigris
+  accents, ivory daylight, crisp structural detail at the edges and a calm dark
+  central 55 percent for title and uploader; no people, text, UI, particles,
+  floating orbs, throne or altar. High-end dark-fantasy architectural artwork.
+- Verified mobile intake at 390px with no page overflow, mode selection,
+  folder controls and visible failed-link retry state. No combat files uploaded.
+- These arrival and artwork changes remain local, not publicly deployed.
+
 ### Remaining Migration
 
 - Further route-specific refinement of replay, player dossiers, archive, intake
   and loading/error presentation, plus deeper Intelligence evidence surfaces.
 - Full keyboard and screen-reader audit beyond the verified shell/dialog flows.
 - Firefox, huge-session and empty-report coverage have not been exercised.
-- No deployment or release performed in this pass.
+- No version-number release performed in this pass.
 
 ## Analytics Observations (Not Changed)
 

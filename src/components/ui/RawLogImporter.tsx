@@ -21,6 +21,7 @@ import { buildReportFromFights } from "../../lib/buildReportFromFights";
 import { useReport } from "../../store/ReportContext";
 import RawFightViewer from "./RawFightViewer";
 import FightReplay from "./FightReplay";
+import { SegmentedControl } from "./SegmentedControl";
 import { createAsyncTaskPool, type AsyncTaskPool } from "../../lib/asyncTaskPool";
 import { BULK_PROCESS_CONCURRENCY } from "../../lib/bridge-metrics/constants";
 import {
@@ -51,6 +52,8 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
   const { setReport } = useReport();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
+  const [intakeMode, setIntakeMode] = useState("files");
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [linkValue, setLinkValue] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -380,7 +383,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
 
   return (
     <div className={`w-full ${cinematic ? "theme-raw-ingress" : "max-w-lg"}`}>
-      <button
+      {!cinematic && <button
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls="raw-log-importer-panel"
@@ -392,18 +395,23 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
           {cinematic ? "Combat record ingress" : "Import raw combat logs (.zevtc / dps.report links)"}
         </span>
         <span>{open ? "Hide" : "Show"}</span>
-      </button>
+      </button>}
 
       {open && (
         <div id="raw-log-importer-panel" className="space-y-3 mt-2">
-          <p className="text-[11px] text-slate-500 leading-relaxed">
+          {cinematic && <SegmentedControl ariaLabel="Import source" value={intakeMode} onChange={setIntakeMode} options={[
+            { value: "files", label: "Files", icon: <UploadCloud size={15} /> },
+            { value: "link", label: "Report Link", icon: <Link size={15} /> },
+            { value: "folder", label: "Watch Folder", icon: <Folder size={15} /> },
+          ]} />}
+          {!cinematic && <p className="text-[11px] text-slate-500 leading-relaxed">
             Drop raw <span className="font-mono text-slate-400">.zevtc</span>/<span className="font-mono text-slate-400">.evtc</span> files
             or paste dps.report links below. Each fight is uploaded straight to dps.report for parsing, then pulled back
             in and shown here — click a finished fight for its full report (MVP cards, leaderboards, class/role
             breakdowns) on Entropy's own dashboard, or select several and combine them into one combined raid report.
-          </p>
+          </p>}
 
-          {folderSupported ? (
+          {(!cinematic || intakeMode === "folder") && (folderSupported ? (
             <div className="rounded-xl border border-amber-500/10 bg-white/[0.02] px-3.5 py-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
@@ -499,28 +507,30 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
                 Folder watching is unavailable in this browser, but direct drag/drop and dps.report links still work here.
               </p>
             </div>
-          )}
+          ))}
 
-          <div
+          {(!cinematic || intakeMode === "files") && <div
             role="button"
             aria-label="Upload combat log files"
             tabIndex={0}
             onClick={() => inputRef.current?.click()}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); inputRef.current?.click(); } }}
-            onDrop={onDrop}
+            onDrop={(e) => { dragDepth.current = 0; onDrop(e); }}
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-            onDragEnter={(e) => { e.preventDefault(); setDragging(true); }}
-            onDragLeave={(e) => { e.preventDefault(); setDragging(false); }}
-            className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 cursor-pointer transition-all duration-200 outline-none ${
+            onDragEnter={(e) => { e.preventDefault(); dragDepth.current += 1; setDragging(true); }}
+            onDragLeave={(e) => { e.preventDefault(); dragDepth.current = Math.max(0, dragDepth.current - 1); if (!dragDepth.current) setDragging(false); }}
+            data-dragging={dragging || undefined}
+            className={`entropy-file-drop flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 cursor-pointer transition-all duration-200 outline-none ${
               dragging
                 ? "border-amber-400 bg-amber-500/10"
                 : "border-amber-500/15 bg-white/[0.02] hover:border-amber-400/40"
             }`}
           >
-            <UploadCloud className={`w-5 h-5 ${dragging ? "text-amber-300" : "text-amber-400/60"}`} />
+            <span className="entropy-upload-glyph" aria-hidden="true"><UploadCloud className={`w-5 h-5 ${dragging ? "text-amber-300" : "text-amber-400/60"}`} /></span>
             <p className="text-xs font-semibold text-slate-300">
-              Drop .zevtc files or <span className="text-amber-400">click to browse</span>
+              {dragging ? "Release to add combat logs" : <>Drop combat logs or <span className="text-amber-400">browse files</span></>}
             </p>
+            <span className="entropy-upload-types">.zevtc · .evtc · .evtc.zip</span>
             <input
               ref={inputRef}
               type="file"
@@ -529,9 +539,9 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
               className="hidden"
               onChange={(e) => handleFiles(e.target.files)}
             />
-          </div>
+          </div>}
 
-          <div className="flex gap-2">
+          {(!cinematic || intakeMode === "link") && <div className="entropy-link-intake flex gap-2">
             <div className="flex-1 relative">
               <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
               <input
@@ -552,7 +562,8 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
             >
               Load
             </button>
-          </div>
+          </div>}
+          {cinematic && <p className="entropy-intake-disclosure">Raw combat logs are uploaded to dps.report for parsing.</p>}
 
           {linkError && (
             <div className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/5 px-3 py-2">

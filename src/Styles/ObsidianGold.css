@@ -663,6 +663,164 @@
   .entropy-skill-art { width: 44px; height: 44px; }
   .entropy-skill-primary > div:first-child > span:last-child { font-size: 27px; }
 }
+/* Squad drilldowns place readable evidence beneath the shared chart surface. */
+.entropy-squad-report > .theme-stat-grid:first-child { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.entropy-squad-report > .theme-stat-grid:first-child .theme-stat-value { white-space: nowrap; }
+@media (min-width: 1800px) {
+  .entropy-squad-report > .theme-stat-grid:first-child { grid-template-columns: repeat(6,minmax(0,1fr)); }
+}
+@media (max-width: 640px) {
+  .entropy-squad-report > .theme-stat-grid:first-child { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .entropy-squad-report > .theme-stat-grid:first-child .entropy-instrument-card { padding: 16px 12px !important; }
+  .entropy-squad-report > .theme-stat-grid:first-child .theme-stat-value { font-size: 26px !important; }
+}
+.entropy-squad-report .theme-drilldown-panel { container-type: inline-size; }
+.entropy-squad-report .theme-selected-fight { border: 0; border-left: 2px solid #d9c28b; border-radius: 0; background: #ffffff04; padding: 20px; }
+.entropy-squad-report .theme-selected-fight b { font: 600 24px var(--theme-mono-font); margin-top: 8px; letter-spacing: 0; overflow-wrap: anywhere; }
+.entropy-squad-report .theme-selected-fight > div:first-child { gap: 16px; }
+.entropy-squad-report .theme-source-grid { align-items: start; gap: 24px; }
+.entropy-squad-report .theme-source-card { min-width: 0; border: 0; border-radius: 0; background: transparent; padding: 12px 0 0; border-top: 1px solid #ffffff24; }
+.entropy-squad-report .theme-source-card > div:first-child { min-height: 28px; }
+.entropy-squad-source { display: grid; grid-template-columns: 22px minmax(0,1fr) auto; align-items: center; gap: 12px; min-height: 70px; padding: 14px 0; border-top: 1px solid #ffffff0d; }
+.entropy-squad-source:first-child { border-top: 0; }
+.entropy-squad-source-rank { font: 11px var(--theme-mono-font); color: #91a0ac; }
+.entropy-squad-source-identity { display: flex; align-items: center; gap: 10px; min-width: 0; color: #e2e8ee; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.entropy-squad-source-identity img { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; border: 1px solid #ffffff36; border-radius: 5px; box-shadow: 0 2px 10px #0006; }
+.entropy-squad-source-values { display: grid; gap: 4px; text-align: right; font-family: var(--theme-mono-font); }
+.entropy-squad-source-values strong { font-size: 19px; font-weight: 600; white-space: nowrap; }
+.entropy-squad-source-values small { font: 10px var(--theme-font); color: #b7c1cc; }
+.entropy-squad-source-values > span { font-size: 10px; color: #99a7b6; }
+.entropy-squad-dps .entropy-ranked-metrics ol { display: grid; grid-auto-flow: column; grid-template-rows: repeat(5,auto); grid-template-columns: repeat(2,minmax(0,1fr)); column-gap: 32px; }
+.entropy-squad-dps .entropy-ranked-metrics li:nth-child(6) { border-top: 0; }
+@container (max-width: 760px) {
+  .entropy-squad-report .theme-source-grid { grid-template-columns: minmax(0,1fr); }
+  .entropy-squad-report .theme-selected-fight .grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+}
+@media (max-width: 900px) {
+  .entropy-squad-dps .entropy-ranked-metrics ol { display: block; }
+  .entropy-squad-dps .entropy-ranked-metrics li:nth-child(6) { border-top: 1px solid #ffffff0c; }
+}
+@media (max-width: 480px) {
+  .entropy-squad-source { grid-template-columns: 18px minmax(0,1fr); column-gap: 8px; }
+  .entropy-squad-source-values { grid-column: 2; text-align: left; display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; }
+  .entropy-squad-report .theme-selected-fight { padding: 16px 12px; }
+  .entropy-squad-report .theme-selected-fight b { font-size: 21px; }
+}
+/* Party identities remain unframed rows within the roster's composition grid. */
+.theme-app-shell .entropy-roster-parties { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+.entropy-roster-parties > .theme-panel-body { padding-inline: 0; }
+.entropy-roster-parties > .theme-panel-header { padding-inline: 0; }
+.entropy-party-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 32px; align-items: start; }
+.entropy-party-block { min-width: 0; border-top: 1px solid #ffffff32; }
+.entropy-party-header { display: flex; align-items: center; gap: 14px; padding: 20px 0; border-bottom: 1px solid #ffffff16; }
+.entropy-party-number { font: 500 32px var(--theme-mono-font); line-height: 1; color: #d9c594; }
+.entropy-party-header h3 { font-size: 15px; font-weight: 650; color: #f2f3f5; margin: 0; }
+.entropy-party-count { margin-left: auto; font-size: 11px; color: #9eacb9; }
+.entropy-party-count strong { color: #e7ecef; font: 500 18px var(--theme-mono-font); margin-right: 4px; }
+.entropy-roster-member { position: relative; display: grid; width: 100%; grid-template-columns: 48px minmax(0,1fr) 62px 15px; align-items: center; gap: 8px 12px; padding: 18px 8px; text-align: left; border-bottom: 1px solid #ffffff0d; transition: background-color 180ms; }
+.entropy-roster-member:hover,.entropy-roster-member[data-selected="true"] { background: color-mix(in srgb,var(--player-identity) 7%,transparent); }
+.entropy-roster-member:focus-visible { outline: 2px solid var(--player-identity); outline-offset: 2px; }
+.entropy-roster-emblem { width: 48px; height: 52px; display: grid; place-items: center; border-radius: 6px; background: color-mix(in srgb,var(--player-identity) 9%,#0c1014); border: 1px solid color-mix(in srgb,var(--player-identity) 38%,transparent); box-shadow: inset 0 1px #ffffff0a; }
+.entropy-roster-emblem .class-icon-frame { width: 34px; height: 34px; }
+.entropy-roster-identity { min-width: 0; display: grid; gap: 4px; }
+.entropy-roster-identity strong { font-size: 13px; color: #eef1f5; font-weight: 600; overflow-wrap: anywhere; }
+.entropy-roster-identity > span { font-size: 11px; color: #a7b1bd; overflow-wrap: anywhere; }
+.entropy-roster-identity small { font-size: 10px; color: var(--player-identity); }
+.entropy-roster-uptime { display: grid; justify-items: end; gap: 5px; }
+.entropy-roster-uptime strong { font: 600 25px var(--theme-mono-font); color: #e7edf0; }
+.entropy-roster-uptime small { font-size: 12px; color: #a5b3bf; }
+.entropy-roster-uptime > span { font-size: 10px; color: #a1afba; }
+.entropy-roster-open { color: #8f9eaa; }
+.entropy-roster-meter { grid-column: 2 / 4; height: 3px; border-radius: 1px; background: #ffffff0b; overflow: hidden; }
+.entropy-roster-meter > span { display: block; height: 100%; background: var(--player-identity); }
+.entropy-roster-report .theme-stat-value { white-space: nowrap; }
+.entropy-roster-report .entropy-instrument-card { display: grid; grid-template-rows: minmax(32px,auto) 40px minmax(18px,auto); align-content: start; gap: 16px; }
+.entropy-roster-report .theme-stat-value { grid-row: 2; align-self: center; }
+.entropy-roster-report .theme-stat-sub { grid-row: 3; }
+.entropy-roster-report tr[data-selected="true"] { outline: 2px solid #d9c594; outline-offset: -2px; background: #d9c59410; }
+@media (min-width: 1900px) {
+  .entropy-party-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+@media (max-width: 1000px) {
+  .entropy-party-grid { grid-template-columns: minmax(0,1fr); gap: 24px; }
+}
+@media (max-width: 640px) {
+  .entropy-roster-report .entropy-instrument-card { padding: 16px 12px !important; }
+  .entropy-roster-report .theme-stat-value { font-size: 26px !important; }
+  .entropy-roster-member { grid-template-columns: 40px minmax(0,1fr) 52px; gap: 8px; padding-inline: 2px; }
+  .entropy-roster-emblem { width: 40px; height: 46px; }
+  .entropy-roster-emblem .class-icon-frame { width: 30px; height: 30px; }
+  .entropy-roster-open { display: none; }
+  .entropy-roster-uptime strong { font-size: 22px; }
+}
+/* Arrival: a centered intake over the existing Entropy sanctuary artwork. */
+.entropy-arrival.theme-cinematic-landing { min-height: 100%; padding: 0; animation: none; background: linear-gradient(180deg,#080b1026,#080b1060 65%,#080b10 100%),url('/images/entropy-arrival-hall-v2.png') center top / cover no-repeat !important; }
+.entropy-arrival::before,.entropy-arrival::after,.entropy-arrival .theme-cinematic-scanline,.entropy-arrival .theme-sanctum-torches,.entropy-arrival .theme-sanctum-sigils,.entropy-arrival .theme-signal-field,.entropy-arrival .theme-cinematic-horizon,.entropy-arrival .theme-cinematic-readouts { display: none !important; }
+.entropy-arrival .theme-cinematic-stage { position: relative; display: flex; flex-direction: column; align-items: center; gap: 28px; width: min(100%,1040px); min-height: 0; margin: 0 auto; padding: 48px 28px 40px; }
+.entropy-arrival .theme-cinematic-copy { width: 100%; max-width: none; padding: 0; text-align: center; }
+.entropy-arrival .theme-cinematic-kicker { justify-content: center; color: #c5d1d8; font-size: 11px; letter-spacing: 0; }
+.entropy-arrival .theme-signal-lockup { display: flex; justify-content: center; align-items: center; gap: 18px; margin: 18px 0; }
+.entropy-arrival .theme-cinematic-mark { width: 54px; height: 64px; margin: 0; flex: 0 0 auto; transform: none; }
+.entropy-arrival .theme-cinematic-wordmark { display: flex; gap: 0; width: auto; margin: 0; padding: 0; font-size: 76px; line-height: 1; letter-spacing: 0; color: #f2ebda; text-shadow: 0 4px 30px #0009; }
+.entropy-arrival .theme-cinematic-wordmark::before,.entropy-arrival .theme-cinematic-wordmark::after { display: none; }
+.entropy-arrival .theme-cinematic-letter { color: inherit; background: none; -webkit-text-fill-color: currentColor; transform: none; opacity: 1; filter: none; animation: none !important; }
+.entropy-arrival .theme-cinematic-declaration { margin: 0; max-width: none; font-size: 22px; line-height: 1.4; letter-spacing: 0; color: #edf0f4; }
+.entropy-arrival .theme-cinematic-support { margin: 8px auto 0; max-width: none; color: #bbc8d1; font-size: 13px; line-height: 1.5; }
+.entropy-arrival .theme-ingress-console { width: min(100%,760px); max-width: none; margin: 0; padding: 0; border: 1px solid #d6c49b50; border-radius: 8px; background: #10151bed; box-shadow: 0 24px 70px #0006,inset 0 1px #fff1; clip-path: none; transform: none; }
+.entropy-arrival .theme-ingress-console::before,.entropy-arrival .theme-ingress-console::after { display: none; }
+.entropy-arrival .theme-ingress-header { padding: 20px 24px; border-bottom: 1px solid #ffffff16; background: none; }
+.entropy-arrival .theme-ingress-header strong { font-size: 18px; color: #edf0f4; }
+.entropy-arrival .theme-ingress-header > div > span { font-size: 10px; letter-spacing: 0; color: #b4a57e; }
+.entropy-arrival .theme-ingress-status { color: #91d9c4; }
+.entropy-arrival .theme-ingress-body { padding: 20px 24px 12px; }
+.entropy-arrival .theme-ingress-utility { padding: 0 24px 20px; border: 0; background: none; }
+.entropy-arrival .theme-ingress-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding-top: 16px; }
+.entropy-arrival .theme-ingress-formats { display: none; }
+.entropy-arrival .theme-saved-report-gate { border: 0; border-top: 1px solid #ffffff16; border-radius: 0; background: none; }
+.entropy-arrival .theme-saved-report-gate summary { color: #c4ccd5; padding: 14px 0; font-size: 12px; }
+.entropy-arrival #raw-log-importer-panel { margin-top: 0; }
+.entropy-arrival .theme-raw-ingress [role="tablist"] { display: flex; width: 100%; margin-bottom: 18px; }
+.entropy-arrival .theme-raw-ingress [role="tab"] { flex: 1; justify-content: center; min-height: 42px; }
+.entropy-arrival .entropy-file-drop { min-height: 190px; border: 1px dashed #b8c9d452; border-radius: 8px; gap: 12px; background: #18212a66; transition: border-color 180ms,background-color 180ms; }
+.entropy-arrival .entropy-file-drop:hover,.entropy-arrival .entropy-file-drop:focus-visible { border-color: #e5cf9c; background: #cdb7830b; outline: 2px solid transparent; }
+.entropy-arrival .entropy-file-drop[data-dragging="true"] { border: 2px solid #85e2c4; background: #85e2c419; }
+.entropy-arrival .entropy-upload-glyph { display: grid; place-items: center; width: 60px; height: 56px; color: #ecd6a4; }
+.entropy-arrival .entropy-upload-glyph svg { width: 42px; height: 42px; color: inherit; transition: transform 220ms; }
+.entropy-arrival .entropy-file-drop:hover .entropy-upload-glyph svg,.entropy-arrival .entropy-file-drop[data-dragging="true"] .entropy-upload-glyph svg { transform: translateY(-4px); }
+.entropy-arrival .entropy-file-drop p { font-size: 15px; text-align: center; }
+.entropy-upload-types { font: 11px var(--theme-mono-font); color: #a6b6c4; }
+.entropy-intake-disclosure { color: #aebac5; font-size: 11px; line-height: 1.5; text-align: center; padding: 4px 0; }
+.entropy-arrival .entropy-link-intake { min-height: 190px; align-items: center; }
+.entropy-arrival .entropy-link-intake input { min-height: 48px; font-size: 13px; }
+.entropy-arrival .entropy-link-intake button { min-height: 48px; }
+.entropy-arrival.is-ready .theme-cinematic-copy { animation: entropyArrivalReveal 650ms ease-out both; }
+.entropy-arrival.is-ready .theme-ingress-console { animation: entropyArrivalReveal 700ms 100ms ease-out both; }
+@keyframes entropyArrivalReveal { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 640px) {
+  .entropy-arrival .theme-cinematic-stage { padding: 28px 14px; gap: 22px; }
+  .entropy-arrival .theme-cinematic-wordmark { font-size: 40px; }
+  .entropy-arrival .theme-cinematic-mark { width: 34px; height: 44px; }
+  .entropy-arrival .theme-cinematic-mark svg { width: 34px; }
+  .entropy-arrival .theme-signal-lockup { gap: 10px; }
+  .entropy-arrival .theme-cinematic-declaration { font-size: 18px; }
+  .entropy-arrival .theme-ingress-header { padding: 16px; }
+  .entropy-arrival .theme-ingress-body { padding: 16px 12px 10px; }
+  .entropy-arrival .theme-ingress-utility { padding: 0 12px 16px; }
+  .entropy-arrival .theme-raw-ingress [role="tab"] { padding: 8px 4px; font-size: 10px; gap: 5px; }
+  .entropy-arrival .theme-raw-ingress [role="tab"] svg { width: 13px; }
+}
+.entropy-arrival .theme-ingress-console { display: block !important; height: auto !important; min-height: 0 !important; aspect-ratio: auto !important; border: 1px solid #d6c49b50 !important; border-radius: 8px !important; background: #10151bed !important; box-shadow: 0 24px 70px #0006,inset 0 1px #fff1 !important; animation: none !important; }
+.entropy-arrival .theme-ingress-header,.entropy-arrival .theme-ingress-body,.entropy-arrival .theme-ingress-utility { position: relative !important; inset: auto !important; width: auto !important; height: auto !important; overflow: visible !important; border: 0 !important; background: transparent !important; }
+.entropy-arrival .theme-ingress-header { border-bottom: 1px solid #ffffff16 !important; }
+.entropy-arrival .theme-ingress-primary .theme-raw-ingress > .space-y-3 { display: block !important; }
+.entropy-arrival .theme-cinematic-mark { display: none !important; }
+.entropy-arrival .theme-cinematic-wordmark { font-size: 76px !important; letter-spacing: 0 !important; }
+.entropy-arrival .theme-signal-lockup { width: 100%; justify-content: center !important; }
+.entropy-arrival .theme-cinematic-wordmark { flex: 0 1 auto !important; justify-content: center; max-width: 100%; }
+.entropy-arrival .theme-cinematic-letter { opacity: 1 !important; transform: none !important; }
+.entropy-arrival .theme-cinematic-declaration { text-transform: none !important; }
+.entropy-arrival.is-ready .theme-ingress-console { animation: entropyArrivalReveal 700ms 100ms ease-out both !important; }
+@media (max-width: 640px) { .entropy-arrival .theme-cinematic-wordmark { font-size: 40px !important; } }
 /* Zero durations also win over earlier, more specific component transitions. */
 :root[data-motion="reduced"] *, :root[data-motion="reduced"] *::before, :root[data-motion="reduced"] *::after { animation: none !important; animation-duration: 0s !important; transition: none !important; transition-duration: 0s !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
 @media (prefers-reduced-motion: reduce) {

@@ -4,11 +4,13 @@ import { useDamageScope, pickDamageScopeValue } from "../store/DamageScopeContex
 import { useAllyScope, pickAllyScopeValue } from "../store/AllyScopeContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
+import RankedMetricList from "../components/ui/RankedMetricList";
+import { useView } from "../store/ViewContext";
 import { fmtNum, fmtCompact, fmtDur, fmtFixed, fmtFixedGrouped } from "../utils/format";
 import ProfessionIcon from "../components/ui/ProfessionIcon";
 import { Users, Swords, Shield, Heart, Zap, Target, Activity, Crosshair, MapPin } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, ReferenceLine } from "recharts";
-import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE, CHART_COLORS } from "../utils/chartTheme";
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, ReferenceLine } from "recharts";
+import { TOOLTIP_STYLE, TOOLTIP_ITEM_STYLE, TOOLTIP_LABEL_STYLE } from "../utils/chartTheme";
 import { resolveChartSelectionIndex, type ChartSelectionRow } from "../utils/chartSelection";
 import type { HealingPlayer, HealingCoverage, OffensePlayer, TopBarrierSource, TopHealingSource, TopSkill } from "../types/report";
 import { buildHealingFightDrilldowns } from "../lib/squadStatsDrilldowns";
@@ -94,7 +96,7 @@ function buildPressureRows(players: Array<Pick<SquadOverviewRow, "account" | "pr
   return base.map((p) => ({ ...p, pressureScore: normalizeScore(p.pressureRaw, total), pressurePct: safeDiv(p.pressureRaw, total) }));
 }
 
-function SkillSourceRows({
+export function SkillSourceRows({
   rows,
   kind,
 }: {
@@ -121,17 +123,15 @@ function SkillSourceRows({
               : asPressure.downContribution ?? 0;
         const secondary = kind === "pressure" ? asPressure.damage ?? 0 : kind === "incoming" ? asPressure.downContribution ?? 0 : 0;
         return (
-          <div key={`${kind}:${skill.id}:${index}`} className="grid grid-cols-[2rem_1fr_auto] items-center gap-3 border-t border-slate-800/50 py-2 text-xs first:border-t-0">
-            <span className="font-mono text-[10px] font-black text-slate-600">#{index + 1}</span>
-            <span className="min-w-0 flex items-center gap-2 text-slate-300">
-              {skill.icon && <img src={skill.icon} alt="" className="h-4 w-4 flex-shrink-0 rounded-sm" loading="lazy" />}
-              <span className="truncate">{skill.name}</span>
+          <div key={`${kind}:${skill.id}:${index}`} className="entropy-squad-source" data-source-kind={kind}>
+            <span className="entropy-squad-source-rank">{String(index + 1).padStart(2, "0")}</span>
+            <span className="entropy-squad-source-identity">
+              {skill.icon && <img src={skill.icon} alt="" loading="lazy" />}
+              <span>{skill.name}</span>
             </span>
-            <span className={`text-right font-mono text-[11px] font-bold ${tone}`}>
-              {fmtCompact(primary)}
-              <span className="ml-1 text-[10px] text-slate-500">{kind === "pressure" ? "down" : kind === "incoming" ? "dmg" : kind}</span>
-              {secondary > 0 && <span className="ml-2 text-slate-500">{fmtCompact(secondary)} {kind === "pressure" ? "dmg" : "down"}</span>}
-              <span className="ml-2 text-slate-500">{fmtNum(skill.hits)} hits</span>
+            <span className={`entropy-squad-source-values ${tone}`}>
+              <strong>{fmtCompact(primary)} <small>{kind === "pressure" ? "down" : kind === "incoming" ? "dmg" : kind}</small></strong>
+              <span>{secondary > 0 && <span>{fmtCompact(secondary)} {kind === "pressure" ? "dmg" : "down"} · </span>}{fmtNum(skill.hits)} hits</span>
             </span>
           </div>
         );
@@ -214,6 +214,7 @@ function FightSelectorStrip({
 
 export default function SquadStatsView() {
   const { report } = useReport();
+  const { navigateToView } = useView();
   const { scope } = useDamageScope();
   const { scope: allyScope } = useAllyScope();
   const initialFightIndex = () => {
@@ -246,7 +247,7 @@ export default function SquadStatsView() {
     .sort((a, b) => b.dps - a.dps)
     .slice(0, 10);
 
-  const chartData = topDps.map((p) => ({ name: p.account.split(".")[0], DPS: Math.round(p.dps), profession: p.profession }));
+  const dpsRanking = topDps.map((p) => ({ account: p.account, value: Math.round(p.dps), profession: p.profession }));
   const pressureRows = buildPressureRows(squadAccountRows);
   const topPressureRows = pressureRows.slice(0, 8);
   const pressureChartRaw = s.fightBreakdown.slice(0, 40).map((fight, index) => {
@@ -611,19 +612,8 @@ export default function SquadStatsView() {
       <DistanceToTagPanel result={distanceResult} />
 
       {/* DPS chart */}
-      <Panel title="Top 10 DPS" icon={<Swords className="w-4 h-4" />} accent="text-orange-400">
-        <div className="theme-chart-stage h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
-              <XAxis type="number" tick={{ fill: "#64748b", fontSize: 10 }} stroke="#334155" />
-              <YAxis type="category" dataKey="name" tick={{ fill: "#94a3b8", fontSize: 11 }} stroke="#334155" width={80} />
-              <Tooltip contentStyle={TOOLTIP_STYLE} itemStyle={TOOLTIP_ITEM_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
-              <Legend wrapperStyle={{ fontSize: 11, color: "#94a3b8" }} />
-              <Bar dataKey="DPS" fill={CHART_COLORS.orange} radius={[0, 4, 4, 0]} barSize={18} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      <Panel title="Top 10 DPS" icon={<Swords className="w-4 h-4" />} accent="text-orange-400" className="entropy-ranking-panel entropy-squad-dps">
+        <RankedMetricList entries={dpsRanking} metric="DPS" onOpen={(entry) => navigateToView("top-players", { source: "other", metric: "dps", account: entry.account })} />
       </Panel>
 
       {/* Squad summary table */}

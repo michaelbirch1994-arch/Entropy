@@ -174,7 +174,7 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
   }, []);
 
   return (
-    <div className={`theme-cinematic-landing${landingReady ? " is-ready" : ""}`}>
+    <div className={`entropy-arrival theme-cinematic-landing${landingReady ? " is-ready" : ""}`}>
       <div className="theme-cinematic-scanline" aria-hidden="true" />
       <div className="theme-sanctum-torches" aria-hidden="true">
         {Array.from({ length: 4 }, (_, index) => (
@@ -225,10 +225,10 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
             </h1>
           </div>
           <p className="theme-cinematic-declaration">
-            Read the fight. Find the break. Command the next push.
+            Every fight tells a story.
           </p>
           <p className="theme-cinematic-support">
-            Turn raw WvW combat records into evidence without changing the fight beneath the numbers.
+            Your squad. Your evidence. Your next move.
           </p>
 
           <div className="theme-cinematic-readouts" aria-label="Supported analysis workflow">
@@ -241,8 +241,8 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
         <div className="theme-ingress-console">
           <header className="theme-ingress-header">
             <div>
-              <span>Operation intake</span>
-              <strong>Open combat record</strong>
+              <span>Combat intelligence</span>
+              <strong>Open your session</strong>
             </div>
             <div className="theme-ingress-status"><i aria-hidden="true" /> Ready</div>
           </header>

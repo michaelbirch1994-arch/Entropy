@@ -3,13 +3,35 @@ import { useReport } from "../store/ReportContext";
 import { useView } from "../store/ViewContext";
 import Panel from "../components/ui/Panel";
 import StatCard from "../components/ui/StatCard";
-import { fmtNum, fmtDur, profStyle } from "../utils/format";
-import { Users, Clock, Heart, Eye } from "lucide-react";
+import { fmtNum, fmtDur, profStyle, PROFESSION_FAMILY, normalizeProfessionLabel } from "../utils/format";
+import { Users, Clock, Heart, Eye, ArrowDownRight } from "lucide-react";
+import ProfessionIcon from "../components/ui/ProfessionIcon";
 import ProfessionIdentity from "../components/ui/ProfessionIdentity";
 import { SortableHeader } from "../components/ui/SortableHeader";
 
 type SortKey = "account" | "characters" | "classes" | "combat" | "squad" | "uptime";
 type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
+
+export function RosterPartyMember({ account, character, profession, uptime, selected, onSelect }: {
+  account: string;
+  character: string;
+  profession: string;
+  uptime: number;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button type="button" className="entropy-roster-member"
+      data-profession-family={PROFESSION_FAMILY[normalizeProfessionLabel(profession)] ?? "default"}
+      data-selected={selected || undefined} aria-label={`View ${account} in Roster Intel`} onClick={onSelect}>
+      <span className="entropy-roster-emblem" aria-hidden="true"><ProfessionIcon profession={profession} /></span>
+      <span className="entropy-roster-identity"><strong>{account}</strong><span>{character}</span><small>{profession}</small></span>
+      <span className="entropy-roster-uptime"><strong>{uptime.toFixed(0)}<small>%</small></strong><span>Uptime</span></span>
+      <ArrowDownRight className="entropy-roster-open" size={15} aria-hidden="true" />
+      <span className="entropy-roster-meter" aria-hidden="true"><span style={{ width: `${Math.min(100, Math.max(0, uptime))}%` }} /></span>
+    </button>
+  );
+}
 
 export default function RosterView() {
   const { report } = useReport();
@@ -94,7 +116,7 @@ export default function RosterView() {
   );
 
   return (
-    <div className="theme-view-layout space-y-5 animate-view pb-12">
+    <div className="entropy-roster-report theme-view-layout space-y-5 animate-view pb-12">
       {/* Summary */}
       <div className="theme-stat-grid grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Roster Size" value={fmtNum(attendance.length)} icon={<Users className="w-3.5 h-3.5 text-theme-accent" />} accent="text-theme-accent" />
@@ -109,43 +131,34 @@ export default function RosterView() {
         icon={<Users className="w-4 h-4" />}
         accent="text-theme-accent"
         action={`${partyGroups.length} groups`}
+        className="entropy-roster-parties"
       >
-        <div className="theme-party-grid grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="entropy-party-grid">
           {partyGroups.map(({ group, players }) => (
-            <div key={group || "unknown"} className="theme-party-card rounded-xl p-3">
-              <div className="mb-3 flex items-center justify-between border-b border-theme-border/50 pb-2">
-                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-theme-muted">
-                  {group > 0 ? `Party ${group}` : "Unassigned"}
-                </div>
-                <div className="rounded-md border border-theme-border/70 bg-theme-surface-elevated/80 px-2 py-0.5 text-[10px] font-mono text-theme-muted">
-                  {players.length}
-                </div>
-              </div>
-              <div className="space-y-2">
+            <section key={group || "unknown"} className="entropy-party-block" aria-label={group > 0 ? `Party ${group}` : "Unassigned"}>
+              <header className="entropy-party-header">
+                <span aria-hidden="true" className="entropy-party-number">{group > 0 ? String(group).padStart(2, "0") : "--"}</span>
+                <h3>{group > 0 ? `Party ${group}` : "Unassigned"}</h3>
+                <span className="entropy-party-count"><strong>{players.length}</strong> {players.length === 1 ? "player" : "players"}</span>
+              </header>
+              <div>
                 {players.map((p) => {
                   const uptime = uptimeOf(p) * 100;
                   const mainProf = p.classTimes[0]?.profession ?? "Unknown";
-                  const st = profStyle(mainProf);
                   return (
-                    <div key={p.account} className="theme-roster-player rounded-lg p-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="truncate text-[11px] font-semibold text-theme-text">{p.account}</div>
-                          <div className="truncate text-[10px] text-theme-muted">{p.characterNames[0] ?? "No character name"}</div>
-                        </div>
-                        <PlayerClassChip profession={mainProf} />
-                      </div>
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="theme-progress-track h-1.5 flex-1 overflow-hidden rounded-full">
-                          <div className={`theme-progress-fill h-full rounded-full ${st.dot}`} style={{ width: `${Math.min(100, Math.max(0, uptime))}%` }} />
-                        </div>
-                        <span className="w-9 text-right font-mono text-[10px] font-bold text-theme-muted">{uptime.toFixed(0)}%</span>
-                      </div>
-                    </div>
+                    <RosterPartyMember key={p.account} account={p.account} character={p.characterNames[0] ?? "No character name"}
+                      profession={mainProf} uptime={uptime} selected={selectedAccount === p.account}
+                      onSelect={() => {
+                        setSelectedAccount(p.account);
+                        if (selectedAccount === p.account) {
+                          selectedRowRef.current?.scrollIntoView({ block: "center" });
+                          selectedRowRef.current?.focus({ preventScroll: true });
+                        }
+                      }} />
                   );
                 })}
               </div>
-            </div>
+            </section>
           ))}
         </div>
       </Panel>
