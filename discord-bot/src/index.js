@@ -92,6 +92,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
     );
   } catch (error) {
     console.error('Entropy setup failed:', error);
+
+    if (error?.code === 'COMMUNITY_REQUIRED') {
+      await interaction.editReply(
+        '⚠️ **Enable Discord Community first.** Go to Server Settings → Enable Community, finish Discord’s setup, then run `/setup` again. Entropy uses Community features for forum-style bug reports and feature requests.',
+      );
+      return;
+    }
+
     await interaction.editReply(
       '❌ Setup failed. Check the bot logs and confirm it still has Manage Channels and Manage Roles permissions.',
     );
