@@ -24,6 +24,7 @@ const CATEGORY_SPECS = [
       ['welcome', ChannelType.GuildText, 'The front door to Entropy — orientation, identity, and where to begin.'],
       ['rules', ChannelType.GuildText, 'Community standards designed to keep discussion useful, focused, and respectful.'],
       ['getting-started', ChannelType.GuildText, 'A concise guide to Entropy, support, feedback, and development channels.'],
+      ['downloads-and-setup', ChannelType.GuildText, 'Entropy downloads, ArcDPS, Healing Stats, and WvW logging setup.'],
     ],
   },
   {
