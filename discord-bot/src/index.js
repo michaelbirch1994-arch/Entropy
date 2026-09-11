@@ -16,6 +16,12 @@ import {
   submitBug,
   submitRequest,
 } from './community.js';
+import {
+  buildAboutEmbed,
+  buildLinksEmbed,
+  buildLoggingEmbed,
+  seedEnrichment,
+} from './enrichment.js';
 
 const token = process.env.DISCORD_BOT_TOKEN;
 const applicationId = process.env.DISCORD_APPLICATION_ID;
@@ -32,11 +38,14 @@ const commands = [
     .setDescription('Create or repair the Entropy Discord community structure.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
   new SlashCommandBuilder().setName('status').setDescription('Check whether the Entropy bot is online.'),
+  new SlashCommandBuilder().setName('about').setDescription('Learn what Entropy does and how to use it.'),
+  new SlashCommandBuilder().setName('links').setDescription('Show official Entropy, logging, and analysis links.'),
+  new SlashCommandBuilder().setName('logging').setDescription('Show the quick WvW combat logging setup for Entropy.'),
   new SlashCommandBuilder().setName('bug').setDescription('Submit a structured Entropy bug report.'),
   new SlashCommandBuilder().setName('request').setDescription('Submit an Entropy feature request.'),
   new SlashCommandBuilder()
     .setName('seed')
-    .setDescription('Publish or repair Entropy welcome and onboarding messages.')
+    .setDescription('Publish or repair Entropy welcome, guide, and resource messages.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 ].map((command) => command.toJSON());
 
@@ -73,6 +82,21 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
+    if (interaction.commandName === 'about') {
+      await interaction.reply({ embeds: [buildAboutEmbed()], flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    if (interaction.commandName === 'links') {
+      await interaction.reply({ embeds: [buildLinksEmbed()], flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    if (interaction.commandName === 'logging') {
+      await interaction.reply({ embeds: [buildLoggingEmbed()], flags: MessageFlags.Ephemeral });
+      return;
+    }
+
     if (interaction.commandName === 'bug') {
       await interaction.showModal(buildBugModal());
       return;
@@ -89,8 +113,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
         return;
       }
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      const count = await seedCommunity(interaction.guild);
-      await interaction.editReply(`✅ Entropy onboarding is ready. Published ${count} missing branded message${count === 1 ? '' : 's'}.`);
+      const communityCount = await seedCommunity(interaction.guild);
+      const enrichmentCount = await seedEnrichment(interaction.guild);
+      const count = communityCount + enrichmentCount;
+      await interaction.editReply(`✅ Entropy community content is ready. Published ${count} missing branded message${count === 1 ? '' : 's'}.`);
       return;
     }
 
@@ -104,14 +130,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
       const result = await setupEntropyServer(interaction.guild);
-      const seeded = await seedCommunity(interaction.guild);
+      const communitySeeded = await seedCommunity(interaction.guild);
+      const enrichmentSeeded = await seedEnrichment(interaction.guild);
       await interaction.editReply([
         '✅ **Entropy community setup complete.**',
         '',
         `Roles: ${result.rolesCreatedOrFound}`,
         `Categories: ${result.categoriesCreatedOrFound}`,
-        `Public channels/forums: ${result.publicChannelsCreatedOrFound}`,
-        `Onboarding messages published: ${seeded}`,
+        `Core public channels/forums: ${result.publicChannelsCreatedOrFound}`,
+        `Branded messages published: ${communitySeeded + enrichmentSeeded}`,
         '',
         'The setup is non-destructive and can be run again to restore missing Entropy resources.',
       ].join('\n'));
