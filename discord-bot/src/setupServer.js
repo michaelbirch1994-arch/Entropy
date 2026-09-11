@@ -1,5 +1,6 @@
 import {
   ChannelType,
+  GuildFeature,
   PermissionFlagsBits,
 } from 'discord.js';
 
@@ -103,9 +104,8 @@ async function ensureChannel(guild, category, [name, type, topic]) {
       type,
       parent: category.id,
       reason: 'Entropy community bootstrap',
+      topic,
     };
-
-    if (type !== ChannelType.GuildCategory) options.topic = topic;
 
     if (type === ChannelType.GuildForum) {
       options.availableTags = (FORUM_TAGS[name] ?? []).map((tagName) => ({ name: tagName }));
@@ -174,6 +174,12 @@ async function ensureTeamCategory(guild, teamRole, moderatorRole) {
 }
 
 export async function setupEntropyServer(guild) {
+  if (!guild.features.includes(GuildFeature.Community)) {
+    const error = new Error('COMMUNITY_REQUIRED');
+    error.code = 'COMMUNITY_REQUIRED';
+    throw error;
+  }
+
   await guild.roles.fetch();
   await guild.channels.fetch();
 
