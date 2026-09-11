@@ -98,28 +98,56 @@ export async function submitRequest(interaction) {
 export async function seedCommunity(guild) {
   const messages = {
     welcome: entropyEmbed(
-      'ENTROPY // WvW COMBAT INTELLIGENCE',
-      '**See the fight beneath the fight.**\n\nEntropy turns Guild Wars 2 WvW combat logs into clear, actionable intelligence — not just numbers. Explore performance, support, positioning, fight flow, player comparisons, replay, and the intelligence layer built around what actually happened.\n\n**START HERE**\n• Read **#getting-started**\n• Open **#downloads-and-setup** to install Entropy and configure logging\n• Watch **#announcements** and **#release-notes**\n• Ask for help in **#help**\n• Use `/bug` for reproducible issues\n• Use `/request` for ideas worth building\n\nWelcome to the place where Entropy gets sharper.'
+      '✦ ENTROPY // WvW COMBAT INTELLIGENCE',
+      `**See the fight beneath the fight.**\n\nEntropy is a Guild Wars 2 WvW analytics platform built to turn combat logs into useful squad intelligence instead of a wall of numbers.\n\n**WHAT YOU CAN DO**\n▸ Analyze squad and player performance\n▸ Review offensive, defensive, support, and healing data\n▸ Compare players from the logs currently loaded\n▸ Inspect fight flow, positioning, replay, and critical events\n▸ Explore Entropy Intelligence findings\n▸ Use the Builder for builds, roles, and composition planning\n\n**START HERE**\n▸ **#getting-started** — learn the workflow\n▸ **#downloads-and-setup** — install Entropy and configure logging\n▸ **#release-notes** — see what shipped\n▸ **#help** — get assistance\n▸ **/bug** — report something broken\n▸ **/request** — propose a feature\n\n[Open Entropy Web](${ENTROPY_LINKS.website})  •  [Latest Desktop Release](${ENTROPY_LINKS.releases})`
     ),
     rules: entropyEmbed(
-      'COMMUNITY STANDARD',
+      '◆ COMMUNITY STANDARD',
       '**Signal over noise. Evidence over ego.**\n\n**01 — Respect the person**\nChallenge builds, metrics, methodology, and conclusions — not people.\n\n**02 — Keep feedback useful**\nIf something is broken, explain what happened and how to reproduce it. If something could be better, explain why.\n\n**03 — Protect privacy and security**\nDo not post credentials, private personal information, malicious files, or material intended to harm other players.\n\n**04 — Keep discussion relevant**\nEntropy, Guild Wars 2 WvW, combat analysis, squad strategy, testing, builds, and product feedback belong here.\n\n**05 — Help us keep the signal clean**\nStaff may merge duplicates, retag reports, move threads, and close resolved discussions.'
     ),
     'getting-started': entropyEmbed(
-      'GETTING STARTED',
-      '**1. INSTALL**\nUse **#downloads-and-setup** for Entropy, ArcDPS, Healing Stats, and logging instructions.\n\n**2. LOAD**\nBring your generated WvW `.evtc`, `.zevtc`, or supported report into Entropy.\n\n**3. ANALYZE**\nUse fight, squad, offensive, defensive, support, replay, comparison, and intelligence views to understand what happened.\n\n**4. QUESTION**\nIf a result looks wrong or confusing, bring it to **#help** or submit a `/bug`.\n\n**5. IMPROVE**\nUse **#build-discussion**, **#wvw**, and the feedback forums to turn analysis into better decisions.'
+      '⚙ GETTING STARTED // 5 MINUTE PATH',
+      `**1 — INSTALL**\nUse **#downloads-and-setup** for Entropy, ArcDPS, Healing Stats, and WvW logging.\n\n**2 — CREATE A LOG**\nRun ArcDPS during WvW and let it save your squad-combat log.\n\n**3 — LOAD IT**\nOpen [Entropy Web](${ENTROPY_LINKS.website}) or the desktop app and load your \`.evtc\`, \`.zevtc\`, or supported parsed report.\n\n**4 — READ THE FIGHT**\nStart with Overview, then move into offensive, defensive, support, player comparison, replay, and intelligence views.\n\n**5 — IMPROVE**\nBring questions to **#wvw**, builds to **#build-discussion**, problems to **#help**, and reproducible issues to **/bug**.`
     ),
     'downloads-and-setup': entropyEmbed(
-      'DOWNLOADS // LOGGING SETUP',
-      `**ENTROPY**\n[Open Entropy Web](${ENTROPY_LINKS.website})  •  [Download the latest desktop release](${ENTROPY_LINKS.releases})  •  [GitHub repository](${ENTROPY_LINKS.github})\n\n**REQUIRED — ARCDPS**\n[Official ArcDPS site](${ENTROPY_LINKS.arcdps})\n1. Close Guild Wars 2.\n2. Download ArcDPS and place the ArcDPS \`d3d11.dll\` next to \`gw2-64.exe\`.\n3. Start Guild Wars 2 and open ArcDPS options with **Alt + Shift + T**.\n4. Open **LOGGING**.\n5. Under the **WvW** section, enable **SAVE (AFTER SQUAD COMBAT)**.\n6. Set **MINIMUM ENEMY PLAYERS** to a value appropriate for your group. For organized zerg fights, **10** is a useful starting point; use a lower value for smaller-scale groups.\n\nArcDPS normally writes combat logs under:\n\`Documents\\Guild Wars 2\\addons\\arcdps\\arcdps.cbtlogs\`\n\n**RECOMMENDED — HEALING STATS**\n[Download ArcDPS Healing Stats](${ENTROPY_LINKS.healing})\n1. Download the latest stable \`arcdps_healing_stats.dll\`.\n2. Place it in the same directory as ArcDPS.\n3. Restart Guild Wars 2.\n4. Open **Alt + Shift + T → Extensions → healing_stats**.\n5. Enable **log healing** so healing-extension data is written into the EVTC log.\n6. Enable **live stats sharing** if you want squad members running the extension to exchange healing data live.\n\n**WHY THIS MATTERS**\nEntropy can analyze normal ArcDPS combat data without Healing Stats, but healing attribution is richer when the Healing Stats extension was present and logging its extension data. Not every squad member must run it, but coverage improves as more do.\n\n**READY**\nAfter a WvW squad combat segment ends, locate the newly created log and load it into Entropy. If Entropy cannot read a log or a metric looks incomplete, post in **#help** or use **/bug**.`
+      '⬇ DOWNLOADS // LOGGING SETUP',
+      `**ENTROPY**\n[Open Entropy Web](${ENTROPY_LINKS.website})  •  [Download latest desktop release](${ENTROPY_LINKS.releases})  •  [GitHub repository](${ENTROPY_LINKS.github})\n\n**REQUIRED — ARCDPS**\n[Official ArcDPS site](${ENTROPY_LINKS.arcdps})\n1. Close Guild Wars 2.\n2. Place ArcDPS \`d3d11.dll\` beside \`gw2-64.exe\`.\n3. Launch GW2 and open ArcDPS options with **Alt + Shift + T**.\n4. Open **LOGGING**.\n5. Under **WvW**, enable **SAVE (AFTER SQUAD COMBAT)**.\n6. Choose an appropriate **MINIMUM ENEMY PLAYERS** value. **10** is a good organized-zerg starting point; use less for havoc or smaller fights.\n\n**DEFAULT LOG LOCATION**\n\`Documents\\Guild Wars 2\\addons\\arcdps\\arcdps.cbtlogs\`\n\n**RECOMMENDED — HEALING STATS**\n[Download Healing Stats](${ENTROPY_LINKS.healing})\n1. Download \`arcdps_healing_stats.dll\`.\n2. Place it beside ArcDPS.\n3. Restart GW2.\n4. Open **Alt + Shift + T → Extensions → healing_stats**.\n5. Enable **log healing**.\n6. Optionally enable **live stats sharing**.\n\n**WHY IT MATTERS**\nEntropy works without Healing Stats, but healing attribution and support coverage are richer when the extension data is present.`
+    ),
+    announcements: entropyEmbed(
+      '★ ENTROPY // OFFICIAL UPDATES',
+      `This channel is reserved for high-signal project announcements: major releases, important fixes, public testing windows, and changes that affect how you use Entropy.\n\nFor normal version-by-version detail, follow **#release-notes**.\n\n[Entropy Web](${ENTROPY_LINKS.website})  •  [GitHub](${ENTROPY_LINKS.github})`
+    ),
+    'release-notes': entropyEmbed(
+      '⬆ RELEASE NOTES // WHERE TO FOLLOW BUILDS',
+      `Every shipped Entropy version is published through GitHub Releases.\n\n**LATEST STABLE DOWNLOAD**\n${ENTROPY_LINKS.releases}\n\nUse this channel for concise release summaries: what changed, why it matters, known limitations, and whether a change affects desktop, web, parsing, analytics, intelligence, replay, or Builder workflows.`
     ),
     roadmap: entropyEmbed(
-      'ROADMAP // PRINCIPLE',
-      'Entropy is developed around one rule: **new features must make the combat data more useful, more understandable, or more actionable.**\n\nThis channel is where planned work, experiments, major refinements, and longer-term direction will be surfaced as they become ready for public discussion.'
+      '◇ ROADMAP // PRODUCT DIRECTION',
+      '**CORE PRINCIPLE**\nNew features should make combat data more useful, understandable, or actionable.\n\n**CURRENT PRODUCT AREAS**\n▸ Combat analytics and report quality\n▸ Entropy Intelligence and critical-event interpretation\n▸ Fight replay and evidence presentation\n▸ Builder and squad-composition workflows\n▸ Player-v-player comparison from currently loaded logs\n▸ Desktop/web polish and performance\n▸ Better onboarding, support, and community tooling\n\nIdeas that deserve consideration belong in **#feature-requests** or through **/request**.'
     ),
     'known-issues': entropyEmbed(
-      'KNOWN ISSUES // STATUS BOARD',
-      'Confirmed issues and workarounds will be posted here when they affect a meaningful portion of Entropy users.\n\nFor a new problem, use `/bug` so the report enters the structured feedback workflow instead of getting buried in chat.'
+      '⚠ KNOWN ISSUES // STATUS BOARD',
+      'Confirmed issues and workarounds will be posted here when they affect a meaningful portion of Entropy users.\n\n**Before reporting**\n▸ Make sure you are on the latest Entropy version\n▸ Note whether you are using web or desktop\n▸ Include browser/version when relevant\n▸ Include a log or report link when the issue depends on combat data\n\nUse **/bug** so the report enters the structured workflow instead of getting buried in chat.'
+    ),
+    help: entropyEmbed(
+      '✚ ENTROPY SUPPORT // HOW TO GET A FAST ANSWER',
+      `When asking for help, include:\n▸ Entropy version\n▸ Web or desktop\n▸ Browser if using web\n▸ What you were trying to do\n▸ What happened instead\n▸ A log/report link when safe and relevant\n\n**COMMON LINKS**\n[Entropy Web](${ENTROPY_LINKS.website})\n[Latest Desktop Release](${ENTROPY_LINKS.releases})\n[ArcDPS](${ENTROPY_LINKS.arcdps})\n[Healing Stats](${ENTROPY_LINKS.healing})\n\nFor a reproducible product defect, use **/bug**.`
+    ),
+    wvw: entropyEmbed(
+      '⚔ WvW // COMBAT DISCUSSION',
+      'Use this channel for fight review, squad strategy, positioning, engage timing, boon/support discussion, comp decisions, and anything that connects WvW gameplay to Entropy data.\n\nScreenshots and clips belong in **#screenshots-clips**; specific build theory belongs in **#build-discussion**.'
+    ),
+    'build-discussion': entropyEmbed(
+      '◆ BUILDS // ROLES // COMPOSITIONS',
+      'Use this channel for profession builds, subgroup structure, role coverage, support pairings, target-cap considerations, and squad-composition theorycrafting.\n\nWhen possible, explain the job the build is meant to perform — not just the gear and traits.'
+    ),
+    'beta-testing': entropyEmbed(
+      '◈ BETA TESTING // VALIDATION',
+      'Use this channel for focused test passes against upcoming Entropy changes.\n\nGood test feedback includes the build/version, test scenario, expected result, actual result, and evidence. Structured outcomes can be posted in **#test-results**.'
+    ),
+    'experimental-features': entropyEmbed(
+      '✦ EXPERIMENTAL // PREVIEW SYSTEMS',
+      'This is where unfinished or higher-risk Entropy ideas can be discussed before they are promoted into the normal product. Expect iteration, changing behavior, and occasional rough edges.'
     ),
   };
 
@@ -127,7 +155,7 @@ export async function seedCommunity(guild) {
   for (const [channelName, embed] of Object.entries(messages)) {
     const channel = findChannel(guild, channelName);
     if (!channel?.isTextBased()) continue;
-    const recent = await channel.messages.fetch({ limit: 20 });
+    const recent = await channel.messages.fetch({ limit: 30 });
     const existing = recent.find((message) => message.author.id === guild.members.me?.id && message.embeds.some((item) => item.title === embed.data.title));
     if (existing) {
       const current = existing.embeds[0];
