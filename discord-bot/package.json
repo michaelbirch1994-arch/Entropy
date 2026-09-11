@@ -1,14 +1,14 @@
 {
   "name": "entropy-discord-bot",
   "private": true,
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "start": "node src/index.js",
-    "check": "node --check src/index.js && node --check src/setupServer.js && node --check src/community.js"
+    "check": "node --check src/index.js && node --check src/setupServer.js && node --check src/community.js && node --check src/enrichment.js"
   },
   "dependencies": {
     "discord.js": "^14.27.0"
