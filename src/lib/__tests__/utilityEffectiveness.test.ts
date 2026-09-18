@@ -287,4 +287,11 @@ describe('utility effectiveness', () => {
     expect(result.stunbreak[0].averageCorrelatedDelayMs).toBeNull();
     expect(result.stunbreak[0].responseShare).toBeNull();
   });
+
+  it('reuses a completed analysis for the same immutable report and reference set', () => {
+    const input = report();
+    const references = [stabilitySkill, breakSkill, enemyControlSkill];
+    const first = buildUtilityEffectiveness(input, 'f', references);
+    expect(buildUtilityEffectiveness(input, 'f', [...references].reverse())).toBe(first);
+  });
 });

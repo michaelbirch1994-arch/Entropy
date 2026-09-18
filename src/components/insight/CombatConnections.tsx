@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer, ReferenceArea, ReferenceLine } from 'recharts';
+import { memo, useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from 'react';
 import { ArrowUpRight, Clock3, Network, Crosshair, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import type { WvWReport } from '../../types/report';
 import { buildCombatConnections, combatMomentBins, connectionFights, connectionWindow, type CombatMoment } from '../../lib/insight/combatConnections';
 import { useView } from '../../store/ViewContext';
 import { fmtCompact } from '../../utils/format';
+import { buildCombatChartGeometry, nearestCombatChartPoint, type CombatChartPoint } from '../../lib/insight/combatConnectionChart';
 import './CombatConnections.css';
 import CombatMomentStory from './CombatMomentStory';
 import type { ExecutionSelection } from './ExecutionSelection';
@@ -12,6 +12,49 @@ import type { ExecutionSelection } from './ExecutionSelection';
 const clock = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
 const kinds = ['mechanic', 'cast', 'down', 'death'] as const;
 const labels = { mechanic: 'Mechanics', cast: 'Skill casts', down: 'Downstate', death: 'Death' };
+
+const CombatDamageChart = memo(function CombatDamageChart({ points, durationMs, timeMs, startMs, endMs, compare, onTime }: {
+  points: CombatChartPoint[];
+  durationMs: number;
+  timeMs: number;
+  startMs: number;
+  endMs: number;
+  compare: boolean;
+  onTime: (timeMs: number) => void;
+}) {
+  const [hovered, setHovered] = useState<CombatChartPoint | null>(null);
+  const geometry = useMemo(() => buildCombatChartGeometry(points, durationMs, compare), [points, durationMs, compare]);
+  const x = (value: number) => Math.max(0, Math.min(1000, value / durationMs * 1000));
+  const selectPointer = (event: PointerEvent<HTMLDivElement> | MouseEvent<HTMLDivElement>, commit: boolean) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const point = nearestCombatChartPoint(points, durationMs, (event.clientX - bounds.left) / bounds.width);
+    setHovered(point);
+    if (commit && point) onTime(point.time);
+  };
+  const selectKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    onTime(Math.max(0, Math.min(durationMs, timeMs + (event.key === 'ArrowLeft' ? -1000 : 1000))));
+  };
+
+  return <div className="connections-chart">
+    <div className="connections-chart-surface" role="slider" tabIndex={0} aria-label="Player damage timeline" aria-valuemin={0} aria-valuemax={durationMs} aria-valuenow={timeMs}
+      aria-valuetext={`${clock(timeMs)}, ${fmtCompact(points.find(point => point.time === Math.floor(timeMs / 1000) * 1000)?.dps ?? 0)} rolling damage per second`}
+      onPointerMove={event => selectPointer(event, false)} onPointerLeave={() => setHovered(null)} onClick={event => selectPointer(event, true)} onKeyDown={selectKeyboard}>
+      <svg className="connections-chart-svg" viewBox="0 0 1000 180" preserveAspectRatio="none" aria-hidden="true">
+        {[.25, .5, .75].map(level => <line key={level} x1="0" x2="1000" y1={180 * level} y2={180 * level} className="connections-chart-grid"/>)}
+        <rect x={x(startMs)} y="0" width={Math.max(0, x(endMs) - x(startMs))} height="180" className="connections-chart-window"/>
+        {geometry.peerPath && <path d={geometry.peerPath} className="connections-chart-peer"/>}
+        {geometry.dpsPath && <path d={geometry.dpsPath} className="connections-chart-player"/>}
+        <line x1={x(timeMs)} x2={x(timeMs)} y1="0" y2="180" className="connections-chart-cursor"/>
+      </svg>
+      <span className="connections-chart-maximum">{fmtCompact(geometry.maximum)}</span>
+      {hovered && <output className="connections-chart-tooltip" style={{ left: `${Math.max(8, Math.min(92, hovered.time / durationMs * 100))}%` }}>
+        <strong>{clock(hovered.time)}</strong><span>{hovered.dps === null ? 'Player not recorded' : `${fmtCompact(hovered.dps)} player`}</span>{compare && <span>{hovered.peers === null ? 'Peer mean unavailable' : `${fmtCompact(hovered.peers)} peer mean`}</span>}
+      </output>}
+    </div>
+  </div>;
+});
 
 export default function CombatConnections({ report, account, selection }: { report: WvWReport; account: string; selection?: ExecutionSelection }) {
   const fights = useMemo(() => connectionFights(report), [report]);
@@ -72,9 +115,7 @@ function FightConnections({ report, account, fightId, fights, onFight, selection
     <div className="connections-playback"><button type="button" title="Previous event" aria-label="Previous combat event" disabled={previousEvent === undefined} onClick={() => previousEvent !== undefined && changeTime(previousEvent)}><SkipBack size={16}/></button><button type="button" title={playing ? 'Pause' : 'Play'} aria-label={playing ? 'Pause combat playback' : 'Play combat playback'} onClick={() => { if (time >= model.fight.duration) setTime(0); setPlaying(p => !p); }}>{playing ? <Pause size={17}/> : <Play size={17}/>}</button><button type="button" title="Next event" aria-label="Next combat event" disabled={nextEvent === undefined} onClick={() => nextEvent !== undefined && changeTime(nextEvent)}><SkipForward size={16}/></button><select aria-label="Combat playback speed" value={speed} onChange={e => setSpeed(Number(e.target.value))}>{[0.5, 1, 2, 4].map(s => <option key={s} value={s}>{s}x</option>)}</select><span>{model.eventScope === 'squad' ? 'Squad events / selected player effects & damage' : 'Selected player events, effects & damage'}</span></div>
     <details className="execution-expand"><summary>Moment analysis</summary><CombatMomentStory model={model} time={time} radius={radius} profession={report.stats.offensePlayers?.find(p => p.account === account)?.profession} onTime={changeTime}/></details>
     <div className="connections-output"><div><span>PLAYER DAMAGE / 5s ROLLING DPS</span><strong>{outputNow?.dps == null ? 'Not recorded' : fmtCompact(outputNow.dps)}</strong></div><div><span>FOCUSED MOMENT</span><strong>{clock(time)}</strong></div></div>
-    <div className="connections-chart" aria-label="Damage over time">
-      {model.hasDamage ? <ResponsiveContainer width="100%" height="100%"><LineChart data={model.output} margin={{ top: 15, bottom: 4, left: 0, right: 0 }} onClick={state => { const value = Number(state?.activeLabel); if (Number.isFinite(value)) changeTime(value); }}><XAxis hide type="number" dataKey="time" domain={[0, model.fight.duration]}/><Tooltip labelFormatter={v => clock(Number(v))} formatter={(v, name) => [fmtCompact(Number(v)), name]} contentStyle={{ background: '#111b18', border: '1px solid #537767', borderRadius: 4, color: '#e4eee8' }}/><ReferenceArea x1={window.startMs} x2={window.endMs} fill="#83d9bc" fillOpacity={.08}/><ReferenceLine x={time} stroke="#e2bf71"/><Line type="linear" dataKey="dps" name="Player DPS" stroke="#6de4c6" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false}/>{compare && <Line type="linear" dataKey="peers" name="Profession mean DPS" stroke="#d4b46e" strokeWidth={1.5} dot={false} strokeDasharray="5 4" connectNulls={false} isAnimationActive={false}/>}</LineChart></ResponsiveContainer> : <p>No damage timeline recorded for this player.</p>}
-    </div>
+    {model.hasDamage ? <CombatDamageChart points={model.output} durationMs={model.fight.duration} timeMs={time} startMs={window.startMs} endMs={window.endMs} compare={compare} onTime={changeTime}/> : <div className="connections-chart"><p>No damage timeline recorded for this player.</p></div>}
     <div className="connections-ruler">{[0, .25, .5, .75, 1].map(f => <span key={f}>{clock(model.fight.duration * f)}</span>)}</div>
     <label className="connections-scrub"><Crosshair size={16}/><input aria-label="Combat moment" type="range" min={0} max={model.fight.duration} step={100} value={time} onChange={e => changeTime(Number(e.target.value))}/><output>{clock(time)}</output></label>
     <div className="connections-lanes">{groups.map(({ kind, bins }) => <div className="connection-lane" key={kind}><span>{labels[kind]}</span><div className={`connection-track ${kind}`}>{cursor}{bins.map(({ index, moments }) => <button type="button" key={index} title={`${moments.map(m => `${clock(m.time)} ${m.label}`).slice(0, 4).join('\n')}${moments.length > 4 ? `\n${moments.length} events` : ''}`} aria-label={`${labels[kind]} at ${clock(moments[0].time)}, ${moments.length} events`} style={{ left: percent(moments[0].time), width: moments[0].end ? percent(Math.max(0, moments[0].end - moments[0].time)) : undefined }} onClick={() => inspectEvents(moments)}/>)}{!bins.length && <small>{(kind === 'cast' ? model.coverage.casts : kind === 'mechanic' ? model.coverage.mechanics : model.coverage.survival) ? 'No events recorded' : 'Timeline unavailable'}</small>}</div></div>)}</div>

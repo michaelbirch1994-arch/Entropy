@@ -46,6 +46,12 @@ describe('Combat connections', () => {
     expect(result.moments.filter(e => e.kind === 'mechanic').map(e => e.account)).toEqual(['A', 'B']);
     expect(connectionWindow(result, 2500, 500).eventScope).toBe('squad');
   });
+  it('reuses immutable joins while keeping player and squad scopes separate', () => {
+    const report = fixture();
+    const player = buildCombatConnections(report, 'f1', 'A', false);
+    expect(buildCombatConnections(report, 'f1', 'A', false)).toBe(player);
+    expect(buildCombatConnections(report, 'f1', 'A', true)).not.toBe(player);
+  });
   it('bounds timeline marks without dropping dense source events', () => {
     const moments = Array.from({ length: 1000 }, (_, index) => ({
       time: index * 600,

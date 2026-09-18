@@ -5,6 +5,10 @@ export interface CombatMoment { time: number; end?: number; label: string; kind:
 export interface CombatMomentBin { index: number; moments: CombatMoment[] }
 export interface EffectSpan { start: number; end: number; value: number }
 
+type ConnectionFight = { id: string; name: string; duration: number };
+
+const fightCache = new WeakMap<WvWReport, ConnectionFight[]>();
+
 /**
  * Preserve every event while bounding the number of interactive timeline marks.
  * EI timelines are generally second-resolution; denser source events remain
@@ -34,6 +38,8 @@ export function effectSpans(effect: ReplayEffectTrack, duration: number): Effect
 }
 
 export function connectionFights(report: WvWReport) {
+  const cached = fightCache.get(report);
+  if (cached) return cached;
   const result = new Map<string, { id: string; name: string; duration: number }>();
   for (const f of [...(report.stats.dpsGraph?.fights ?? []), ...(report.stats.rotations?.fights ?? []), ...(report.stats.mechanics?.fights ?? [])]) {
     if (f.durationMs > 0) result.set(f.fightId, { id: f.fightId, name: f.fightName, duration: f.durationMs });
@@ -41,11 +47,13 @@ export function connectionFights(report: WvWReport) {
   for (const f of report.stats.replayFights ?? []) {
     if (f.data.durationMs > 0) result.set(f.fightId, { id: f.fightId, name: f.fightName, duration: f.data.durationMs });
   }
-  return [...result.values()];
+  const fights = [...result.values()];
+  fightCache.set(report, fights);
+  return fights;
 }
 
 /** Join existing datasets by fight identity; never assume their array indices match. */
-export function buildCombatConnections(report: WvWReport, fightId: string, account: string, squadEvents = false) {
+function calculateCombatConnections(report: WvWReport, fightId: string, account: string, squadEvents = false) {
   const s = report.stats;
   const fight = connectionFights(report).find(f => f.id === fightId);
   if (!fight) return null;
@@ -88,13 +96,30 @@ export function buildCombatConnections(report: WvWReport, fightId: string, accou
   if (!mechanics) for (const event of replay?.data.mechanics ?? []) {
     if (event.account && included(event.account)) moments.push({ time: event.t, account: event.account, kind: 'mechanic', label: event.name });
   }
-  return { fight, account, eventScope: squadEvents ? 'squad' : 'player', fightIndex: s.fightBreakdown?.findIndex(f => f.id === fightId) ?? -1,
+  return { fight, account, eventScope: squadEvents ? 'squad' as const : 'player' as const, fightIndex: s.fightBreakdown?.findIndex(f => f.id === fightId) ?? -1,
     output, hasDamage: Boolean(series?.points.length), peerProfession: series?.profession, peerCount: peers.length,
     effects: (track?.effects ?? []).map(e => ({ ...e, spans: effectSpans(e, fight.duration) })),
     moments: moments.filter(m => Number.isFinite(m.time) && m.time >= 0 && m.time <= fight.duration).sort((a, b) => a.time - b.time),
     coverage: { casts: Boolean(squadEvents ? rotationFight : rotation), survival: Boolean(squadEvents ? replay : track), mechanics: Boolean(mechanics || replay?.data.mechanics?.length), healingTimeline: false },
     healing: s.healingPlayers?.find(p => p.account === account) ?? null,
   };
+}
+
+type CombatConnectionsModel = ReturnType<typeof calculateCombatConnections>;
+const connectionCache = new WeakMap<WvWReport, Map<string, CombatConnectionsModel>>();
+
+export function buildCombatConnections(report: WvWReport, fightId: string, account: string, squadEvents = false) {
+  let reportCache = connectionCache.get(report);
+  if (!reportCache) {
+    reportCache = new Map();
+    connectionCache.set(report, reportCache);
+  }
+  const cacheKey = `${fightId}\u0000${account}\u0000${squadEvents ? 'squad' : 'player'}`;
+  if (reportCache.has(cacheKey)) return reportCache.get(cacheKey) ?? null;
+
+  const model = calculateCombatConnections(report, fightId, account, squadEvents);
+  reportCache.set(cacheKey, model);
+  return model;
 }
 
 export function connectionWindow(model: NonNullable<ReturnType<typeof buildCombatConnections>>, center: number, radius: number) {

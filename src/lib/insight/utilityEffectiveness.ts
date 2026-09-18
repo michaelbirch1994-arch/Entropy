@@ -1167,7 +1167,7 @@ function accountGroups(report: WvWReport) {
   return groups;
 }
 
-export function buildUtilityEffectiveness(report: WvWReport, fightId: string, apiSkills: Gw2Skill[]) {
+function calculateUtilityEffectiveness(report: WvWReport, fightId: string, apiSkills: Gw2Skill[]) {
   const rotation = report.stats.rotations?.fights.find(fight => fight.fightId === fightId);
   const groupsByAccount = accountGroups(report);
   const references = new Map<number, Gw2Skill>();
@@ -1732,6 +1732,25 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
       'A subgroup rating pairs mechanics recorded on that party with casts from providers assigned to the same party. Mechanics without a resolved account are excluded; cross-party help remains visible in Overall.',
     ],
   };
+}
+
+type UtilityEffectivenessModel = ReturnType<typeof calculateUtilityEffectiveness>;
+const utilityEffectivenessCache = new WeakMap<WvWReport, Map<string, UtilityEffectivenessModel>>();
+
+export function buildUtilityEffectiveness(report: WvWReport, fightId: string, apiSkills: Gw2Skill[]) {
+  let reportCache = utilityEffectivenessCache.get(report);
+  if (!reportCache) {
+    reportCache = new Map();
+    utilityEffectivenessCache.set(report, reportCache);
+  }
+  const referenceKey = apiSkills.map(skill => skill.id).sort((left, right) => left - right).join(',');
+  const cacheKey = `${fightId}\u0000${referenceKey}`;
+  const cached = reportCache.get(cacheKey);
+  if (cached) return cached;
+
+  const model = calculateUtilityEffectiveness(report, fightId, apiSkills);
+  reportCache.set(cacheKey, model);
+  return model;
 }
 
 export function utilityEffectivenessSkillIds(report: WvWReport, fightId: string) {
