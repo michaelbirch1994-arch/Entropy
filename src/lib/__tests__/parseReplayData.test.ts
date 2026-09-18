@@ -103,6 +103,21 @@ describe('parseReplayData enemy identity', () => {
 });
 
 describe('parseReplayData tactical state persistence', () => {
+  it('persists the selected fight subgroup for squad analysis', () => {
+    const log = {
+      durationMS: 1000,
+      combatReplayMetaData: { pollingRate: 150 },
+      players: [{
+        account: 'Squad.1234', name: 'Squad Player', profession: 'Guardian', group: 4,
+        combatReplayData: { start: 0, positions: [[0, 0], [1, 1]], orientations: [], down: [], dead: [] },
+        totalDamageDist: [[]], rotation: [],
+      }],
+      targets: [],
+    } as unknown as RawFightLog;
+
+    expect(parseReplayData(log)?.players[0].group).toBe(4);
+  });
+
   it('persists only timestamped boon/condition state needed by combined replay inspection', () => {
     const log = {
       durationMS: 1000,

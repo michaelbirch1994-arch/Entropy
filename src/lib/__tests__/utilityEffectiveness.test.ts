@@ -288,6 +288,26 @@ describe('utility effectiveness', () => {
     expect(result.stunbreak[0].responseShare).toBeNull();
   });
 
+  it('prefers selected-fight replay subgroups over report-aggregate assignments', () => {
+    const input = report();
+    input.stats.replayFights![0].data.players[0].group = 2;
+    input.stats.replayFights![0].data.players[1].group = 2;
+
+    const result = buildUtilityEffectiveness(input, 'f', [stabilitySkill, breakSkill, enemyControlSkill]);
+
+    expect(result.subgroupEvidence).toEqual({ source: 'fight-replay', fightAssignments: 2, aggregateFallbacks: 0, unresolved: 0 });
+    expect(result.stability[0].group).toBe(2);
+    expect(result.subgroups.map(scope => scope.group)).toEqual([2]);
+  });
+
+  it('keeps aggregate subgroup fallback for reports built before replay groups were persisted', () => {
+    const input = report();
+    const result = buildUtilityEffectiveness(input, 'f', [stabilitySkill, breakSkill, enemyControlSkill]);
+
+    expect(result.subgroupEvidence).toEqual({ source: 'report-aggregate', fightAssignments: 0, aggregateFallbacks: 2, unresolved: 0 });
+    expect(result.stability[0].group).toBe(1);
+  });
+
   it('reuses a completed analysis for the same immutable report and reference set', () => {
     const input = report();
     const references = [stabilitySkill, breakSkill, enemyControlSkill];

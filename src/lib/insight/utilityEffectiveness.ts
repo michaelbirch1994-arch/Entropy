@@ -1158,18 +1158,67 @@ const normalizedGroup = (value: unknown) => {
 
 const groupSortValue = (group: number) => group > 0 ? group : Number.MAX_SAFE_INTEGER;
 
-function accountGroups(report: WvWReport) {
-  const groups = new Map<string, number>();
-  for (const row of report.stats.attendanceData ?? []) groups.set(row.account, normalizedGroup(row.group));
+function accountGroups(report: WvWReport, fightId: string) {
+  const aggregateGroups = new Map<string, number>();
+  for (const row of report.stats.attendanceData ?? []) aggregateGroups.set(row.account, normalizedGroup(row.group));
   for (const row of report.stats.boonUptimes?.rows ?? []) {
-    if (!groups.has(row.account)) groups.set(row.account, normalizedGroup(row.group));
+    if (!aggregateGroups.has(row.account)) aggregateGroups.set(row.account, normalizedGroup(row.group));
   }
-  return groups;
+
+  const replayPlayers = report.stats.replayFights?.find(fight => fight.fightId === fightId)?.data.players
+    .filter(player => player.inSquad === true) ?? [];
+  const rotationPlayers = report.stats.rotations?.fights.find(fight => fight.fightId === fightId)?.players ?? [];
+  const mechanicAccounts = report.stats.mechanics?.fights.find(fight => fight.fightId === fightId)?.mechanics
+    .flatMap(mechanic => mechanic.events.map(event => event.account).filter((account): account is string => Boolean(account))) ?? [];
+  const incomingAccounts = report.stats.incomingSkillEvents?.fights.find(fight => fight.fightId === fightId)?.events
+    .map(event => event.targetAccount).filter((account): account is string => Boolean(account)) ?? [];
+  const fightAccounts = new Set([
+    ...replayPlayers.map(player => player.account),
+    ...rotationPlayers.map(player => player.account),
+    ...mechanicAccounts,
+    ...incomingAccounts,
+  ]);
+
+  if (fightAccounts.size === 0) {
+    return {
+      groups: aggregateGroups,
+      evidence: { source: 'report-aggregate' as const, fightAssignments: 0, aggregateFallbacks: aggregateGroups.size, unresolved: 0 },
+    };
+  }
+
+  const replayGroups = new Map(replayPlayers
+    .filter(player => player.group !== undefined)
+    .map(player => [player.account, normalizedGroup(player.group)] as const));
+  const groups = new Map<string, number>();
+  let aggregateFallbacks = 0;
+  let unresolved = 0;
+  for (const account of fightAccounts) {
+    if (replayGroups.has(account)) groups.set(account, replayGroups.get(account)!);
+    else if (aggregateGroups.has(account)) {
+      groups.set(account, aggregateGroups.get(account)!);
+      aggregateFallbacks += 1;
+    } else {
+      groups.set(account, 0);
+      unresolved += 1;
+    }
+  }
+
+  const fightAssignments = replayGroups.size;
+  return {
+    groups,
+    evidence: {
+      source: fightAssignments === 0 ? 'report-aggregate' as const
+        : aggregateFallbacks > 0 || unresolved > 0 ? 'mixed' as const : 'fight-replay' as const,
+      fightAssignments,
+      aggregateFallbacks,
+      unresolved,
+    },
+  };
 }
 
 function calculateUtilityEffectiveness(report: WvWReport, fightId: string, apiSkills: Gw2Skill[]) {
   const rotation = report.stats.rotations?.fights.find(fight => fight.fightId === fightId);
-  const groupsByAccount = accountGroups(report);
+  const { groups: groupsByAccount, evidence: subgroupEvidence } = accountGroups(report, fightId);
   const references = new Map<number, Gw2Skill>();
   for (const skill of [...apiSkills, ...firebrandTomeSkills()]) references.set(skill.id, skill);
   const controls = controlEvents(report, fightId);
@@ -1703,6 +1752,7 @@ function calculateUtilityEffectiveness(report: WvWReport, fightId: string, apiSk
     stunbreak,
     subgroups,
     overall,
+    subgroupEvidence,
     limitations: [
       incoming.source === 'native-evtc'
         ? 'Realized effectiveness is confirmed Stability interceptions divided by resolved Stability contests. Other defenses and unresolved attempts do not enter that denominator.'
@@ -1728,7 +1778,11 @@ function calculateUtilityEffectiveness(report: WvWReport, fightId: string, apiSk
       'Reports without native hostile hit timestamps use clearly labeled mechanic-and-boon inference. Re-importing the original EVTC or ZEVTC upgrades candidate consumptions to result-backed confirmation.',
       'Confirmed stun-break totals and removed duration are report aggregates. Removed duration is control time prevented, not time already spent stunned.',
       'Correlated response delay measures time from a recorded control mechanic to the next recorded allied stun-break cast. Recipient, range, subgroup and actual removal remain unverified.',
-      'Subgroup assignments use the report-aggregate attendance source shared with Party Boons and may not reflect a mid-session party swap.',
+      subgroupEvidence.source === 'fight-replay'
+        ? 'Subgroup assignments use the selected fight replay roster. Mid-fight party swaps remain unverified because EI records one subgroup value per player for the fight.'
+        : subgroupEvidence.source === 'mixed'
+          ? `Subgroup assignments use ${subgroupEvidence.fightAssignments} selected-fight replay values and ${subgroupEvidence.aggregateFallbacks} report-aggregate fallbacks; ${subgroupEvidence.unresolved} players remain unassigned. Mid-fight party swaps remain unverified.`
+          : 'Subgroup assignments use the report-aggregate attendance source because this fight has no persisted replay subgroup values. They may not reflect a mid-session party swap.',
       'A subgroup rating pairs mechanics recorded on that party with casts from providers assigned to the same party. Mechanics without a resolved account are excluded; cross-party help remains visible in Overall.',
     ],
   };

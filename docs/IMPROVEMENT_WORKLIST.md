@@ -35,8 +35,9 @@ This sequence incorporates the current full-app screenshot audit, the Intelligen
 ## P1 — Performance and compatibility
 
 - [x] Remove the page-level slide/exit animation that mounted two heavy report views during sidebar tab changes and caused a visible layout jerk.
+- [x] Keep the current report surface visible while a lazy destination loads, and warm the destination section when the user points at or focuses its sidebar heading. Initial report loading still retains an explicit loading state.
 - [~] Firefox-specific large-log profiling is deferred by product decision and is not a v0.2.59 release gate.
-- [ ] Memoize expensive report derivations only where measured or code-reviewed evidence shows repeated work during render.
+- [x] Memoize the repeated Insight combat-connection and utility-effectiveness derivations identified during the large-report render audit, keyed by immutable report identity and analysis inputs.
 - [ ] Audit chart animation, blur, shadow, gradient, and large-table costs only when a concrete performance regression justifies it.
 - [ ] Virtualize only tables whose measured DOM/render cost justifies it.
 - [ ] Run a general browser compatibility pass when practical; obsolete-browser support is not a priority.

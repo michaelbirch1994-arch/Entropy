@@ -42,6 +42,8 @@ export interface ReplayPlayerTrack {
   account: string;
   name: string;
   profession: string;
+  /** Fight-recorded subgroup. Zero means EI recorded the player as unassigned. */
+  group?: number;
   inSquad: boolean;
   isCommander: boolean;
   points: ReplayPoint[];
@@ -316,6 +318,8 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
       account: typeof p.account === "string" ? p.account : "Unknown",
       name: typeof p.name === "string" ? p.name : "Unknown",
       profession: typeof p.profession === "string" ? p.profession : "Unknown",
+      group: p.group === undefined || p.group === null || !Number.isFinite(Number(p.group))
+        ? undefined : Number(p.group) > 0 ? Math.trunc(Number(p.group)) : 0,
       inSquad: !p.notInSquad,
       isCommander: !!p.hasCommanderTag,
       points,

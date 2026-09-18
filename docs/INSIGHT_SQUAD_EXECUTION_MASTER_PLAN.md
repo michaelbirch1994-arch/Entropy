@@ -127,6 +127,14 @@ stays unknown. Show an all-squad outcome view and an actionable participant view
 so excluding dead, downed, late-joining, or disconnected players does not hide
 the very execution problems being investigated.
 
+Current implementation checkpoint: newly imported replay tracks persist EI's
+selected-fight subgroup value. Utility-effectiveness scopes prefer those values,
+limit membership to accounts evidenced in that fight, and disclose fight-replay,
+mixed, or report-aggregate subgroup provenance. Older reports remain compatible
+through the aggregate fallback. This is fight-local, not time-local: EI exposes
+one subgroup value for the player in that fight, so mid-fight swaps remain
+unverified and must not be described as exact-moment membership.
+
 Role estimates must be visible and correctable as analysis annotations. An elite
 specialization or low damage does not prove a support build.
 

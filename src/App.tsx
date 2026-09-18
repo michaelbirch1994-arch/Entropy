@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { lazy, Suspense, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Sidebar, { VIEW_ICONS } from "./components/layout/Sidebar";
 import type { WorkspaceDestination } from "./components/layout/CommandPalette";
 import { Search, ChevronRight, Files } from "lucide-react";
@@ -104,6 +104,21 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "effective-power": return <EffectivePowerView />;
     default: return <OverviewView />;
   }
+}
+
+function DeferredReportRoute({ activeView }: { activeView: string }) {
+  const renderedView = useDeferredValue(activeView);
+  const pending = renderedView !== activeView;
+
+  return (
+    <div
+      className="entropy-route-stage min-h-full w-full"
+      data-view-pending={pending || undefined}
+      aria-busy={pending}
+    >
+      <ReportRouter activeView={renderedView} />
+    </div>
+  );
 }
 
 
@@ -775,9 +790,7 @@ function ReportShell() {
         <div className={showImport && !showStandaloneView ? "min-h-full" : report || showStandaloneView ? "theme-content p-6" : "min-h-full"} id="workspace-content" tabIndex={-1}>
           {showStandaloneView ? (
             <Suspense fallback={<LoadingState />}>
-              <div key={activeView} className="entropy-route-stage min-h-full w-full">
-                <ReportRouter activeView={activeView} />
-              </div>
+              <DeferredReportRoute activeView={activeView} />
             </Suspense>
           ) : showLoading ? (
             <LoadingState />
@@ -813,9 +826,7 @@ function ReportShell() {
             </div>
           ) : report ? (
             <Suspense fallback={<LoadingState />}>
-              <div key={activeView} className="entropy-route-stage min-h-full w-full">
-                <ReportRouter activeView={activeView} />
-              </div>
+              <DeferredReportRoute activeView={activeView} />
             </Suspense>
           ) : null}
         </div>
