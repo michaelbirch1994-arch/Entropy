@@ -1,0 +1,17 @@
+name: WvW reference parity
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 12 * * 1'
+
+jobs:
+  audit-references:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Compare reviewed skill facts with ArenaNet
+        run: node scripts/audit-wvw-reference-catalog.mjs

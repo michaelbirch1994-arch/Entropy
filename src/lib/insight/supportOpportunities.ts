@@ -1,11 +1,13 @@
 import type { WvWReport } from '../../types/report';
 import type { ReplayEffectTrack } from '../parseReplayData';
 import type { InsightEvidence } from './evidence';
+import { CURRENT_WVW_REFERENCE_CATALOG, responseReferenceForReport } from './referenceCatalog';
 
+const standYourGround = CURRENT_WVW_REFERENCE_CATALOG.skills.find((skill) => skill.skillId === 9153)!;
 export const SUPPORT_RULE = {
-  name: 'Stand Your Ground!', cooldownMs: 24000, radius: 600,
-  mode: 'WvW', version: 'support-reference-v1', reviewed: '2026-09-09',
-  source: 'https://wiki.guildwars2.com/wiki/%22Stand_Your_Ground%22',
+  name: standYourGround.name, cooldownMs: standYourGround.wvw.cooldownModelMs!, radius: standYourGround.wvw.maxReach!,
+  mode: CURRENT_WVW_REFERENCE_CATALOG.mode, version: CURRENT_WVW_REFERENCE_CATALOG.id, reviewed: CURRENT_WVW_REFERENCE_CATALOG.reviewedAt,
+  source: standYourGround.source,
   effect: 'Grants stability to allies; not evidence of an ally stunbreak or immobilize cleanse.',
 };
 const guardian = new Set(['Guardian', 'Firebrand', 'Dragonhunter', 'Willbender', 'Luminary']);
@@ -44,11 +46,22 @@ export function rechargeWindow(start: number, end: number, cooldownMs: number, e
 
 export function buildSupportOpportunities(report: WvWReport, account: string): InsightEvidence[] {
   const rows: InsightEvidence[] = [];
+  const reference = responseReferenceForReport(report);
+  const pinnedRule = reference.rules.find((rule) => rule.skillId === 9153);
+  const supportRule = pinnedRule?.cooldownMs !== null && pinnedRule?.cooldownMs !== undefined
+    && pinnedRule.maxReach !== null
+    ? { ...SUPPORT_RULE, cooldownMs: pinnedRule.cooldownMs, radius: pinnedRule.maxReach,
+        version: reference.catalog?.id ?? SUPPORT_RULE.version, reviewed: reference.catalog?.reviewedAt ?? SUPPORT_RULE.reviewed, source: pinnedRule.source }
+    : null;
+  if (!supportRule) return [{ id: '', label: 'Support opportunity coverage', data: {
+    supportedSkills: [], eligibleFights: 0, assessedWindows: 0, includedWindows: 0,
+    scope: `Unavailable: ${report.meta?.referenceCatalog?.id ?? 'reference catalog'} cannot be resolved by this app version.`,
+  } }];
   let eligibleFights = 0, assessed = 0;
   for (const fight of report.stats.rotations?.fights ?? []) {
     const actor = fight.players.find(p => p.account === account);
     if (!actor || !guardian.has(actor.profession)) continue;
-    const casts = actor.casts.filter(c => normalized(report.stats.rotations?.skillMeta[c.skillId]?.name ?? '') === SUPPORT_RULE.name
+    const casts = actor.casts.filter(c => normalized(report.stats.rotations?.skillMeta[c.skillId]?.name ?? '') === supportRule.name
       && Number.isFinite(c.castTime) && c.castTime >= 0).slice().sort((a, b) => a.castTime - b.castTime);
     if (!casts.length) continue;
     const replay = report.stats.replayFights?.find(f => f.fightId === fight.fightId);
@@ -66,7 +79,7 @@ export function buildSupportOpportunities(report: WvWReport, account: string): I
         if (rows.length >= 12) continue;
         const used = casts.filter(c => c.castTime >= start && c.castTime <= down);
         const anchor = used.at(-1) ?? last;
-        const progress = rechargeWindow(anchor.castTime, down, SUPPORT_RULE.cooldownMs, provider.effects ?? []);
+        const progress = rechargeWindow(anchor.castTime, down, supportRule.cooldownMs, provider.effects ?? []);
         const overlap = [...(provider.downIntervals ?? []), ...(provider.deadIntervals ?? [])].filter(([a, b]) => a <= down && b > start);
         const mechanics = report.stats.mechanics?.fights.find(f => f.fightId === fight.fightId)?.mechanics.flatMap(m => m.events
           .filter(e => e.time >= start && e.time <= down && (e.account === account || e.account === target.account))
@@ -76,14 +89,14 @@ export function buildSupportOpportunities(report: WvWReport, account: string): I
         rows.push({ id: '', label: 'Support opportunity review (conditional cooldown)',
           ...(index >= 0 ? { replay: { fightIndex: index, timestampMs: start, account } } : {}),
           data: { account, profession: actor.profession, teammate: target.account, fightName: fight.fightName,
-            name: SUPPORT_RULE.name, skillId: last.skillId, icon: report.stats.rotations?.skillMeta[last.skillId]?.icon,
+            name: supportRule.name, skillId: last.skillId, icon: report.stats.rotations?.skillMeta[last.skillId]?.icon,
             windowStartMs: start, downTimeMs: down, lastCastMs: anchor.castTime,
             recordedUsesInWindow: used.length, castTimesMs: used.map(c => c.castTime), referenceRecharge: progress,
             review: used.length ? 'Skill use recorded in danger window; do not describe it as unused.' : 'No skill use recorded in the five seconds before this down; an opportunity is not established.',
             providerSurvival: overlap.length ? 'Recorded down/dead interval overlaps danger window' : 'No down/dead overlap recorded; ability to act remains unknown',
             providerEffects: effects(provider), teammateEffects: effects(target), recordedMechanics: mechanics,
             actualAvailability: 'Unknown', rescueOutcome: 'Not established', rangeAssessment: 'Unknown: replay positions are not calibrated here to skill-range units.',
-            referenceRule: SUPPORT_RULE,
+            referenceRule: supportRule,
             assumptions: ['Reference cooldown starts at the recorded instant shout cast. Cast completion and log completeness are not certified.',
               'No trait reductions, resets, loadout changes or special recharge modifiers. This reference is not certified for the fight balance patch.',
               'Alacrity-only progresses at 1.25/s; unopposed chill at 1/1.66 per second. Missing or overlapping modifiers retain a range.',
@@ -95,6 +108,6 @@ export function buildSupportOpportunities(report: WvWReport, account: string): I
       }
     }
   }
-  return [{ id: '', label: 'Support opportunity coverage', data: { supportedSkills: [SUPPORT_RULE.name], eligibleFights, assessedWindows: assessed,
+  return [{ id: '', label: 'Support opportunity coverage', data: { supportedSkills: [supportRule.name], eligibleFights, assessedWindows: assessed,
     includedWindows: rows.length, scope: 'Selected provider; squad teammate downs with a prior recorded cast. Other skills and missing anchors are not assessed.' } }, ...rows];
 }

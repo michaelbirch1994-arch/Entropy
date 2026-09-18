@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "audit:ui": "node scripts/audit-ui-surfaces.mjs --markdown",
+    "audit:references": "node scripts/audit-wvw-reference-catalog.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "pnpm test:unit && pnpm test:node",

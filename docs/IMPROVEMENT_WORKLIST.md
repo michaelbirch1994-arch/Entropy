@@ -25,6 +25,7 @@ This sequence incorporates the current full-app screenshot audit, the Intelligen
 
 ## P0 — Data correctness
 
+- [x] Centralize reviewed WvW response skills in a versioned catalog, stamp new reports with source versions, and audit depended-on ArenaNet facts weekly without conflating API baseline values with WvW balance splits.
 - [x] Use stable account identity across combined fights, professions, characters, roles, and subgroup changes.
 - [x] Keep one Squad Roster Overview row per player while preserving profession history.
 - [x] Audit damage, healing, barrier, cleanses, strips, downs, and participation for stable account-level aggregation; retain account+profession rows only where build-specific context is required (damage modifiers and per-fight rotations).

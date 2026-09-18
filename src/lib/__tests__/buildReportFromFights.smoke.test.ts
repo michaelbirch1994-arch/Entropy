@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { buildReportFromFights, type FightInput } from '../buildReportFromFights';
+import { CURRENT_WVW_REFERENCE_CATALOG } from '../insight/referenceCatalog';
 import { summarizeRawFight, type RawFightLog } from '../../types/rawFight';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -34,6 +35,16 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
            it('produces a report with the expected top-level shape', () => {
                  expect(report.meta).toBeTruthy();
                  expect(report.stats).toBeTruthy();
+           });
+
+           it('pins the reviewed WvW reference catalog and source versions', () => {
+                 expect(report.meta.referenceCatalog).toMatchObject({
+                       id: CURRENT_WVW_REFERENCE_CATALOG.id,
+                       mode: 'WvW',
+                       sourceGameBuilds: [193778],
+                       eliteInsightsVersions: ['3.20.0.0'],
+                       arcVersions: ['EVTC20260114'],
+                 });
            });
 
            it('persists compact, scope-separated damage activity evidence for Insight', () => {

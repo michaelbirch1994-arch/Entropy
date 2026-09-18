@@ -10,6 +10,18 @@ export interface ReportGuild {
     tag: string | null;
 }
 
+export interface ReportReferenceCatalog {
+    id: string;
+    mode: 'WvW';
+    reviewedAt: string;
+    /** GW2 builds present in the source EI logs. Empty means the parser did not expose a build. */
+  sourceGameBuilds: number[];
+    /** Parser versions retained for reproducibility, not interpreted as balance versions. */
+  eliteInsightsVersions: string[];
+    /** ArcDPS EVTC versions retained for source-contract auditing. */
+  arcVersions: string[];
+}
+
 export interface ReportMeta {
     id: string;
     title: string;
@@ -19,6 +31,8 @@ export interface ReportMeta {
     dateLabel: string;
     generatedAt: string;
     appVersion: string;
+    /** Reference catalog selected when this report's Insight analysis was built. */
+  referenceCatalog?: ReportReferenceCatalog;
     /** Present when the squad's dominant guild could be resolved for this report. */
   guild?: ReportGuild | null;
     /** Names of report sections dropped to keep the payload under size limits. */

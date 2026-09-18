@@ -13,6 +13,9 @@ export interface RawFightPlayer {
 }
 
 export interface RawFightLog {
+  eliteInsightsVersion?: string;
+  arcVersion?: string;
+  gW2Build?: number;
   fightName?: string;
   mapID?: number;
   duration?: string;

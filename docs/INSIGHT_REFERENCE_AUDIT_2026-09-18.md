@@ -32,6 +32,14 @@ The summed range and radius figures are permissive two-dimensional outer boundar
 - Purging Flames remains 28 seconds in WvW. The API's 20-second value is the PvE baseline and must not override the WvW split.
 - Regression tests pin the reviewed WvW values and the Stability-description exclusion.
 
+## Implemented hardening
+
+- The reviewed skills now live in one versioned WvW reference catalog instead of being scattered through analysis modules.
+- Every newly built report records the catalog revision, GW2 build, Elite Insights version and ArcDPS EVTC version used by its source logs.
+- Archived reports without a stamp use a clearly labelled legacy fallback. Reports pinned to a catalog unavailable in the running app are left unassessed rather than silently reinterpreted.
+- `npm run audit:references` compares every structured ArenaNet fact used by the catalog and fails loudly on drift while keeping WvW overrides separate from API baseline values.
+- A weekly and manually runnable repository workflow performs the same live parity check without making the normal application build depend on external API availability.
+
 ## Primary references
 
 - ArenaNet skill API: https://api.guildwars2.com/v2/skills
@@ -41,8 +49,7 @@ The summed range and radius figures are permissive two-dimensional outer boundar
 
 ## Next hardening steps
 
-- Persist the game build and reference-catalog revision with every report analysis.
-- Add a scheduled or release-time parity check that compares reviewed skill IDs with the API and flags changed structured facts.
-- Keep WvW split values in a versioned catalog rather than scattering them through UI components.
+- Retain each superseded catalog revision in the registry so old pinned reports remain reproducible after balance updates.
+- Add a reviewed-patch workflow that creates a new catalog revision instead of editing an already-published revision in place.
 - Store evidence provenance on every computed assessment: recorded event, API fact, WvW override, parser-derived state or bounded inference.
 - Test against modern Elite Insights JSON with and without `RawTimelineArrays` so coverage degrades explicitly rather than changing the conclusion silently.

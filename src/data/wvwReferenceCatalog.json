@@ -1,0 +1,160 @@
+{
+  "id": "entropy-wvw-references-2026-09-18-v1",
+  "mode": "WvW",
+  "reviewedAt": "2026-09-18",
+  "sources": {
+    "arenaNetApi": "https://api.guildwars2.com/v2/skills",
+    "guildWars2WikiApi": "https://wiki.guildwars2.com/api.php",
+    "arcDpsEvtc": "https://www.deltaconnected.com/arcdps/evtc/README.txt",
+    "eliteInsights": "https://github.com/baaron4/GW2-Elite-Insights-Parser"
+  },
+  "skills": [
+    {
+      "skillId": 9163,
+      "name": "Signet of Mercy",
+      "api": {
+        "name": "Signet of Mercy",
+        "rechargeSeconds": 50,
+        "range": 900,
+        "distanceFacts": { "Radius": 180 },
+        "buffStatuses": ["Signet of Mercy"],
+        "stunBreak": false
+      },
+      "wvw": { "rechargeMs": 90000, "cooldownModelMs": 90000, "maxReach": 1080 },
+      "response": {
+        "kind": "revive",
+        "summary": "Revives a downed ally; ground placement and successful revival are not established."
+      },
+      "source": "https://wiki.guildwars2.com/wiki/Signet_of_Mercy"
+    },
+    {
+      "skillId": 14419,
+      "name": "Battle Standard",
+      "api": {
+        "name": "Battle Standard",
+        "rechargeSeconds": 90,
+        "range": 600,
+        "distanceFacts": { "Revival Radius": 360 },
+        "buffStatuses": ["Might", "Fury", "Swiftness"],
+        "stunBreak": false
+      },
+      "wvw": { "rechargeMs": 120000, "cooldownModelMs": 120000, "maxReach": 960 },
+      "response": {
+        "kind": "revive",
+        "summary": "Revives downed allies; the reference boundary combines 600 range and 360 revival radius. Cast completion, banner arrival and recipients are not established."
+      },
+      "source": "https://wiki.guildwars2.com/wiki/Battle_Standard"
+    },
+    {
+      "skillId": 30047,
+      "name": "Eye of the Storm!",
+      "api": {
+        "name": "\"Eye of the Storm!\"",
+        "rechargeSeconds": 30,
+        "distanceFacts": { "Radius": 600 },
+        "buffStatuses": ["Superspeed", "Swiftness", "Stability"],
+        "stunBreak": true
+      },
+      "wvw": { "rechargeMs": 30000, "cooldownModelMs": 30000, "maxReach": 600 },
+      "response": {
+        "kind": "stunbreak",
+        "summary": "Breaks stun for nearby allies. Self-only stunbreaks are not substitutes."
+      },
+      "source": "https://wiki.guildwars2.com/wiki/%22Eye_of_the_Storm%21%22"
+    },
+    {
+      "skillId": 9187,
+      "name": "Purging Flames",
+      "api": {
+        "name": "Purging Flames",
+        "rechargeSeconds": 20,
+        "range": 900,
+        "distanceFacts": { "Radius": 180 },
+        "buffStatuses": ["Burning"],
+        "stunBreak": false
+      },
+      "wvw": { "rechargeMs": 28000, "cooldownModelMs": 28000, "maxReach": 1080 },
+      "response": {
+        "kind": "cleanse",
+        "summary": "Removes conditions from allies in the ground-targeted area. Removal of this specific condition is not guaranteed."
+      },
+      "source": "https://wiki.guildwars2.com/wiki/Purging_Flames"
+    },
+    {
+      "skillId": 10203,
+      "name": "Null Field",
+      "api": {
+        "name": "Null Field",
+        "rechargeSeconds": 25,
+        "range": 900,
+        "distanceFacts": { "Radius": 240 },
+        "buffStatuses": [],
+        "stunBreak": false
+      },
+      "wvw": { "rechargeMs": 45000, "cooldownModelMs": 45000, "maxReach": 1140 },
+      "response": {
+        "kind": "cleanse",
+        "summary": "Removes conditions from allies in the ground-targeted field. Removal of this specific condition is not guaranteed."
+      },
+      "source": "https://wiki.guildwars2.com/wiki/Null_Field"
+    },
+    {
+      "skillId": 43357,
+      "name": "Mantra of Liberation",
+      "api": {
+        "name": "Mantra of Liberation",
+        "rechargeSeconds": 40,
+        "buffStatuses": [],
+        "stunBreak": false,
+        "flipSkillId": 40114
+      },
+      "wvw": { "rechargeMs": 60000, "cooldownModelMs": null, "maxReach": 450 },
+      "response": {
+        "kind": "stunbreak",
+        "aliases": ["Portent of Freedom", "Unhindered Delivery"],
+        "assumedProfession": "Firebrand",
+        "summary": "Prepared charges break allied stuns. Preparation, remaining charges and cone facing must be resolved; a single last-cast cooldown is not valid for this mantra."
+      },
+      "source": "https://wiki.guildwars2.com/wiki/Mantra_of_Liberation"
+    },
+    {
+      "skillId": 9153,
+      "name": "Stand Your Ground!",
+      "api": {
+        "name": "\"Stand Your Ground!\"",
+        "rechargeSeconds": 24,
+        "distanceFacts": { "Radius": 600 },
+        "buffStatuses": ["Resolution", "Stability"],
+        "stunBreak": true
+      },
+      "wvw": { "rechargeMs": 24000, "cooldownModelMs": 24000, "maxReach": 600 },
+      "response": {
+        "kind": "stunbreak",
+        "assumedProfession": "Firebrand",
+        "preventionOnly": true,
+        "summary": "Allied stability is preventive. The stunbreak affects the caster only, so this cannot remove an ally's existing stun."
+      },
+      "source": "https://wiki.guildwars2.com/wiki/%22Stand_Your_Ground!%22"
+    },
+    {
+      "skillId": 12569,
+      "name": "Spirit of Nature",
+      "api": {
+        "name": "Spirit of Nature",
+        "rechargeSeconds": 90,
+        "range": 600,
+        "distanceFacts": { "Radius": 360 },
+        "buffStatuses": ["Regeneration"],
+        "stunBreak": false,
+        "flipSkillId": 12601
+      },
+      "wvw": { "rechargeMs": 120000, "cooldownModelMs": 120000, "maxReach": 960 },
+      "response": {
+        "kind": "revive",
+        "assumedProfession": "Druid",
+        "summary": "Summons the spirit whose Nature's Renewal slam revives downed allies. Summon completion, slam timing and spirit placement remain unresolved."
+      },
+      "source": "https://wiki.guildwars2.com/wiki/Spirit_of_Nature"
+    }
+  ]
+}

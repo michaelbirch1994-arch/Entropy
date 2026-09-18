@@ -21,6 +21,7 @@ import type { CriticalEvent, IntelligenceFinding } from './intelligence/types';
 import type { EngagementSegment } from './intelligence/engagementTypes';
 import { computeDistanceToTag } from './bridge-metrics/distanceToTag';
 import { executionActivity, summarizeExecutionActivity } from './insight/executionActivity';
+import { referenceCatalogStamp } from './insight/referenceCatalog';
 import { METRICS_VERSION } from './metricsVersion';
 
 export { METRICS_VERSION } from './metricsVersion';
@@ -2565,6 +2566,7 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
                 dateLabel,
                 generatedAt: new Date().toISOString(),
                 appVersion: METRICS_VERSION,
+                referenceCatalog: referenceCatalogStamp(fights.map((fight) => fight.raw)),
                 trimmedSections: ['fightBreakdown', 'commanderStats', 'mapData', 'timelineData', 'boonTables'],
         },
         stats,
