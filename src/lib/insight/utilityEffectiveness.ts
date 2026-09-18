@@ -72,8 +72,10 @@ function controlText(values: Array<string | undefined>) {
 export function hardControlReference(skill: Gw2Skill) {
   const baseFacts = skill.facts ?? [];
   const traitedFacts = skill.traited_facts ?? [];
-  const baseSegments = controlText(baseFacts.flatMap(fact => [fact.text, fact.status, fact.description]));
-  const traitedSegments = controlText(traitedFacts.flatMap(fact => [fact.text, fact.status, fact.description]));
+  // Buff descriptions explain what the boon prevents and can contain every control
+  // keyword. API fact text/status identify the skill's actual applied effect.
+  const baseSegments = controlText(baseFacts.flatMap(fact => [fact.text, fact.status]));
+  const traitedSegments = controlText(traitedFacts.flatMap(fact => [fact.text, fact.status]));
   const descriptionSegments = controlText([skill.description]);
   const types = HARD_CONTROL_PATTERNS.filter(([, pattern]) => [...baseSegments, ...traitedSegments, ...descriptionSegments]
     .some(segment => pattern.test(segment))).map(([type]) => type);

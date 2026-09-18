@@ -5,12 +5,14 @@ import { responseReach } from './responseReach';
 
 export type ResponseKind = 'revive' | 'stunbreak' | 'cleanse' | 'unknown';
 interface ResponseRule { name: string; kind: ResponseKind; cooldownMs: number | null; maxReach: number | null; response: string; source: string; assumedProfession?: string; skillId?: number; aliases?: string[]; preventionOnly?: boolean }
+// API IDs identify the base records. Recharge values use the reviewed WvW
+// split when it differs from the baseline value returned by /v2/skills.
 export const RESPONSE_RULES: ResponseRule[] = [
-  { name: 'Signet of Mercy', kind: 'revive', cooldownMs: 90000, maxReach: 1080, response: 'Revives a downed ally; ground placement and successful revival are not established.', source: 'https://wiki.guildwars2.com/wiki/Signet_of_Mercy' },
-  { name: 'Battle Standard', kind: 'revive', cooldownMs: 120000, maxReach: null, response: 'Revives downed allies; cast completion, banner arrival and recipients are not established.', source: 'https://wiki.guildwars2.com/wiki/Battle_Standard' },
-  { name: 'Eye of the Storm!', kind: 'stunbreak', cooldownMs: 30000, maxReach: 600, response: 'Breaks stun for nearby allies. Self-only stunbreaks are not substitutes.', source: 'https://wiki.guildwars2.com/wiki/%22Eye_of_the_Storm%21%22' },
-  { name: 'Purging Flames', kind: 'cleanse', cooldownMs: 28000, maxReach: 1080, response: 'Removes conditions from allies in the ground-targeted area. Removal of this specific condition is not guaranteed.', source: 'https://wiki.guildwars2.com/wiki/Purging_Flames' },
-  { name: 'Null Field', kind: 'cleanse', cooldownMs: 45000, maxReach: 1140, response: 'Removes conditions from allies in the ground-targeted field. Removal of this specific condition is not guaranteed.', source: 'https://wiki.guildwars2.com/wiki/Null_Field' },
+  { name: 'Signet of Mercy', kind: 'revive', cooldownMs: 90000, maxReach: 1080, skillId: 9163, response: 'Revives a downed ally; ground placement and successful revival are not established.', source: 'https://wiki.guildwars2.com/wiki/Signet_of_Mercy' },
+  { name: 'Battle Standard', kind: 'revive', cooldownMs: 120000, maxReach: 960, skillId: 14419, response: 'Revives downed allies; the reference boundary combines 600 range and 360 revival radius. Cast completion, banner arrival and recipients are not established.', source: 'https://wiki.guildwars2.com/wiki/Battle_Standard' },
+  { name: 'Eye of the Storm!', kind: 'stunbreak', cooldownMs: 30000, maxReach: 600, skillId: 30047, response: 'Breaks stun for nearby allies. Self-only stunbreaks are not substitutes.', source: 'https://wiki.guildwars2.com/wiki/%22Eye_of_the_Storm%21%22' },
+  { name: 'Purging Flames', kind: 'cleanse', cooldownMs: 28000, maxReach: 1080, skillId: 9187, response: 'Removes conditions from allies in the ground-targeted area. Removal of this specific condition is not guaranteed.', source: 'https://wiki.guildwars2.com/wiki/Purging_Flames' },
+  { name: 'Null Field', kind: 'cleanse', cooldownMs: 45000, maxReach: 1140, skillId: 10203, response: 'Removes conditions from allies in the ground-targeted field. Removal of this specific condition is not guaranteed.', source: 'https://wiki.guildwars2.com/wiki/Null_Field' },
   { name: 'Mantra of Liberation', kind: 'stunbreak', cooldownMs: null, maxReach: 450, assumedProfession: 'Firebrand', skillId: 43357, aliases: ['Portent of Freedom', 'Unhindered Delivery'], response: 'Prepared charges break allied stuns. Preparation, remaining charges and cone facing must be resolved; a single last-cast cooldown is not valid for this mantra.', source: 'https://wiki.guildwars2.com/wiki/Mantra_of_Liberation' },
   { name: 'Stand Your Ground!', kind: 'stunbreak', cooldownMs: 24000, maxReach: 600, assumedProfession: 'Firebrand', skillId: 9153, preventionOnly: true, response: 'Allied stability is preventive. The stunbreak affects the caster only, so this cannot remove an ally\'s existing stun.', source: 'https://wiki.guildwars2.com/wiki/%22Stand_Your_Ground!%22' },
   { name: 'Spirit of Nature', kind: 'revive', cooldownMs: 120000, maxReach: 960, assumedProfession: 'Druid', skillId: 12569, response: 'Summons the spirit whose Nature\'s Renewal slam revives downed allies. Summon completion, slam timing and spirit placement remain unresolved.', source: 'https://wiki.guildwars2.com/wiki/Spirit_of_Nature' },
@@ -123,7 +125,7 @@ export function eventResponses(report: WvWReport, fightId: string, event: Combat
     }
   }
   return { event, kind, targetResolved: Boolean(target), rotationAvailable: Boolean(fight), candidates,
-    supportedSkills: rules.map(r => r.name), referenceMode: 'WvW reference / reviewed 2026-09-10',
+    supportedSkills: rules.map(r => r.name), referenceMode: 'WvW reference / reviewed 2026-09-18',
     metaAssumptions: ['Firebrand: Mantra of Liberation and Stand Your Ground!', 'Druid: Spirit of Nature', 'Equipped is assumed, not readiness, mantra preparation or remaining charges.'],
     limitations: ['Supported recorded skills and user-defined Firebrand/Druid loadout assumptions are assessed. Other never-cast skills remain unknown.',
       'Recharge estimates apply recorded Alacrity, Chill and Resistance plus provable profession mechanics. Unverified traits, sigils, triggers and loadout changes remain candidates.',

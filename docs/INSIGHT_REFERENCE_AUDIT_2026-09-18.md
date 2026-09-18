@@ -1,0 +1,48 @@
+# Insight reference audit - 2026-09-18
+
+This audit records the source hierarchy used by Insight so the app does not mix baseline API values with WvW balance splits or treat optional parser output as complete evidence.
+
+## Source hierarchy
+
+1. ArenaNet `/v2/skills` identifies the skill, icon, description, structured facts, baseline recharge, range, radius and related skill records.
+2. Guild Wars 2 Wiki mode-split infobox data overrides baseline recharge or behavior for WvW. The API currently returns baseline values and does not expose competitive-mode splits.
+3. ArcDPS EVTC defines recorded combat result values. Entropy follows the current `cbtresult` enumeration rather than inferring numeric meanings.
+4. Elite Insights defines dps.report JSON semantics. Timeline `States` are transition pairs of `[time, stack count]` and are emitted only when `RawTimelineArrays` is enabled.
+5. A missing timeline, cast, position, trait, sigil, resource or recipient remains missing evidence. It must not be converted into a negative event or a certain missed opportunity.
+
+## Reviewed WvW response references
+
+| Skill | API ID | WvW recharge used | Reach model |
+| --- | ---: | ---: | --- |
+| Signet of Mercy | 9163 | 90s | 900 range + 180 radius = 1080 outer reference boundary |
+| Battle Standard | 14419 | 120s | 600 range + 360 revival radius = 960 outer reference boundary |
+| Eye of the Storm! | 30047 | 30s | 600 radius |
+| Purging Flames | 9187 | 28s | 900 range + 180 radius = 1080 outer reference boundary |
+| Null Field | 10203 | 45s | 900 range + 240 radius = 1140 outer reference boundary |
+| Stand Your Ground! | 9153 | 24s | 600 radius; allied Stability is preventive and the stunbreak is self-only |
+| Mantra of Liberation | 43357 | not modeled as a single cooldown | Prepared charges, activation skill, cone facing and remaining ammunition must be resolved separately |
+| Spirit of Nature | 12569 | 120s | 600 range + 360 radius = 960 outer reference boundary |
+
+The summed range and radius figures are permissive two-dimensional outer boundaries, not proof that a cast could reach. Line of sight, elevation, facing, placement, target eligibility, animation state and actual recipients remain unresolved unless separately recorded.
+
+## Correctness changes from this audit
+
+- Stability fact descriptions are no longer parsed as offensive control effects. ArenaNet's Stability description lists the control types it prevents, which previously could make a support skill look like an incoming crowd-control skill.
+- Battle Standard now has a documented 960-unit outer reference boundary instead of an unknown reach.
+- Purging Flames remains 28 seconds in WvW. The API's 20-second value is the PvE baseline and must not override the WvW split.
+- Regression tests pin the reviewed WvW values and the Stability-description exclusion.
+
+## Primary references
+
+- ArenaNet skill API: https://api.guildwars2.com/v2/skills
+- Guild Wars 2 Wiki API: https://wiki.guildwars2.com/api.php
+- ArcDPS EVTC format: https://www.deltaconnected.com/arcdps/evtc/README.txt
+- Elite Insights parser and JSON models: https://github.com/baaron4/GW2-Elite-Insights-Parser
+
+## Next hardening steps
+
+- Persist the game build and reference-catalog revision with every report analysis.
+- Add a scheduled or release-time parity check that compares reviewed skill IDs with the API and flags changed structured facts.
+- Keep WvW split values in a versioned catalog rather than scattering them through UI components.
+- Store evidence provenance on every computed assessment: recorded event, API fact, WvW override, parser-derived state or bounded inference.
+- Test against modern Elite Insights JSON with and without `RawTimelineArrays` so coverage degrades explicitly rather than changing the conclusion silently.

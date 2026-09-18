@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { eventResponses, responseKind } from '../insight/eventResponses';
+import { eventResponses, RESPONSE_RULES, responseKind } from '../insight/eventResponses';
 import type { WvWReport } from '../../types/report';
 import type { CombatMoment } from '../insight/combatConnections';
 const event: CombatMoment = { time: 150000, end: 160000, kind: 'down', label: 'Downstate', account: 'victim' };
@@ -9,6 +9,10 @@ function fixture() {
     replayFights: [{ fightId: 'f', data: { players: ['victim', 'ready', 'cooling', 'unknown', 'enemy', 'break', 'self'].map(account => ({ account, inSquad: account !== 'enemy', downIntervals: [], deadIntervals: [], effects: [] })) } }] } } as unknown as WvWReport;
 }
 describe('Timeline response assessment', () => {
+  it('uses reviewed WvW recharge and reach references', () => {
+    expect(RESPONSE_RULES.find(rule => rule.name === 'Purging Flames')).toMatchObject({ skillId: 9187, cooldownMs: 28_000, maxReach: 1_080 });
+    expect(RESPONSE_RULES.find(rule => rule.name === 'Battle Standard')).toMatchObject({ skillId: 14419, cooldownMs: 120_000, maxReach: 960 });
+  });
   it('separates cooldown states, future-only anchors, and enemies', () => {
     const report = fixture(), before = JSON.stringify(report);
     const rows = eventResponses(report, 'f', event, 'revive').candidates;

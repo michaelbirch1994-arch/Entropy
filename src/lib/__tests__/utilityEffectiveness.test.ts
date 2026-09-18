@@ -96,6 +96,10 @@ describe('utility effectiveness', () => {
     expect(hardControlReference({ ...enemyControlSkill, facts: [], traited_facts: [{ type: 'Buff', status: 'Daze', requires_trait: 99 }] }))
       .toMatchObject({ types: ['daze'], source: 'api-traited-facts', conditional: true });
     expect(hardControlReference(breakSkill).types).toEqual([]);
+    expect(hardControlReference({
+      ...stabilitySkill,
+      facts: [{ type: 'Buff', status: 'Stability', description: 'Cannot be knocked down, pushed back, pulled, launched, stunned, dazed, floated, sunk, feared, or taunted.' }],
+    }).types).toEqual([]);
     expect(conditionReference(enemyChillSkill)).toMatchObject({ conditions: ['Chilled'], source: 'api-facts', conditional: false });
     expect(conditionReference({ ...enemyChillSkill, facts: [], description: 'Remove chilled from yourself.' }).conditions).toEqual([]);
   });
