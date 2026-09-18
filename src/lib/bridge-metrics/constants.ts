@@ -24,7 +24,7 @@ export const AEGIS_BOON_ID = 743;
 export const BULK_PROCESS_CONCURRENCY = 3;
 
 /** Maximum wall time for one raw-log upload, including safe retries/fallback. */
-export const DPS_REPORT_UPLOAD_TIMEOUT_MS = 3 * 60 * 1000;
+export const DPS_REPORT_UPLOAD_TIMEOUT_MS = 15 * 60 * 1000;
 
 /** Maximum wall time for retrieving one parsed Elite Insights payload. */
-export const DPS_REPORT_FETCH_TIMEOUT_MS = 90 * 1000;
+export const DPS_REPORT_FETCH_TIMEOUT_MS = 5 * 60 * 1000;

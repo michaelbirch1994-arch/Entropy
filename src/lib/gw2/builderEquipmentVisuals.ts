@@ -1,3 +1,4 @@
+import { reportImageSrc } from "../../utils/reportImageAssets";
 const GW2_WIKI_FILE = "https://wiki.guildwars2.com/wiki/Special:Redirect/file";
 
 export const BUILDER_ARMOR_SLOT_ICONS: Record<string, string> = {
@@ -45,4 +46,8 @@ export function builderWeaponIcon(weapon: string | undefined): string | undefine
   const normalized = weapon.toLowerCase().replace(/[^a-z]/g, "");
   const key = normalized === "harpoongun" || normalized === "speargun" ? "harpoon" : normalized;
   return BUILDER_WEAPON_ICONS[key];
+}
+
+for (const icons of [BUILDER_ARMOR_SLOT_ICONS, BUILDER_WEAPON_ICONS]) {
+  for (const key of Object.keys(icons)) icons[key] = reportImageSrc(icons[key])!;
 }

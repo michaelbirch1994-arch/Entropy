@@ -70,3 +70,15 @@ button.theme-player-card:active {
 /* View entrances are handled once on .animate-view in Global.css. Keeping
    child chart panels transform-free prevents responsive canvases from being
    measured while their containers are still moving. */
+@keyframes entropy-import-arrival {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.entropy-import-arrival {
+  animation: entropy-import-arrival 400ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entropy-import-arrival { animation: none; }
+}

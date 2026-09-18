@@ -1,4 +1,4 @@
-import { memo, type PointerEventHandler, type RefObject } from "react";
+import { memo, useRef, useState, type PointerEventHandler, type RefObject } from "react";
 import { interpolateFacing, interpolatePosition, isInInterval, type ReplayData } from "../../lib/parseReplayData";
 import type { ReplayIntelligenceAnchor } from "../../lib/replayIntelligenceAnchors";
 import { classIconSrc } from "../../data/classIconAssets";
@@ -58,7 +58,7 @@ interface ReplayMapStageProps {
   onPointerDown: PointerEventHandler<SVGSVGElement>;
   onPointerMove: PointerEventHandler<SVGSVGElement>;
   onPointerUp: PointerEventHandler<SVGSVGElement>;
-  onSelectPlayer: (account: string) => void;
+  onSelectPlayer: (account: string | null) => void;
 }
 
 /**
@@ -93,6 +93,13 @@ export function ReplayMapStage({
   onSelectPlayer,
 }: ReplayMapStageProps) {
   const intelligenceAccounts = new Set(alignedIntelligenceEvent?.accounts ?? []);
+  const [hoveredAccount, setHoveredAccount] = useState<string | null>(null);
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+  const moved = useRef(false);
+  const players = data.players.map((player, playerIndex) => ({ player, playerIndex }));
+  const priority = (account: string, commander: boolean) => account === hoveredAccount ? 3 : account === selectedAccount ? 2 : commander ? 1 : 0;
+  players.sort((a, b) => priority(a.player.account, a.player.isCommander) - priority(b.player.account, b.player.isCommander));
+  const placedLabels: { x: number; y: number; halfWidth: number }[] = [];
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-700/80 bg-black/70 shadow-[inset_0_0_50px_rgba(0,0,0,0.55)]">
@@ -102,10 +109,16 @@ export function ReplayMapStage({
         viewBox={viewBox}
         className={focusMode ? "h-[clamp(520px,60vh,760px)] w-full select-none touch-none" : "h-[420px] w-full select-none touch-none xl:h-[520px] 2xl:h-[600px]"}
         style={{ cursor: dragging ? "grabbing" : "grab" }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
+        onPointerDown={(event) => { pointerStart.current = { x: event.clientX, y: event.clientY }; moved.current = false; onPointerDown(event); }}
+        onPointerMove={(event) => {
+          if (pointerStart.current && Math.hypot(event.clientX - pointerStart.current.x, event.clientY - pointerStart.current.y) > 4) moved.current = true;
+          onPointerMove(event);
+        }}
         onPointerUp={onPointerUp}
+        onPointerCancel={(event) => { moved.current = true; pointerStart.current = null; setHoveredAccount(null); onPointerUp(event); }}
         onPointerLeave={onPointerUp}
+        onClick={() => { if (!moved.current) onSelectPlayer(null); pointerStart.current = null; }}
+        onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onSelectPlayer(null); } }}
       >
         <defs>
           <marker id="replay-facing-arrow" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
@@ -164,7 +177,7 @@ export function ReplayMapStage({
             );
           })}
 
-          {data.players.map((player, playerIndex) => {
+          {players.map(({ player, playerIndex }) => {
             const point = interpolatePosition(player.points, timestampMs);
             if (!point || isInInterval(player.deadIntervals, timestampMs)) return null;
             const down = isInInterval(player.downIntervals, timestampMs);
@@ -183,7 +196,23 @@ export function ReplayMapStage({
               <g
                 key={`${player.account}-${playerIndex}`}
                 transform={replayActorTransform(point.x, point.y)}
-                onClick={(event) => { event.stopPropagation(); onSelectPlayer(player.account); }}
+                onClick={(event) => { event.stopPropagation(); if (!moved.current) onSelectPlayer(selected ? null : player.account); pointerStart.current = null; }}
+                onPointerEnter={() => setHoveredAccount(player.account)}
+                onPointerDown={(event) => { if (event.pointerType === "mouse") event.preventDefault(); }}
+                onPointerLeave={() => setHoveredAccount(null)}
+                role="button"
+                tabIndex={0}
+                aria-label={`${player.name}, ${player.profession}${player.isCommander ? ", commander" : ""}`}
+                aria-pressed={selected}
+                onFocus={() => setHoveredAccount(player.account)}
+                onBlur={() => setHoveredAccount(null)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onSelectPlayer(selected ? null : player.account);
+                  }
+                }}
                 className="cursor-pointer"
               >
                 <title>{`${player.name} · ${player.profession}${player.isCommander ? " · commander" : ""}${down ? " · downed" : ""}${intelligenceParticipant ? " · Intelligence event participant" : ""}`}</title>
@@ -212,18 +241,30 @@ export function ReplayMapStage({
                     <clipPath id={clipId}>
                       <circle cx={0} cy={0} r={iconRadius} />
                     </clipPath>
+                    <circle cx={0} cy={0} r={iconRadius} fill="#111820" pointerEvents="none" />
                     <image href={iconSrc} x={-iconRadius} y={-iconRadius} width={iconRadius * 2} height={iconRadius * 2} clipPath={`url(#${clipId})`} preserveAspectRatio="xMidYMid slice" opacity={down ? 0.55 : 1} />
                     <circle cx={0} cy={0} r={iconRadius} fill="none" stroke={outlineColor} strokeWidth={1 * markerUnit} />
                   </>
                 ) : (
                   <circle cx={0} cy={0} r={iconRadius} fill={player.inSquad ? "#475569" : "#334155"} fillOpacity={down ? 0.35 : 0.95} stroke={outlineColor} strokeWidth={1 * markerUnit} />
                 )}
-                {(selected || player.isCommander) && (
-                  <text x={0} y={-(baseRadius + 6) * markerUnit} textAnchor="middle" fontSize={9 * markerUnit} fontWeight="800" fill={selected ? "#fef3c7" : "#e2e8f0"} stroke="#020617" strokeWidth={2.5 * markerUnit} paintOrder="stroke">{shortName(player.name)}</text>
-                )}
               </g>
             );
           })}
+          <g pointerEvents="none" data-replay-labels="true">
+            {players.map(({ player, playerIndex }) => {
+              const selected = player.account === selectedAccount;
+              if (!selected && !player.isCommander && player.account !== hoveredAccount) return null;
+              const point = interpolatePosition(player.points, timestampMs);
+              if (!point || isInInterval(player.deadIntervals, timestampMs)) return null;
+              const label = shortName(player.name);
+              const halfWidth = label.length * 3.2 * markerUnit;
+              let y = point.y - (player.isCommander ? 16.5 : 13.5) * markerUnit;
+              while (placedLabels.some(other => Math.abs(other.x - point.x) < other.halfWidth + halfWidth && Math.abs(other.y - y) < 13 * markerUnit)) y -= 14 * markerUnit;
+              placedLabels.push({ x: point.x, y, halfWidth });
+              return <text key={`${player.account}-${playerIndex}`} x={point.x} y={y} textAnchor="middle" fontSize={9 * markerUnit} fontWeight="800" fill={selected ? "#fef3c7" : "#e2e8f0"} stroke="#020617" strokeWidth={2.5 * markerUnit} paintOrder="stroke">{label}</text>;
+            })}
+          </g>
         </g>
       </svg>
     </div>

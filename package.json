@@ -2,6 +2,7 @@
   "name": "vite-react-typescript-starter",
   "private": true,
   "version": "0.2.101",
+  "packageManager": "pnpm@11.19.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +10,9 @@
     "audit:ui": "node scripts/audit-ui-surfaces.mjs --markdown",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "pnpm test:unit && pnpm test:node",
+    "test:unit": "vitest run",
+    "test:node": "node --test \"scripts/*.test.mjs\"",
     "tauri": "tauri"
   },
   "dependencies": {
@@ -21,6 +24,7 @@
     "@tauri-apps/plugin-process": "^2",
     "@tauri-apps/plugin-updater": "^2",
     "@vercel/blob": "^2.8.0",
+    "@zip.js/zip.js": "^2.14.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.43.0",
     "lucide-react": "^1.27.0",

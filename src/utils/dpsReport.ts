@@ -17,6 +17,8 @@ import {
   DPS_REPORT_UPLOAD_TIMEOUT_MS,
 } from "../lib/bridge-metrics/constants";
 
+export { isRawLogFile } from "./rawLogFile";
+
 export interface DpsReportUploadResult {
   id: string;
   permalink: string;
@@ -74,8 +76,8 @@ function createTimedSignal(externalSignal: AbortSignal | undefined, timeoutMs: n
   };
 }
 
-function uploadEndpoint(base: string): string {
-  return `${base}/uploadContent?json=1&generator=ei&detailedwvw=true`;
+function uploadEndpoint(base: string, detailedWvw: boolean): string {
+  return `${base}/uploadContent?json=1&generator=ei${detailedWvw ? "&detailedwvw=true" : ""}`;
 }
 
 function jsonEndpoint(base: string): string {
@@ -165,16 +167,11 @@ function waitForRetry(milliseconds: number, signal?: AbortSignal): Promise<void>
   });
 }
 
-/** Accepts .evtc/.zevtc/.evtc.zip files. */
-export function isRawLogFile(file: File): boolean {
-  const name = file.name.toLowerCase();
-  return name.endsWith(".zevtc") || name.endsWith(".evtc") || name.endsWith(".evtc.zip");
-}
-
 async function uploadRawLogToService(
   base: string,
   file: File,
   signal?: AbortSignal,
+  detailedWvw = true,
 ): Promise<DpsReportUploadResult> {
   const maxAttempts = 3;
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
@@ -183,7 +180,7 @@ async function uploadRawLogToService(
 
     let res: Response;
     try {
-      res = await fetch(uploadEndpoint(base), { method: "POST", body: form, signal });
+      res = await fetch(uploadEndpoint(base, detailedWvw), { method: "POST", body: form, signal });
     } catch (e) {
       throw new DpsReportUploadError(
         e instanceof Error && e.name === "AbortError"
@@ -241,6 +238,16 @@ export async function uploadRawLogToDpsReport(
       } catch (error) {
         if (!(error instanceof DpsReportUploadError)) throw error;
         if (error.code === "cancelled" || error.code === "rate-limited") throw error;
+        if (error.status === 500) {
+          try {
+            return await uploadRawLogToService(base, file, timed.signal, false);
+          } catch (fallbackError) {
+            if (!(fallbackError instanceof DpsReportUploadError)) throw fallbackError;
+            if (fallbackError.code === "cancelled" || fallbackError.code === "rate-limited") throw fallbackError;
+            lastError = fallbackError;
+            continue;
+          }
+        }
         lastError = error;
       }
     }

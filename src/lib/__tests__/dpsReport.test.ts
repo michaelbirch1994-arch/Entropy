@@ -101,6 +101,27 @@ describe("dps.report upload responses", () => {
     });
   });
 
+  it("falls back to a standard WvW parse when detailed parsing returns 500", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "Detailed parse failed" }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        id: "fallback-123",
+        permalink: "https://wvw.report/fallback-123_wvw",
+      }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }));
+
+    await expect(uploadRawLogToDpsReport(new File(["log"], "fight.zevtc"))).resolves.toMatchObject({
+      permalink: "fallback-123_wvw",
+    });
+    expect(String(fetchMock.mock.calls[0][0])).toContain("detailedwvw=true");
+    expect(String(fetchMock.mock.calls[1][0])).not.toContain("detailedwvw=true");
+  });
+
   it("times out a stalled parsed-log retrieval", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => new Promise((_resolve, reject) => {
       init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });

@@ -1,0 +1,21 @@
+.composition-workspace { container-type: inline-size; }
+.composition-workspace .truncate { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
+.composition-workspace .theme-role-coverage > div { min-height: 112px; border-radius: 6px; border-left-width: 3px; flex-wrap: wrap; }
+.composition-workspace .theme-role-coverage .text-lg { font-size: 24px; line-height: 1.25; }
+.composition-workspace .theme-role-coverage .text-\[9px\] { font-size: 11px; letter-spacing: 0; }
+.composition-identity { font-size: 13px; gap: 10px; }
+.composition-identity > :first-child { flex-shrink: 0; }
+.composition-share { display: grid; min-width: 0; gap: 5px; padding-block: 6px; }
+.composition-share strong { font-size: 17px; line-height: 1.3; color: #e9e9e2; font-variant-numeric: tabular-nums; }
+.composition-share-label, .composition-share-count { font-size: 10px; color: #b7b6af; overflow-wrap: anywhere; }
+.composition-share-track { display: block; height: 4px; background: #ffffff0b; overflow: hidden; }
+.composition-share-track > span { display: block; height: 100%; }
+.composition-workspace button[aria-pressed="true"] { background: #d9b65e12; box-shadow: inset 3px 0 #d9b65e; }
+.composition-workspace button:focus-visible { outline: 2px solid #d9b65e; outline-offset: -2px; }
+@container (max-width: 500px) {
+  .composition-workspace .theme-role-coverage { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .composition-workspace .theme-role-coverage > div { padding: 12px; }
+  .composition-workspace .theme-role-coverage > div > span { max-width: none; text-align: left; }
+  .composition-workspace .theme-role-coverage .text-lg { font-size: 20px; }
+  .composition-identity { font-size: 14px; }
+}

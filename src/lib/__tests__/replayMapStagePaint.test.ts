@@ -45,8 +45,7 @@ function replayData(): ReplayData {
   };
 }
 
-function renderFrame(timestampMs: number, showMap = false): string {
-  const data = replayData();
+function renderFrame(timestampMs: number, showMap = false, data = replayData(), selectedAccount: string | null = null): string {
   if (showMap) {
     data.map = {
       images: [{ url: "https://i.imgur.com/replay-map.png", startMs: 0, endMs: 1000, x: 0, y: 0 }],
@@ -61,7 +60,7 @@ function renderFrame(timestampMs: number, showMap = false): string {
       timestampMs,
       viewBox: "0 0 100 100",
       markerUnit: 1,
-      selectedAccount: null,
+      selectedAccount,
       alignedIntelligenceEvent: null,
       showMap,
       showMechanics: false,
@@ -80,6 +79,28 @@ function renderFrame(timestampMs: number, showMap = false): string {
 }
 
 describe("ReplayMapStage stable actor painting", () => {
+  it("paints a dark disc before the profession image", () => {
+    const frame = renderFrame(0);
+    expect(frame.indexOf('fill="#111820"')).toBeLessThan(frame.indexOf('<image'));
+    expect(frame).toContain('role="button" tabindex="0"');
+    expect(frame).toContain('aria-pressed="false"');
+  });
+
+  it("raises commanders and selection without changing original clip identities", () => {
+    const data = replayData();
+    const base = data.players[0];
+    data.players = [
+      { ...base, account: "commander", name: "Commander", isCommander: true },
+      { ...base, account: "selected", name: "Selected" },
+      { ...base, account: "ordinary", name: "Ordinary" },
+    ];
+    const frame = renderFrame(0, false, data, "selected");
+    expect(frame.indexOf('aria-label="Ordinary')).toBeLessThan(frame.indexOf('aria-label="Commander'));
+    expect(frame.indexOf('aria-label="Commander')).toBeLessThan(frame.indexOf('aria-label="Selected'));
+    expect(frame).toContain('replay-icon-clip-1-selected');
+    expect(frame.lastIndexOf('<image')).toBeLessThan(frame.indexOf('data-replay-labels="true"'));
+    expect(frame).toContain('aria-pressed="true"');
+  });
   it("encodes actor motion as one group transform", () => {
     expect(replayActorTransform(10, 20)).toBe("translate(10 20)");
     expect(replayActorTransform(30, 40)).toBe("translate(30 40)");

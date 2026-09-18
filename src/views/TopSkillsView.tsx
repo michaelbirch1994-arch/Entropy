@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useReport } from "../store/ReportContext";
+import { useView } from "../store/ViewContext";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { fmtCompact, fmtNum } from "../utils/format";
 import type { TopSkill, TopHealingSource } from "../types/report";
 import { getSampleReliability, sampleReliabilityClasses } from "../lib/sampleReliability";
-import { Zap, ArrowDownLeft, Flame, Trophy, HeartPulse } from "lucide-react";
+import { Zap, ArrowDownLeft, Flame, Trophy, HeartPulse, Search, X } from "lucide-react";
 
 type SortKey = "damage" | "downContribution" | "hits";
 type Tab = "outgoing" | "incoming" | "healing";
@@ -47,7 +48,7 @@ function SkillIcon({ src, index }: { src?: string; index: number }) {
   }
   return (
     <img
-      src={src}
+      src={reportImageSrc(src)}
       alt=""
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
@@ -395,9 +396,24 @@ function LifeStealSpotlight({
 
 export default function TopSkillsView() {
   const { report } = useReport();
+  const { navigationTarget, clearNavigationTarget } = useView();
   const [tab, setTab] = useState<"outgoing" | "incoming" | "healing">("outgoing");
   const [sort, setSort] = useState<SortKey>("damage");
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (navigationTarget?.targetView !== "top-skills") return;
+    const match = navigationTarget.metric?.match(/^skill:(outgoing|incoming):(\d+)$/);
+    if (!match) return;
+    const [, direction, skillId] = match;
+    setTab(direction as "outgoing" | "incoming");
+    setSort("damage");
+    setQuery(skillId);
+    setExpandedKey(`${direction}:${skillId}`);
+    clearNavigationTarget();
+  }, [navigationTarget, clearNavigationTarget]);
+
   if (!report) return null;
   const s = report.stats;
 
@@ -515,8 +531,14 @@ export default function TopSkillsView() {
     );
   }
 
-  const skills: TopSkill[] = tab === "outgoing" ? s.topSkills : s.topIncomingSkills;
+  const hasFullCatalog = tab === "outgoing" ? Array.isArray(s.allSkills) : Array.isArray(s.allIncomingSkills);
+  const skills: TopSkill[] = tab === "outgoing" ? (s.allSkills ?? s.topSkills) : (s.allIncomingSkills ?? s.topIncomingSkills);
   const sorted = [...skills].sort((a, b) => b[sort] - a[sort]);
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleSkills = normalizedQuery
+    ? sorted.filter((skill) => skill.name.toLowerCase().includes(normalizedQuery) || String(skill.id).includes(normalizedQuery))
+    : sorted.slice(0, 20);
+  const rankById = new Map(sorted.map((skill, index) => [skill.id, index + 1]));
   const maxActive = Math.max(...sorted.map((x) => metricValueForSkill(x, sort)), 1);
   const maxDmg = Math.max(...sorted.map((x) => x.damage), 1);
   const maxDc = Math.max(...sorted.map((x) => x.downContribution), 1);
@@ -534,6 +556,24 @@ export default function TopSkillsView() {
     // (and replay the entrance animation) on every "Sort by" click.
     <div className="entropy-skills-report space-y-5 animate-view pb-12" data-skill-tab={tab} key={`${tab}-view`}>
       <TabRow tab={tab} setTab={setTab} />
+
+      <div className="flex flex-col gap-2 border border-theme-border bg-theme-surface px-3 py-3 sm:flex-row sm:items-center">
+        <label className="flex min-w-0 flex-1 items-center gap-2 bg-theme-surface-inset px-3 py-2 text-theme-muted focus-within:text-theme-text">
+          <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <input
+            aria-label={`Search every recorded ${tab} damage skill`}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={`Search every ${tab} skill by name or ID`}
+            className="min-w-0 flex-1 bg-transparent text-sm text-theme-text outline-none placeholder:text-theme-muted"
+          />
+          {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear skill search" title="Clear search" className="text-theme-muted hover:text-theme-text"><X className="h-4 w-4" /></button>}
+        </label>
+        <span className="shrink-0 text-[10px] font-mono uppercase tracking-wider text-theme-muted">
+          {normalizedQuery ? `${visibleSkills.length} of ${sorted.length} matched` : `Top 20 of ${sorted.length}`}
+        </span>
+      </div>
+      {!hasFullCatalog && <p className="text-[10px] text-theme-muted">This saved report retained its original ranked set. Re-importing its logs enables complete below-cutoff search.</p>}
 
       {/* Sort selector */}
       <div className="flex items-center gap-2 text-[11px]">
@@ -564,8 +604,9 @@ export default function TopSkillsView() {
       )}
 
       {/* Skills grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`${tab}:grid:${sort}:${sorted.map((x) => `${x.id}:${metricValueForSkill(x, sort)}`).join("|")}`}>
-        {sorted.slice(0, 20).map((sk, i) => {
+      {visibleSkills.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key={`${tab}:grid:${sort}:${visibleSkills.map((x) => `${x.id}:${metricValueForSkill(x, sort)}`).join("|")}`}>
+        {visibleSkills.map((sk) => {
+          const rank = rankById.get(sk.id) ?? 0;
           const healingMatch = tab === "outgoing" ? healingById.get(sk.id) : undefined;
           const activeValue = metricValueForSkill(sk, sort);
           return (
@@ -578,7 +619,7 @@ export default function TopSkillsView() {
             >
               <div className="entropy-skill-card-head flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <SkillIcon src={sk.icon || healingMatch?.icon} index={i} />
+                  <SkillIcon src={sk.icon || healingMatch?.icon} index={Math.max(0, rank - 1)} />
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-bold text-theme-text">{sk.name}</span>
@@ -596,8 +637,8 @@ export default function TopSkillsView() {
                     />
                   </div>
                 </div>
-                <span className={`text-xs font-black font-mono ${i < 3 ? "text-amber-400" : "text-theme-muted"}`}>
-                  #{i + 1}
+                <span className={`text-xs font-black font-mono ${rank <= 3 ? "text-amber-400" : "text-theme-muted"}`}>
+                  #{rank}
                 </span>
               </div>
 
@@ -671,7 +712,8 @@ export default function TopSkillsView() {
             </button>
           );
         })}
-      </div>
+      </div> : <div className="entropy-empty-state"><Search size={24} /><strong>No matching skill</strong><p>No recorded {tab} damage skill matches &quot;{query.trim()}&quot;.</p></div>}
     </div>
   );
 }
+import { reportImageSrc } from "../utils/reportImageAssets";

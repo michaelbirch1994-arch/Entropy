@@ -15,6 +15,7 @@ export interface CachedReport {
   id: string;
   source: ReportSource;
   savedAt: number;
+  imageAssetsLocalized?: boolean;
   report: WvWReport;
 }
 

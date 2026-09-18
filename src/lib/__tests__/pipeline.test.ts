@@ -326,6 +326,25 @@ function buildEvtc(opts: { agentName?: string; account?: string } = {}): ArrayBu
     return buf;
 }
 
+function buildHostileCombatEvtc(): ArrayBuffer {
+      const enc = new TextEncoder(), agentCount = 2, skillCount = 1, eventCount = 2;
+      const buffer = new ArrayBuffer(16 + 4 + agentCount * 96 + 4 + skillCount * 68 + eventCount * EVENT_SIZE);
+      const bytes = new Uint8Array(buffer), data = new DataView(buffer);
+      bytes.set(enc.encode('EVTC'), 0); bytes.set(enc.encode('20260914'), 4); bytes[12] = 1; data.setUint16(13, 1, true);
+      let offset = 16; data.setUint32(offset, agentCount, true); offset += 4;
+      data.setBigUint64(offset, 3000n, true); data.setUint32(offset + 8, 123, true); data.setUint32(offset + 12, 0xffffffff, true);
+      bytes.set(enc.encode('Enemy player'), offset + 28); offset += 96;
+      data.setBigUint64(offset, 2000n, true); data.setUint32(offset + 8, 1, true); data.setUint32(offset + 12, 65, true);
+      bytes.set(enc.encode(`Target\0:Target.1234\0${'1'}\0`), offset + 28); offset += 96;
+      data.setUint32(offset, skillCount, true); offset += 4; data.setInt32(offset, 3, true);
+      bytes.set(enc.encode('Driving Hammer'), offset + 4); offset += 68;
+      data.setBigUint64(offset, 1000n, true); bytes[offset + 56] = CBTS.SQUAD_COMBAT_START; offset += EVENT_SIZE;
+      data.setBigUint64(offset, 1250n, true); data.setBigUint64(offset + 8, 3000n, true); data.setBigUint64(offset + 16, 2000n, true);
+      data.setInt32(offset + 24, 500, true); data.setUint32(offset + 36, 3, true); data.setUint16(offset + 40, 7, true);
+      data.setUint16(offset + 42, 9, true); bytes[offset + 48] = 1; bytes[offset + 50] = 12;
+      return buffer;
+}
+
 describe('native EVTC parser', () => {
       it('parses the header, agents and skills', () => {
                 const log = parseEvtc(buildEvtc());
@@ -362,6 +381,16 @@ describe('native EVTC parser', () => {
                        // Named to make misuse obvious at the call site.
                         expect(e.overstackValueUnverified).toBe(2085);
                        expect(e.signature).toBe(2627419289);
+             });
+
+             it('retains hostile skill results aimed at players on the squad combat clock', () => {
+                       const log = parseEvtc(buildHostileCombatEvtc());
+                       expect(log.combatClockSource).toBe('squad-combat-start');
+                       expect(log.combatEvents).toMatchObject([{
+                                 timeMs: 250, skillId: 3, result: 12, value: 500,
+                                 source: { name: 'Enemy player', isPlayer: false },
+                                 target: { name: 'Target', account: ':Target.1234', isPlayer: true },
+                       }]);
              });
 
              it('rejects non-EVTC and unsupported revisions instead of misparsing', () => {

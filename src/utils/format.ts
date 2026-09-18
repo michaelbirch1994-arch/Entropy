@@ -96,15 +96,15 @@ export const PROFESSION_FAMILY: Record<string, string> = {
 };
 
 export const PROFESSION_COLORS: Record<string, { bg: string; text: string; border: string; dot: string }> = {
-    guardian: { bg: "bg-sky-950/50", text: "text-sky-400", border: "border-sky-500/30", dot: "bg-sky-400" },
-    warrior: { bg: "bg-yellow-950/50", text: "text-yellow-400", border: "border-yellow-500/30", dot: "bg-yellow-400" },
-    revenant: { bg: "bg-red-950/50", text: "text-red-500", border: "border-red-700/40", dot: "bg-red-700" },
-    engineer: { bg: "bg-orange-950/50", text: "text-orange-400", border: "border-orange-500/30", dot: "bg-orange-400" },
-    ranger: { bg: "bg-lime-950/50", text: "text-lime-400", border: "border-lime-500/30", dot: "bg-lime-400" },
-    thief: { bg: "bg-rose-950/50", text: "text-rose-300", border: "border-rose-400/30", dot: "bg-rose-300" },
-    elementalist: { bg: "bg-red-950/50", text: "text-red-400", border: "border-red-500/30", dot: "bg-red-400" },
-    necro: { bg: "bg-green-950/50", text: "text-green-400", border: "border-green-500/30", dot: "bg-green-400" },
-    mesmer: { bg: "bg-fuchsia-950/50", text: "text-fuchsia-400", border: "border-fuchsia-500/30", dot: "bg-fuchsia-400" },
+    guardian: { bg: "bg-sky-950/50", text: "text-[#2bbee3]", border: "border-sky-500/30", dot: "bg-sky-400" },
+    warrior: { bg: "bg-yellow-950/50", text: "text-[#f9be40]", border: "border-yellow-500/30", dot: "bg-yellow-400" },
+    revenant: { bg: "bg-red-950/50", text: "text-[#df655c]", border: "border-red-700/40", dot: "bg-red-700" },
+    engineer: { bg: "bg-orange-950/50", text: "text-[#df955c]", border: "border-orange-500/30", dot: "bg-orange-400" },
+    ranger: { bg: "bg-lime-950/50", text: "text-[#88d828]", border: "border-lime-500/30", dot: "bg-lime-400" },
+    thief: { bg: "bg-rose-950/50", text: "text-[#c8717c]", border: "border-rose-400/30", dot: "bg-rose-300" },
+    elementalist: { bg: "bg-red-950/50", text: "text-[#e94045]", border: "border-red-500/30", dot: "bg-red-400" },
+    necro: { bg: "bg-green-950/50", text: "text-[#00d87d]", border: "border-green-500/30", dot: "bg-green-400" },
+    mesmer: { bg: "bg-fuchsia-950/50", text: "text-[#b844e4]", border: "border-fuchsia-500/30", dot: "bg-fuchsia-400" },
   default: { bg: "bg-slate-800/40", text: "text-slate-300", border: "border-slate-600/30", dot: "bg-slate-400" },
 };
 

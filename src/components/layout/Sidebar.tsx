@@ -3,9 +3,10 @@ import {
   ChevronDown, PanelLeftClose, PanelLeftOpen, Activity, Target, Users, Shield, Zap,
   Swords, Trophy, Layers, Map as MapIcon, Sparkles, Percent, Clock,
   LineChart as LineChartIcon, Film, Crosshair, Skull, Star, Archive, GitCompare,
-  FlaskConical, Search, Settings2, Flame,
+  Calculator, FlaskConical, Search, Settings2, Flame,
 } from "lucide-react";
 import { VIEW_SECTIONS, type ViewRegistryItem } from "../../lib/viewRegistry";
+import { preloadView, preloadViewsWhenIdle } from "../../lib/viewPreload";
 import { useWorkspacePreferences } from "../../theme/WorkspacePreferences";
 import EntropyLogo from "../ui/EntropyLogo";
 import SelectionIndicator from "../ui/SelectionIndicator";
@@ -54,6 +55,22 @@ export default function Sidebar({ activeView, setActiveView, hasReport = true, o
     media.addEventListener("change", resize);
     return () => media.removeEventListener("change", resize);
   }, []);
+  useEffect(() => {
+    const section = VIEW_SECTIONS.find((candidate) => candidate.items.some((item) => item.id === activeView));
+    if (!section) return;
+
+    const items = section.items.filter((item) => item.id !== activeView && (hasReport || item.requiresReport === false));
+    const activeIndex = section.items.findIndex((item) => item.id === activeView);
+    const nearbyViews = items
+      .sort((left, right) => {
+        const leftDistance = Math.abs(section.items.findIndex((item) => item.id === left.id) - activeIndex);
+        const rightDistance = Math.abs(section.items.findIndex((item) => item.id === right.id) - activeIndex);
+        return leftDistance - rightDistance;
+      })
+      .map((item) => item.id);
+
+    return preloadViewsWhenIdle(nearbyViews);
+  }, [activeView, hasReport]);
 
   function toggleCompact() {
     if (narrow) setMobileOpen((value) => !value);
@@ -67,6 +84,9 @@ export default function Sidebar({ activeView, setActiveView, hasReport = true, o
 
   function renderItem(item: ViewRegistryItem, indicatorVisible = true) {
     return <button type="button" key={item.id} onClick={() => navigate(item.id)}
+      onPointerEnter={() => { void preloadView(item.id); }}
+      onFocus={() => { void preloadView(item.id); }}
+      onTouchStart={() => { void preloadView(item.id); }}
       className="entropy-nav-link" aria-current={activeView === item.id ? "page" : undefined}
       aria-label={item.label} title={compact ? item.label : undefined}>
       {activeView === item.id && indicatorVisible && <SelectionIndicator id={selectionId} variant="navigation" />}
@@ -164,5 +184,8 @@ export const VIEW_ICONS: Record<string, ReactNode> = {
   archive: <Archive className="w-4 h-4" />,
   compare: <GitCompare className="w-4 h-4" />,
   intelligence: <Sparkles className="w-4 h-4" />,
+  insight: <Sparkles className="w-4 h-4" />,
+  raw: <Activity className="w-4 h-4" />,
   "axiforge-lab": <FlaskConical className="w-4 h-4" />,
+  "effective-power": <Calculator className="w-4 h-4" />,
 };

@@ -1,0 +1,29 @@
+.classes-workspace { container-type: inline-size; }
+.classes-workspace .theme-role-coverage > div { border-radius: 6px; min-height: 112px; border-left-width: 3px; }
+.classes-workspace .theme-role-coverage .text-2xl { font-size: 32px; line-height: 1.2; }
+.classes-workspace .theme-role-coverage .text-\[9px\] { font-size: 11px; letter-spacing: 0; }
+.classes-index-identity { gap: 12px; font-size: 14px; }
+.classes-index-identity > :first-child { flex-shrink: 0; }
+.classes-index-identity > span:last-child { overflow-wrap: anywhere; }
+.classes-detail-grid button[aria-pressed] { min-height: 60px; }
+.classes-detail-grid button[aria-pressed] > .font-mono { font-size: 16px; font-variant-numeric: tabular-nums; }
+.classes-detail-grid button[aria-pressed="true"] { background: #d9b65e12; box-shadow: inset 3px 0 #d9b65e; }
+.classes-profession-header { padding: 12px 0 24px; }
+.classes-profession-header > :first-child { width: 64px; height: 64px; }
+.classes-profession-header > :first-child img { width: 52px; height: 52px; object-fit: contain; }
+.classes-profession-header .text-xl { font-size: 24px; overflow-wrap: anywhere; }
+.classes-workspace .truncate { white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
+.classes-workspace button:focus-visible { outline: 2px solid #d9b65e; outline-offset: -2px; }
+.classes-workspace [aria-label="Filter role classifications"] { gap: 0; border-bottom: 1px solid #ffffff18; }
+.classes-workspace [aria-label="Filter role classifications"] button { border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; font-size: 11px; letter-spacing: 0; }
+.classes-workspace [aria-label="Filter role classifications"] button[aria-pressed="true"] { border-bottom-color: #d9b65e; background: #d9b65e0d; }
+@container (max-width: 1000px) {
+  .classes-detail-grid > section:first-child [role="region"] { max-height: 260px; }
+}
+@container (max-width: 500px) {
+  .classes-profession-header { grid-template-columns: 64px minmax(0, 1fr); }
+  .classes-profession-header > :last-child { grid-column: 1 / -1; text-align: left; border-top: 1px solid #ffffff12; padding-top: 16px; }
+  .classes-workspace .theme-role-coverage { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .classes-workspace .theme-role-coverage > div { flex-wrap: wrap; padding: 12px; }
+  .classes-workspace .theme-role-coverage > div > span { max-width: none; text-align: left; }
+}

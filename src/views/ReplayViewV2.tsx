@@ -280,7 +280,12 @@ export default function ReplayViewV2() {
     return fight.data.players.find((player) => player.account === selectedAccount) ?? null;
   }, [fight, selectedAccount]);
 
-  const selectPlayer = useCallback((account: string) => {
+  const selectPlayer = useCallback((account: string | null) => {
+    if (account === null) {
+      setSelectedAccount(null);
+      setFollowFocus(false);
+      return;
+    }
     setPlaying(false);
     setSelectedAccount(account);
     setInspectorMode("player");

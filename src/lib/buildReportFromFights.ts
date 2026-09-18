@@ -20,6 +20,10 @@ import type { CombatEvent } from './combat/CombatEvent';
 import type { CriticalEvent, IntelligenceFinding } from './intelligence/types';
 import type { EngagementSegment } from './intelligence/engagementTypes';
 import { computeDistanceToTag } from './bridge-metrics/distanceToTag';
+import { executionActivity, summarizeExecutionActivity } from './insight/executionActivity';
+import { METRICS_VERSION } from './metricsVersion';
+
+export { METRICS_VERSION } from './metricsVersion';
 
 /**
  * Merge per-log incoming-healing breakdowns into one per player.
@@ -201,6 +205,7 @@ import { classifyPlayerRoles } from './bridge-metrics/classifyPlayerRoles';
 import { getProfessionColor } from './bridge-metrics/professionUtils';
 import { parseReplayData } from './parseReplayData';
 import type { RawFightLog, RawFightSummary } from '../types/rawFight';
+import type { EvtcLog } from './evtc/parseEvtc';
 import type {
     WvWReport,
     ReportStats,
@@ -229,6 +234,7 @@ import type {
     FightHighlight,
     DamageMitigationPlayer,
     DamageMitigationMinion,
+    IncomingSkillData,
 } from '../types/report';
 
 import { getFightOutcome } from "./bridge-metrics/computePlayerAggregation";
@@ -237,7 +243,6 @@ import { getFightOutcome } from "./bridge-metrics/computePlayerAggregation";
 // that version produced - updating the app does not retroactively fix it.
 // Bump this whenever a change alters computed output, so the UI can tell the
 // user to re-import instead of silently showing them stale figures.
-export const METRICS_VERSION = 'entropy-raw-v7';
 
 const NATURAL_FORTITUDE_SYNTHETIC_SKILL_ID = -1001779;
 const NATURAL_FORTITUDE_DAMAGE_PER_UNLEASHED_SKILL_HIT = 1779;
@@ -253,6 +258,8 @@ const NATURAL_FORTITUDE_TRIGGER_SKILLS: Record<string, { divisor: number }> = {
 export interface FightInput {
     summary: RawFightSummary;
     raw: RawFightLog;
+    /** Available only when the user supplied local EVTC/ZEVTC bytes. */
+    nativeEvtc?: EvtcLog;
 }
 
 // --- MVP weight table ---
@@ -562,7 +569,7 @@ const BOON_PRIORITY = [
 // view can offer the full set of dps.report-style tabs instead of just Boons.
 function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerStats[]): Record<string, BoonUptimeData> {
     const buffMetaByClass = new Map<string, Map<number, { name: string; icon?: string; stacking: boolean }>>();
-    const accByClass = new Map<string, Map<string, Map<number, { sum: number; count: number }>>>();
+    const accByClass = new Map<string, Map<string, Map<number, { sum: number; count: number; presenceSum: number; presenceCount: number }>>>();
     const groupByAccount = new Map<string, number>();
 
   for (const cls of Object.keys(BUFF_CLASSIFICATIONS)) {
@@ -613,7 +620,7 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
 
 
           const buffUptimes = (p.buffUptimes ?? []) as Array<{ id?: number; buffData?: Array<{ uptime?: number; presence?: number }> }>;
-          const fightBuffValues = new Map<number, number>();
+          const fightBuffValues = new Map<number, { uptime: number; presence?: number }>();
                 for (const entry of buffUptimes) {
                           const id = Number(entry?.id);
                           if (!Number.isFinite(id)) continue;
@@ -622,22 +629,24 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                           const meta = buffMetaByClass.get(cls)?.get(id);
                           const uptime = Number(entry?.buffData?.[0]?.uptime);
                           if (!Number.isFinite(uptime)) continue;
+                          const rawPresence = Number(entry?.buffData?.[0]?.presence);
+                          const presence = meta?.stacking && Number.isFinite(rawPresence) ? rawPresence : undefined;
                           // EI normally emits one phase-0 uptime row per buff, but
                           // defensive test fixtures and some transformed logs may
                           // carry duplicate ids. Treat the last row for a buff as
                           // the fight-level value and add it once below, instead of
                           // averaging duplicate rows inside the same fight.
-                          fightBuffValues.set(id, uptime);
+                          fightBuffValues.set(id, { uptime, presence });
                 }
 
-                fightBuffValues.forEach((uptime, id) => {
+                fightBuffValues.forEach(({ uptime, presence }, id) => {
                           const cls = idToClass.get(id);
                           if (!cls) return;
 
                   const accMapByAccount = accByClass.get(cls)!;
                           let accMap = accMapByAccount.get(account);
                           if (!accMap) { accMap = new Map(); accMapByAccount.set(account, accMap); }
-                          const cur = accMap.get(id) || { sum: 0, count: 0 };
+                          const cur = accMap.get(id) || { sum: 0, count: 0, presenceSum: 0, presenceCount: 0 };
                           // A plain mean across the fights a player joined, and every player is
                   // listed - this is deliberately the same methodology EI and dps.report
                   // use, so a column here can be read side by side with theirs. An
@@ -646,6 +655,10 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                   // meant the numbers no longer reconciled with either tool.
                   cur.sum += uptime;
                           cur.count += 1;
+                          if (presence !== undefined) {
+                              cur.presenceSum += presence;
+                              cur.presenceCount += 1;
+                          }
                           accMap.set(id, cur);
                 });
         }
@@ -673,9 +686,12 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
             .map((s) => {
                       const accMap = acc.get(s.account);
                       const uptimes: Record<number, number> = {};
+                      const presences: Record<number, number> = {};
                       if (accMap) {
                                   accMap.forEach((v, id) => {
-                                                if (columnIds.has(id)) uptimes[id] = v.count > 0 ? v.sum / v.count : 0;
+                                                if (!columnIds.has(id)) return;
+                                                uptimes[id] = v.count > 0 ? v.sum / v.count : 0;
+                                                if (v.presenceCount > 0) presences[id] = v.presenceSum / v.presenceCount;
                                   });
                       }
                       return {
@@ -685,6 +701,7 @@ function computeBuffCategoryUptimes(fights: FightInput[], playerEntries: PlayerS
                                   group: groupByAccount.get(s.account) ?? 0,
                                   logsJoined: s.logsJoined,
                                   uptimes,
+                                  ...(Object.keys(presences).length > 0 ? { presences } : {}),
                       };
             })
             .filter((row) => Object.keys(row.uptimes).length > 0)
@@ -811,6 +828,61 @@ function computeDamageModifiers(fights: FightInput[]): DamageModifierData {
       .sort((a, b) => a.group - b.group || a.account.localeCompare(b.account) || a.profession.localeCompare(b.profession));
 
   return { columns, rows, totalFights: fights.length };
+}
+
+function canonicalAccount(value: string | undefined) {
+    return (value ?? '').replace(/^:/, '').trim().toLowerCase();
+}
+
+/**
+ * Keep only native hostile skill results aimed at the squad. Skill semantics are
+ * resolved later against the current ArenaNet/wiki reference catalog in Insight.
+ */
+function computeIncomingSkillEvents(fights: FightInput[]): IncomingSkillData {
+    const rows: IncomingSkillData['fights'] = [];
+    fights.forEach((fight, index) => {
+        const native = fight.nativeEvtc;
+        if (!native) return;
+        const rawPlayers = ((fight.raw as Record<string, unknown>).players ?? []) as Array<Record<string, unknown>>;
+        const squadByAccount = new Map<string, { account: string; name: string }>();
+        const squadByName = new Map<string, { account: string; name: string }>();
+        for (const player of rawPlayers) {
+            if (player.notInSquad) continue;
+            const account = String(player.account ?? '').replace(/^:/, '').trim();
+            const name = String(player.name ?? account).trim();
+            if (!account) continue;
+            const member = { account, name };
+            squadByAccount.set(canonicalAccount(account), member);
+            if (name) squadByName.set(name.toLowerCase(), member);
+        }
+        const events = native.combatEvents.flatMap(event => {
+            const targetAccount = canonicalAccount(event.target?.account);
+            const target = squadByAccount.get(targetAccount)
+                ?? squadByName.get((event.target?.name ?? '').toLowerCase());
+            if (!target) return [];
+            const sourceAccount = (event.source?.account ?? '').replace(/^:/, '').trim();
+            if (sourceAccount && squadByAccount.has(canonicalAccount(sourceAccount))) return [];
+            return [{
+                timeMs: event.timeMs,
+                sourceName: event.source?.name || 'Unknown enemy',
+                sourceAccount: sourceAccount || undefined,
+                targetName: target.name,
+                targetAccount: target.account,
+                skillId: event.skillId,
+                skillName: native.skills.get(event.skillId) || `Skill ${event.skillId}`,
+                result: event.result,
+                amount: event.isBuff ? event.buffDamage : event.value,
+                isBuff: event.isBuff,
+            }];
+        }).sort((a, b) => a.timeMs - b.timeMs || a.skillId - b.skillId);
+        rows.push({
+            fightId: fight.summary.permalink || `${fight.summary.fightName}-${index}`,
+            fightName: fight.summary.fightName || `Fight ${index + 1}`,
+            clockSource: native.combatClockSource,
+            events,
+        });
+    });
+    return { fights: rows };
 }
 
 // Per-fight skill-cast timeline (dps.report's "Rotations" tab). Reads
@@ -956,7 +1028,14 @@ function computeDpsGraph(fights: FightInput[]): DpsGraphData {
 // `downContribution` field (the same field the vendored bridge-metrics code
 // reads for the player-level total in combatMetrics.ts) - down contribution is
 // an outgoing-damage concept, so it's only accumulated for outgoing skills.
-function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topIncomingSkills: TopSkill[]; topSkillsByDamage: TopSkill[]; topSkillsByDownContribution: TopSkill[] } {
+function computeTopSkills(fights: FightInput[]): {
+  topSkills: TopSkill[];
+  topIncomingSkills: TopSkill[];
+  allSkills: TopSkill[];
+  allIncomingSkills: TopSkill[];
+  topSkillsByDamage: TopSkill[];
+  topSkillsByDownContribution: TopSkill[];
+} {
     const naturalFortitude = computeNaturalFortitudeDamage(fights);
     const skillMeta = new Map<number, { name: string; icon?: string }>();
     const outgoing = new Map<number, { damage: number; hits: number; downContribution: number }>();
@@ -1178,12 +1257,15 @@ function computeTopSkills(fights: FightInput[]): { topSkills: TopSkill[]; topInc
 
     const outgoingRows = toRows(outgoing, outgoingBest, outgoingFightValues, outgoingFightPeaks, outgoingPlayers, outgoingActiveMs);
     const incomingRows = toRows(incoming, incomingBest, incomingFightValues, incomingFightPeaks, incomingPlayers, incomingActiveMs);
-  const byDamage = (rows: TopSkill[]) => [...rows].sort((a, b) => b.damage - a.damage || b.downContribution - a.downContribution).slice(0, 30);
+  const allByDamage = (rows: TopSkill[]) => [...rows].sort((a, b) => b.damage - a.damage || b.downContribution - a.downContribution);
+  const byDamage = (rows: TopSkill[]) => allByDamage(rows).slice(0, 30);
   const byDownContribution = (rows: TopSkill[]) => [...rows].sort((a, b) => b.downContribution - a.downContribution || b.damage - a.damage).slice(0, 30);
 
   return {
         topSkills: byDamage(outgoingRows),
         topIncomingSkills: byDamage(incomingRows),
+        allSkills: allByDamage(outgoingRows),
+        allIncomingSkills: allByDamage(incomingRows),
         topSkillsByDamage: byDamage(outgoingRows),
         topSkillsByDownContribution: byDownContribution(outgoingRows),
   };
@@ -2338,6 +2420,14 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
       }));
 
   const persistedIntelligence = computePersistedIntelligence(fights);
+  const executionActivityData = { fights: fights.map((fight, index) => ({
+        fightId: fight.summary.permalink || `${fight.summary.fightName}-${index}`,
+        fightName: fight.summary.fightName,
+        scopes: {
+                recordedEnemyPlayers: summarizeExecutionActivity(executionActivity(fight.raw, 'recorded-enemy-players')),
+                allTargets: summarizeExecutionActivity(executionActivity(fight.raw, 'all-targets')),
+        },
+  })) };
 
   const stats: ReportStats = {
         total, wins, losses, unclassified, avgSquadSize, avgEnemies, squadKDR, enemyKDR,
@@ -2419,9 +2509,11 @@ export function buildReportFromFights(fights: FightInput[]): WvWReport {
         damageModifiers: computeDamageModifiers(fights),
         rotations: computeRotations(fights),
         dpsGraph: computeDpsGraph(fights),
+        executionActivity: executionActivityData,
         replayFights: computeReplayFights(fights),
         synergyInsights: computeSynergyInsights(playerEntries, buffCategoryUptimes, roleClassifications, reportTotalSquadKills, reportTotalSquadDeaths, avgSquadSize),
         mechanics: computeMechanicsTimeline(fights),
+        incomingSkillEvents: computeIncomingSkillEvents(fights),
         topHealingSkills: computeTopHealingSkills(fights),
         playerSkillBreakdowns: serializePlayerSkillBreakdowns(agg),
         deathRecaps: computeDeathRecaps(fights),

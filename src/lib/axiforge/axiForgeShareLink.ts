@@ -1,5 +1,5 @@
 import { getConfiguredShareViewerUrl } from "../shareLinks";
-import { brandEntropyCode } from "./axiForgeAdapter";
+import { brandEntropyCode } from "./axiForgeCodeBrand";
 
 export function buildAxiForgeShareUrl(code: string, currentHref?: string): string {
   if (typeof window === "undefined" && !currentHref) return brandEntropyCode(code);

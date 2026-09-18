@@ -62,10 +62,23 @@ export async function fetchGw2Skills(ids: number[]): Promise<Gw2Skill[]> {
   if (!uniqueIds.length) return [];
   const batches: number[][] = [];
   for (let index = 0; index < uniqueIds.length; index += 200) batches.push(uniqueIds.slice(index, index + 200));
-  const skills = (await Promise.all(batches.map((batch) => getJson<Gw2Skill[]>(`/skills?ids=${idsParam(batch)}`)))).flat();
+  const loadBatch = async (batch: number[]): Promise<Gw2Skill[]> => {
+    try {
+      return await getJson<Gw2Skill[]>(`/skills?ids=${idsParam(batch)}`);
+    } catch (error) {
+      const rejectedId = error instanceof Error && /\((400|404)\)/.test(error.message);
+      if (!rejectedId) throw error;
+      if (batch.length === 1) return [];
+      const middle = Math.ceil(batch.length / 2);
+      const left = await loadBatch(batch.slice(0, middle));
+      const right = await loadBatch(batch.slice(middle));
+      return [...left, ...right];
+    }
+  };
+  const skills = (await Promise.all(batches.map(loadBatch))).flat();
   return skills
     .map((skill) => ({ ...skill, description: stripMarkup(skill.description) }))
-    .sort((a, b) => a.slot.localeCompare(b.slot) || a.name.localeCompare(b.name));
+    .sort((a, b) => (a.slot ?? "").localeCompare(b.slot ?? "") || (a.name ?? "").localeCompare(b.name ?? ""));
 }
 
 export async function fetchGw2ItemStats(): Promise<Gw2ItemStat[]> {

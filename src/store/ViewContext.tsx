@@ -2,8 +2,9 @@
 // state into a context so other views (e.g. ArchiveView and Intelligence) can
 // navigate the user to a different view programmatically while preserving the
 // exact evidence target that motivated the jump.
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { parseAxiForgeShareQuery } from "../lib/axiforge/axiForgeShareLink";
+import { preloadView } from "../lib/viewPreload";
 import { viewLabel } from "../lib/viewRegistry";
 import { buildViewUrl, normalizeViewId, parseViewUrlState } from "./viewUrlState";
 
@@ -40,6 +41,7 @@ const ViewContext = createContext<ViewContextValue>({
 });
 
 export function ViewProvider({ children }: { children: ReactNode }) {
+  const [, startViewTransition] = useTransition();
   const [activeView, setActiveViewState] = useState(() => {
     if (typeof window === "undefined") return "overview";
     if (parseAxiForgeShareQuery(window.location.search)) return "axiforge-lab";
@@ -65,23 +67,29 @@ export function ViewProvider({ children }: { children: ReactNode }) {
 
     const onPopState = () => {
       if (parseAxiForgeShareQuery(window.location.search)) {
-        setPreviousView(activeViewRef.current === "axiforge-lab" ? null : activeViewRef.current);
-        setNavigationTarget(null);
-        setNavigationTrailTarget(null);
-        setActiveViewState("axiforge-lab");
+        void preloadView("axiforge-lab");
+        startViewTransition(() => {
+          setPreviousView(activeViewRef.current === "axiforge-lab" ? null : activeViewRef.current);
+          setNavigationTarget(null);
+          setNavigationTrailTarget(null);
+          setActiveViewState("axiforge-lab");
+        });
         return;
       }
 
       const parsed = parseViewUrlState(window.location.search);
-      setPreviousView(parsed.view === activeViewRef.current ? previousView : activeViewRef.current);
-      setNavigationTarget(parsed.navigationTarget);
-      setNavigationTrailTarget(parsed.navigationTarget);
-      setActiveViewState(parsed.view);
+      void preloadView(parsed.view);
+      startViewTransition(() => {
+        setPreviousView(parsed.view === activeViewRef.current ? previousView : activeViewRef.current);
+        setNavigationTarget(parsed.navigationTarget);
+        setNavigationTrailTarget(parsed.navigationTarget);
+        setActiveViewState(parsed.view);
+      });
     };
 
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [previousView]);
+  }, [previousView, startViewTransition]);
 
   function moveToView(view: string, target: ViewNavigationTarget | null) {
     const normalizedView = normalizeViewId(view);
@@ -97,10 +105,13 @@ export function ViewProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setPreviousView(activeView);
-    setNavigationTarget(target);
-    setNavigationTrailTarget(target);
-    setActiveViewState(normalizedView);
+    void preloadView(normalizedView);
+    startViewTransition(() => {
+      setPreviousView(activeView);
+      setNavigationTarget(target);
+      setNavigationTrailTarget(target);
+      setActiveViewState(normalizedView);
+    });
   }
 
   function setActiveView(view: string) {
@@ -118,10 +129,13 @@ export function ViewProvider({ children }: { children: ReactNode }) {
     if (typeof window !== "undefined") {
       window.history.pushState(null, "", buildViewUrl(window.location.href, destination, null));
     }
-    setPreviousView(activeView);
-    setNavigationTarget(null);
-    setNavigationTrailTarget(null);
-    setActiveViewState(destination);
+    void preloadView(destination);
+    startViewTransition(() => {
+      setPreviousView(activeView);
+      setNavigationTarget(null);
+      setNavigationTrailTarget(null);
+      setActiveViewState(destination);
+    });
   }
 
   function clearNavigationTarget() {

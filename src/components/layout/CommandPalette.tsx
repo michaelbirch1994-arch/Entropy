@@ -1,13 +1,14 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, Search, Swords, UserRound } from "lucide-react";
+import { ArrowUpRight, Search, Swords, UserRound, Zap } from "lucide-react";
 import { VIEW_SECTIONS } from "../../lib/viewRegistry";
 import { useReport } from "../../store/ReportContext";
 import type { ViewNavigationTarget } from "../../store/ViewContext";
 import WorkspaceDialog from "../ui/WorkspaceDialog";
 import { VIEW_ICONS } from "./Sidebar";
+import { fmtCompact } from "../../utils/format";
 
 export type WorkspaceDestination = Omit<ViewNavigationTarget, "targetView">;
-type Command = { id: string; label: string; detail: string; view: string; kind: "View" | "Player" | "Fight"; target?: WorkspaceDestination; keywords: string };
+type Command = { id: string; label: string; detail: string; view: string; kind: "View" | "Player" | "Fight" | "Skill"; target?: WorkspaceDestination; keywords: string };
 
 export default function CommandPalette({ open, onClose, onNavigate }: {
   open: boolean; onClose: () => void; onNavigate: (view: string, target?: WorkspaceDestination) => void;
@@ -31,10 +32,24 @@ export default function CommandPalette({ open, onClose, onNavigate }: {
       id: `fight:${fight.id}`, label: `Fight ${index + 1}`, detail: `${fight.label} / ${fight.duration}`, view: "fight-breakdown", kind: "Fight" as const,
       target: { source: "other" as const, fightId: fight.id, fightIndex: index }, keywords: `fight ${index + 1} ${fight.fullLabel} ${fight.mapName}`,
     })),
+    ...([
+      { direction: "outgoing" as const, skills: report?.stats.allSkills ?? report?.stats.topSkills ?? [] },
+      { direction: "incoming" as const, skills: report?.stats.allIncomingSkills ?? report?.stats.topIncomingSkills ?? [] },
+    ]).flatMap(({ direction, skills }) => skills.map((skill, index) => ({
+      id: `skill:${direction}:${skill.id}`,
+      label: skill.name,
+      detail: `${direction === "outgoing" ? "Outgoing" : "Incoming"} #${index + 1} / ${fmtCompact(skill.damage)} damage`,
+      view: "top-skills",
+      kind: "Skill" as const,
+      target: { source: "other" as const, metric: `skill:${direction}:${skill.id}` },
+      keywords: `${skill.name} ${skill.id} ${direction} damage skill`,
+    }))),
   ], [report]);
   const results = useMemo(() => {
     const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    return commands.filter((item) => (category === "All" || category === `${item.kind}s`) && terms.every((term) => item.keywords.toLowerCase().includes(term)));
+    return commands.filter((item) => (category === "All" || category === `${item.kind}s`)
+      && (terms.length > 0 || item.kind !== "Skill")
+      && terms.every((term) => item.keywords.toLowerCase().includes(term))).slice(0, 100);
   }, [commands, query, category]);
 
   useEffect(() => { if (open) { setQuery(""); setActive(0); setCategory("All"); } }, [open]);
@@ -46,9 +61,9 @@ export default function CommandPalette({ open, onClose, onNavigate }: {
   return <WorkspaceDialog open={open} onClose={onClose} title="Search workspace" className="entropy-command-dialog">
     <div className="entropy-command-input">
       <Search size={20} aria-hidden="true" />
-      <input autoFocus role="combobox" aria-label="Search views, players, and fights" aria-autocomplete="list" aria-expanded="true"
+      <input autoFocus role="combobox" aria-label="Search views, players, fights, and skills" aria-autocomplete="list" aria-expanded="true"
         aria-controls={listId} aria-activedescendant={results[active] ? `${listId}-${active}` : undefined}
-        placeholder="Find a view, player, or fight" value={query} onChange={(event) => setQuery(event.target.value)}
+        placeholder="Find a view, player, fight, or skill" value={query} onChange={(event) => setQuery(event.target.value)}
         onKeyDown={(event) => {
           if (["ArrowDown", "ArrowUp"].includes(event.key)) {
             event.preventDefault();
@@ -58,17 +73,17 @@ export default function CommandPalette({ open, onClose, onNavigate }: {
         }} />
     </div>
     <div className="entropy-command-categories" role="group" aria-label="Search category">
-      {["All", "Views", "Players", "Fights"].map((item) => <button type="button" key={item} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}
+      {["All", "Views", "Players", "Fights", "Skills"].map((item) => <button type="button" key={item} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}
       <span role="status">{results.length} results</span>
     </div>
     <div className="entropy-command-results custom-scrollbar" id={listId} role="listbox" aria-label="Search results" ref={listRef}>
       {results.map((item, index) => <button type="button" role="option" id={`${listId}-${index}`} key={item.id} aria-selected={index === active}
         tabIndex={-1} className="entropy-command-result" onPointerMove={() => setActive(index)} onClick={() => choose(item)}>
-        <span className="entropy-command-result-icon">{item.kind === "Player" ? <UserRound size={18} /> : item.kind === "Fight" ? <Swords size={18} /> : VIEW_ICONS[item.view]}</span>
+        <span className="entropy-command-result-icon">{item.kind === "Player" ? <UserRound size={18} /> : item.kind === "Fight" ? <Swords size={18} /> : item.kind === "Skill" ? <Zap size={18} /> : VIEW_ICONS[item.view]}</span>
         <span className="entropy-command-result-copy"><strong>{item.label}</strong><span>{item.detail}</span></span>
         <small>{item.kind}</small><ArrowUpRight size={15} aria-hidden="true" />
       </button>)}
     </div>
-    {!results.length && <div className="entropy-empty-state"><Search size={24} /><strong>No matches</strong><p>No matching views, players, or fights in this workspace.</p></div>}
+    {!results.length && <div className="entropy-empty-state"><Search size={24} /><strong>No matches</strong><p>No matching views, players, fights, or skills in this workspace.</p></div>}
   </WorkspaceDialog>;
 }

@@ -36,6 +36,17 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(report.stats).toBeTruthy();
            });
 
+           it('persists compact, scope-separated damage activity evidence for Insight', () => {
+                 const activity = report.stats.executionActivity?.fights[0];
+                 expect(activity?.scopes.recordedEnemyPlayers.scope).toBe('recorded-enemy-players');
+                 expect(activity?.scopes.allTargets.scope).toBe('all-targets');
+                 expect(activity?.scopes.allTargets.method).toBe('raw-damage-activity-v2');
+                 expect(activity?.scopes.allTargets.coverage.totalBins).toBe(Math.floor((fight.raw.durationMS ?? 0) / 1000));
+                 expect(activity?.scopes.allTargets.pressure.method).toBe('experimental-local-damage-peaks-v1');
+                 expect(activity?.scopes.allTargets.pressure).not.toHaveProperty('bins');
+                 expect(activity?.scopes.allTargets).not.toHaveProperty('bins');
+           });
+
            it('finds the squad players in the fixture log', () => {
                  // The fixture has 3 squad members and 7 non-squad "Non Squad Player N"
                   // entries (arcdps includes anyone nearby, not just the recorder's squad).
@@ -101,6 +112,23 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(sample?.perFightMaxContext?.fightName).toBe('Final Push');
                  expect(sample?.biggestHit?.fightIndex).toBe(1);
                  expect(sample?.biggestHit?.fightName).toBe('Final Push');
+           });
+
+           it('retains damage skills below the ranked cutoff for full-catalog search', () => {
+                 const raw = JSON.parse(JSON.stringify(fight.raw)) as RawFightLog;
+                 const player = (raw.players ?? []).find((entry: any) => !entry.notInSquad) as any;
+                 expect(player).toBeTruthy();
+                 player.totalDamageDist = player.totalDamageDist ?? [[]];
+                 const ids = Array.from({ length: 35 }, (_, index) => 8_800_000 + index);
+                 for (const [index, id] of ids.entries()) {
+                   (raw as any).skillMap = { ...((raw as any).skillMap ?? {}), [`s${id}`]: { name: `Deep Search Skill ${index + 1}` } };
+                   player.totalDamageDist[0].push({ id, totalDamage: index + 1, connectedHits: 1, downContribution: 0, max: index + 1 });
+                 }
+
+                 const expanded = buildReportFromFights([{ summary: summarizeRawFight(raw), raw }]);
+                 expect(expanded.stats.topSkills).toHaveLength(30);
+                 expect(expanded.stats.allSkills?.filter((skill) => ids.includes(skill.id))).toHaveLength(35);
+                 expect(ids.some((id) => !expanded.stats.topSkills.some((skill) => skill.id === id))).toBe(true);
            });
 
 
@@ -307,9 +335,10 @@ describe('buildReportFromFights (real WvW log fixture)', () => {
                  expect(stability).toBeTruthy();
                  expect(stability!.stacking).toBe(true);
 
-                 const row = boons.rows.find((r) => r.account === player.account);
-                 expect(row).toBeTruthy();
-                 expect(row!.uptimes[stabilityId]).toBeCloseTo(0.12);
+                  const row = boons.rows.find((r) => r.account === player.account);
+                  expect(row).toBeTruthy();
+                  expect(row!.uptimes[stabilityId]).toBeCloseTo(0.12);
+                  expect(row!.presences?.[stabilityId]).toBeCloseTo(3);
 
                  const stabilityInsight = synthetic.stats.synergyInsights?.find((i) => i.id === 'stability');
                  expect(stabilityInsight?.detail).toContain('Stability stacks');

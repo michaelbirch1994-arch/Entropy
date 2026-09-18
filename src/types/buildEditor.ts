@@ -1,6 +1,6 @@
 export type Gw2GameMode = "pve" | "pvp" | "wvw";
 
-export type Gw2SkillSlot = "Heal" | "Utility" | "Elite" | "Profession" | `Profession_${number}`;
+export type Gw2SkillSlot = "Heal" | "Utility" | "Elite" | "Profession" | `Profession_${number}` | `Weapon_${number}`;
 
 export interface Gw2ApiFact {
   text?: string;
@@ -125,8 +125,10 @@ export interface Gw2Skill {
   toolbelt_skill?: number;
   bundle_skills?: number[];
   transform_skills?: number[];
+  categories?: string[];
   flags?: string[];
   facts?: Gw2ApiFact[];
+  traited_facts?: Array<Gw2ApiFact & { requires_trait: number; overrides?: number }>;
 }
 
 export type BuilderTraitRow = [number, number, number];

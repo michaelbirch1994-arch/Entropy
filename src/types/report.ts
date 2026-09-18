@@ -499,6 +499,12 @@ export interface BoonUptimeRow {
     logsJoined: number;
     /** buff id -> average uptime % or average stack count across the fights this player joined. */
   uptimes: Record<number, number>;
+    /**
+     * Intensity buff id -> percentage of time at least one stack was present.
+     * Elite Insights exposes this separately from its average-stack `uptime`
+     * value. Optional for reports saved before Entropy retained this field.
+     */
+  presences?: Record<number, number>;
 }
 
 export interface BoonUptimeData {
@@ -667,6 +673,31 @@ export interface MechanicsData {
     fights: MechanicsFight[];
 }
 
+/** A native EVTC combat result aimed at a squad player, before skill semantics are applied. */
+export interface IncomingSkillEvent {
+    timeMs: number;
+    sourceName: string;
+    sourceAccount?: string;
+    targetName: string;
+    targetAccount: string;
+    skillId: number;
+    skillName: string;
+    result: number;
+    amount: number;
+    isBuff: boolean;
+}
+
+export interface IncomingSkillFight {
+    fightId: string;
+    fightName: string;
+    clockSource: 'squad-combat-start' | 'first-combat-event' | 'unavailable';
+    events: IncomingSkillEvent[];
+}
+
+export interface IncomingSkillData {
+    fights: IncomingSkillFight[];
+}
+
 // --- Top Healing Sources (outgoing healing by skill/trait, including
 // buff-triggered conversion heals like Replenishing Despair or a direct
 // skill cast like Life Siphon) ---
@@ -792,6 +823,10 @@ export interface ReportStats {
     closestToTag: MaxStat;
     topSkills: TopSkill[];
     topIncomingSkills: TopSkill[];
+    /** Complete outgoing skill catalog for search and drilldown. Older saved reports may omit it. */
+    allSkills?: TopSkill[];
+    /** Complete incoming skill catalog for search and drilldown. Older saved reports may omit it. */
+    allIncomingSkills?: TopSkill[];
     topSkillsByDamage: TopSkill[];
     topSkillsByDownContribution: TopSkill[];
     mapData: ClassSlice[];
@@ -840,12 +875,16 @@ export interface ReportStats {
   rotations?: RotationsData;
     /** Per-fight cumulative damage-over-time series. Raw-log reports only. */
   dpsGraph?: DpsGraphData;
+    /** Compact raw one-second damage-activity evidence for Insight anchor selection. Candidates are not detected engagements. */
+  executionActivity?: import('../lib/insight/executionActivity').ExecutionActivityData;
     /** Per-fight 2D scrubbable position replays (only for fights whose parse included combat replay data). Raw-log reports only. */
   replayFights?: ReplayFightEntry[];
     /** Automated squad-composition/performance insight flags. Raw-log reports only. */
   synergyInsights?: SynergyInsight[];
     /** Per-fight boss/encounter mechanic event markers. Raw-log reports only. */
     mechanics?: MechanicsData;
+    /** Timestamped hostile skill results recovered from locally supplied EVTC bytes. */
+    incomingSkillEvents?: IncomingSkillData;
     /** Top outgoing healing sources by skill/trait, squad-wide. Only populated when the log was recorded with the healing addon active. Raw-log reports only. */
   topHealingSkills?: TopHealingSource[];
     /** Per-player top damage/healing/barrier skill sources for compact player-card drilldowns. Raw-log reports only. */

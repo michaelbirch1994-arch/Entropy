@@ -62,6 +62,7 @@ export const VIEW_SECTIONS: ViewRegistrySection[] = [
       { id: "fight-replay", label: "Fight Replay" },
       { id: "mechanics", label: "Mechanics Timeline" },
       { id: "death-recap", label: "Death Recap" },
+      { id: "raw", label: "Raw", keywords: ["capture", "companion", "events"], requiresReport: false },
     ],
   },
   {
@@ -70,6 +71,7 @@ export const VIEW_SECTIONS: ViewRegistrySection[] = [
     flat: true,
     items: [
       { id: "intelligence", label: "Intelligence", keywords: ["ml", "predictive", "findings"] },
+      { id: "insight", label: "Insight", keywords: ["ai", "why", "coaching", "investigation"] },
     ],
   },
   {
@@ -87,6 +89,7 @@ export const VIEW_SECTIONS: ViewRegistrySection[] = [
     flat: true,
     items: [
       { id: "axiforge-lab", label: "Entropy Builder", keywords: ["builder", "build editor", "tools"], requiresReport: false },
+      { id: "effective-power", label: "Effective Power", keywords: ["calculator", "theorycraft", "power", "precision", "ferocity", "crit"], requiresReport: false },
     ],
   },
 ];
@@ -106,4 +109,8 @@ VIEW_TONES.highlights = "squad";
 
 export function viewLabel(view: string) {
   return VIEW_TITLES[view] ?? view.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export function viewRequiresReport(view: string) {
+  return VIEW_SECTIONS.flatMap((section) => section.items).find((item) => item.id === view)?.requiresReport !== false;
 }

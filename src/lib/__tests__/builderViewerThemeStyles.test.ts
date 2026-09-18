@@ -29,7 +29,7 @@ describe("builder viewer theme styles", () => {
     expect(view).toContain("<h4>Specializations</h4>");
     expect(view).not.toContain("Specialization matrix");
     expect(view).toContain('className="theme-builder-trait-tier-head"');
-    expect(view).toContain('{selectedTrait?.name ?? "Choose trait"}');
+    expect(view).toContain('aria-pressed={selectedPosition === position + 1}');
     expect(view).toContain('className="theme-builder-spec-inspect"');
     expect(css).toContain('.theme-builder-loadout-canvas .theme-builder-trait-grid::before');
     expect(css).toContain('grid-template-rows: repeat(3, 2.35rem)');

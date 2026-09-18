@@ -9,6 +9,7 @@ import type { DeathRecapEntry, DeathRecapHit } from "../types/report";
 import { Skull, ArrowDown, Swords, ShieldAlert, Film, BrainCircuit } from "lucide-react";
 import {
   buildDeathBoonCorrelationRows,
+  isStackingBoonColumn,
   nextDeathBoonSort,
   sortDeathBoonRows,
   type DeathBoonSortKey,
@@ -199,6 +200,9 @@ function useDeathBoonCorrelation(report: ReturnType<typeof useReport>["report"])
 function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<typeof useDeathBoonCorrelation>> }) {
   const [sort, setSort] = useState<DeathBoonSortState>(null);
   const rows = useMemo(() => sortDeathBoonRows(data.rows, sort), [data.rows, sort]);
+  const hasStabilityCoverage = data.rows.some((row) =>
+    row.boons.some((boon) => boon.name.toLowerCase().includes("stability") && boon.unit === "percent"),
+  );
 
   const toggleSort = (key: DeathBoonSortKey) => {
     setSort((prev) => nextDeathBoonSort(prev, key));
@@ -213,8 +217,10 @@ function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<type
 
   return (
     <Panel
-      title="Boon Uptime vs. Deaths"
-      subtitle="Each player's average defensive-boon uptime next to how many times they died - cells noticeably below the squad average are flagged. Correlation, not a per-death timeline."
+      title="Defensive Boon Coverage vs. Deaths"
+      subtitle={hasStabilityCoverage
+        ? "Duration boons show average uptime. Stability shows the time at least one stack was present plus average stacks. Cells materially below the squad average are flagged."
+        : "Duration boons show average uptime. This saved report predates Stability coverage storage, so Stability is shown as average stacks. Cells materially below the squad average are flagged."}
       icon={<ShieldAlert className="w-3.5 h-3.5" />}
       bodyClassName="p-0"
     >
@@ -232,13 +238,21 @@ function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<type
                   Deaths <span className="text-[8px] opacity-70">{sortLabel("deaths")}</span>
                 </button>
               </th>
-              {data.cols.map((c) => (
-                <th key={c.id} className="text-center font-bold px-2 py-3 min-w-[64px]">
-                  <button type="button" onClick={() => toggleSort(c.id)} className={sortButtonClass(c.id, "justify-center")}>
-                    {c.name} <span className="text-[8px] opacity-70">{sortLabel(c.id)}</span>
-                  </button>
-                </th>
-              ))}
+              {data.cols.map((c) => {
+                const example = data.rows.flatMap((row) => row.boons).find((boon) => boon.id === c.id);
+                const stacking = isStackingBoonColumn(c);
+                const unitLabel = stacking
+                  ? example?.unit === "percent" ? "coverage + avg stacks" : "avg stacks"
+                  : "uptime";
+                return (
+                  <th key={c.id} className="text-center font-bold px-2 py-3 min-w-[88px]">
+                    <button type="button" onClick={() => toggleSort(c.id)} className={sortButtonClass(c.id, "w-full flex-col justify-center")}>
+                      <span>{c.name} <span className="text-[8px] opacity-70">{sortLabel(c.id)}</span></span>
+                      <span className="text-[8px] normal-case font-semibold text-slate-600">{unitLabel}</span>
+                    </button>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -253,9 +267,21 @@ function DeathBoonCorrelationPanel({ data }: { data: NonNullable<ReturnType<type
                 <td className="text-center px-2 py-2.5 font-mono font-bold text-rose-400">{row.deaths}</td>
                 {row.boons.map((b) => (
                   <td key={b.id} className="text-center px-2 py-2.5 font-mono">
-                    <span className={`font-bold ${b.belowAvg ? "text-rose-400" : "text-slate-300"}`} title={`Squad avg ${b.squadAvgPct.toFixed(0)}%`}>
-                      {b.pct.toFixed(0)}%
-                    </span>
+                    <div
+                      className={`font-bold ${b.belowAvg ? "text-rose-400" : "text-slate-300"}`}
+                      title={
+                        b.unit === "stacks"
+                          ? `Squad average ${b.squadAverage.toFixed(2)} stacks`
+                          : b.averageStacks !== undefined
+                            ? `Squad average ${b.squadAverage.toFixed(0)}% coverage and ${b.squadAverageStacks?.toFixed(2)} stacks`
+                            : `Squad average ${b.squadAverage.toFixed(0)}% uptime`
+                      }
+                    >
+                      <div>{b.unit === "stacks" ? b.value.toFixed(2) : `${b.value.toFixed(0)}%`}</div>
+                      {b.unit === "percent" && b.averageStacks !== undefined && (
+                        <div className="mt-0.5 text-[9px] font-semibold text-slate-500">{b.averageStacks.toFixed(2)} avg stacks</div>
+                      )}
+                    </div>
                   </td>
                 ))}
               </tr>

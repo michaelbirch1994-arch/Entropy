@@ -32,6 +32,8 @@
 /** Statechange values used here. The full enum is in the arcdps spec. */
 export const CBTS = {
       COMBAT: 0,
+      /** First squad member entered combat. Used as the EI-compatible timeline origin. */
+      SQUAD_COMBAT_START: 9,
       /** Addon registration record. Not managed by arcdps. */
       EXTENSION: 40,
       /** Addon combat record, laid out as a cbtevent. Not managed by arcdps. */
@@ -42,13 +44,16 @@ export const CBTS = {
 const OFF = {
       time: 0,
       srcAgent: 8,
+      dstAgent: 16,
       value: 24,
       buffDmg: 28,
       overstackValue: 32,
       skillId: 36,
       srcInstId: 40,
       dstInstId: 42,
+      iff: 48,
       buff: 49,
+      result: 50,
       isStateChange: 56,
       isShields: 58,
       pad61: 60,
@@ -124,6 +129,21 @@ export interface ExtensionCombatEvent {
     signature: number;
 }
 
+/** One hostile combat result aimed at a player, retained for later skill classification. */
+export interface EvtcCombatEvent {
+      timeMs: number;
+      source?: EvtcAgent;
+      target?: EvtcAgent;
+      srcInstId: number;
+      dstInstId: number;
+      skillId: number;
+      value: number;
+      buffDamage: number;
+      iff: number;
+      isBuff: boolean;
+      result: number;
+}
+
 export interface EvtcLog {
       header: EvtcHeader;
       agents: EvtcAgent[];
@@ -132,6 +152,9 @@ export interface EvtcLog {
     agentsByInstId: Map<number, EvtcAgent>;
       extensions: ExtensionRegistration[];
       extensionCombat: ExtensionCombatEvent[];
+      /** Foe events targeting player agents, relative to squad combat start when available. */
+      combatEvents: EvtcCombatEvent[];
+      combatClockSource: 'squad-combat-start' | 'first-combat-event' | 'unavailable';
       eventCount: number;
 }
 
@@ -247,6 +270,12 @@ export function parseEvtc(buffer: ArrayBuffer): EvtcLog {
     const agentsByInstId = new Map<number, EvtcAgent>();
       const extensions: ExtensionRegistration[] = [];
       const extensionCombat: ExtensionCombatEvent[] = [];
+      const pendingCombat: Array<Omit<EvtcCombatEvent, 'timeMs' | 'source' | 'target'> & {
+            absoluteTimeMs: number;
+            srcAddress: string;
+            dstAddress: string;
+      }> = [];
+      let squadCombatStartMs: number | null = null;
 
     for (let i = 0; i < eventCount; i++) {
               const p = off + i * EVENT_SIZE;
@@ -260,6 +289,31 @@ export function parseEvtc(buffer: ArrayBuffer): EvtcLog {
                                           const agent = agentByAddress.get(view.getBigUint64(p + OFF.srcAgent, true).toString());
                                           if (agent) agentsByInstId.set(srcInstId, agent);
                         }
+                        const dstInstId = view.getUint16(p + OFF.dstInstId, true);
+                        const dstAddress = view.getBigUint64(p + OFF.dstAgent, true).toString();
+                        if (dstInstId !== 0 && !agentsByInstId.has(dstInstId)) {
+                              const agent = agentByAddress.get(dstAddress);
+                              if (agent) agentsByInstId.set(dstInstId, agent);
+                        }
+                        pendingCombat.push({
+                              absoluteTimeMs: Number(view.getBigUint64(p + OFF.time, true)),
+                              srcAddress: view.getBigUint64(p + OFF.srcAgent, true).toString(),
+                              dstAddress,
+                              srcInstId,
+                              dstInstId,
+                              skillId: view.getUint32(p + OFF.skillId, true),
+                              value: view.getInt32(p + OFF.value, true),
+                              buffDamage: view.getInt32(p + OFF.buffDmg, true),
+                              iff: bytes[p + OFF.iff],
+                              isBuff: bytes[p + OFF.buff] === 1,
+                              result: bytes[p + OFF.result],
+                        });
+                        continue;
+          }
+
+          if (statechange === CBTS.SQUAD_COMBAT_START) {
+                        const timeMs = Number(view.getBigUint64(p + OFF.time, true));
+                        if (Number.isFinite(timeMs) && (squadCombatStartMs === null || timeMs < squadCombatStartMs)) squadCombatStartMs = timeMs;
                         continue;
           }
 
@@ -296,6 +350,28 @@ export function parseEvtc(buffer: ArrayBuffer): EvtcLog {
           }
     }
 
+    const firstCombatMs = pendingCombat.reduce<number | null>((first, event) =>
+          first === null || event.absoluteTimeMs < first ? event.absoluteTimeMs : first, null);
+      const clockOriginMs = squadCombatStartMs ?? firstCombatMs;
+      const combatEvents: EvtcCombatEvent[] = pendingCombat.flatMap(event => {
+            const source = agentByAddress.get(event.srcAddress) ?? agentsByInstId.get(event.srcInstId);
+            const target = agentByAddress.get(event.dstAddress) ?? agentsByInstId.get(event.dstInstId);
+            if (event.iff !== 1 || !target?.isPlayer || event.skillId <= 0 || clockOriginMs === null) return [];
+            return [{
+                  timeMs: Math.max(0, event.absoluteTimeMs - clockOriginMs),
+                  source,
+                  target,
+                  srcInstId: event.srcInstId,
+                  dstInstId: event.dstInstId,
+                  skillId: event.skillId,
+                  value: event.value,
+                  buffDamage: event.buffDamage,
+                  iff: event.iff,
+                  isBuff: event.isBuff,
+                  result: event.result,
+            }];
+      });
+
     return {
               header: { build, revision, bossId, isWvW: bossId === 1 },
               agents,
@@ -303,6 +379,9 @@ export function parseEvtc(buffer: ArrayBuffer): EvtcLog {
               agentsByInstId,
               extensions,
               extensionCombat,
+              combatEvents,
+              combatClockSource: squadCombatStartMs !== null ? 'squad-combat-start'
+                  : firstCombatMs !== null ? 'first-combat-event' : 'unavailable',
               eventCount,
     };
 }

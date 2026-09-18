@@ -1,4 +1,5 @@
 import type { Gw2ApiFact, Gw2Skill, Gw2Trait } from "../../types/buildEditor";
+import { reportImageSrc } from "../../utils/reportImageAssets";
 
 const CONDITION_FACT_TYPES = new Set(["Buff", "ApplyBuffCondition", "PrefixedBuff"]);
 
@@ -166,7 +167,7 @@ function scanEntity(
 }
 
 export function fallbackConditionIcon(name: string): string | undefined {
-  return FALLBACK_CONDITION_ICONS[name];
+  return reportImageSrc(FALLBACK_CONDITION_ICONS[name]);
 }
 
 export function analyzeBuildConditions(
@@ -189,7 +190,7 @@ export function analyzeBuildConditions(
         : undefined;
       return {
         ...entry,
-        icon: entry.sources.find((source) => source.icon)?.icon ?? entry.icon ?? fallbackConditionIcon(entry.name),
+        icon: reportImageSrc(entry.sources.find((source) => source.icon)?.icon ?? entry.icon ?? fallbackConditionIcon(entry.name)),
         estimatedUptimePercent,
       };
     })

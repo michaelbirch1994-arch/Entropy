@@ -6,6 +6,7 @@ import { useCompare } from "../store/CompareContext";
 import { useView } from "../store/ViewContext";
 import { fmtCompact, fmtFixed, fmtNum } from "../utils/format";
 import type { WvWReport } from "../types/report";
+import "../Styles/CompareWorkspace.css";
 
 interface CompareMetrics {
   entry: ArchiveEntry;
@@ -37,25 +38,34 @@ function computeMetrics(entry: ArchiveEntry): CompareMetrics {
   return { entry, totalHealing, totalBarrier, totalDownContrib, totalCleanses, totalStrips, winRatePct };
 }
 
-function ReportMetricTable({ rows, titleA, titleB }: { rows: MetricRow[]; titleA: string; titleB: string }) {
+export function ReportMetricTable({ rows, titleA, titleB }: { rows: MetricRow[]; titleA: string; titleB: string }) {
   return (
-    <div className="overflow-x-auto custom-scrollbar rounded-xl border border-theme-border/70 bg-theme-surface-inset/55">
+    <div className="compare-metrics overflow-x-auto custom-scrollbar">
       <table className="w-full text-left text-xs">
         <thead>
           <tr className="text-[10px] text-theme-muted uppercase font-bold tracking-wider border-b border-theme-border/50">
-            <th className="p-2.5">Metric</th>
-            <th className="p-2.5 text-right">{titleA}</th>
-            <th className="p-2.5 text-right">{titleB}</th>
+            <th scope="col" className="p-2.5">Metric</th>
+            <th scope="col" className="p-2.5 text-right">{titleA}</th>
+            <th scope="col" className="p-2.5 text-right">{titleB}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-theme-border/30 font-mono">
           {rows.map((r) => {
-            const aWins = r.higherIsBetter ? r.a >= r.b : r.a <= r.b;
+            const tied = r.a === r.b;
+            const aWins = !tied && (r.higherIsBetter ? r.a > r.b : r.a < r.b);
+            const bWins = !tied && !aWins;
+            const maximum = Math.max(r.a, r.b, 1);
             return (
               <tr key={r.label} className="transition-colors hover:bg-theme-surface-elevated/60">
-                <td className="p-2.5 text-theme-muted font-sans">{r.label}</td>
-                <td className={`p-2.5 text-right font-bold ${aWins ? "text-emerald-400" : "text-theme-text/80"}`}>{r.fmt(r.a)}</td>
-                <td className={`p-2.5 text-right font-bold ${!aWins ? "text-emerald-400" : "text-theme-text/80"}`}>{r.fmt(r.b)}</td>
+                <th scope="row" className="compare-metric-label p-2.5 text-theme-muted font-sans">{r.label}{tied && <span className="compare-tie">Equal</span>}</th>
+                <td className={`p-2.5 text-right font-bold ${aWins ? "text-emerald-400" : "text-theme-text/80"}`}>
+                  {r.fmt(r.a)}
+                  <span className="compare-meter" aria-hidden="true"><span style={{ width: `${Math.max(0, r.a / maximum) * 100}%` }} /></span>
+                </td>
+                <td className={`p-2.5 text-right font-bold ${bWins ? "text-emerald-400" : "text-theme-text/80"}`}>
+                  {r.fmt(r.b)}
+                  <span className="compare-meter" aria-hidden="true"><span style={{ width: `${Math.max(0, r.b / maximum) * 100}%` }} /></span>
+                </td>
               </tr>
             );
           })}
@@ -71,6 +81,7 @@ export default function CompareView() {
   const [metricsA, setMetricsA] = useState<CompareMetrics | null>(null);
   const [metricsB, setMetricsB] = useState<CompareMetrics | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     if (!compareIds) {
@@ -80,10 +91,16 @@ export default function CompareView() {
     }
     let cancelled = false;
     setLoading(true);
+    setLoadError(false);
     Promise.all([getArchivedById(compareIds[0]), getArchivedById(compareIds[1])]).then(([a, b]) => {
       if (cancelled) return;
       setMetricsA(a ? computeMetrics(a) : null);
       setMetricsB(b ? computeMetrics(b) : null);
+      setLoading(false);
+      setLoadError(!a || !b);
+    }).catch(() => {
+      if (cancelled) return;
+      setLoadError(true);
       setLoading(false);
     });
     return () => {
@@ -114,13 +131,15 @@ export default function CompareView() {
 
   if (!compareIds) {
     return (
-      <div className="space-y-5 animate-view pb-12">
+      <div className="compare-workspace space-y-5 animate-view pb-12">
         <Panel
           title="Compare Reports"
           icon={<GitCompare className="w-4 h-4" />}
           empty={
             <div className="py-10 text-center text-sm text-theme-muted">
-              Pick two reports from the Archive to compare report-level night totals. Player Compare now uses the currently loaded log from its own sidebar view.
+              <GitCompare className="compare-empty-icon" aria-hidden="true" />
+              <h3 className="compare-empty-title">Two sessions. One perspective.</h3>
+              <p>No reports selected</p>
               <div className="mt-4">
                 <button
                   type="button"
@@ -139,18 +158,28 @@ export default function CompareView() {
     );
   }
 
+  if (loadError) {
+    return <div className="compare-workspace compare-unavailable" role="status">
+      <GitCompare className="compare-empty-icon" aria-hidden="true" />
+      <h2 className="compare-empty-title">Report unavailable</h2>
+      <p>One of these reports could not be loaded from this device.</p>
+      <button type="button" onClick={() => setActiveView("archive")}>Return to archive <ArrowRight size={16} /></button>
+    </div>;
+  }
+
   if (loading || !metricsA || !metricsB) {
     return <div className="flex items-center justify-center py-24 text-theme-muted text-sm">Loading comparison...</div>;
   }
 
   return (
-    <div className="space-y-5 animate-view pb-12">
+    <div className="compare-workspace space-y-5 animate-view pb-12">
       <Panel
         title="Compare Reports"
-        subtitle="Squad-wide totals side by side - green highlights the better value per row, which still needs fight context."
+        subtitle="Session totals. Differences in fight count, duration and squad size affect this comparison."
         icon={<GitCompare className="w-4 h-4" />}
+        action={<button type="button" className="compare-change" onClick={() => setActiveView("archive")}><GitCompare size={16} /> Change reports</button>}
       >
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="compare-identities grid grid-cols-2 gap-4 mb-4">
           <div className="rounded-xl border border-theme-border bg-theme-surface-inset/70 px-4 py-3 shadow-[inset_2px_0_0_color-mix(in_srgb,var(--theme-accent)_38%,transparent)]">
             <div className="text-[10px] uppercase tracking-wider text-theme-accent-strong font-bold">Report A</div>
             <div className="text-sm font-bold text-theme-text truncate">{metricsA.entry.title}</div>

@@ -1,0 +1,7 @@
+.tmp
+node_modules
+dist
+dist-ssr
+*.log
+*.local
+companion/native

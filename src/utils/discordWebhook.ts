@@ -1,42 +1,14 @@
 import type { WvWReport } from "../types/report";
 import { fmtCompact, fmtFixed, fmtNum } from "./format";
 import { resolveDiscordReportLeaders } from "../lib/discordLeaderNormalization";
+import { isDiscordWebhookUrl } from "./discordWebhookStorage";
 
-const DISCORD_WEBHOOK_STORAGE_KEY = "entropy.discordWebhookUrl";
-
-export function loadDiscordWebhookUrl(): string {
-  try {
-    return localStorage.getItem(DISCORD_WEBHOOK_STORAGE_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-export function saveDiscordWebhookUrl(url: string): void {
-  const trimmed = url.trim();
-  try {
-    if (trimmed) {
-      localStorage.setItem(DISCORD_WEBHOOK_STORAGE_KEY, trimmed);
-    } else {
-      localStorage.removeItem(DISCORD_WEBHOOK_STORAGE_KEY);
-    }
-  } catch {
-    // Non-fatal. The caller still keeps the value in component state.
-  }
-}
-
-export function clearDiscordWebhookUrl(): void {
-  try {
-    localStorage.removeItem(DISCORD_WEBHOOK_STORAGE_KEY);
-  } catch {
-    // Non-fatal.
-  }
-}
-
-export function isDiscordWebhookUrl(url: string): boolean {
-  const trimmed = url.trim();
-  return /^https:\/\/(discord(?:app)?\.com)\/api\/webhooks\/\d+\/[\w.-]+(?:\?.*)?$/i.test(trimmed);
-}
+export {
+  clearDiscordWebhookUrl,
+  isDiscordWebhookUrl,
+  loadDiscordWebhookUrl,
+  saveDiscordWebhookUrl,
+} from "./discordWebhookStorage";
 
 function clampText(value: unknown, maxLength: number, fallback = "Not available"): string {
   const text = String(value ?? "").replace(/\s+/g, " ").trim() || fallback;

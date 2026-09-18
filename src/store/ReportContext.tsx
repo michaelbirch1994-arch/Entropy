@@ -6,13 +6,9 @@ import {
   getActiveReport,
   putActiveReport,
 } from "../utils/reportCache";
-import { recordReportIntoProfiles } from "../lib/playerProfileStore";
-import { saveToArchive } from "../utils/reportArchive";
-import { buildReportFromFights } from "../lib/buildReportFromFights";
-import { fetchDpsReportJson } from "../utils/dpsReport";
-import { summarizeRawFight } from "../types/rawFight";
 import { ENTROPY_REPORT_ARTIFACT_SCHEMA } from "../lib/shareReportArtifact";
 import { parseReportLoadQuery } from "../lib/shareLinks";
+import { localizeReportImages } from "../utils/reportImageAssets";
 
 
 export type { ReportSource };
@@ -96,9 +92,38 @@ function reportPermalinks(report: WvWReport | null): string[] {
   );
 }
 
+function persistReportSummaries(report: WvWReport): void {
+  void import("../lib/playerProfileStore")
+    .then(({ recordReportIntoProfiles }) => recordReportIntoProfiles(report))
+    .catch(() => undefined);
+  void import("../utils/reportArchive")
+    .then(({ saveToArchive }) => saveToArchive(report))
+    .catch(() => undefined);
+}
+
+async function buildReportFromPermalinks(permalinks: string[]): Promise<WvWReport> {
+  const [{ fetchDpsReportJson }, { summarizeRawFight }, { buildReportFromFights }] = await Promise.all([
+    import("../utils/dpsReport"),
+    import("../types/rawFight"),
+    import("../lib/buildReportFromFights"),
+  ]);
+  const fights = await Promise.all(
+    permalinks.map(async (permalink) => {
+      const raw = await fetchDpsReportJson(permalink);
+      return { summary: summarizeRawFight(raw, permalink), raw };
+    }),
+  );
+  return buildReportFromFights(fights);
+}
+
 
 export function ReportProvider({ children }: { children: ReactNode }) {
-  const [report, setReportState] = useState<WvWReport | null>(null);
+  const [report, setRawReportState] = useState<WvWReport | null>(null);
+  const setReportState = useCallback((value: WvWReport | null, imageAssetsLocalized = false) => {
+    const prepared = imageAssetsLocalized ? value : localizeReportImages(value);
+    setRawReportState(prepared);
+    return prepared;
+  }, []);
   const [index, setIndex] = useState<ReportIndex | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,25 +151,19 @@ export function ReportProvider({ children }: { children: ReactNode }) {
 
 
         if (permalinks.length > 0) {
-          const fights = await Promise.all(
-            permalinks.map(async (permalink) => {
-              const raw = await fetchDpsReportJson(permalink);
-              return { summary: summarizeRawFight(raw, permalink), raw };
-            }),
-          );
-          const data = buildReportFromFights(fights);
+          const data = await buildReportFromPermalinks(permalinks);
           if (cancelled) return;
-          setReportState(data);
+          const prepared = setReportState(data)!;
           setSource("url");
           setLoading(false);
-          void saveToArchive(data);
+          persistReportSummaries(prepared);
           void putActiveReport({
-            id: reportCacheId(data, "url"),
+            id: reportCacheId(prepared, "url"),
             source: "url",
             savedAt: Date.now(),
-            report: data,
+            imageAssetsLocalized: true,
+            report: prepared,
           });
-          void recordReportIntoProfiles(data);
           return;
         }
 
@@ -153,17 +172,17 @@ export function ReportProvider({ children }: { children: ReactNode }) {
           if (!res.ok) throw new Error(`Shared report artifact not found (${res.status})`);
           const data = parseReport(await res.text(), artifactUrl);
           if (cancelled) return;
-          setReportState(data);
+          const prepared = setReportState(data)!;
           setSource("url");
           setLoading(false);
-          void saveToArchive(data);
+          persistReportSummaries(prepared);
           void putActiveReport({
-            id: reportCacheId(data, "url"),
+            id: reportCacheId(prepared, "url"),
             source: "url",
             savedAt: Date.now(),
-            report: data,
+            imageAssetsLocalized: true,
+            report: prepared,
           });
-          void recordReportIntoProfiles(data);
           return;
         }
 
@@ -173,17 +192,17 @@ export function ReportProvider({ children }: { children: ReactNode }) {
           if (!res.ok) throw new Error(`Report not found (${res.status})`);
           const data = parseReport(await res.text(), `Report ${id}`);
           if (cancelled) return;
-          setReportState(data);
+          const prepared = setReportState(data)!;
           setSource("url");
           setLoading(false);
-                    void saveToArchive(data);
+          persistReportSummaries(prepared);
           void putActiveReport({
-            id: reportCacheId(data, "url"),
+            id: reportCacheId(prepared, "url"),
             source: "url",
             savedAt: Date.now(),
-            report: data,
+            imageAssetsLocalized: true,
+            report: prepared,
           });
-          void recordReportIntoProfiles(data);
           return;
         }
 
@@ -192,8 +211,11 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         const cached = await getActiveReport();
         if (cancelled) return;
         if (cached) {
-          setReportState(cached.report);
+          const prepared = setReportState(cached.report, cached.imageAssetsLocalized);
           setSource(cached.source);
+          if (!cached.imageAssetsLocalized && prepared) {
+            void putActiveReport({ ...cached, imageAssetsLocalized: true, report: prepared });
+          }
         } else {
           setReportState(null);
           setSource(null);
@@ -218,18 +240,18 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     try {
       const text = await file.text();
       const data = parseReport(text, file.name);
-      setReportState(data);
+      const prepared = setReportState(data)!;
       setSource("upload");
       setReportId(null);
       setLoading(false);
       await putActiveReport({
-        id: reportCacheId(data, "upload"),
+        id: reportCacheId(prepared, "upload"),
         source: "upload",
         savedAt: Date.now(),
-        report: data,
+        imageAssetsLocalized: true,
+        report: prepared,
       });
-      void recordReportIntoProfiles(data);
-      void saveToArchive(data);
+      persistReportSummaries(prepared);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to read file");
       setLoading(false);
@@ -245,18 +267,18 @@ export function ReportProvider({ children }: { children: ReactNode }) {
       if (!res.ok) throw new Error(`Failed to fetch report (${res.status})`);
       const text = await res.text();
       const data = parseReport(text, url);
-      setReportState(data);
+      const prepared = setReportState(data)!;
       setSource("url");
       setReportId(null);
       setLoading(false);
       await putActiveReport({
-        id: reportCacheId(data, "url"),
+        id: reportCacheId(prepared, "url"),
         source: "url",
         savedAt: Date.now(),
-        report: data,
+        imageAssetsLocalized: true,
+        report: prepared,
       });
-      void recordReportIntoProfiles(data);
-      void saveToArchive(data);
+      persistReportSummaries(prepared);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to load URL";
       setError(msg);
@@ -276,26 +298,20 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     try {
       const permalinks = reportPermalinks(report);
       if (permalinks.length > 0) {
-        const fights = await Promise.all(
-          permalinks.map(async (permalink) => {
-            const raw = await fetchDpsReportJson(permalink);
-            return { summary: summarizeRawFight(raw, permalink), raw };
-          }),
-        );
-        const data = buildReportFromFights(fights);
+        const data = await buildReportFromPermalinks(permalinks);
         const nextSource: ReportSource = source === "upload" ? "raw" : (source ?? "raw");
-        setReportState(data);
+        const prepared = setReportState(data)!;
         setSource(nextSource);
         setReportId(null);
         setLoading(false);
         await putActiveReport({
-          id: reportCacheId(data, nextSource),
+          id: reportCacheId(prepared, nextSource),
           source: nextSource,
           savedAt: Date.now(),
-          report: data,
+          imageAssetsLocalized: true,
+          report: prepared,
         });
-        void recordReportIntoProfiles(data);
-        void saveToArchive(data);
+        persistReportSummaries(prepared);
         return;
       }
 
@@ -303,17 +319,17 @@ export function ReportProvider({ children }: { children: ReactNode }) {
         const res = await fetch(`${import.meta.env.BASE_URL}reports/${reportId}/report.json`);
         if (!res.ok) throw new Error(`Report not found (${res.status})`);
         const data = parseReport(await res.text(), `Report ${reportId}`);
-        setReportState(data);
+        const prepared = setReportState(data)!;
         setSource("url");
         setLoading(false);
         await putActiveReport({
-          id: reportCacheId(data, "url"),
+          id: reportCacheId(prepared, "url"),
           source: "url",
           savedAt: Date.now(),
-          report: data,
+          imageAssetsLocalized: true,
+          report: prepared,
         });
-        void recordReportIntoProfiles(data);
-        void saveToArchive(data);
+        persistReportSummaries(prepared);
         return;
       }
 
@@ -329,18 +345,18 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      setReportState(data);
+      const prepared = setReportState(data)!;
       setSource("raw");
       setReportId(null);
       setLoading(false);
       await putActiveReport({
-        id: reportCacheId(data, "raw"),
+        id: reportCacheId(prepared, "raw"),
         source: "raw",
         savedAt: Date.now(),
-        report: data,
+        imageAssetsLocalized: true,
+        report: prepared,
       });
-      void recordReportIntoProfiles(data);
-      void saveToArchive(data);
+      persistReportSummaries(prepared);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load combined report");
       setLoading(false);

@@ -1,64 +1,68 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { motion } from "framer-motion";
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Sidebar, { VIEW_ICONS } from "./components/layout/Sidebar";
-import CommandPalette, { type WorkspaceDestination } from "./components/layout/CommandPalette";
-import AppearanceDialog from "./components/layout/AppearanceDialog";
+import type { WorkspaceDestination } from "./components/layout/CommandPalette";
 import { Search, ChevronRight, Files } from "lucide-react";
-import { VIEW_TITLES, VIEW_TONES } from "./lib/viewRegistry";
+import { VIEW_TITLES, VIEW_TONES, viewRequiresReport } from "./lib/viewRegistry";
 import { ReportProvider, useReport } from "./store/ReportContext";
 import { ViewProvider, useView } from "./store/ViewContext";
 import { CompareProvider } from "./store/CompareContext";
 import { DamageScopeProvider, DamageScopeToggle } from "./store/DamageScopeContext";
 import { StatsDisplayProvider, StatsDisplayToggle } from "./store/StatsDisplayContext";
 import { AllyScopeProvider, AllyScopeToggle } from "./store/AllyScopeContext";
-import OverviewView from "./views/OverviewView";
-import KdrView from "./views/KdrView";
-import FightBreakdownView from "./views/FightBreakdownView";
-import TopPlayersView from "./views/TopPlayersView";
-import TopSkillsView from "./views/TopSkillsView";
-import BuffsView from "./views/BuffsView";
-import ClassesView from "./views/ClassesView";
-import MapDistributionView from "./views/MapDistributionView";
-import CommanderStatsHighlightsView from "./views/CommanderStatsHighlightsView";
-import SquadStatsView from "./views/SquadStatsView";
-import CompositionView from "./views/CompositionView";
-import OffensiveView from "./views/OffensiveView";
-import DefensiveView from "./views/DefensiveView";
-import RosterView from "./views/RosterView";
-import PlayerProfilesView from "./views/PlayerProfilesView";
-import PlayerCompareView from "./views/PlayerCompareView";
-import DamageModifiersView from "./views/DamageModifiersView";
-import RotationsView from "./views/RotationsView";
-import DpsGraphView from "./views/DpsGraphView";
-import ReplayView from "./views/ReplayView";
-import MechanicsView from "./views/MechanicsView";
-import DeathRecapView from "./views/DeathRecapView";
-import BuffGenerationView from "./views/BuffGenerationView";
-import ConditionsView from "./views/ConditionsView";
-import PartyBoonsView from "./views/PartyBoonsView";
-import ArchiveView from "./views/ArchiveView";
-import CompareView from "./views/CompareView";
-import IntelligenceDebugView from "./views/IntelligenceDebugView";
-import AxiForgeLabView from "./views/AxiForgeLabView";
 import { downloadReportArtifact } from "./lib/shareReportArtifact";
 import { buildEntropyShareLink, getReportPermalinks } from "./lib/shareLinks";
-import { METRICS_VERSION } from "./lib/buildReportFromFights";
+import { METRICS_VERSION } from "./lib/metricsVersion";
+import { VIEW_LOADERS } from "./lib/viewPreload";
 import { Activity, CircleAlert as AlertCircle, CloudUpload, FlaskConical, Link2, MessageCircle, RefreshCw, Send, Share2, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
-import HostedReportShareModal from "./components/ui/HostedReportShareModal";
-import RawLogImporter from "./components/ui/RawLogImporter";
 import { TopbarActionMenu, TopbarMenuButton } from "./components/ui/TopbarActionMenu";
 import UpdateToast from "./components/ui/UpdateToast";
 import { useAutoUpdater } from "./utils/useAutoUpdater";
+import { isRawLogFile } from "./utils/rawLogFile";
 import {
-  buildDiscordReportPayload,
   clearDiscordWebhookUrl,
   isDiscordWebhookUrl,
   loadDiscordWebhookUrl,
   saveDiscordWebhookUrl,
-  sendDiscordWebhook,
-} from "./utils/discordWebhook";
+} from "./utils/discordWebhookStorage";
+
+const OverviewView = lazy(VIEW_LOADERS.overview);
+const KdrView = lazy(VIEW_LOADERS.kdr);
+const FightBreakdownView = lazy(VIEW_LOADERS["fight-breakdown"]);
+const TopPlayersView = lazy(VIEW_LOADERS["top-players"]);
+const TopSkillsView = lazy(VIEW_LOADERS["top-skills"]);
+const BuffsView = lazy(VIEW_LOADERS.buffs);
+const ClassesView = lazy(VIEW_LOADERS.classes);
+const MapDistributionView = lazy(VIEW_LOADERS["map-distribution"]);
+const CommanderStatsHighlightsView = lazy(VIEW_LOADERS["commander-stats"]);
+const SquadStatsView = lazy(VIEW_LOADERS["squad-stats"]);
+const CompositionView = lazy(VIEW_LOADERS.composition);
+const OffensiveView = lazy(VIEW_LOADERS.offensive);
+const DefensiveView = lazy(VIEW_LOADERS.defensive);
+const RosterView = lazy(VIEW_LOADERS.roster);
+const PlayerProfilesView = lazy(VIEW_LOADERS["player-profiles"]);
+const PlayerCompareView = lazy(VIEW_LOADERS["player-compare"]);
+const DamageModifiersView = lazy(VIEW_LOADERS["damage-modifiers"]);
+const RotationsView = lazy(VIEW_LOADERS.rotations);
+const DpsGraphView = lazy(VIEW_LOADERS["dps-graph"]);
+const ReplayView = lazy(VIEW_LOADERS["fight-replay"]);
+const MechanicsView = lazy(VIEW_LOADERS.mechanics);
+const DeathRecapView = lazy(VIEW_LOADERS["death-recap"]);
+const BuffGenerationView = lazy(VIEW_LOADERS["buff-generation"]);
+const ConditionsView = lazy(VIEW_LOADERS.conditions);
+const PartyBoonsView = lazy(VIEW_LOADERS["party-boons"]);
+const ArchiveView = lazy(VIEW_LOADERS.archive);
+const CompareView = lazy(VIEW_LOADERS.compare);
+const IntelligenceDebugView = lazy(VIEW_LOADERS.intelligence);
+const InsightView = lazy(VIEW_LOADERS.insight);
+const RawView = lazy(VIEW_LOADERS.raw);
+const AxiForgeLabView = lazy(VIEW_LOADERS["axiforge-lab"]);
+const EffectivePowerView = lazy(VIEW_LOADERS["effective-power"]);
+const RawLogImporter = lazy(() => import("./components/ui/RawLogImporter"));
+const CommandPalette = lazy(() => import("./components/layout/CommandPalette"));
+const AppearanceDialog = lazy(() => import("./components/layout/AppearanceDialog"));
+const HostedReportShareModal = lazy(() => import("./components/ui/HostedReportShareModal"));
 
 
 
@@ -94,7 +98,10 @@ function ReportRouter({ activeView }: { activeView: string }) {
     case "archive": return <ArchiveView />;
     case "compare": return <CompareView />;
     case "intelligence": return <IntelligenceDebugView />;
+    case "insight": return <InsightView />;
+    case "raw": return <RawView />;
     case "axiforge-lab": return <AxiForgeLabView />;
+    case "effective-power": return <EffectivePowerView />;
     default: return <OverviewView />;
   }
 }
@@ -160,6 +167,7 @@ function ErrorState({
 function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void }) {
   const { uploadReport, loadFromUrl, error, loading } = useReport();
   const [landingReady, setLandingReady] = useState(false);
+  const [forwardedRawFile, setForwardedRawFile] = useState<{ id: number; file: File } | null>(null);
 
   useEffect(() => {
     let revealFrame = 0;
@@ -248,14 +256,32 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
           </header>
 
           <div className="theme-ingress-body theme-ingress-primary">
-            <RawLogImporter cinematic />
+            <Suspense fallback={
+              <div className="flex min-h-52 items-center justify-center gap-3 text-sm font-semibold text-amber-200/80">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Preparing log workspace...
+              </div>
+            }>
+              <RawLogImporter cinematic incomingFile={forwardedRawFile} />
+            </Suspense>
           </div>
 
           <div className="theme-ingress-utility">
             <details className="theme-saved-report-gate">
               <summary>Open a saved Entropy report</summary>
               <div className="theme-saved-report-body">
-                <UploadCard onFile={uploadReport} onUrl={loadFromUrl} error={error} loading={loading} />
+                <UploadCard
+                  onFile={(file) => {
+                    if (isRawLogFile(file)) {
+                      setForwardedRawFile({ id: Date.now(), file });
+                      return;
+                    }
+                    void uploadReport(file);
+                  }}
+                  onUrl={loadFromUrl}
+                  error={error}
+                  loading={loading}
+                />
               </div>
             </details>
 
@@ -344,7 +370,7 @@ function ReportShell() {
 
 
   const viewTitle = VIEW_TITLES[activeView] ?? "Overview";
-  const showTool = activeView === "axiforge-lab";
+  const showStandaloneView = !viewRequiresReport(activeView);
 
 
 
@@ -430,6 +456,7 @@ function ReportShell() {
       setDiscordStatus("sending");
       setDiscordError("");
       const viewerUrl = buildEntropyShareLink(report);
+      const { buildDiscordReportPayload, sendDiscordWebhook } = await import("./utils/discordWebhook");
       await sendDiscordWebhook(webhookUrl, buildDiscordReportPayload(report, viewerUrl));
       flashDiscordStatus("sent");
     } catch (err) {
@@ -473,14 +500,22 @@ function ReportShell() {
     <div className="theme-app-shell flex h-screen w-full overflow-hidden">
       <a href="#workspace-content" className="entropy-skip-link">Skip to workspace</a>
       <div className="entropy-bg" />
-      <CommandPalette open={commandOpen} onClose={() => setCommandOpen(false)} onNavigate={handleCommandNavigate} />
-      <AppearanceDialog open={appearanceOpen} onClose={() => setAppearanceOpen(false)} />
+      {commandOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette open onClose={() => setCommandOpen(false)} onNavigate={handleCommandNavigate} />
+        </Suspense>
+      )}
+      {appearanceOpen && (
+        <Suspense fallback={null}>
+          <AppearanceDialog open onClose={() => setAppearanceOpen(false)} />
+        </Suspense>
+      )}
 
 
 
 
       {/* Only show sidebar when a report is loaded */}
-      {(report || showTool) && <Sidebar activeView={activeView} setActiveView={handleSetActiveView} hasReport={!!report}
+      {(report || showStandaloneView) && <Sidebar activeView={activeView} setActiveView={handleSetActiveView} hasReport={!!report}
         onSearch={() => setCommandOpen(true)} onSettings={() => setAppearanceOpen(true)} />}
 
 
@@ -608,7 +643,11 @@ function ReportShell() {
           </header>
         )}
 
-        {hostedShareOpen && report && <HostedReportShareModal report={report} onClose={() => setHostedShareOpen(false)} />}
+        {hostedShareOpen && report && (
+          <Suspense fallback={null}>
+            <HostedReportShareModal report={report} onClose={() => setHostedShareOpen(false)} />
+          </Suspense>
+        )}
 
         {discordOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
@@ -733,9 +772,13 @@ function ReportShell() {
 
 
         {/* Content */}
-        <div className={showImport ? "min-h-full" : report || showTool ? "theme-content p-6" : "min-h-full"} id="workspace-content" tabIndex={-1}>
-          {showTool ? (
-            <AxiForgeLabView />
+        <div className={showImport && !showStandaloneView ? "min-h-full" : report || showStandaloneView ? "theme-content p-6" : "min-h-full"} id="workspace-content" tabIndex={-1}>
+          {showStandaloneView ? (
+            <Suspense fallback={<LoadingState />}>
+              <div key={activeView} className="entropy-route-stage min-h-full w-full">
+                <ReportRouter activeView={activeView} />
+              </div>
+            </Suspense>
           ) : showLoading ? (
             <LoadingState />
           ) : showError ? (
@@ -753,7 +796,7 @@ function ReportShell() {
               }}
             />
           ) : showImport ? (
-            <motion.div className="min-h-full w-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+            <div className="entropy-import-arrival min-h-full w-full">
               <div className="min-h-full w-full">
                 {report && (
                   <div className="theme-landing-return">
@@ -767,11 +810,13 @@ function ReportShell() {
                 )}
                 <NoReportState onOpenAxiForgeLab={() => setActiveView("axiforge-lab")} />
               </div>
-            </motion.div>
-          ) : report ? (
-            <div key={activeView} className="entropy-route-stage min-h-full w-full">
-              <ReportRouter activeView={activeView} />
             </div>
+          ) : report ? (
+            <Suspense fallback={<LoadingState />}>
+              <div key={activeView} className="entropy-route-stage min-h-full w-full">
+                <ReportRouter activeView={activeView} />
+              </div>
+            </Suspense>
           ) : null}
         </div>
       </main>

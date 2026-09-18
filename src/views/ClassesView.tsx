@@ -5,6 +5,7 @@ import ClassIcon from "../components/ui/ClassIcon";
 import Panel from "../components/ui/Panel";
 import { buildCompositionComparison, summarizeProfessionPresence } from "../lib/compositionInsights";
 import { useReport } from "../store/ReportContext";
+import "../Styles/ClassesWorkspace.css";
 
 type RoleFilter = "all" | "support" | "damage" | "review";
 
@@ -49,7 +50,7 @@ export default function ClassesView() {
   const professionIndex = [...comparisonRows].sort((a, b) => b.squadCount - a.squadCount || b.enemyCount - a.enemyCount || a.name.localeCompare(b.name));
 
   return (
-    <div className="space-y-5 animate-view pb-10">
+    <div className="classes-workspace space-y-5 animate-view pb-10">
       <section className="theme-role-coverage grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <RoleMetric icon={<ShieldCheck className="h-4 w-4" />} label="Support" value={String(supportCount)} detail={`${supportRatio.toFixed(0)}% of roster`} tone="text-emerald-300" />
         <RoleMetric icon={<Swords className="h-4 w-4" />} label="Damage" value={String(damageCount)} detail={`${Math.max(0, 100 - supportRatio).toFixed(0)}% of roster`} tone="text-orange-300" />
@@ -57,14 +58,14 @@ export default function ClassesView() {
         <RoleMetric icon={<AlertTriangle className="h-4 w-4" />} label="Needs review" value={String(reviewCount)} detail="below 50% confidence" tone={reviewCount > 0 ? "text-amber-300" : "text-emerald-300"} />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[0.72fr_1.28fr]">
+      <section className="classes-detail-grid grid gap-5 xl:grid-cols-[0.72fr_1.28fr]">
         <Panel title="Profession Index" icon={<Layers className="h-4 w-4" />} action={`${professionIndex.length} professions`} bodyClassName="p-0">
           <div className="grid grid-cols-[1fr_3rem_4rem] gap-2 border-b border-theme-border/50 px-4 py-2 text-[9px] font-black uppercase tracking-wider text-theme-muted"><span>Profession</span><span className="text-right">Squad</span><span className="text-right">Enemy obs.</span></div>
           <BoundedDataRegion label={`Profession index, ${professionIndex.length} professions`} itemCount={professionIndex.length} maxHeightClass="max-h-[31rem]" className="divide-y divide-theme-border/30">
             {professionIndex.map((row) => {
               const active = selectedName === row.name;
               return <button key={row.name} type="button" aria-pressed={active} onClick={() => setSelectedProfession(row.name)} className={`grid w-full grid-cols-[1fr_3rem_4rem] items-center gap-2 px-4 py-2.5 text-left transition-colors ${active ? "bg-theme-accent/[0.07] shadow-[inset_2px_0_0_var(--theme-accent)]" : "hover:bg-theme-surface-elevated/55"}`}>
-                <span className="flex min-w-0 items-center gap-2 text-xs font-bold text-theme-text"><ClassIcon name={row.name} size="sm" /><span className="truncate">{row.name}</span></span>
+                <span className="classes-index-identity flex min-w-0 items-center gap-2 text-xs font-bold text-theme-text"><ClassIcon name={row.name} size="lg" /><span>{row.name}</span></span>
                 <span className="text-right font-mono text-xs text-amber-300">{row.squadCount}</span>
                 <span className="text-right font-mono text-xs text-rose-300">{row.enemyCount}</span>
               </button>;
@@ -74,7 +75,7 @@ export default function ClassesView() {
 
         <Panel title={selectedName ?? "Profession Coverage"} icon={<Activity className="h-4 w-4" />} action={selected ? `${selected.squadCount} squad · ${selected.enemyCount} enemy obs.` : undefined}>
           {selectedName ? <div className="space-y-5">
-            <div className="grid items-center gap-4 border-b border-theme-border/50 pb-4 md:grid-cols-[auto_1fr_auto]">
+            <div className="classes-profession-header grid items-center gap-4 border-b border-theme-border/50 pb-4 md:grid-cols-[auto_1fr_auto]">
               <div className="grid h-12 w-12 place-items-center overflow-visible"><ClassIcon name={selectedName} size="lg" /></div>
               <div><div className="text-xl font-black uppercase text-theme-text">{selectedName}</div><div className="mt-1 text-xs text-theme-muted">Present in {presence.fightsPresent} of {presence.totalFights} fights; absent from {presence.fightsAbsent}.</div></div>
               <div className="grid grid-cols-2 gap-5 text-right"><CompactValue label="Average" value={presence.averagePerFight.toFixed(1)} /><CompactValue label="Peak" value={String(presence.peakCount)} /></div>

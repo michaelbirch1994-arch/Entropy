@@ -1,0 +1,66 @@
+.insight-workspace {
+  color: var(--color-theme-text, #e8eeeb);
+  max-width: 1600px;
+  margin: auto;
+  padding: 12px 8px 48px;
+  letter-spacing: 0;
+}
+
+.insight-heading {
+  display: flex;
+  align-items: center;
+  padding: 18px 0 30px;
+  border-bottom: 1px solid #b4d4c526;
+}
+
+.insight-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #d3b86e;
+}
+
+.insight-heading h1 {
+  margin: 10px 0;
+  font-size: 44px;
+  font-weight: 750;
+  line-height: 1.1;
+}
+
+.insight-heading h1 span {
+  color: #65dec4;
+}
+
+.insight-heading p {
+  color: #a3b5b0;
+  font-size: 14px;
+}
+
+.insight-main {
+  min-width: 0;
+  padding-top: 28px;
+}
+
+.insight-workspace button {
+  cursor: pointer;
+}
+
+.insight-workspace button:focus-visible {
+  outline: 2px solid #70dec2;
+  outline-offset: 3px;
+}
+
+@media (max-width: 850px) {
+  .insight-heading h1 {
+    font-size: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .insight-workspace * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

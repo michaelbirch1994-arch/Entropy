@@ -7,6 +7,7 @@ import { useView } from "../store/ViewContext";
 import { useCompare } from "../store/CompareContext";
 import { fmtCompact, fmtNum } from "../utils/format";
 import { SortableHeader } from "../components/ui/SortableHeader";
+import "../Styles/ArchiveWorkspace.css";
 
 type SortKey = "title" | "commanders" | "fights" | "record" | "totalDamage" | "avgSquadSize";
 type SortState = { key: SortKey; dir: "asc" | "desc" } | null;
@@ -103,12 +104,12 @@ export default function ArchiveView() {
   }
 
   return (
-    <div className="space-y-5 animate-view pb-12">
+    <div className="archive-workspace space-y-5 animate-view pb-12">
       <Panel
         title="Report Archive"
-        subtitle="Every report you've loaded on this device, searchable by title or commander - stored locally, no server involved"
+        subtitle="Your combat history, saved on this device"
         icon={<Archive className="w-4 h-4" />}
-        action={<span className="text-[10px] text-theme-muted font-mono">{entries.length} reports saved</span>}
+        action={<span className="text-[10px] text-theme-muted font-mono">{entries.length} {entries.length === 1 ? "report" : "reports"} saved</span>}
       >
         {entries.length === 0 ? (
           <div className="py-12 text-center text-sm text-theme-muted">
@@ -116,7 +117,7 @@ export default function ArchiveView() {
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-3 mb-3">
+            <div className="archive-toolbar">
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-theme-muted" />
                 <input
@@ -128,22 +129,18 @@ export default function ArchiveView() {
                   className="w-full rounded-lg border border-theme-border bg-theme-surface-inset pl-8 pr-3 py-2 text-xs text-theme-text placeholder:text-theme-faint outline-none transition-all focus:border-theme-accent/50"
                 />
               </div>
-              {selected.size === 2 && (
                 <button
                   type="button"
                   onClick={handleCompare}
+                  disabled={selected.size !== 2}
                   className="flex items-center gap-1.5 rounded-lg border border-theme-accent/35 bg-theme-accent/10 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-theme-accent-strong transition-all hover:bg-theme-accent/15"
                 >
-                  <GitCompare className="w-3.5 h-3.5" /> Compare Selected
+                  <GitCompare className="w-3.5 h-3.5" /> Compare ({selected.size}/2)
                 </button>
-              )}
-              {selected.size > 0 && (
-                <span className="text-[10px] text-theme-muted">{selected.size}/2 selected for compare</span>
-              )}
             </div>
 
             <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left text-xs">
+              <table className="archive-table w-full text-left text-xs">
                 <thead>
                   <tr className="text-[10px] text-theme-muted uppercase font-bold tracking-wider border-b border-theme-border/50">
                     <th className="p-2.5 w-8"></th>
@@ -158,7 +155,7 @@ export default function ArchiveView() {
                 </thead>
                 <tbody className="divide-y divide-theme-border/30 font-mono">
                   {filtered.map((e) => (
-                    <tr key={e.id} className="transition-colors hover:bg-theme-surface-elevated/60">
+                    <tr key={e.id} data-selected={selected.has(e.id)} className="transition-colors hover:bg-theme-surface-elevated/60">
                       <td className="p-2.5">
                         <input
                           type="checkbox"
@@ -169,20 +166,20 @@ export default function ArchiveView() {
                         />
                       </td>
                       <td className="p-2.5">
-                        <div className="text-theme-text font-semibold">{e.title}</div>
+                        <button type="button" className="archive-report-title" onClick={() => handleOpen(e)}>{e.title}</button>
                         <div className="text-[10px] text-theme-muted">{e.dateLabel}</div>
                       </td>
                       <td className="p-2.5 text-theme-muted whitespace-nowrap">{e.commanders.join(", ") || "—"}</td>
-                      <td className="p-2.5 text-right text-theme-text/80">{fmtNum(e.fights)}</td>
-                      <td className="p-2.5 text-right">
+                      <td data-label="Fights" className="p-2.5 text-right text-theme-text/80">{fmtNum(e.fights)}</td>
+                      <td data-label="Outcome" className="p-2.5 text-right">
                         {e.wins + e.losses > 0 ? <>
                           <span className="text-emerald-400">{e.wins}</span>
                           <span className="text-theme-faint"> / </span>
                           <span className="text-rose-400">{e.losses}</span>
                         </> : <span className="text-theme-muted">{e.unclassified ?? e.fights} unclassified</span>}
                       </td>
-                      <td className="p-2.5 text-right text-orange-400 font-bold">{fmtCompact(e.totalDamage)}</td>
-                      <td className="p-2.5 text-right text-theme-text/80">{e.avgSquadSize.toFixed(1)}</td>
+                      <td data-label="Squad damage" className="archive-damage p-2.5 text-right text-orange-400 font-bold" title={fmtNum(e.totalDamage)}>{fmtCompact(e.totalDamage)}</td>
+                      <td data-label="Average squad" className="p-2.5 text-right text-theme-text/80">{e.avgSquadSize.toFixed(1)}</td>
                       <td className="p-2.5">
                         <div className="flex items-center gap-2 justify-end">
                           <button
@@ -210,6 +207,7 @@ export default function ArchiveView() {
                 </tbody>
               </table>
             </div>
+            {filtered.length === 0 && <p role="status" className="archive-no-results">No reports match "{query}".</p>}
           </>
         )}
       </Panel>

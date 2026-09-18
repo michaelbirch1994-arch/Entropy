@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, type Plugin } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import gw2SkillsImportHandler from './api/gw2skills-import.js'
@@ -31,6 +31,13 @@ const gw2SkillsImportDevApi: Plugin = {
 export default defineConfig({
   base: process.env.GITHUB_PAGES === 'true' ? '/Entropy/' : './',
   plugins: [react(), tailwindcss(), gw2SkillsImportDevApi],
+  test: {
+    include: [
+      'src/**/*.test.{ts,tsx}',
+      'api/**/*.test.js',
+      'scripts/**/*.test.ts',
+    ],
+  },
   server: {
     watch: {
       ignored: ['**/.tmp/**'],

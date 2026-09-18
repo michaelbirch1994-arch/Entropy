@@ -272,7 +272,7 @@ export default function RotationsView() {
                     <tr key={i} className="border-b border-slate-800/30 hover:bg-white/[0.02]">
                       <td className="px-3 py-1.5 font-mono text-slate-500">{fmtClock(c.castTime)}</td>
                       <td className="px-3 py-1.5 flex items-center gap-2">
-                        {meta?.icon && <img src={meta.icon} alt="" referrerPolicy="no-referrer" className="w-4 h-4 rounded-sm" loading="lazy" />}
+                        {meta?.icon && <img src={reportImageSrc(meta.icon)} alt="" referrerPolicy="no-referrer" className="w-4 h-4 rounded-sm" loading="lazy" />}
                         <span className="text-slate-300 font-medium">{meta?.name ?? `Skill ${c.skillId}`}</span>
                       </td>
                     </tr>
@@ -286,3 +286,4 @@ export default function RotationsView() {
     </div>
   );
 }
+import { reportImageSrc } from "../utils/reportImageAssets";

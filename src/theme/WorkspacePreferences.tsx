@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { MotionConfig } from "framer-motion";
 
 export type WorkspacePreferences = {
   density: "comfortable" | "compact";
@@ -48,11 +47,7 @@ export function WorkspacePreferencesProvider({ children }: { children: ReactNode
   const contextValue = useMemo(() => ({ preferences, updatePreference }), [preferences, updatePreference]);
 
   return (
-    <Context.Provider value={contextValue}>
-      <MotionConfig reducedMotion={preferences.motion === "reduced" ? "always" : "user"}>
-        {children}
-      </MotionConfig>
-    </Context.Provider>
+    <Context.Provider value={contextValue}>{children}</Context.Provider>
   );
 }
 

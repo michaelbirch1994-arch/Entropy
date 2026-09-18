@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import "../Styles/BuilderSquadUsability.css";
+import "../Styles/BuilderVisualFoundation.css";
+import "../Styles/BuilderWorkbench.css";
 import SelectionIndicator from "../components/ui/SelectionIndicator";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
@@ -14,6 +17,7 @@ import {
   Archive,
   BookOpen,
   Check,
+  ChevronLeft,
   ChevronRight,
   Clipboard,
   Download,
@@ -170,13 +174,13 @@ const ARMOR_SLOT_LABELS: Record<(typeof ARMOR_SLOTS)[number], string> = {
 };
 const BUILDER_FOOD_LABELS = BUILDER_FOOD_CHOICES.map((choice) => choice.label);
 const BUILDER_UTILITY_LABELS = BUILDER_UTILITY_CHOICES.map((choice) => choice.label);
-const BUILDER_SECTIONS: Array<{ id: BuilderSection; label: string }> = [
-  { id: "overview", label: "Overview" },
-  { id: "traits", label: "Traits & Skills" },
-  { id: "equipment", label: "Equipment" },
-  { id: "notes", label: "Notes" },
-  { id: "preview", label: "Preview" },
-];
+const BUILDER_SECTIONS = [
+  { id: "overview", label: "Profile", icon: Users },
+  { id: "traits", label: "Traits & Skills", icon: Layers3 },
+  { id: "equipment", label: "Equipment", icon: Shield },
+  { id: "notes", label: "Notes", icon: BookOpen },
+  { id: "preview", label: "Review", icon: Gauge },
+] as const;
 const EQUIPMENT_SECTIONS: Array<{ id: EquipmentSection; label: string }> = [
   { id: "weapons", label: "Weapons" },
   { id: "armor", label: "Armor & Trinkets" },
@@ -432,26 +436,25 @@ function ChoicePickerField({
         <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </button>
       {open && createPortal(
-        <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closePicker(); }}>
+        <div className="theme-builder-picker-backdrop builder-selection-drawer" onMouseDown={(event) => { if (event.target === event.currentTarget) closePicker(); }}>
           <section ref={dialogRef} id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} onKeyDown={(event) => handleModalDialogKeyDown(event, dialogRef.current, closePicker)}>
             <div className="theme-builder-picker-head">
-              <div><div className="theme-builder-kicker">Builder picker</div><h3 id={`${id}-title`}>{label}</h3></div>
+              <div><div className="theme-builder-kicker">Loadout selection</div><h3 id={`${id}-title`}>{label}</h3></div>
               <button type="button" onClick={closePicker} aria-label="Close picker"><X className="h-4 w-4" /></button>
             </div>
             <div className="theme-builder-picker-search">
               <Search className="h-4 w-4" aria-hidden="true" />
               <TextField value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label.toLowerCase()}`} aria-label={`Search ${label} choices`} autoFocus />
+              {query && <button type="button" aria-label="Clear search" title="Clear search" onClick={() => { setQuery(""); dialogRef.current?.querySelector("input")?.focus(); }}><X className="h-4 w-4" /></button>}
             </div>
             {filters.length > 1 && (
               <div className="theme-builder-picker-filters" role="group" aria-label={`${label} filters`}>
                 {filters.map((item) => <button key={item} type="button" aria-pressed={filter === item} className={filter === item ? "is-active" : undefined} onClick={() => setFilter(item)}>{item}</button>)}
               </div>
             )}
+            <div className="builder-picker-result-count" role="status">{filteredChoices.length} {filteredChoices.length === 1 ? "option" : "options"}</div>
             <div className="theme-builder-picker-list">
-              <button type="button" aria-pressed={!value} className={!value ? "is-active" : undefined} onClick={() => { onChange(""); closePicker(); }}>
-                <span className="theme-builder-picker-icon"><Eraser className="h-4 w-4" aria-hidden="true" /></span>
-                <span><strong>{clearLabel}</strong><small>Use default or leave empty</small></span>
-              </button>
+              {!filteredChoices.length && <div className="builder-picker-no-results"><Search aria-hidden="true" /><strong>No matches</strong><span>{query ? `No results for "${query}"` : `No options in ${filter}`}</span><button type="button" onClick={() => { setQuery(""); setFilter("All"); }}>Reset filters</button></div>}
               {filteredChoices.map((choice) => (
                 <button
                   key={choice.value}
@@ -466,9 +469,11 @@ function ChoicePickerField({
                 >
                   <span className="theme-builder-picker-icon">{choice.icon ? <img src={choice.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}</span>
                   <span><strong>{choice.label}</strong><small>{choice.disabledReason ?? choice.meta ?? choice.group ?? "Available"}</small></span>
+                  <Check className="builder-picker-selected-mark" aria-hidden="true" />
                 </button>
               ))}
             </div>
+            <footer className="builder-picker-current"><span><small>Current selection</small><strong>{selected?.label || value || "None"}</strong></span><button type="button" disabled={!value} title={clearLabel} aria-label={clearLabel} onClick={() => { onChange(""); closePicker(); }}><Eraser className="h-4 w-4" /></button></footer>
           </section>
         </div>,
         document.body,
@@ -569,24 +574,23 @@ function ItemPickerField({
       </button>
       {!resolved && <span className="theme-builder-choice-note"><AlertCircle className="h-3.5 w-3.5" /> Imported item is not in the curated catalog.</span>}
       {open && createPortal(
-        <div className="theme-builder-picker-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closePicker(); }}>
+        <div className="theme-builder-picker-backdrop builder-selection-drawer" onMouseDown={(event) => { if (event.target === event.currentTarget) closePicker(); }}>
           <section ref={dialogRef} id={`${id}-dialog`} className="theme-builder-picker-dialog" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`} onKeyDown={(event) => handleModalDialogKeyDown(event, dialogRef.current, closePicker)}>
             <div className="theme-builder-picker-head">
-              <div><div className="theme-builder-kicker">Equipment picker</div><h3 id={`${id}-title`}>{label}</h3></div>
+              <div><div className="theme-builder-kicker">Equipment selection</div><h3 id={`${id}-title`}>{label}</h3></div>
               <button type="button" onClick={closePicker} aria-label="Close picker"><X className="h-4 w-4" /></button>
             </div>
             <div className="theme-builder-picker-search">
               <Search className="h-4 w-4" aria-hidden="true" />
               <TextField value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${label} choices`} aria-label={`Search ${label} choices`} autoFocus />
+              {query && <button type="button" aria-label="Clear search" title="Clear search" onClick={() => { setQuery(""); dialogRef.current?.querySelector("input")?.focus(); }}><X className="h-4 w-4" /></button>}
             </div>
             <div className="theme-builder-picker-filters" role="group" aria-label={`${label} filters`}>
               {filters.map((item) => <button key={item} type="button" aria-pressed={filter === item} className={filter === item ? "is-active" : undefined} onClick={() => setFilter(item)}>{item}</button>)}
             </div>
+            <div className="builder-picker-result-count" role="status">{filteredChoices.length} {filteredChoices.length === 1 ? "option" : "options"}</div>
             <div className="theme-builder-picker-list">
-              <button type="button" aria-pressed={!value} className={!value ? "is-active" : undefined} onClick={() => { onChange(""); closePicker(); }}>
-                <span className="theme-builder-picker-icon"><Eraser className="h-4 w-4" aria-hidden="true" /></span>
-                <span><strong>Clear slot</strong><small>Use no {label.toLowerCase()}</small></span>
-              </button>
+              {!filteredChoices.length && <div className="builder-picker-no-results"><Search aria-hidden="true" /><strong>No matches</strong><span>{query ? `No results for "${query}"` : `No options in ${filter}`}</span><button type="button" onClick={() => { setQuery(""); setFilter("All"); }}>Reset filters</button></div>}
               {filteredChoices.map((choice) => {
                 const item = choice.id ? enrichedItems[choice.id] : null;
                 const active = selectedChoice?.label === choice.label;
@@ -594,10 +598,12 @@ function ItemPickerField({
                   <button key={choice.label} type="button" aria-pressed={active} className={active ? "is-active" : undefined} onClick={() => choose(choice)}>
                     <span className="theme-builder-picker-icon">{item?.icon ? <img src={item.icon} alt="" /> : <FileCode2 className="h-4 w-4" aria-hidden="true" />}</span>
                     <span><strong>{item?.name ?? choice.label}</strong><small>{itemChoiceGroup(choice.label)}</small></span>
+                    <Check className="builder-picker-selected-mark" aria-hidden="true" />
                   </button>
                 );
               })}
             </div>
+            <footer className="builder-picker-current"><span><small>Current selection</small><strong>{displayValue || "None"}</strong></span><button type="button" disabled={!value} title="Clear slot" aria-label="Clear slot" onClick={() => { onChange(""); closePicker(); }}><Eraser className="h-4 w-4" /></button></footer>
           </section>
         </div>,
         document.body,
@@ -2131,7 +2137,7 @@ function EquipmentPreview({
 
 type BuildViewerTab = "build" | "equipment";
 
-function BuildViewerDialog({
+function BuildViewerWorkspace({
   build,
   professions,
   specsById,
@@ -2140,6 +2146,7 @@ function BuildViewerDialog({
   items,
   onClose,
   onEdit,
+  returnLabel,
 }: {
   build: SavedBuilderBuild;
   professions: Gw2Profession[];
@@ -2149,6 +2156,7 @@ function BuildViewerDialog({
   items: Record<number, Gw2Item>;
   onClose: () => void;
   onEdit: () => void;
+  returnLabel: string;
 }) {
   const [tab, setTab] = useState<BuildViewerTab>("build");
   const [traits, setTraits] = useState<Gw2Trait[]>([]);
@@ -2209,12 +2217,14 @@ function BuildViewerDialog({
 
   useEffect(() => {
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    window.requestAnimationFrame(() => dialogRef.current?.focus());
+    const frame = window.requestAnimationFrame(() => dialogRef.current?.focus());
     return () => {
-      document.body.style.overflow = previousOverflow;
-      returnFocusRef.current?.focus();
+      window.cancelAnimationFrame(frame);
+      window.requestAnimationFrame(() => {
+        const previous = returnFocusRef.current;
+        if (previous?.isConnected && previous.getClientRects().length) previous.focus();
+        else document.getElementById("builder-tab-build")?.focus();
+      });
     };
   }, []);
 
@@ -2237,13 +2247,6 @@ function BuildViewerDialog({
       onClose();
       return;
     }
-    if (event.key !== "Tab") return;
-    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), summary, [href], [tabindex]:not([tabindex="-1"])') ?? [])];
-    if (!focusable.length) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-    if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   };
 
   const viewerUrl = new URL(window.location.href);
@@ -2255,9 +2258,9 @@ function BuildViewerDialog({
     if (exportMenuRef.current) exportMenuRef.current.open = false;
   };
 
-  return createPortal(
-    <motion.div className="theme-builder-viewer-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <motion.div ref={dialogRef} className="theme-builder-viewer" role="dialog" aria-modal="true" aria-labelledby="builder-viewer-title" tabIndex={-1} onKeyDown={handleKeyDown} initial={{ opacity: 0, scale: reduceMotion ? 1 : 0.985 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: reduceMotion ? 1 : 0.99 }} transition={{ duration: reduceMotion ? 0 : 0.16 }}>
+  return (
+      <motion.div ref={dialogRef} className="theme-builder-viewer builder-saved-workspace" role="region" aria-labelledby="builder-viewer-title" tabIndex={-1} onKeyDown={handleKeyDown} initial={{ opacity: 0, y: reduceMotion ? 0 : 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduceMotion ? 0 : 0.16 }}>
+        <div className="builder-saved-breadcrumb"><button type="button" onClick={onClose}><ChevronLeft className="h-4 w-4" />Back to {returnLabel}</button><span>Saved build</span></div>
         <header className="theme-builder-viewer-head">
           <div><ClassIcon name={resolveEliteSpecName(build.state.specializationIds, specsById, build.state.professionId)} size="lg" /><span><small>{build.state.professionId} · {build.state.gameMode.toUpperCase()}</small><h2 id="builder-viewer-title">{build.name}</h2></span></div>
           <div>
@@ -2271,7 +2274,6 @@ function BuildViewerDialog({
               </div>
             </details>
             <a href={viewerUrl.toString()} target="_blank" rel="noreferrer" title="Open build in new tab" aria-label="Open build in new tab"><ExternalLink className="h-4 w-4" /></a>
-            <button type="button" onClick={onClose} title="Close build viewer" aria-label="Close build viewer"><X className="h-4 w-4" /></button>
           </div>
         </header>
         <nav className="theme-builder-viewer-tabs" role="tablist" aria-label="Build viewer sections">
@@ -2287,8 +2289,6 @@ function BuildViewerDialog({
         </div>
         <span className="sr-only" role="status" aria-live="polite">{copyStatus}</span>
       </motion.div>
-    </motion.div>,
-    document.body,
   );
 }
 
@@ -3040,7 +3040,8 @@ export default function AxiForgeLabView() {
   const builderViewModes = BUILDER_SECTIONS.map((section) => section.id);
 
   return (
-    <div className="theme-builder-root">
+    <div className="theme-builder-root builder-workbench">
+      <div className="builder-workspace-home" hidden={Boolean(viewingBuild)}>
       <header className="theme-builder-command-deck">
         <div className="theme-builder-title-block">
           <div className="theme-builder-mark"><Wrench className="h-5 w-5" /></div>
@@ -3055,7 +3056,7 @@ export default function AxiForgeLabView() {
         <div className="theme-builder-command-actions">
           <button
             type="button"
-            onClick={() => setImportOpen((open) => !open)}
+            onClick={() => { exportMenuRef.current?.removeAttribute("open"); setImportOpen((open) => !open); }}
             aria-expanded={importOpen}
             aria-controls="builder-import-rack"
             aria-label={importOpen ? "Hide build import panel" : "Show build import panel"}
@@ -3064,7 +3065,7 @@ export default function AxiForgeLabView() {
             <Download className="h-4 w-4" /> Import
           </button>
           <details ref={exportMenuRef} className="theme-builder-export-menu">
-            <summary className="theme-command-button"><Share2 className="h-4 w-4" /> Export</summary>
+            <summary className="theme-command-button" onClick={() => setImportOpen(false)}><Share2 className="h-4 w-4" /> Export</summary>
             <div role="menu" aria-label="Export build">
               <button type="button" role="menuitem" onClick={() => { exportCurrentBuild(); exportMenuRef.current?.removeAttribute("open"); }}><FileCode2 className="h-4 w-4" /><span><strong>Entropy code</strong><small>Copy a portable build code</small></span></button>
               <button type="button" role="menuitem" onClick={() => { exportChatCode(); exportMenuRef.current?.removeAttribute("open"); }}><Clipboard className="h-4 w-4" /><span><strong>Chat code</strong><small>Copy a Guild Wars 2 build code</small></span></button>
@@ -3089,7 +3090,7 @@ export default function AxiForgeLabView() {
             onClick={() => setActiveTab(tab.id)}
             onKeyDown={(event) => moveTabFocus(workbenchTabs.map((item) => item.id), tab.id, event, setActiveTab, (item) => `builder-tab-${item}`)}
           >
-            {activeTab === tab.id && <SelectionIndicator id="builder-workspace-tab" />}<tab.icon className="h-4 w-4" /><span>{tab.label}</span><strong>{tab.count}</strong>
+            {activeTab === tab.id && <SelectionIndicator id="builder-workspace-tab" />}<tab.icon className="h-4 w-4" /><span>{tab.label === 'Build' ? 'Editor' : tab.label}</span>{tab.id !== 'build' && <strong>{tab.count}</strong>}
           </button>
         ))}
         <div className="theme-builder-mode-switch" role="group" aria-label="Build game mode">
@@ -3129,8 +3130,10 @@ export default function AxiForgeLabView() {
 
       {activeTab === "build" && (
         <div id="builder-panel-build" role="tabpanel" aria-labelledby="builder-tab-build" className={`theme-builder-layout${detailRailOpen ? " is-rail-open" : " is-rail-collapsed"}`}>
-          <main className="space-y-5">
-          <div className="theme-builder-mode-toggle" role="tablist" aria-label="Build editor sections">
+          <main className="builder-editor-main">
+          <div className="builder-section-nav">
+          <div className="builder-draft-identity"><ClassIcon name={selectedProfession?.name ?? builder.professionId} size="lg"/><div><small>{editingBuildId ? 'Editing saved build' : 'Draft build'}</small><strong>{builder.name.trim() || 'Untitled build'}</strong><span>{selectedProfession?.name ?? builder.professionId} / {builder.gameMode.toUpperCase()}</span></div></div>
+          <div className="theme-builder-mode-toggle" role="tablist" aria-label="Build editor sections" aria-orientation="vertical">
             {BUILDER_SECTIONS.map((section) => (
               <button
                 key={section.id}
@@ -3144,7 +3147,7 @@ export default function AxiForgeLabView() {
                 onClick={() => setBuilderViewMode(section.id)}
                 onKeyDown={(event) => moveTabFocus(builderViewModes, section.id, event, setBuilderViewMode, (item) => `builder-view-tab-${item}`)}
               >
-                {builderViewMode === section.id && <SelectionIndicator id="builder-editor-tab" />}<span>{section.label}</span>
+                {builderViewMode === section.id && <SelectionIndicator id="builder-editor-tab" />}<section.icon className="h-4 w-4" aria-hidden="true"/><span>{section.label}</span>
                 {section.id !== "notes" && (
                   <span
                     className={`theme-builder-mode-status ${builderSectionIssueCounts[section.id] === 0 ? "is-complete" : ""}`}
@@ -3159,6 +3162,8 @@ export default function AxiForgeLabView() {
                 )}
               </button>
             ))}
+          </div>
+          <div className="builder-nav-status"><span>{issues.length === 0 ? 'Build complete' : `${issues.length} items to complete`}</span><button type="button" onClick={() => setBuilderViewMode('preview')} aria-label="Review build completeness"><ChevronRight size={16}/></button></div>
           </div>
           <div key={builderViewMode} id="builder-view-panel" role="tabpanel" aria-labelledby={`builder-view-tab-${builderViewMode}`} className="theme-builder-mode-content">
           {builderViewMode === "overview" && (
@@ -3281,15 +3286,15 @@ export default function AxiForgeLabView() {
                           </button>
                         )}
                       </div>
-                      <div className="theme-builder-trait-grid">
+                      <div className="theme-builder-trait-grid" hidden={!selectedSpec}>
                         {[1, 2, 3].map((tier) => {
                           const traits = (selectedSpecId ? traitsBySpecId.get(selectedSpecId) ?? [] : []).filter((trait) => trait.slot === "Major" && trait.tier === tier).sort((a, b) => a.order - b.order);
                           const selectedPosition = builder.traitChoices[trackIndex][tier - 1];
                           const selectedTrait = selectedPosition ? traits[selectedPosition - 1] : null;
                           return (
                             <div key={tier} className={`theme-builder-trait-tier ${selectedTrait ? "has-selection" : ""}`}>
-                              <div className="theme-builder-trait-tier-head"><span>Tier {tier}</span><strong>{selectedTrait?.name ?? "Choose trait"}</strong></div>
-                              <div>{traits.map((trait, position) => <button key={trait.id} type="button" aria-label={`Choose ${trait.name} trait`} aria-pressed={selectedPosition === position + 1} className={selectedPosition === position + 1 ? "is-active" : ""} onClick={() => chooseTrait(trackIndex, tier, position + 1, trait)} onFocus={() => setSelectedSummary({ kind: "trait", item: trait })} onMouseEnter={() => setSelectedSummary({ kind: "trait", item: trait })} title={trait.name}>{trait.icon ? <img src={trait.icon} alt="" /> : position + 1}</button>)}</div>
+                              <div className="theme-builder-trait-tier-head"><span>Tier {tier}</span><strong>{["Adept", "Master", "Grandmaster"][tier - 1]}</strong></div>
+                              <div>{traits.map((trait, position) => <button key={trait.id} type="button" aria-label={`Choose ${trait.name} trait`} aria-pressed={selectedPosition === position + 1} className={selectedPosition === position + 1 ? "is-active" : ""} onClick={() => chooseTrait(trackIndex, tier, position + 1, trait)} onFocus={() => setSelectedSummary({ kind: "trait", item: trait })} onMouseEnter={() => setSelectedSummary({ kind: "trait", item: trait })} title={trait.name}>{trait.icon ? <img src={trait.icon} alt="" /> : <span className="builder-trait-fallback">{position + 1}</span>}<span className="builder-trait-name">{trait.name}</span><Check className="builder-trait-check" aria-hidden="true" /></button>)}</div>
                             </div>
                           );
                         })}
@@ -3326,7 +3331,7 @@ export default function AxiForgeLabView() {
                   </div>
                 </div>
                 <div className="theme-builder-canvas-status">
-                  <span>Stat doctrine</span>
+                  <span>Default stats</span>
                   <strong>{builder.equipment.statPackage || "Unassigned"}</strong>
                   <small>Active set {builder.activeWeaponSet === 2 ? "II" : "I"}</small>
                 </div>
@@ -3418,8 +3423,8 @@ export default function AxiForgeLabView() {
                                   disabledLabel="Unavailable with a two-handed weapon"
                                   choices={statOptions.filter(Boolean).map((stat) => ({ value: stat, label: stat, group: (QUICK_STAT_OPTIONS as readonly string[]).includes(stat) ? "Common" : "All stats" }))}
                                   onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, slots: { ...current.equipment.slots, [slot]: value } } }))}
-                                  placeholder="Use doctrine stats"
-                                  clearLabel="Use doctrine stats"
+                                  placeholder={builder.equipment.statPackage ? `${builder.equipment.statPackage} (default)` : "No stats selected"}
+                                  clearLabel="Use default stats"
                                 />
                               </div>
                             );
@@ -3432,7 +3437,7 @@ export default function AxiForgeLabView() {
                 <div className="theme-builder-equipment-stack is-gear" hidden={equipmentSection !== "armor" && equipmentSection !== "upgrades"}>
                   <div className="theme-builder-equipment-group is-armor" hidden={equipmentSection !== "armor"}>
                     <h4>Armor stats</h4>
-                    <span className="theme-builder-choice-note">Each slot uses the doctrine stat package unless you set an override.</span>
+                    <span className="theme-builder-choice-note">Default stats: {builder.equipment.statPackage || "Not selected"}</span>
                     <div className="theme-builder-armor-stat-grid">
                       {ARMOR_SLOTS.map((slot) => (
                         <ChoicePickerField
@@ -3442,8 +3447,8 @@ export default function AxiForgeLabView() {
                           value={builder.equipment.slots[slot] || ""}
                           choices={statOptions.filter(Boolean).map((stat) => ({ value: stat, label: stat, group: (QUICK_STAT_OPTIONS as readonly string[]).includes(stat) ? "Common" : "All stats" }))}
                           onChange={(value) => updateBuilder((current) => ({ ...current, equipment: { ...current.equipment, slots: { ...current.equipment.slots, [slot]: value } } }))}
-                          placeholder="Use doctrine stats"
-                          clearLabel="Use doctrine stats"
+                          placeholder={builder.equipment.statPackage ? `${builder.equipment.statPackage} (default)` : "No stats selected"}
+                          clearLabel="Use default stats"
                           emptyIcon={<EquipmentArtwork src={BUILDER_ARMOR_SLOT_ICONS[slot]} fallback={<Shield className="h-4 w-4" />} label={`${ARMOR_SLOT_LABELS[slot]} slot`} />}
                         />
                       ))}
@@ -3458,15 +3463,14 @@ export default function AxiForgeLabView() {
         <div key={trinketSlot}>
           <ChoicePickerField
             id={`builder-trinket-stat-${trinketSlot}`}
-            label={trinketSlot}
+            label={({ amulet: "Amulet", ring1: "Ring 1", ring2: "Ring 2", accessory1: "Accessory 1", accessory2: "Accessory 2", backpack: "Back item" } as Record<string, string>)[trinketSlot]}
             value={current}
             choices={statOptions.filter(Boolean).map((stat) => ({ value: stat, label: stat, group: (QUICK_STAT_OPTIONS as readonly string[]).includes(stat) ? "Common" : "All stats" }))}
             onChange={(value) => updateBuilder((next) => ({ ...next, equipment: { ...next.equipment, slots: { ...next.equipment.slots, [trinketSlot]: value } } }))}
-            placeholder="Use doctrine stats"
-            clearLabel="Use doctrine stats"
+            placeholder={builder.equipment.statPackage ? `${builder.equipment.statPackage} (default)` : "No stats selected"}
+            clearLabel="Use default stats"
             emptyIcon={<EquipmentArtwork src={BUILDER_TRINKET_SLOT_ICONS[trinketSlot]} fallback={<Sparkles className="h-4 w-4" />} label={`${trinketSlot} slot`} />}
           />
-          {!current && <span className="theme-builder-choice-note">Unassigned</span>}
         </div>
       );
     })}
@@ -3661,9 +3665,8 @@ export default function AxiForgeLabView() {
           </aside>
         </div>
       )}
-      <AnimatePresence>
-        {viewingBuild && <BuildViewerDialog key={viewingBuild.id} build={viewingBuild} professions={professions} specsById={allSpecsById} legends={legends} pets={pets} items={equipmentItems} onClose={closeBuildViewer} onEdit={() => editViewedBuild(viewingBuild)} />}
-      </AnimatePresence>
+      </div>
+      {viewingBuild && <BuildViewerWorkspace key={viewingBuild.id} build={viewingBuild} professions={professions} specsById={allSpecsById} legends={legends} pets={pets} items={equipmentItems} onClose={closeBuildViewer} onEdit={() => editViewedBuild(viewingBuild)} returnLabel={activeTab === "build" ? "Editor" : activeTab === "library" ? "Library" : "Squad"} />}
     </div>
   );
 }

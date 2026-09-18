@@ -1,4 +1,5 @@
 import type { EntropyBuilderState, Gw2ApiFact, Gw2Skill } from "../../types/buildEditor";
+import { reportImageSrc } from "../../utils/reportImageAssets";
 
 const DRUID_SPECIALIZATION_ID = 5;
 const FIREBRAND_SPECIALIZATION_ID = 62;
@@ -35,7 +36,7 @@ const EFFECT_ICONS: Record<string, string> = {
 };
 
 function buff(status: string, duration: number, applyCount = 1): Gw2ApiFact {
-  return { type: "Buff", status, duration, apply_count: applyCount, icon: EFFECT_ICONS[status] };
+  return { type: "Buff", status, duration, apply_count: applyCount, icon: reportImageSrc(EFFECT_ICONS[status]) };
 }
 
 function recharge(value: number): Gw2ApiFact {
@@ -58,7 +59,7 @@ function tomeSkill(
     name,
     description,
     facts,
-    icon: `https://wiki.guildwars2.com/wiki/Special:Redirect/file/${iconFile}`,
+    icon: reportImageSrc(`https://wiki.guildwars2.com/wiki/Special:Redirect/file/${iconFile}`),
     professions: ["Guardian"],
     specialization: FIREBRAND_SPECIALIZATION_ID,
     slot: "Profession",
@@ -115,6 +116,14 @@ const FIREBRAND_TOME_SKILLS: Gw2Skill[] = [
     buff("Aegis", 4), buff("Protection", 5), buff("Stability", 5), recharge(25),
   ]),
 ];
+
+export const DRUID_CELESTIAL_AVATAR_SKILL_IDS = [31796, 31406, 31318, 31894, 31503] as const;
+export const FIREBRAND_TOME_ACTIVATION_SKILL_IDS = [44364, 41780, 42259] as const;
+
+/** Wiki-backed WvW references for tome chapters omitted by /v2/skills. */
+export function firebrandTomeSkills(): Gw2Skill[] {
+  return FIREBRAND_TOME_SKILLS.map((skill) => ({ ...skill, facts: skill.facts?.map((fact) => ({ ...fact })) }));
+}
 
 const RITUALIST_WVW_FACT_OVERRIDES: Record<number, Gw2ApiFact[]> = {
   // ArenaNet exposes Preservation but currently omits its effect facts.

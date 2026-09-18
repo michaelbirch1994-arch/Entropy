@@ -6,6 +6,7 @@ import Panel from "../components/ui/Panel";
 import { buildCompositionComparison } from "../lib/compositionInsights";
 import { useReport } from "../store/ReportContext";
 import { fmtNum } from "../utils/format";
+import "../Styles/CompositionWorkspace.css";
 
 export default function CompositionView() {
   const { report } = useReport();
@@ -24,7 +25,7 @@ export default function CompositionView() {
   const squadHeavy = comparisonRows.filter((row) => row.deltaPct <= -2).slice(0, 3);
 
   return (
-    <div className="space-y-5 animate-view pb-10">
+    <div className="composition-workspace space-y-5 animate-view pb-10">
       <section className="theme-role-coverage grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ReadoutMetric icon={<Users className="h-4 w-4" />} label="Squad profiles" value={fmtNum(squadTotal)} detail="tracked roster" />
         <ReadoutMetric icon={<Eye className="h-4 w-4" />} label="Enemy observations" value={fmtNum(enemyTotal)} detail={`${report.stats.total} fights`} />
@@ -56,7 +57,7 @@ export default function CompositionView() {
                   className={`block w-full px-4 py-2.5 text-left transition-colors sm:grid sm:grid-cols-[minmax(7rem,1fr)_4.5rem_4.5rem_3.5rem] sm:items-center sm:gap-2 lg:grid-cols-[minmax(8rem,1fr)_minmax(8rem,1.2fr)_minmax(8rem,1.2fr)_5.5rem] lg:gap-3 ${active ? "bg-theme-accent/[0.07] shadow-[inset_2px_0_0_var(--theme-accent)]" : "hover:bg-theme-surface-elevated/55"}`}
                 >
                   <span className="flex min-w-0 items-center justify-between gap-2 text-xs font-bold text-theme-text sm:justify-start">
-                    <span className="flex min-w-0 items-center gap-2"><ClassIcon name={row.name} size="sm" /><span className="truncate">{row.name}</span></span>
+                    <span className="composition-identity flex min-w-0 items-center gap-2"><ClassIcon name={row.name} size="lg" /><span className="truncate">{row.name}</span></span>
                     <span className={`shrink-0 font-mono text-[10px] font-black sm:hidden ${deltaTone}`}>{mobileDifference(row.deltaPct)}</span>
                   </span>
                   <span className="mt-2 grid grid-cols-2 gap-4 sm:contents">
@@ -102,7 +103,12 @@ export default function CompositionView() {
 }
 
 function ShareBar({ label, value, count, color }: { label: string; value: number; count: number; color: string }) {
-  return <span className="flex items-center justify-between gap-2 sm:grid sm:grid-cols-1 lg:grid-cols-[1fr_4.5rem]"><span className="text-[9px] font-black uppercase text-theme-muted sm:hidden">{label}</span><span className="hidden h-2 bg-theme-surface-inset lg:block"><span className="block h-full" style={{ width: `${Math.max(0, Math.min(100, value))}%`, backgroundColor: color }} /></span><span className="whitespace-nowrap text-right font-mono text-[10px] text-theme-muted">{value.toFixed(1)}% · {fmtNum(count)}</span></span>;
+  return <span className="composition-share">
+    <span className="composition-share-label sm:hidden">{label}</span>
+    <strong>{value.toFixed(1)}%</strong>
+    <span className="composition-share-track" aria-hidden="true"><span style={{ width: `${Math.max(0, Math.min(100, value))}%`, backgroundColor: color }} /></span>
+    <span className="composition-share-count">{fmtNum(count)} {label === "Squad" ? "profiles" : "observations"}</span>
+  </span>;
 }
 
 function ReadoutMetric({ icon, label, value, detail, tone = "text-theme-accent-strong" }: { icon: React.ReactNode; label: string; value: string; detail: string; tone?: string }) {

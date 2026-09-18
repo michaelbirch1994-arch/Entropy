@@ -126,7 +126,7 @@ export function SkillSourceRows({
           <div key={`${kind}:${skill.id}:${index}`} className="entropy-squad-source" data-source-kind={kind}>
             <span className="entropy-squad-source-rank">{String(index + 1).padStart(2, "0")}</span>
             <span className="entropy-squad-source-identity">
-              {skill.icon && <img src={skill.icon} alt="" loading="lazy" />}
+              {skill.icon && <img src={reportImageSrc(skill.icon)} alt="" loading="lazy" />}
               <span>{skill.name}</span>
             </span>
             <span className={`entropy-squad-source-values ${tone}`}>
@@ -671,3 +671,4 @@ export default function SquadStatsView() {
   );
 }
 
+import { reportImageSrc } from "../utils/reportImageAssets";

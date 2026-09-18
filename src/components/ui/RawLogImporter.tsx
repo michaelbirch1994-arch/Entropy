@@ -24,6 +24,8 @@ import FightReplay from "./FightReplay";
 import { SegmentedControl } from "./SegmentedControl";
 import { createAsyncTaskPool, type AsyncTaskPool } from "../../lib/asyncTaskPool";
 import { BULK_PROCESS_CONCURRENCY } from "../../lib/bridge-metrics/constants";
+import { parseEvtc, type EvtcLog } from "../../lib/evtc/parseEvtc";
+import { readEncounterFile } from "../../lib/insight/readEncounterFile";
 import {
   isFolderWatchSupported,
   pickLogFolder,
@@ -44,11 +46,19 @@ interface QueueItem {
   status: "pending" | "uploading" | "fetching" | "done" | "error" | "cancelled";
   summary?: RawFightSummary;
   raw?: RawFightLog;
+  nativeEvtc?: EvtcLog;
+  nativeParseError?: string;
   errorMsg?: string;
   sourcePermalink?: string;
 }
 
-export default function RawLogImporter({ cinematic = false }: { cinematic?: boolean }) {
+export default function RawLogImporter({
+  cinematic = false,
+  incomingFile = null,
+}: {
+  cinematic?: boolean;
+  incomingFile?: { id: number; file: File } | null;
+}) {
   const { setReport } = useReport();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -79,6 +89,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
   const scanningRef = useRef(false);
   const uploadChainRef = useRef<Promise<void>>(Promise.resolve());
   const queueSequenceRef = useRef(0);
+  const incomingFileIdRef = useRef<number | null>(null);
   const filesRef = useRef(new Map<string, File>());
   const controllersRef = useRef(new Map<string, AbortController>());
   const fetchPoolRef = useRef<AsyncTaskPool | null>(null);
@@ -100,7 +111,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
   async function combineFights(items: QueueItem[]) {
     const fights = items
       .filter((i) => i.status === "done" && i.summary && i.raw)
-      .map((i) => ({ summary: i.summary!, raw: i.raw! }));
+      .map((i) => ({ summary: i.summary!, raw: i.raw!, nativeEvtc: i.nativeEvtc }));
     if (fights.length === 0) return;
     setCombining(true);
     setCombineError(null);
@@ -133,7 +144,7 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
     setViewingFullReportKey(item.key);
     setFullReportError(null);
     try {
-      const report = buildReportFromFights([{ summary: item.summary, raw: item.raw }]);
+      const report = buildReportFromFights([{ summary: item.summary, raw: item.raw, nativeEvtc: item.nativeEvtc }]);
       await setReport(report);
     } catch (e) {
       setFullReportError(e instanceof Error ? e.message : "Failed to build full report for this fight.");
@@ -154,14 +165,14 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
     return error instanceof Error ? error.message : fallback;
   }
 
-  function scheduleFetch(permalink: string, key: string, controller: AbortController) {
+  function scheduleFetch(permalink: string, key: string, controller: AbortController, nativeEvtc?: EvtcLog, nativeParseError?: string) {
     void fetchPoolRef.current?.add(async () => {
       if (controller.signal.aborted || !attemptIsCurrent(key, controller)) return;
-      updateItem(key, { status: "fetching", sourcePermalink: permalink });
+      updateItem(key, { status: "fetching", sourcePermalink: permalink, nativeEvtc, nativeParseError });
       try {
         const json = await fetchDpsReportJson(permalink, controller.signal);
         if (!attemptIsCurrent(key, controller)) return;
-        updateItem(key, { status: "done", summary: summarizeRawFight(json, permalink), raw: json });
+        updateItem(key, { status: "done", summary: summarizeRawFight(json, permalink), raw: json, nativeEvtc, nativeParseError });
       } catch (error) {
         if (!attemptIsCurrent(key, controller)) return;
         updateItem(key, controller.signal.aborted
@@ -177,9 +188,14 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
     if (controller.signal.aborted || !attemptIsCurrent(key, controller)) return;
     updateItem(key, { status: "uploading", errorMsg: undefined });
     try {
+      const nativePromise = readEncounterFile(file)
+        .then((buffer) => ({ log: parseEvtc(buffer), error: undefined as string | undefined }))
+        .catch((error: unknown) => ({ log: undefined, error: errorMessage(error, "Native EVTC extraction failed.") }));
       const uploaded = await uploadRawLogToDpsReport(file, controller.signal);
       if (!attemptIsCurrent(key, controller)) return;
-      scheduleFetch(uploaded.permalink, key, controller);
+      const native = await nativePromise;
+      if (!attemptIsCurrent(key, controller)) return;
+      scheduleFetch(uploaded.permalink, key, controller, native.log, native.error);
     } catch (error) {
       if (!attemptIsCurrent(key, controller)) return;
       updateItem(key, controller.signal.aborted
@@ -212,6 +228,14 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
     for (const { file, item } of queued) scheduleUpload(file, item.key);
   }
 
+  useEffect(() => {
+    if (!incomingFile || incomingFileIdRef.current === incomingFile.id) return;
+    incomingFileIdRef.current = incomingFile.id;
+    setIntakeMode("files");
+    setOpen(true);
+    enqueueFiles([incomingFile.file]);
+  }, [incomingFile]);
+
   function processPermalink(permalink: string, label: string) {
     const key = `${permalink}-${Date.now()}`;
     const controller = new AbortController();
@@ -237,11 +261,13 @@ export default function RawLogImporter({ cinematic = false }: { cinematic?: bool
       errorMsg: undefined,
       summary: undefined,
       raw: undefined,
+      nativeEvtc: item.nativeEvtc,
+      nativeParseError: item.nativeParseError,
     });
     if (item.sourcePermalink) {
       const controller = new AbortController();
       controllersRef.current.set(item.key, controller);
-      scheduleFetch(item.sourcePermalink, item.key, controller);
+      scheduleFetch(item.sourcePermalink, item.key, controller, item.nativeEvtc, item.nativeParseError);
       return;
     }
     const file = filesRef.current.get(item.key);
