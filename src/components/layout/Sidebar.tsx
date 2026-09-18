@@ -91,12 +91,6 @@ export default function Sidebar({ activeView, setActiveView, hasReport = true, o
     setMobileOpen(false);
   }
 
-  function warmSection(items: ViewRegistryItem[]) {
-    for (const item of items) {
-      if (item.id !== activeView) void preloadView(item.id);
-    }
-  }
-
   function renderItem(item: ViewRegistryItem, indicatorVisible = true) {
     return <button type="button" key={item.id} onClick={() => navigate(item.id)}
       onPointerEnter={() => { void preloadView(item.id); }}
@@ -137,9 +131,6 @@ export default function Sidebar({ activeView, setActiveView, hasReport = true, o
                 aria-label={compact ? section.title : undefined}
                 aria-expanded={!compact && open} aria-controls={`nav-section-${index}`}
                 title={compact ? section.title : undefined}
-                onPointerEnter={() => warmSection(section.items)}
-                onFocus={() => warmSection(section.items)}
-                onTouchStart={() => warmSection(section.items)}
                 onClick={() => {
                   if (compact) {
                     if (narrow) setMobileOpen(true);
