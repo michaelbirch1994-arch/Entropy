@@ -178,6 +178,9 @@ describe('utility effectiveness', () => {
       ambiguousStabilityGains: 0, ambiguousStabilityLossUnits: 0,
       stabilityTrackedPlayers: 1, replayRosterPlayers: 2, incomingControlSource: 'native-evtc', incomingControlAttempts: 2,
       realizedInterceptions: 1, resolvedControlContests: 2, successfulControls: 1, unresolvedAttempts: 0, evidenceCoverage: 1 });
+    expect(result.coverage.effectTimelineCoverage).toEqual({
+      available: 0, partial: 0, unavailable: 1, legacyUnknown: 1, rosterPlayers: 2,
+    });
     expect(result.provenance.map(source => source.kind)).toEqual([
       'recorded-event', 'parser-derived-state', 'arena-net-api', 'wvw-override', 'bounded-inference',
     ]);

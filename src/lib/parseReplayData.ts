@@ -38,6 +38,17 @@ export interface ReplayEffectTrack {
   states: [number, number][];
 }
 
+export type EffectTimelineCoverageStatus = "available" | "partial" | "unavailable";
+
+export interface EffectTimelineCoverage {
+  status: EffectTimelineCoverageStatus;
+  source: "buffUptimes.states";
+  aggregateEntries: number;
+  entriesWithStateArrays: number;
+  entriesWithStateSamples: number;
+  persistedTracks: number;
+}
+
 export interface ReplayPlayerTrack {
   account: string;
   name: string;
@@ -57,6 +68,11 @@ export interface ReplayPlayerTrack {
    * already exposes, even after the original upload object is gone.
    */
   effects: ReplayEffectTrack[];
+  /**
+   * Whether EI actually emitted RawTimelineArrays for this player's
+   * buffUptimes. Optional for reports created before this coverage stamp.
+   */
+  effectTimelineCoverage?: EffectTimelineCoverage;
   /**
    * Cast times of skills that actually dealt damage in this fight. These
    * mark WHERE AND WHEN a skill was cast - they are not the effect's real
@@ -211,6 +227,35 @@ function playerEffectTracks(
   return effects.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export function effectTimelineCoverageForPlayer(
+  player: Record<string, unknown>,
+  persistedTracks = 0,
+): EffectTimelineCoverage {
+  const entries = Array.isArray(player.buffUptimes)
+    ? (player.buffUptimes as Array<Record<string, unknown>>).filter(entry => entry && typeof entry === "object")
+    : [];
+  const entriesWithStateArrays = entries.filter(entry => Array.isArray(entry.states)).length;
+  const entriesWithStateSamples = entries.filter(entry => asEffectStates(entry.states).length > 0).length;
+  const status: EffectTimelineCoverageStatus = entries.length > 0 && entriesWithStateArrays === entries.length
+    ? "available"
+    : entriesWithStateArrays > 0
+      ? "partial"
+      : "unavailable";
+  return { status, source: "buffUptimes.states", aggregateEntries: entries.length, entriesWithStateArrays,
+    entriesWithStateSamples, persistedTracks };
+}
+
+export function effectTimelineCoverageStatus(player: Pick<ReplayPlayerTrack, "effects" | "effectTimelineCoverage"> | undefined) {
+  if (!player) return "unavailable" as const;
+  return player.effectTimelineCoverage?.status ?? (player.effects.length ? "legacy-unknown" as const : "unavailable" as const);
+}
+
+/** Preserve pre-stamp report behavior while new reports use explicit EI coverage. */
+export function effectTimelineSupportsRecharge(player: Pick<ReplayPlayerTrack, "effects" | "effectTimelineCoverage"> | undefined) {
+  const status = effectTimelineCoverageStatus(player);
+  return status === "available" || status === "legacy-unknown";
+}
+
 // EI's "isFake" flag marks decoy/clone actors it still tracks combat for but
 // that were never a real hostile player (illusions, siege placeholders,
 // etc.) - excluded so the replay doesn't scatter phantom red dots that don't
@@ -314,6 +359,7 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
     }
     casts.sort((a, b) => a.t - b.t);
 
+    const effects = playerEffectTracks(p, buffMap);
     players.push({
       account: typeof p.account === "string" ? p.account : "Unknown",
       name: typeof p.name === "string" ? p.name : "Unknown",
@@ -326,7 +372,8 @@ export function parseReplayData(log: RawFightLog): ReplayData | null {
       downIntervals: asIntervals(crd.down),
       deadIntervals: asIntervals(crd.dead),
       facings,
-      effects: playerEffectTracks(p, buffMap),
+      effects,
+      effectTimelineCoverage: effectTimelineCoverageForPlayer(p, effects.length),
       casts,
     });
   }

@@ -23,6 +23,7 @@ describe('Combat connections', () => {
       'recorded-event', 'recorded-event', 'parser-derived-state', 'parser-derived-state', 'parser-derived-state', 'bounded-inference',
     ]);
     expect(result.provenance.find(source => source.id === 'rotation-casts')?.detail).toContain('1 timestamped cast');
+    expect(result.coverage.effects).toBe('legacy-unknown');
     expect(JSON.stringify(report)).toBe(before);
   });
   it('does not extend missing damage samples or infer a healing curve', () => {
@@ -44,6 +45,7 @@ describe('Combat connections', () => {
   it('does not assign another players timeline to a missing player', () => {
     const result = buildCombatConnections(fixture(), 'f1', 'missing')!;
     expect(result.hasDamage).toBe(false); expect(result.effects).toEqual([]); expect(result.moments).toEqual([]);
+    expect(result.coverage.effects).toBe('unavailable');
   });
   it('retains actor attribution when squad event scope is enabled', () => {
     const result = buildCombatConnections(fixture(), 'f1', 'A', true)!;

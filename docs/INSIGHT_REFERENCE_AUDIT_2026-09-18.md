@@ -41,6 +41,8 @@ The summed range and radius figures are permissive two-dimensional outer boundar
 - A weekly and manually runnable repository workflow performs the same live parity check without making the normal application build depend on external API availability.
 - Insight assessments now retain a typed evidence chain that distinguishes recorded events, parser-derived state, ArenaNet API facts, reviewed WvW overrides, bounded inference and explicit user assumptions.
 - The shared provenance ledger is visible in combat moments, utility effectiveness, player skill palettes and event investigations without changing the underlying parser or metric calculations.
+- Newly built reports stamp player-level `buffUptimes.states` coverage as available, partial or unavailable. Legacy reports remain usable but are labelled as unstamped instead of being silently presented as complete.
+- Cooldown and utility surfaces expose the RawTimelineArrays coverage separately from observed effect tracks; missing arrays remain unknown and do not become zero uptime.
 
 ## Primary references
 
@@ -54,4 +56,4 @@ The summed range and radius figures are permissive two-dimensional outer boundar
 - Retain each superseded catalog revision in the registry so old pinned reports remain reproducible after balance updates.
 - Add a reviewed-patch workflow that creates a new catalog revision instead of editing an already-published revision in place.
 - Extend the shared evidence provenance ledger to any remaining legacy assessment that still presents a conclusion without a typed source chain.
-- Test against modern Elite Insights JSON with and without `RawTimelineArrays` so coverage degrades explicitly rather than changing the conclusion silently.
+- Extend the real-fixture matrix as additional current Elite Insights exports become available, retaining paired coverage assertions for reports with and without `RawTimelineArrays`.

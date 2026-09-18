@@ -4,6 +4,7 @@ import { assessCooldownInterval } from './cooldownModifiers';
 import { normalizeEvidenceProvenance } from './provenance';
 import { responseReferenceForReport, type ResponseKind } from './referenceCatalog';
 import { responseReach } from './responseReach';
+import { effectTimelineCoverageStatus, effectTimelineSupportsRecharge } from '../parseReplayData';
 
 export { RESPONSE_RULES } from './referenceCatalog';
 export type { ResponseKind } from './referenceCatalog';
@@ -34,6 +35,7 @@ export function eventResponses(report: WvWReport, fightId: string, event: Combat
       if (player.account === target.account) continue;
       const track = replay?.data.players.find(p => p.account === player.account && p.inSquad === true);
       if (!track) continue;
+      const effectTimelineStatus = effectTimelineCoverageStatus(track);
       for (const rule of rules) {
         const assumedEquipped = rule.assumedProfession === player.profession;
         const observedCasts = player.casts.filter(c => [rule.name, ...(rule.aliases ?? [])].includes(normalize(report.stats.rotations?.skillMeta[c.skillId]?.name ?? '')))
@@ -58,7 +60,7 @@ export function eventResponses(report: WvWReport, fightId: string, event: Combat
               profession: player.profession,
               skillMeta: report.stats.rotations?.skillMeta,
               effects: track.effects ?? [],
-              effectTimelineComplete: Boolean(track.effects?.length),
+              effectTimelineComplete: effectTimelineSupportsRecharge(track),
               gameMode: 'wvw',
             })
           : null;
@@ -78,7 +80,7 @@ export function eventResponses(report: WvWReport, fightId: string, event: Combat
         const evidenceChecks = [
           { label: 'Event matches the supported response type', available: Boolean(matchesEvent) },
           { label: 'Prior skill cast timestamp recorded', available: Boolean(last) },
-          { label: 'Continuous effect timeline supplied for recharge modifiers', available: Boolean(recharge && track.effects?.length) },
+          { label: 'Continuous effect timeline supplied for recharge modifiers', available: Boolean(recharge && effectTimelineSupportsRecharge(track)) },
           { label: 'Down/dead interval records supplied', available: Array.isArray(track.downIntervals) && Array.isArray(track.deadIntervals) },
           { label: 'Fight patch, traits and resets verified', available: false },
           { label: 'Current skill access verified', available: false },
@@ -111,8 +113,14 @@ export function eventResponses(report: WvWReport, fightId: string, event: Combat
             detail: `${event.label} at ${event.time} ms for ${event.account ?? 'an unresolved actor'}.`, source: parserSource },
           observedCasts.length > 0 && { id: 'response-casts', kind: 'recorded-event', label: 'Response skill casts',
             detail: `${observedCasts.length} matching cast start${observedCasts.length === 1 ? '' : 's'} in this fight.`, source: parserSource },
-          Boolean(track.effects?.length) && { id: 'response-effects', kind: 'parser-derived-state', label: 'Recharge effect timelines',
-            detail: `${track.effects!.length} player effect track${track.effects!.length === 1 ? '' : 's'} supplied to the cooldown model.`, source: parserSource },
+          { id: 'response-effects', kind: 'parser-derived-state', label: 'Recharge effect coverage',
+            detail: effectTimelineStatus === 'available'
+              ? `${track.effects.length} player effect track${track.effects.length === 1 ? '' : 's'} with explicit RawTimelineArrays coverage.`
+              : effectTimelineStatus === 'partial'
+                ? `${track.effects.length} effect track${track.effects.length === 1 ? '' : 's'} persisted, but the source state arrays are partial.`
+                : effectTimelineStatus === 'legacy-unknown'
+                  ? `${track.effects.length} effect track${track.effects.length === 1 ? '' : 's'} persisted without a coverage stamp; legacy recharge behavior is preserved.`
+                  : 'Timestamped buffUptimes state arrays were not supplied; effect-driven recharge modifiers remain unknown.', source: parserSource },
           reference.catalog && { id: 'response-api', kind: 'arena-net-api', label: 'Skill identity and baseline facts',
             detail: `${rule.name} is bound to ArenaNet skill ${rule.skillId}.`, source: reference.catalog.sources.arenaNetApi },
           { id: 'response-wvw', kind: 'wvw-override', label: 'Reviewed WvW behavior',

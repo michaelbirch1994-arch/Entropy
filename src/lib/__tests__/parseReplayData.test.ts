@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   distanceBetween,
+  effectTimelineCoverageForPlayer,
+  effectTimelineCoverageStatus,
+  effectTimelineSupportsRecharge,
   interpolateFacing,
   interpolatePosition,
   isInInterval,
@@ -9,6 +12,7 @@ import {
   type ReplayPoint,
 } from '../parseReplayData';
 import type { RawFightLog } from '../../types/rawFight';
+import { readFileSync } from 'node:fs';
 
 // Regression coverage for the replay-scrubbing primitives behind Fight
 // Replay's dot/line rendering. Trail reports have had several independent
@@ -154,6 +158,54 @@ describe('parseReplayData tactical state persistence', () => {
       { id: 736, name: 'Blind', icon: 'blind.png', classification: 'Condition', states: [[0, 1], [300, 0]] },
       { id: 1122, name: 'Stability', icon: 'stab.png', classification: 'Boon', states: [[0, 0], [150, 2], [600, 0]] },
     ]);
+    expect(parseReplayData(log)?.players[0].effectTimelineCoverage).toMatchObject({
+      status: 'available', aggregateEntries: 4, entriesWithStateArrays: 4, entriesWithStateSamples: 3, persistedTracks: 2,
+    });
+  });
+
+  it('stamps missing and partial RawTimelineArrays without turning absence into zero', () => {
+    const base = {
+      durationMS: 1000,
+      combatReplayMetaData: { pollingRate: 150 },
+      buffMap: {
+        b30328: { name: 'Alacrity', classification: 'Boon' },
+        b720: { name: 'Blind', classification: 'Condition' },
+      },
+      players: [{
+        account: 'Modern.1234', name: 'Modern Player', profession: 'Guardian',
+        combatReplayData: { start: 0, positions: [[0, 0], [1, 1]], orientations: [], down: [], dead: [] },
+        totalDamageDist: [[]], rotation: [],
+      }],
+      targets: [],
+    };
+    const without = structuredClone(base) as unknown as RawFightLog;
+    (without.players![0] as unknown as Record<string, unknown>).buffUptimes = [{ id: 30328, buffData: [{ uptime: 50 }] }];
+    const missing = parseReplayData(without)!.players[0];
+    expect(missing.effectTimelineCoverage).toMatchObject({ status: 'unavailable', aggregateEntries: 1, entriesWithStateArrays: 0 });
+    expect(missing.effects).toEqual([]);
+    expect(effectTimelineCoverageStatus(missing)).toBe('unavailable');
+    expect(effectTimelineSupportsRecharge(missing)).toBe(false);
+
+    const partial = structuredClone(base) as unknown as RawFightLog;
+    (partial.players![0] as unknown as Record<string, unknown>).buffUptimes = [
+      { id: 30328, states: [[0, 1], [500, 0]] },
+      { id: 720, buffData: [{ uptime: 10 }] },
+    ];
+    const partialPlayer = parseReplayData(partial)!.players[0];
+    expect(partialPlayer.effectTimelineCoverage).toMatchObject({
+      status: 'partial', aggregateEntries: 2, entriesWithStateArrays: 1, entriesWithStateSamples: 1,
+    });
+    expect(effectTimelineSupportsRecharge(partialPlayer)).toBe(false);
+    expect(effectTimelineSupportsRecharge({ effects: partialPlayer.effects })).toBe(true);
+  });
+
+  it('recognizes the paired real EI fixtures with and without raw state arrays', () => {
+    const modern = JSON.parse(readFileSync(new URL('fixtures/wvw-modern-ei.json', import.meta.url), 'utf8'));
+    const timeline = JSON.parse(readFileSync(new URL('fixtures/sample-wvw-log.json', import.meta.url), 'utf8'));
+    expect(effectTimelineCoverageForPlayer(modern.players[0])).toMatchObject({ status: 'unavailable', aggregateEntries: 0 });
+    expect(effectTimelineCoverageForPlayer(timeline.players[0])).toMatchObject({
+      status: 'available', aggregateEntries: 48, entriesWithStateArrays: 48,
+    });
   });
 });
 

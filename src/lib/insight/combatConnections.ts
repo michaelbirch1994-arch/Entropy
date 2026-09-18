@@ -1,5 +1,6 @@
 import type { WvWReport } from '../../types/report';
 import type { ReplayEffectTrack } from '../parseReplayData';
+import { effectTimelineCoverageStatus } from '../parseReplayData';
 import { normalizeEvidenceProvenance } from './provenance';
 
 export interface CombatMoment { time: number; end?: number; label: string; kind: 'cast' | 'mechanic' | 'down' | 'death'; icon?: string; account?: string }
@@ -102,6 +103,7 @@ function calculateCombatConnections(report: WvWReport, fightId: string, account:
   const survivalIntervals = (replay?.data.players ?? []).filter(player => included(player.account))
     .reduce((count, player) => count + (player.downIntervals?.length ?? 0) + (player.deadIntervals?.length ?? 0), 0);
   const parserSource = 'https://github.com/baaron4/GW2-Elite-Insights-Parser';
+  const effectTimelineStatus = effectTimelineCoverageStatus(track);
   const provenance = normalizeEvidenceProvenance([
     includedCasts > 0 && { id: 'rotation-casts', kind: 'recorded-event', label: 'Skill casts',
       detail: `${includedCasts} timestamped cast start${includedCasts === 1 ? '' : 's'} from the selected fight.`, source: parserSource },
@@ -109,8 +111,17 @@ function calculateCombatConnections(report: WvWReport, fightId: string, account:
       detail: `${includedMechanics} parser-labelled event${includedMechanics === 1 ? '' : 's'} in the active scope.`, source: parserSource },
     survivalIntervals > 0 && { id: 'survival-intervals', kind: 'parser-derived-state', label: 'Down and death intervals',
       detail: `${survivalIntervals} interval${survivalIntervals === 1 ? '' : 's'} reconstructed by Elite Insights.`, source: parserSource },
-    Boolean(track?.effects?.length) && { id: 'effect-timelines', kind: 'parser-derived-state', label: 'Effect timelines',
-      detail: `${track!.effects.length} timestamped boon or condition track${track!.effects.length === 1 ? '' : 's'} for the selected player.`, source: parserSource },
+    track && { id: 'effect-timelines', kind: 'parser-derived-state',
+      label: effectTimelineStatus === 'available' ? 'Effect timelines available'
+        : effectTimelineStatus === 'partial' ? 'Effect timelines partial'
+          : effectTimelineStatus === 'legacy-unknown' ? 'Effect timelines legacy-unstamped' : 'Effect timelines unavailable',
+      detail: effectTimelineStatus === 'available'
+        ? `${track.effects.length} timestamped boon or condition track${track.effects.length === 1 ? '' : 's'} with RawTimelineArrays coverage.`
+        : effectTimelineStatus === 'partial'
+          ? `${track.effects.length} effect track${track.effects.length === 1 ? '' : 's'} persisted from partially supplied state arrays.`
+          : effectTimelineStatus === 'legacy-unknown'
+            ? `${track.effects.length} effect track${track.effects.length === 1 ? '' : 's'} persisted in a legacy report without a coverage stamp.`
+            : 'Timestamped boon and condition state arrays were not supplied; absence cannot be interpreted as zero.', source: parserSource },
     Boolean(series?.points.length) && { id: 'damage-series', kind: 'parser-derived-state', label: 'Damage series',
       detail: `${series!.points.length} cumulative damage sample${series!.points.length === 1 ? '' : 's'} converted to a five-second rolling rate.`, source: parserSource },
     { id: 'temporal-join', kind: 'bounded-inference', label: 'Combat connection',
@@ -121,7 +132,8 @@ function calculateCombatConnections(report: WvWReport, fightId: string, account:
     effects: (track?.effects ?? []).map(e => ({ ...e, spans: effectSpans(e, fight.duration) })),
     moments: moments.filter(m => Number.isFinite(m.time) && m.time >= 0 && m.time <= fight.duration).sort((a, b) => a.time - b.time),
     provenance,
-    coverage: { casts: Boolean(squadEvents ? rotationFight : rotation), survival: Boolean(squadEvents ? replay : track), mechanics: Boolean(mechanics || replay?.data.mechanics?.length), healingTimeline: false },
+    coverage: { casts: Boolean(squadEvents ? rotationFight : rotation), survival: Boolean(squadEvents ? replay : track), mechanics: Boolean(mechanics || replay?.data.mechanics?.length),
+      effects: effectTimelineStatus, healingTimeline: false },
     healing: s.healingPlayers?.find(p => p.account === account) ?? null,
   };
 }

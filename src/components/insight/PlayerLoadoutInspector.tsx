@@ -7,6 +7,7 @@ import { playerSkillState } from '../../lib/insight/playerSkillState';
 import type { PlayerSkillStateContext } from '../../lib/insight/playerSkillState';
 import { playerSkillTimeline } from '../../lib/insight/playerSkillTimeline';
 import { normalizeEvidenceProvenance } from '../../lib/insight/provenance';
+import { effectTimelineCoverageStatus, effectTimelineSupportsRecharge } from '../../lib/parseReplayData';
 import {
   buildPlayerSkillPalette,
   supplementalPlayerSkillIds,
@@ -100,11 +101,12 @@ export default function PlayerLoadoutInspector({ report, account, fightId, timeM
   const referencesPending = Boolean(referenceIds.length && referenceSet?.key !== referenceKey);
   const meta = report.stats.rotations?.skillMeta;
   const replayPlayer = report.stats.replayFights?.find((fight) => fight.fightId === fightId)?.data.players.find((candidate) => candidate.account === account);
+  const effectTimelineStatus = effectTimelineCoverageStatus(replayPlayer);
   const cooldownContext = useMemo<PlayerSkillStateContext>(() => ({
       profession: player?.profession,
       skillMeta: meta,
       effects: replayPlayer?.effects ?? [],
-      effectTimelineComplete: Boolean(replayPlayer?.effects.length),
+      effectTimelineComplete: effectTimelineSupportsRecharge(replayPlayer),
       gameMode: 'wvw',
   }), [player?.profession, meta, replayPlayer]);
   const palette = useMemo(() => buildPlayerSkillPalette(player?.profession, casts, references, timeMs, initialSkillId), [player?.profession, casts, references, timeMs, initialSkillId]);
@@ -143,8 +145,15 @@ export default function PlayerLoadoutInspector({ report, account, fightId, timeM
   const selectedProvenance = normalizeEvidenceProvenance([
     times.length > 0 && { id: 'selected-skill-casts', kind: 'recorded-event', label: 'Recorded casts',
       detail: `${times.length} timestamped use${times.length === 1 ? '' : 's'} of ${selectedName} in this fight.`, source: 'https://github.com/baaron4/GW2-Elite-Insights-Parser' },
-    Boolean(replayPlayer?.effects.length) && { id: 'selected-player-effects', kind: 'parser-derived-state', label: 'Combat effects',
-      detail: `${replayPlayer!.effects.length} timestamped effect track${replayPlayer!.effects.length === 1 ? '' : 's'} can modify the recharge interval.`, source: 'https://github.com/baaron4/GW2-Elite-Insights-Parser' },
+    replayPlayer && { id: 'selected-player-effects', kind: 'parser-derived-state', label: 'Effect timeline coverage',
+      detail: effectTimelineStatus === 'available'
+        ? `${replayPlayer.effects.length} timestamped effect track${replayPlayer.effects.length === 1 ? '' : 's'}; RawTimelineArrays coverage is available.`
+        : effectTimelineStatus === 'partial'
+          ? `${replayPlayer.effects.length} effect track${replayPlayer.effects.length === 1 ? '' : 's'} persisted, but EI supplied state arrays for only part of buffUptimes.`
+          : effectTimelineStatus === 'legacy-unknown'
+            ? `${replayPlayer.effects.length} effect track${replayPlayer.effects.length === 1 ? '' : 's'} persisted in a legacy report without an explicit RawTimelineArrays coverage stamp.`
+            : 'EI did not supply timestamped buffUptimes state arrays for this player; missing effects remain unknown.',
+      source: 'https://github.com/baaron4/GW2-Elite-Insights-Parser' },
     selectedEntry?.source === 'api' && { id: 'selected-skill-api', kind: 'arena-net-api', label: 'Base skill facts',
       detail: `${selectedName} identity, slot, icon and baseline recharge.`, source: `https://api.guildwars2.com/v2/skills/${id}` },
     selectedEntry?.source === 'wiki-wvw' && { id: 'selected-skill-wvw', kind: 'wvw-override', label: 'WvW skill reference',

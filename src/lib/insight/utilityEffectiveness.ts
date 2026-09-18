@@ -1,6 +1,7 @@
 import type { Gw2Skill } from '../../types/buildEditor';
 import type { WvWReport } from '../../types/report';
 import { firebrandTomeSkills } from '../axiforge/nestedMechanicSkills';
+import { effectTimelineCoverageStatus } from '../parseReplayData';
 import { RESPONSE_RULES, responseKind } from './eventResponses';
 import { normalizeEvidenceProvenance } from './provenance';
 import { responseReferenceForReport } from './referenceCatalog';
@@ -168,6 +169,20 @@ function effectTransitions(report: WvWReport, fightId: string, effectName: strin
     }
   }
   return { gains, losses, statesByAccount, trackedPlayers, rosterPlayers: roster.length };
+}
+
+function effectTimelineCoverage(report: WvWReport, fightId: string) {
+  const roster = report.stats.replayFights?.find(fight => fight.fightId === fightId)?.data.players
+    .filter(player => player.inSquad === true) ?? [];
+  const counts = { available: 0, partial: 0, unavailable: 0, legacyUnknown: 0, rosterPlayers: roster.length };
+  for (const player of roster) {
+    const status = effectTimelineCoverageStatus(player);
+    if (status === 'available') counts.available += 1;
+    else if (status === 'partial') counts.partial += 1;
+    else if (status === 'legacy-unknown') counts.legacyUnknown += 1;
+    else counts.unavailable += 1;
+  }
+  return counts;
 }
 
 const stabilityTransitions = (report: WvWReport, fightId: string) => effectTransitions(report, fightId, 'Stability');
@@ -1705,12 +1720,13 @@ function calculateUtilityEffectiveness(report: WvWReport, fightId: string, apiSk
   const responseReference = responseReferenceForReport(report);
   const referenceSources = responseReference.catalog?.sources;
   const recordedCastCount = (rotation?.players ?? []).reduce((count, player) => count + player.casts.length, 0);
+  const timelineCoverage = effectTimelineCoverage(report, fightId);
   const provenance = normalizeEvidenceProvenance([
     (recordedCastCount > 0 || incoming.rawEvents > 0) && { id: 'utility-events', kind: 'recorded-event', label: 'Combat events',
       detail: `${recordedCastCount} cast starts and ${incoming.rawEvents} incoming event records in the selected fight.`, source: referenceSources?.eliteInsights },
-    (transitions.trackedPlayers > 0 || conditionPressure.trackedPlayers > 0 || aegisState.trackedPlayers > 0) && {
-      id: 'utility-states', kind: 'parser-derived-state', label: 'Boon and condition states',
-      detail: `${transitions.trackedPlayers} Stability, ${resistanceState.trackedPlayers} Resistance, ${conditionPressure.trackedPlayers} condition, and ${aegisState.trackedPlayers} Aegis player timelines.`,
+    timelineCoverage.rosterPlayers > 0 && {
+      id: 'utility-states', kind: 'parser-derived-state', label: 'Boon and condition timeline coverage',
+      detail: `${timelineCoverage.available} available, ${timelineCoverage.partial} partial, ${timelineCoverage.unavailable} unavailable, and ${timelineCoverage.legacyUnknown} legacy-unstamped player timelines; ${transitions.trackedPlayers} Stability, ${resistanceState.trackedPlayers} Resistance, ${conditionPressure.trackedPlayers} condition, and ${aegisState.trackedPlayers} Aegis tracks contributed.`,
       source: referenceSources?.eliteInsights,
     },
     references.size > 0 && { id: 'utility-api', kind: 'arena-net-api', label: 'Skill classification',
@@ -1737,6 +1753,7 @@ function calculateUtilityEffectiveness(report: WvWReport, fightId: string, apiSk
       stabilityCoveredControlEvents: incoming.source === 'native-evtc' ? overall.stability.protectedAttempts
         : controls.filter(control => stabilityCasts.some(cast => control.timeMs >= cast.timeMs && control.timeMs <= cast.pressureEndMs)).length,
       stabilityTrackedPlayers: transitions.trackedPlayers, replayRosterPlayers: transitions.rosterPlayers,
+      effectTimelineCoverage: timelineCoverage,
       incomingControlSource: incoming.source,
       incomingSkillEvents: incoming.rawEvents,
       classifiedIncomingSkillEvents: incoming.classifiedEvents,
