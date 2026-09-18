@@ -26,6 +26,28 @@ const normalize = (value: string) => value.replace(/["\u201c\u201d]/g, '').trim(
 const finite = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : 0;
 const ALLIED_TARGET = /\b(?:allies|nearby allies|party members|subgroup members)\b/;
 
+function readinessSummary<T>(events: T[], stateFor: (event: T) => number | null) {
+  let present = 0;
+  let known = 0;
+  for (const event of events) {
+    const state = stateFor(event);
+    if (state === null || !Number.isFinite(state) || state < 0) continue;
+    known += 1;
+    if (state > 0) present += 1;
+  }
+  const total = events.length;
+  const unknown = total - known;
+  return {
+    total,
+    known,
+    unknown,
+    present,
+    rating: known ? present / known : null,
+    evidenceCoverage: total ? known / total : null,
+    bounds: total ? [present / total, (present + unknown) / total] as [number, number] : null,
+  };
+}
+
 export type HardControlType = 'stun' | 'daze' | 'knockdown' | 'knockback' | 'launch' | 'pull' | 'float' | 'sink' | 'fear' | 'taunt';
 
 const HARD_CONTROL_PATTERNS: Array<[HardControlType, RegExp]> = [
@@ -253,7 +275,11 @@ export interface ResistanceConditionEffectiveness {
   effectiveRating: number | null;
   conditionArrivals: number;
   coveredArrivals: number;
+  knownArrivals: number;
+  unknownArrivals: number;
   readinessRating: number | null;
+  readinessEvidenceCoverage: number | null;
+  readinessBounds: [number, number] | null;
   attributedArrivals: number;
   verifiedArrivals: number;
   candidateArrivals: number;
@@ -269,6 +295,7 @@ export interface ResistanceConditionSource {
   matchedArrivals: number;
   coveredArrivals: number;
   unprotectedArrivals: number;
+  unknownArrivals: number;
   averageCertainty: number;
   sourceNames: string[];
   targetAccounts: string[];
@@ -282,7 +309,7 @@ interface ConditionArrivalAttribution {
   condition: string;
   account: string;
   timeMs: number;
-  resistanceActive: boolean;
+  resistanceActive: boolean | null;
   status: 'matched' | 'ambiguous' | 'unattributed';
   certainty: number;
   skillId?: number;
@@ -414,7 +441,8 @@ function buildConditionArrivalAttributions(
   }
   const attributions = new Map<string, ConditionArrivalAttribution>();
   for (const arrival of arrivals) {
-    const resistanceActive = (stateAt(resistanceStates.get(arrival.account), Math.max(0, arrival.timeMs - 1)) ?? 0) > 0;
+    const resistanceValue = stateAt(resistanceStates.get(arrival.account), Math.max(0, arrival.timeMs - 1));
+    const resistanceActive = resistanceValue === null ? null : resistanceValue > 0;
     const verifiedCandidates = (eventIndex.get(`${arrival.account}:${arrival.condition}`) ?? [])
       .map(candidate => ({ ...candidate, deltaMs: Math.abs(candidate.event.timeMs - arrival.timeMs) }))
       .filter(candidate => candidate.deltaMs <= CONDITION_SOURCE_MATCH_MS)
@@ -468,6 +496,7 @@ function conditionSources(attributions: ConditionArrivalAttribution[]) {
       matchedArrivals: 0,
       coveredArrivals: 0,
       unprotectedArrivals: 0,
+      unknownArrivals: 0,
       averageCertainty: 0,
       sourceNames: [],
       targetAccounts: [],
@@ -477,8 +506,9 @@ function conditionSources(attributions: ConditionArrivalAttribution[]) {
       certaintyTotal: 0,
     };
     existing.matchedArrivals += 1;
-    existing.coveredArrivals += attribution.resistanceActive ? 1 : 0;
-    existing.unprotectedArrivals += attribution.resistanceActive ? 0 : 1;
+    existing.coveredArrivals += attribution.resistanceActive === true ? 1 : 0;
+    existing.unprotectedArrivals += attribution.resistanceActive === false ? 1 : 0;
+    existing.unknownArrivals += attribution.resistanceActive === null ? 1 : 0;
     existing.certaintyTotal += attribution.certainty;
     existing.averageCertainty = existing.certaintyTotal / existing.matchedArrivals;
     existing.sourceNames = [...new Set([...existing.sourceNames, ...(attribution.sourceName ? [attribution.sourceName] : [])])].slice(0, 3);
@@ -487,8 +517,7 @@ function conditionSources(attributions: ConditionArrivalAttribution[]) {
     existing.lastTimeMs = Math.max(existing.lastTimeMs, attribution.timeMs);
     grouped.set(attribution.skillId, existing);
   }
-  return [...grouped.values()].map(({ certaintyTotal: _, ...source }) => source)
-    .sort((a, b) => b.matchedArrivals - a.matchedArrivals
+  return [...grouped.values()].sort((a, b) => b.matchedArrivals - a.matchedArrivals
       || b.unprotectedArrivals - a.unprotectedArrivals || b.averageCertainty - a.averageCertainty || a.skillName.localeCompare(b.skillName));
 }
 
@@ -511,8 +540,8 @@ function resistanceConditionEffectiveness(
     const conditionArrivals = scopedArrivals.filter(arrival => arrival.condition === condition);
     const conditionPressureMs = conditionPressureDuration(conditionIntervals, windows);
     const suppressedConditionMs = suppressedConditionDuration(conditionIntervals, resistanceByAccount, windows);
-    const coveredArrivals = conditionArrivals.filter(arrival =>
-      (stateAt(resistanceStates.get(arrival.account), Math.max(0, arrival.timeMs - 1)) ?? 0) > 0).length;
+    const readiness = readinessSummary(conditionArrivals, arrival =>
+      stateAt(resistanceStates.get(arrival.account), Math.max(0, arrival.timeMs - 1)));
     const affectedPlayers = new Set([
       ...conditionIntervals.map(interval => interval.account),
       ...conditionArrivals.map(arrival => arrival.account),
@@ -531,8 +560,12 @@ function resistanceConditionEffectiveness(
       suppressedConditionMs,
       effectiveRating: conditionPressureMs > 0 ? suppressedConditionMs / conditionPressureMs : null,
       conditionArrivals: conditionArrivals.length,
-      coveredArrivals,
-      readinessRating: conditionArrivals.length ? coveredArrivals / conditionArrivals.length : null,
+      coveredArrivals: readiness.present,
+      knownArrivals: readiness.known,
+      unknownArrivals: readiness.unknown,
+      readinessRating: readiness.rating,
+      readinessEvidenceCoverage: readiness.evidenceCoverage,
+      readinessBounds: readiness.bounds,
       attributedArrivals,
       verifiedArrivals,
       candidateArrivals,
@@ -909,6 +942,8 @@ export interface ResistanceApplication {
   suppressedConditionMs: number;
   conditionArrivals: number;
   coveredArrivals: number;
+  knownArrivals: number;
+  unknownArrivals: number;
   correlatedRecipientGains: number;
   conditions: ResistanceConditionEffectiveness[];
 }
@@ -956,7 +991,11 @@ export interface StabilityEffectivenessRow {
   pressureCoverageRating: number | null;
   threatAttempts: number;
   protectedAttempts: number;
+  knownThreatAttempts: number;
+  unknownThreatAttempts: number;
   readinessRating: number | null;
+  readinessEvidenceCoverage: number | null;
+  readinessBounds: [number, number] | null;
   resolvedControlContests: number;
   realizedInterceptions: number;
   inferredInterceptions: number;
@@ -983,7 +1022,11 @@ export interface AegisEffectivenessRow {
   inferredConsumptions: number;
   threatAttempts: number;
   readyAttempts: number;
+  knownThreatAttempts: number;
+  unknownThreatAttempts: number;
   readinessRating: number | null;
+  readinessEvidenceCoverage: number | null;
+  readinessBounds: [number, number] | null;
   otherBlocks: number;
   otherDefenses: number;
   landedWhileAegisPresent: number;
@@ -1006,7 +1049,11 @@ export interface ResistanceEffectivenessRow {
   effectiveRating: number | null;
   conditionArrivals: number;
   coveredArrivals: number;
+  knownArrivals: number;
+  unknownArrivals: number;
   readinessRating: number | null;
+  readinessEvidenceCoverage: number | null;
+  readinessBounds: [number, number] | null;
   correlatedRecipientGains: number;
   generatedSeconds: number | null;
   wastedSeconds: number | null;
@@ -1045,7 +1092,11 @@ export interface UtilityEffectivenessScope {
     generationEfficiency: number | null;
     threatAttempts: number;
     protectedAttempts: number;
+    knownThreatAttempts: number;
+    unknownThreatAttempts: number;
     readinessRating: number | null;
+    readinessEvidenceCoverage: number | null;
+    readinessBounds: [number, number] | null;
     successfulControls: number;
     otherDefenses: number;
     unresolvedAttempts: number;
@@ -1058,7 +1109,11 @@ export interface UtilityEffectivenessScope {
     suppressedConditionMs: number;
     conditionArrivals: number;
     coveredArrivals: number;
+    knownArrivals: number;
+    unknownArrivals: number;
     readinessRating: number | null;
+    readinessEvidenceCoverage: number | null;
+    readinessBounds: [number, number] | null;
     casts: number;
     alignedCasts: number;
     conditionTrackedPlayers: number;
@@ -1074,7 +1129,11 @@ export interface UtilityEffectivenessScope {
     inferredConsumptions: number;
     threatAttempts: number;
     readyAttempts: number;
+    knownThreatAttempts: number;
+    unknownThreatAttempts: number;
     readinessRating: number | null;
+    readinessEvidenceCoverage: number | null;
+    readinessBounds: [number, number] | null;
     otherBlocks: number;
     otherDefenses: number;
     landedWhileAegisPresent: number;
@@ -1183,12 +1242,12 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
     const pressureTimes = incoming.source === 'native-evtc' ? groupAttempts.map(attempt => attempt.timeMs) : controls
       .filter(control => (groupsByAccount.get(control.account ?? '') ?? 0) === group).map(control => control.timeMs);
     const pressureAlignedCasts = casts.filter(cast => pressureTimes.some(timeMs => timeMs >= cast.timeMs && timeMs <= cast.pressureEndMs)).length;
-    const protectedAttempts = providerAttempts.filter(attempt => (attempt.stabilityBefore ?? 0) > 0).length;
+    const readiness = readinessSummary(providerAttempts, attempt => attempt.stabilityBefore);
     const resolvedControlContests = providerAttempts.filter(attempt => attempt.outcome === 'intercepted' || attempt.outcome === 'controlled').length;
     const attributedInterceptions = casts.reduce((sum, cast) => sum + (lossesByCast.get(cast.key) ?? 0), 0);
     const realizedInterceptions = incoming.source === 'native-evtc' ? attributedInterceptions : 0;
     const inferredInterceptions = incoming.source === 'mechanic-boon-inference' ? attributedInterceptions : 0;
-    const pressureCoveredControls = protectedAttempts;
+    const pressureCoveredControls = readiness.present;
     const skills = [...new Map(casts.map(cast => [cast.skillId, cast])).values()].map(skill => ({ id: skill.skillId, name: skill.skillName, icon: skill.icon,
       casts: casts.filter(cast => cast.skillId === skill.skillId).length }));
     const generation = alliedGeneration(report, account);
@@ -1212,8 +1271,10 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
     }));
     return { account, group: casts[0].group, profession: casts[0].profession, skills, casts: casts.length, pressureAlignedCasts,
       pressureTimingRating: pressureTimes.length ? pressureAlignedCasts / casts.length : null,
-      pressureCoveredControls, pressureCoverageRating: providerAttempts.length ? protectedAttempts / providerAttempts.length : null,
-      threatAttempts: providerAttempts.length, protectedAttempts, readinessRating: providerAttempts.length ? protectedAttempts / providerAttempts.length : null,
+      pressureCoveredControls, pressureCoverageRating: readiness.rating,
+      threatAttempts: readiness.total, protectedAttempts: readiness.present,
+      knownThreatAttempts: readiness.known, unknownThreatAttempts: readiness.unknown,
+      readinessRating: readiness.rating, readinessEvidenceCoverage: readiness.evidenceCoverage, readinessBounds: readiness.bounds,
       resolvedControlContests, realizedInterceptions, inferredInterceptions,
       realizedEffectiveness: resolvedControlContests ? attributedInterceptions / resolvedControlContests : null,
       successfulControls: providerAttempts.filter(attempt => attempt.outcome === 'controlled').length,
@@ -1241,13 +1302,16 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
     const conditionPressureMs = conditionPressureDuration(groupIntervals, providerWindows);
     const suppressedConditionMs = suppressedConditionDuration(groupIntervals, resistanceByAccount, providerWindows);
     const providerArrivals = groupArrivals.filter(arrival => providerWindows.some(window => arrival.timeMs >= window.startMs && arrival.timeMs <= window.endMs));
-    const coveredArrivals = providerArrivals.filter(arrival => (stateAt(resistanceState.statesByAccount.get(arrival.account), Math.max(0, arrival.timeMs - 1)) ?? 0) > 0).length;
+    const readiness = readinessSummary(providerArrivals, arrival =>
+      stateAt(resistanceState.statesByAccount.get(arrival.account), Math.max(0, arrival.timeMs - 1)));
     const conditions = resistanceConditionEffectiveness(groupIntervals, groupArrivals, resistanceByAccount,
       resistanceState.statesByAccount, conditionArrivalAttributions, providerWindows);
     const applications: ResistanceApplication[] = casts.slice().sort((a, b) => a.timeMs - b.timeMs).map(cast => {
       const window = [{ startMs: cast.timeMs, endMs: cast.pressureEndMs }];
       const pressureIntervals = groupIntervals.filter(interval => interval.endMs > cast.timeMs && interval.startMs < cast.pressureEndMs);
       const arrivals = groupArrivals.filter(arrival => arrival.timeMs >= cast.timeMs && arrival.timeMs <= cast.pressureEndMs);
+      const applicationReadiness = readinessSummary(arrivals, arrival =>
+        stateAt(resistanceState.statesByAccount.get(arrival.account), Math.max(0, arrival.timeMs - 1)));
       const applicationConditions = resistanceConditionEffectiveness(pressureIntervals, arrivals, resistanceByAccount,
         resistanceState.statesByAccount, conditionArrivalAttributions, window);
       return {
@@ -1261,7 +1325,9 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
         conditionPressureMs: conditionPressureDuration(pressureIntervals, window),
         suppressedConditionMs: suppressedConditionDuration(pressureIntervals, resistanceByAccount, window),
         conditionArrivals: arrivals.length,
-        coveredArrivals: arrivals.filter(arrival => (stateAt(resistanceState.statesByAccount.get(arrival.account), Math.max(0, arrival.timeMs - 1)) ?? 0) > 0).length,
+        coveredArrivals: applicationReadiness.present,
+        knownArrivals: applicationReadiness.known,
+        unknownArrivals: applicationReadiness.unknown,
         correlatedRecipientGains: resistanceGainsByCast.get(cast.key)?.length ?? 0,
         conditions: applicationConditions,
       };
@@ -1283,9 +1349,13 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
       conditionPressureMs,
       suppressedConditionMs,
       effectiveRating: conditionPressureMs > 0 ? suppressedConditionMs / conditionPressureMs : null,
-      conditionArrivals: providerArrivals.length,
-      coveredArrivals,
-      readinessRating: providerArrivals.length ? coveredArrivals / providerArrivals.length : null,
+      conditionArrivals: readiness.total,
+      coveredArrivals: readiness.present,
+      knownArrivals: readiness.known,
+      unknownArrivals: readiness.unknown,
+      readinessRating: readiness.rating,
+      readinessEvidenceCoverage: readiness.evidenceCoverage,
+      readinessBounds: readiness.bounds,
       correlatedRecipientGains: casts.reduce((sum, cast) => sum + (resistanceGainsByCast.get(cast.key)?.length ?? 0), 0),
       generatedSeconds: generation.generatedStackSeconds,
       wastedSeconds: generation.wastedStackSeconds,
@@ -1327,7 +1397,7 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
     const group = casts[0].group;
     const groupAttempts = incomingAttacks.attempts.filter(attempt => attempt.targetGroup === group);
     const providerAttempts = groupAttempts.filter(attempt => casts.some(cast => attempt.timeMs >= cast.timeMs && attempt.timeMs <= cast.pressureEndMs));
-    const readyAttempts = providerAttempts.filter(attempt => (attempt.aegisBefore ?? 0) > 0).length;
+    const readiness = readinessSummary(providerAttempts, attempt => attempt.aegisBefore);
     const applications = casts.slice().sort((a, b) => a.timeMs - b.timeMs).map(cast => {
       const attackAttempts = groupAttempts.filter(attempt => attempt.timeMs >= cast.timeMs && attempt.timeMs <= cast.pressureEndMs);
       return {
@@ -1363,9 +1433,13 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
       castConversion: incomingAttacks.source !== 'unavailable' && casts.length ? realizedCasts / casts.length : null,
       confirmedBlocks,
       inferredConsumptions,
-      threatAttempts: providerAttempts.length,
-      readyAttempts,
-      readinessRating: providerAttempts.length ? readyAttempts / providerAttempts.length : null,
+      threatAttempts: readiness.total,
+      readyAttempts: readiness.present,
+      knownThreatAttempts: readiness.known,
+      unknownThreatAttempts: readiness.unknown,
+      readinessRating: readiness.rating,
+      readinessEvidenceCoverage: readiness.evidenceCoverage,
+      readinessBounds: readiness.bounds,
       otherBlocks: providerAttempts.filter(attempt => attempt.outcome === 'other-block').length,
       otherDefenses: providerAttempts.filter(attempt => attempt.outcome === 'other-defense').length,
       landedWhileAegisPresent: providerAttempts.filter(attempt => attempt.outcome === 'landed' && (attempt.aegisBefore ?? 0) > 0).length,
@@ -1452,7 +1526,7 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
       : conditionPressure.arrivals.filter(arrival => arrival.group === group);
     const resolvedAttempts = scopedAttempts.filter(attempt => attempt.outcome === 'intercepted' || attempt.outcome === 'controlled');
     const coveredControls = resolvedAttempts.filter(attempt => attempt.outcome === 'intercepted').length;
-    const protectedAttempts = scopedAttempts.filter(attempt => (attempt.stabilityBefore ?? 0) > 0).length;
+    const stabilityReadiness = readinessSummary(scopedAttempts, attempt => attempt.stabilityBefore);
     const resolvedEvidence = scopedAttempts.filter(attempt => attempt.outcome !== 'unresolved').length;
     const pressureTimes = incoming.source === 'native-evtc' ? scopedAttempts.map(attempt => attempt.timeMs) : scopedControls.map(control => control.timeMs);
     const alignedCasts = scopedStabilityCasts.filter(cast => pressureTimes.some(timeMs => timeMs >= cast.timeMs && timeMs <= cast.pressureEndMs)).length;
@@ -1471,11 +1545,11 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
     const aegisProviderAccounts = [...new Set(scopedAegisRows.map(row => row.account))].sort((a, b) => a.localeCompare(b));
     const realizedAegisCasts = scopedAegisRows.reduce((sum, row) => sum + row.realizedCasts, 0);
     const inferredAegisConsumptions = scopedAegisRows.reduce((sum, row) => sum + row.inferredConsumptions, 0);
-    const readyAegisAttempts = scopedAttackAttempts.filter(attempt => (attempt.aegisBefore ?? 0) > 0).length;
+    const aegisReadiness = readinessSummary(scopedAttackAttempts, attempt => attempt.aegisBefore);
     const resistanceConditionMs = conditionPressureDuration(scopedConditionIntervals);
     const resistanceSuppressedMs = suppressedConditionDuration(scopedConditionIntervals, resistanceByAccount);
-    const resistanceCoveredArrivals = scopedConditionArrivals.filter(arrival =>
-      (stateAt(resistanceState.statesByAccount.get(arrival.account), Math.max(0, arrival.timeMs - 1)) ?? 0) > 0).length;
+    const resistanceReadiness = readinessSummary(scopedConditionArrivals, arrival =>
+      stateAt(resistanceState.statesByAccount.get(arrival.account), Math.max(0, arrival.timeMs - 1)));
     const resistanceConditions = resistanceConditionEffectiveness(scopedConditionIntervals, scopedConditionArrivals,
       resistanceByAccount, resistanceState.statesByAccount, conditionArrivalAttributions);
     const conditionTrackedAccounts = new Set(scopedConditionIntervals.map(interval => interval.account));
@@ -1494,9 +1568,13 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
         alignedCasts,
         candidateNegatedControls: coveredControls,
         generationEfficiency: generated + wasted > 0 ? generated / (generated + wasted) : null,
-        threatAttempts: scopedAttempts.length,
-        protectedAttempts,
-        readinessRating: scopedAttempts.length ? protectedAttempts / scopedAttempts.length : null,
+        threatAttempts: stabilityReadiness.total,
+        protectedAttempts: stabilityReadiness.present,
+        knownThreatAttempts: stabilityReadiness.known,
+        unknownThreatAttempts: stabilityReadiness.unknown,
+        readinessRating: stabilityReadiness.rating,
+        readinessEvidenceCoverage: stabilityReadiness.evidenceCoverage,
+        readinessBounds: stabilityReadiness.bounds,
         successfulControls: scopedAttempts.filter(attempt => attempt.outcome === 'controlled').length,
         otherDefenses: scopedAttempts.filter(attempt => attempt.outcome === 'other-defense').length,
         unresolvedAttempts: scopedAttempts.filter(attempt => attempt.outcome === 'unresolved').length,
@@ -1509,9 +1587,13 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
         effectiveRating: resistanceConditionMs > 0 ? resistanceSuppressedMs / resistanceConditionMs : null,
         conditionPressureMs: resistanceConditionMs,
         suppressedConditionMs: resistanceSuppressedMs,
-        conditionArrivals: scopedConditionArrivals.length,
-        coveredArrivals: resistanceCoveredArrivals,
-        readinessRating: scopedConditionArrivals.length ? resistanceCoveredArrivals / scopedConditionArrivals.length : null,
+        conditionArrivals: resistanceReadiness.total,
+        coveredArrivals: resistanceReadiness.present,
+        knownArrivals: resistanceReadiness.known,
+        unknownArrivals: resistanceReadiness.unknown,
+        readinessRating: resistanceReadiness.rating,
+        readinessEvidenceCoverage: resistanceReadiness.evidenceCoverage,
+        readinessBounds: resistanceReadiness.bounds,
         casts: scopedResistanceCasts.length,
         alignedCasts: scopedResistanceRows.reduce((sum, row) => sum + row.pressureAlignedCasts, 0),
         conditionTrackedPlayers: conditionTrackedAccounts.size,
@@ -1526,9 +1608,13 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
         realizedCasts: realizedAegisCasts,
         confirmedBlocks: scopedAttackAttempts.filter(attempt => attempt.outcome === 'aegis-block').length,
         inferredConsumptions: inferredAegisConsumptions,
-        threatAttempts: scopedAttackAttempts.length,
-        readyAttempts: readyAegisAttempts,
-        readinessRating: scopedAttackAttempts.length ? readyAegisAttempts / scopedAttackAttempts.length : null,
+        threatAttempts: aegisReadiness.total,
+        readyAttempts: aegisReadiness.present,
+        knownThreatAttempts: aegisReadiness.known,
+        unknownThreatAttempts: aegisReadiness.unknown,
+        readinessRating: aegisReadiness.rating,
+        readinessEvidenceCoverage: aegisReadiness.evidenceCoverage,
+        readinessBounds: aegisReadiness.bounds,
         otherBlocks: scopedAttackAttempts.filter(attempt => attempt.outcome === 'other-block').length,
         otherDefenses: scopedAttackAttempts.filter(attempt => attempt.outcome === 'other-defense').length,
         landedWhileAegisPresent: scopedAttackAttempts
@@ -1634,6 +1720,7 @@ export function buildUtilityEffectiveness(report: WvWReport, fightId: string, ap
       'Correlated recipient gains are uniquely time-matched to one recorded Stability cast; simultaneous provider casts are left ambiguous.',
       'Resistance effectiveness is observed non-damaging-condition time overlapped by an active Resistance timeline. Blind, Chill, Cripple, Fear, Immobilize, Slow, Taunt, Weakness and Vulnerability are included; damaging conditions and hard-control states are excluded.',
       'Resistance arrival readiness asks whether Resistance was already active immediately before each observed non-damaging condition gain. Resistance is not consumed, so provider rows are correlated cast windows rather than unique source credit.',
+      'Readiness percentages use only events with a known boon state. Missing Stability, Resistance or Aegis state is reported separately and expands the possible lower-to-upper readiness range instead of being counted as absent.',
       `A verified hostile source match requires the same target and API-classified condition within ${CONDITION_SOURCE_MATCH_MS}ms of the observed condition gain. Match certainty falls with timestamp distance and with traited or description-only references.`,
       `When the API cannot classify a condition source, one same-target hostile hit within ${CONDITION_TEMPORAL_CANDIDATE_MS}ms may be shown as a timing candidate at no more than 60% certainty. This is temporal attribution, not proof that the skill applied the condition.`,
       `Different verified skills within ${CONDITION_SOURCE_AMBIGUITY_MS}ms, or timing candidates within ${CONDITION_TEMPORAL_AMBIGUITY_MS}ms, remain ambiguous. Unmatched and ambiguous arrivals stay in the Resistance denominator but are never assigned to a hostile skill.`,

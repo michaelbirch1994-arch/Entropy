@@ -71,6 +71,15 @@ export default function Sidebar({ activeView, setActiveView, hasReport = true, o
 
     return preloadViewsWhenIdle(nearbyViews);
   }, [activeView, hasReport]);
+  useEffect(() => {
+    if (!expanded) return;
+    const section = VIEW_SECTIONS.find((candidate) => candidate.title === expanded);
+    if (!section) return;
+    const destinations = section.items
+      .filter((item) => item.id !== activeView && (hasReport || item.requiresReport === false))
+      .map((item) => item.id);
+    return preloadViewsWhenIdle(destinations, { delayMs: 100, maxViews: destinations.length });
+  }, [activeView, expanded, hasReport]);
 
   function toggleCompact() {
     if (narrow) setMobileOpen((value) => !value);

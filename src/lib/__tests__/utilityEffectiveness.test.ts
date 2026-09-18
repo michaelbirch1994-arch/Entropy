@@ -223,6 +223,35 @@ describe('utility effectiveness', () => {
     expect(result.overall.stunbreak.effectiveRating).toBeCloseTo(2 / 3);
   });
 
+  it('keeps missing boon timelines out of readiness denominators and exposes bounds', () => {
+    const input = report();
+    input.stats.rotations!.fights[0].players[0].casts.push({ skillId: 6, castTime: 4_500, duration: 0 });
+    input.stats.attendanceData.push({ account: 'Unknown.3', characterNames: ['Unknown target'], combatTimeMs: 20_000,
+      squadTimeMs: 20_000, classTimes: [{ profession: 'Scrapper', timeMs: 20_000 }], group: 1 });
+    input.stats.replayFights![0].data.players.push({ account: 'Unknown.3', name: 'Unknown target', profession: 'Scrapper',
+      inSquad: true, isCommander: false, points: [], facings: [], casts: [], downIntervals: [], deadIntervals: [], effects: [
+        { id: 722, name: 'Chilled', classification: 'Condition', states: [[5_000, 1], [6_000, 0]] },
+      ] });
+    input.stats.incomingSkillEvents!.fights[0].events.push(
+      { timeMs: 5_000, sourceName: 'Enemy', targetName: 'Unknown target', targetAccount: 'Unknown.3',
+        skillId: 3, skillName: 'Driving Hammer', result: 12, amount: 0, isBuff: false },
+      { timeMs: 5_200, sourceName: 'Enemy', targetName: 'Unknown target', targetAccount: 'Unknown.3',
+        skillId: 5, skillName: 'Heavy Slash', result: 0, amount: 900, isBuff: false },
+    );
+
+    const result = buildUtilityEffectiveness(input, 'f', [stabilitySkill, breakSkill, enemyControlSkill, aegisSkill,
+      enemyStrikeSkill, resistanceSkill, enemyChillSkill]);
+
+    expect(result.overall.stability).toMatchObject({ threatAttempts: 3, knownThreatAttempts: 2, unknownThreatAttempts: 1,
+      protectedAttempts: 1, readinessRating: .5, readinessEvidenceCoverage: 2 / 3, readinessBounds: [1 / 3, 2 / 3] });
+    expect(result.overall.aegis).toMatchObject({ threatAttempts: 6, knownThreatAttempts: 4, unknownThreatAttempts: 2,
+      readyAttempts: 2, readinessRating: .5, readinessEvidenceCoverage: 2 / 3, readinessBounds: [1 / 3, 2 / 3] });
+    expect(result.overall.resistance).toMatchObject({ conditionArrivals: 1, knownArrivals: 0, unknownArrivals: 1,
+      coveredArrivals: 0, readinessRating: null, readinessEvidenceCoverage: 0, readinessBounds: [0, 1] });
+    expect(result.overall.resistance.conditions[0]).toMatchObject({ condition: 'Chilled', knownArrivals: 0,
+      unknownArrivals: 1, readinessRating: null, readinessBounds: [0, 1] });
+  });
+
   it('quantifies legacy reports from mechanic and boon timelines without claiming native confirmation', () => {
     const input = report();
     delete input.stats.incomingSkillEvents;
