@@ -39,6 +39,8 @@ The summed range and radius figures are permissive two-dimensional outer boundar
 - Archived reports without a stamp use a clearly labelled legacy fallback. Reports pinned to a catalog unavailable in the running app are left unassessed rather than silently reinterpreted.
 - `npm run audit:references` compares every structured ArenaNet fact used by the catalog and fails loudly on drift while keeping WvW overrides separate from API baseline values.
 - A weekly and manually runnable repository workflow performs the same live parity check without making the normal application build depend on external API availability.
+- Insight assessments now retain a typed evidence chain that distinguishes recorded events, parser-derived state, ArenaNet API facts, reviewed WvW overrides, bounded inference and explicit user assumptions.
+- The shared provenance ledger is visible in combat moments, utility effectiveness, player skill palettes and event investigations without changing the underlying parser or metric calculations.
 
 ## Primary references
 
@@ -51,5 +53,5 @@ The summed range and radius figures are permissive two-dimensional outer boundar
 
 - Retain each superseded catalog revision in the registry so old pinned reports remain reproducible after balance updates.
 - Add a reviewed-patch workflow that creates a new catalog revision instead of editing an already-published revision in place.
-- Store evidence provenance on every computed assessment: recorded event, API fact, WvW override, parser-derived state or bounded inference.
+- Extend the shared evidence provenance ledger to any remaining legacy assessment that still presents a conclusion without a typed source chain.
 - Test against modern Elite Insights JSON with and without `RawTimelineArrays` so coverage degrades explicitly rather than changing the conclusion silently.

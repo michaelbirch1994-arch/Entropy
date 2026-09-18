@@ -42,6 +42,6 @@ export function eventInvestigation(report: WvWReport, fightId: string, event: Co
   while (data.candidates.length && new TextEncoder().encode(JSON.stringify(data)).length > 28000) {
     data.candidates.pop(); data.omittedCandidates++;
   }
-  return { id: 'W1', label: 'Combat event response investigation', data,
+  return { id: 'W1', label: 'Combat event response investigation', data, provenance: responses.provenance,
     ...(fightIndex >= 0 && event.account ? { replay: { fightIndex, account: event.account, timestampMs: event.time } } : {}) };
 }

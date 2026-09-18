@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, BrainCircuit, Link2, Search, X } from 'lucide-react';
 import type { InsightEvidence } from '../../lib/insight/evidence';
 import InsightEvidenceDetails from './InsightEvidenceDetails';
+import EvidenceProvenance from './EvidenceProvenance';
 import SkillReferences from './SkillReferences';
 import './EvidenceWorkbench.css';
 
@@ -44,6 +45,7 @@ export default function EvidenceWorkbench({ evidence, findings, selected, onSele
       {selected && <><header className="insight-inspector-heading"><div><span className="insight-eyebrow"><BookOpen size={14}/>{selected.id} / EVIDENCE</span><h2 id="insight-inspector-title" ref={title} tabIndex={-1}>{selected.label}</h2></div><button type="button" aria-label="Close evidence" title="Close evidence" onClick={() => onSelect(null)}><X size={20}/></button></header>
         <div className="insight-inspector-actions"><div><button type="button" aria-label="Previous evidence" title="Previous evidence" disabled={position <= 0} onClick={() => onSelect(evidence[position - 1])}><ArrowLeft size={16}/></button><span>{position + 1} / {evidence.length}</span><button type="button" aria-label="Next evidence" title="Next evidence" disabled={position >= evidence.length - 1} onClick={() => onSelect(evidence[position + 1])}><ArrowRight size={16}/></button></div><div>{selected.replay && <button type="button" onClick={() => onReplay(selected)}>Replay<ArrowUpRight size={15}/></button>}<button type="button" onClick={() => onFollowUp(selected)}><BrainCircuit size={16}/>Investigate further</button></div></div>
         {!!findings.filter(f => f.evidenceIds.includes(selected.id)).length && <section className="insight-linked-findings"><h3>Referenced by</h3>{findings.filter(f => f.evidenceIds.includes(selected.id)).map((finding, index) => <details key={index}><summary>{finding.title}<span>{finding.confidence}</span></summary><p>{finding.explanation}</p></details>)}</section>}
+        {selected.provenance && <EvidenceProvenance items={selected.provenance} title="Evidence record provenance"/>}
         <InsightEvidenceDetails data={selected.data}/>
         <SkillReferences key={selected.id} data={selected.data}/>
       </>}

@@ -1,6 +1,7 @@
 import type { WvWReport } from '../../types/report';
 import type { ReplayEffectTrack } from '../parseReplayData';
 import type { InsightEvidence } from './evidence';
+import { normalizeEvidenceProvenance } from './provenance';
 import { CURRENT_WVW_REFERENCE_CATALOG, responseReferenceForReport } from './referenceCatalog';
 
 const standYourGround = CURRENT_WVW_REFERENCE_CATALOG.skills.find((skill) => skill.skillId === 9153)!;
@@ -56,7 +57,8 @@ export function buildSupportOpportunities(report: WvWReport, account: string): I
   if (!supportRule) return [{ id: '', label: 'Support opportunity coverage', data: {
     supportedSkills: [], eligibleFights: 0, assessedWindows: 0, includedWindows: 0,
     scope: `Unavailable: ${report.meta?.referenceCatalog?.id ?? 'reference catalog'} cannot be resolved by this app version.`,
-  } }];
+  }, provenance: [{ id: 'support-reference-missing', kind: 'bounded-inference', label: 'Reference unavailable',
+    detail: 'The report-pinned WvW reference catalog cannot be resolved, so no opportunity assessment is made.' }] }];
   let eligibleFights = 0, assessed = 0;
   for (const fight of report.stats.rotations?.fights ?? []) {
     const actor = fight.players.find(p => p.account === account);
@@ -88,6 +90,16 @@ export function buildSupportOpportunities(report: WvWReport, account: string): I
           .map(e => ({ name: e.name, icon: e.icon, stateAtWindowStart: stateAt(e, start), changes: e.states.filter(([t]) => t > start && t <= down).slice(0, 12) }));
         rows.push({ id: '', label: 'Support opportunity review (conditional cooldown)',
           ...(index >= 0 ? { replay: { fightIndex: index, timestampMs: start, account } } : {}),
+          provenance: normalizeEvidenceProvenance([
+            { id: 'support-casts', kind: 'recorded-event', label: 'Support casts and teammate down',
+              detail: `${casts.length} ${supportRule.name} cast${casts.length === 1 ? '' : 's'} and a teammate down at ${down} ms.`, source: reference.catalog?.sources.eliteInsights },
+            Boolean(provider.effects?.length) && { id: 'support-effects', kind: 'parser-derived-state', label: 'Provider effect states',
+              detail: `${provider.effects!.length} effect track${provider.effects!.length === 1 ? '' : 's'} supplied to the recharge scenario.`, source: reference.catalog?.sources.eliteInsights },
+            { id: 'support-wvw-rule', kind: 'wvw-override', label: 'Reviewed WvW response rule',
+              detail: `${supportRule.name}: ${supportRule.cooldownMs / 1000}s reference recharge and ${supportRule.radius}-unit outer reach boundary.`, source: supportRule.source },
+            { id: 'support-opportunity', kind: 'bounded-inference', label: 'Conditional opportunity',
+              detail: 'The model joins timestamps and recharge bounds; actual availability, recipient reach and rescue outcome remain unknown.' },
+          ]),
           data: { account, profession: actor.profession, teammate: target.account, fightName: fight.fightName,
             name: supportRule.name, skillId: last.skillId, icon: report.stats.rotations?.skillMeta[last.skillId]?.icon,
             windowStartMs: start, downTimeMs: down, lastCastMs: anchor.castTime,
@@ -108,6 +120,11 @@ export function buildSupportOpportunities(report: WvWReport, account: string): I
       }
     }
   }
-  return [{ id: '', label: 'Support opportunity coverage', data: { supportedSkills: [supportRule.name], eligibleFights, assessedWindows: assessed,
+  return [{ id: '', label: 'Support opportunity coverage', provenance: normalizeEvidenceProvenance([
+    { id: 'support-wvw-rule', kind: 'wvw-override', label: 'Reviewed WvW response rule',
+      detail: `${supportRule.version}, reviewed ${supportRule.reviewed}.`, source: supportRule.source },
+    { id: 'support-scope', kind: 'bounded-inference', label: 'Assessment coverage',
+      detail: `${rows.length} of ${assessed} anchored teammate-down windows were retained for review.` },
+  ]), data: { supportedSkills: [supportRule.name], eligibleFights, assessedWindows: assessed,
     includedWindows: rows.length, scope: 'Selected provider; squad teammate downs with a prior recorded cast. Other skills and missing anchors are not assessed.' } }, ...rows];
 }

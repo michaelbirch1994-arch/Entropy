@@ -1,6 +1,7 @@
 import type { WvWReport } from '../../types/report';
 import type { CombatMoment } from './combatConnections';
 import { assessCooldownInterval } from './cooldownModifiers';
+import { normalizeEvidenceProvenance } from './provenance';
 import { responseReferenceForReport, type ResponseKind } from './referenceCatalog';
 import { responseReach } from './responseReach';
 
@@ -21,6 +22,7 @@ export function eventResponses(report: WvWReport, fightId: string, event: Combat
   const replay = report.stats.replayFights?.find(f => f.fightId === fightId);
   const target = replay?.data.players.find(p => p.account === event.account && p.inSquad === true);
   const reference = responseReferenceForReport(report);
+  const parserSource = reference.catalog?.sources.eliteInsights ?? 'https://github.com/baaron4/GW2-Elite-Insights-Parser';
   const rules = reference.rules.filter(rule => rule.kind === kind);
   const candidates = [];
   if (fight && target && event.kind !== 'death' && Number.isFinite(event.time) && event.time >= 0 && event.time <= fight.durationMs) {
@@ -104,17 +106,40 @@ export function eventResponses(report: WvWReport, fightId: string, event: Combat
           { title: 'A response cast was recorded', assessment: following.length ? 'Recorded' : 'Not observed', evidence: following.length ? `${following.length} cast(s) recorded in the next response window.` : 'No matching cast appears in the response window.', limitation: 'Recipients, completed activation and impact are unknown; absence is not evidence of negligence.' },
           { title: 'Position or skill access prevented help', assessment: reach.status === 'Outside reference reach' ? 'Outside reference reach' : 'Unresolved', evidence: reach.distanceUnits === null ? 'Position evidence is unavailable; skill access and recipient eligibility remain unknown.' : `2D separation is approximately ${reach.distanceUnits} units (${reach.status.toLowerCase()}). Skill access and recipient eligibility remain unknown.`, limitation: 'Estimated recharge and 2D reach alone cannot establish a usable rescue opportunity.' },
         ];
+        const provenance = normalizeEvidenceProvenance([
+          { id: 'response-event', kind: 'recorded-event', label: 'Mechanic or survival event',
+            detail: `${event.label} at ${event.time} ms for ${event.account ?? 'an unresolved actor'}.`, source: parserSource },
+          observedCasts.length > 0 && { id: 'response-casts', kind: 'recorded-event', label: 'Response skill casts',
+            detail: `${observedCasts.length} matching cast start${observedCasts.length === 1 ? '' : 's'} in this fight.`, source: parserSource },
+          Boolean(track.effects?.length) && { id: 'response-effects', kind: 'parser-derived-state', label: 'Recharge effect timelines',
+            detail: `${track.effects!.length} player effect track${track.effects!.length === 1 ? '' : 's'} supplied to the cooldown model.`, source: parserSource },
+          reference.catalog && { id: 'response-api', kind: 'arena-net-api', label: 'Skill identity and baseline facts',
+            detail: `${rule.name} is bound to ArenaNet skill ${rule.skillId}.`, source: reference.catalog.sources.arenaNetApi },
+          { id: 'response-wvw', kind: 'wvw-override', label: 'Reviewed WvW behavior',
+            detail: `${rule.name} response type, recharge and outer reach boundary.`, source: rule.source },
+          assumedEquipped && !observedCasts.length && { id: 'response-loadout-assumption', kind: 'user-assumption', label: 'Meta loadout assumption',
+            detail: `${player.profession} is assumed to equip ${rule.name}; the fight does not verify the slot.` },
+          { id: 'response-opportunity', kind: 'bounded-inference', label: 'Potential response opportunity',
+            detail: 'Cooldown, survival and two-dimensional reach evidence are joined at the event timestamp. Usability and a successful save are not proven.' },
+        ]);
         candidates.push({ account: player.account, profession: player.profession, skillId, name: rule.name, loadoutEvidence,
           icon: skillId === null ? undefined : report.stats.rotations?.skillMeta[skillId]?.icon, status, lastCastMs: last?.castTime ?? null,
           referenceCooldownMs: rule.cooldownMs, recharge, responseEndMs: responseEnd, explanations, responseTimeline, opportunity,
           recordedFollowingCastsMs: following.map(c => c.castTime), source: rule.source,
+          provenance,
           evidenceCoverage: { percent: Math.round(completedChecks / evidenceChecks.length * 100), completedChecks, totalChecks: evidenceChecks.length, checks: evidenceChecks },
           actualAvailability: recharge ? `${recharge.coveragePct}% cooldown evidence coverage. Overall usability remains unverified because range, skill access, completion, full control state and target priority are separate requirements.` : 'Cooldown evidence coverage unavailable. Overall usability remains unverified.',
         });
       }
     }
   }
+  const provenance = normalizeEvidenceProvenance([
+    { id: 'response-event', kind: 'recorded-event', label: 'Mechanic or survival event',
+      detail: `${event.label} at ${event.time} ms for ${event.account ?? 'an unresolved actor'}.`, source: parserSource },
+    ...candidates.flatMap(candidate => candidate.provenance),
+  ]);
   return { event, kind, targetResolved: Boolean(target), rotationAvailable: Boolean(fight), candidates,
+    provenance,
     supportedSkills: rules.map(r => r.name),
     referenceMode: reference.catalog
       ? `${reference.catalog.mode} ${reference.catalog.id} / reviewed ${reference.catalog.reviewedAt} / ${reference.status}`

@@ -2,6 +2,8 @@ import type { Gw2Skill } from '../../types/buildEditor';
 import type { WvWReport } from '../../types/report';
 import { firebrandTomeSkills } from '../axiforge/nestedMechanicSkills';
 import { RESPONSE_RULES, responseKind } from './eventResponses';
+import { normalizeEvidenceProvenance } from './provenance';
+import { responseReferenceForReport } from './referenceCatalog';
 
 const PRESSURE_WINDOW_MS = 5_000;
 const CONTROL_PROXIMITY_MS = 750;
@@ -1700,6 +1702,24 @@ function calculateUtilityEffectiveness(report: WvWReport, fightId: string, apiSk
     ...(rotation?.players ?? []).flatMap(player => player.casts.map(cast => cast.skillId)),
     ...(report.stats.incomingSkillEvents?.fights.find(entry => entry.fightId === fightId)?.events ?? []).map(event => event.skillId),
   ]);
+  const responseReference = responseReferenceForReport(report);
+  const referenceSources = responseReference.catalog?.sources;
+  const recordedCastCount = (rotation?.players ?? []).reduce((count, player) => count + player.casts.length, 0);
+  const provenance = normalizeEvidenceProvenance([
+    (recordedCastCount > 0 || incoming.rawEvents > 0) && { id: 'utility-events', kind: 'recorded-event', label: 'Combat events',
+      detail: `${recordedCastCount} cast starts and ${incoming.rawEvents} incoming event records in the selected fight.`, source: referenceSources?.eliteInsights },
+    (transitions.trackedPlayers > 0 || conditionPressure.trackedPlayers > 0 || aegisState.trackedPlayers > 0) && {
+      id: 'utility-states', kind: 'parser-derived-state', label: 'Boon and condition states',
+      detail: `${transitions.trackedPlayers} Stability, ${resistanceState.trackedPlayers} Resistance, ${conditionPressure.trackedPlayers} condition, and ${aegisState.trackedPlayers} Aegis player timelines.`,
+      source: referenceSources?.eliteInsights,
+    },
+    references.size > 0 && { id: 'utility-api', kind: 'arena-net-api', label: 'Skill classification',
+      detail: `${references.size} observed skill record${references.size === 1 ? '' : 's'} matched to structured API facts or descriptions.`, source: referenceSources?.arenaNetApi },
+    responseReference.catalog && { id: 'utility-wvw', kind: 'wvw-override', label: 'WvW reference rules',
+      detail: `${responseReference.catalog.id}, reviewed ${responseReference.catalog.reviewedAt}.`, source: referenceSources?.guildWars2WikiApi },
+    { id: 'utility-attribution', kind: 'bounded-inference', label: 'Outcome attribution',
+      detail: `Stability uses ${incoming.source}; Aegis uses ${incomingAttacks.source}; condition and stun-break links use bounded timing windows. Competing candidates remain unresolved.` },
+  ]);
 
   return {
     fightId,
@@ -1748,6 +1768,7 @@ function calculateUtilityEffectiveness(report: WvWReport, fightId: string, apiSk
       referencedSkills: references.size, observedFightSkills: observedSkillIds.size },
     incomingControlAttempts: incoming.attempts,
     incomingAttackAttempts: incomingAttacks.attempts,
+    provenance,
     stability,
     resistance,
     aegis,

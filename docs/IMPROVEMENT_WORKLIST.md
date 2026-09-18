@@ -138,6 +138,11 @@ This sequence incorporates the current full-app screenshot audit, the Intelligen
 
 ## P1 — Intelligence nervous system across evidence views
 
+- [x] Add a shared evidence-provenance ledger to Insight conclusions.
+  - [x] Distinguish recorded events, parser-derived state, ArenaNet API facts, reviewed WvW overrides, bounded inference, and explicit loadout assumptions.
+  - [x] Surface provenance in combat moments, utility effectiveness, player skill palettes, and event investigations without changing metric calculations.
+  - [x] Preserve the recorded event source even when no teammate-response candidate is available.
+
 - [x] Make Intelligence critical events selectable and preserve exact fight, timestamp, player, and event identity in its event inspector.
 - [x] Link supported Intelligence evidence into Fight Replay and Death Recap without duplicating metric calculations.
 - [x] Add a compact Intelligence evidence layer to Mechanics Timeline.

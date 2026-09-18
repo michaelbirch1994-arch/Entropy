@@ -6,12 +6,14 @@ import { fetchGw2Skills } from '../../lib/gw2/gw2Api';
 import { playerSkillState } from '../../lib/insight/playerSkillState';
 import type { PlayerSkillStateContext } from '../../lib/insight/playerSkillState';
 import { playerSkillTimeline } from '../../lib/insight/playerSkillTimeline';
+import { normalizeEvidenceProvenance } from '../../lib/insight/provenance';
 import {
   buildPlayerSkillPalette,
   supplementalPlayerSkillIds,
   type PlayerPaletteSkill,
   type SkillReferenceSource,
 } from '../../lib/insight/playerSkillPalette';
+import EvidenceProvenance from './EvidenceProvenance';
 
 const seconds = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
 const clock = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}.${String(Math.floor(ms % 1000)).padStart(3, '0')}`;
@@ -137,6 +139,21 @@ export default function PlayerLoadoutInspector({ report, account, fightId, timeM
   const selectedRemaining = state?.remainingMs ?? null;
   const selectedStatus = state?.status === 'reference-conflict' || state?.status === 'adjusted-uncertain' ? 'uncertain'
     : selectedRemaining === null ? 'unknown' : state?.status === 'adjusted-recharging' || state?.status === 'base-recharging' ? 'recharging' : 'reference-ready';
+  const selectedName = skill?.name ?? meta?.[id]?.name ?? `Skill ${id}`;
+  const selectedProvenance = normalizeEvidenceProvenance([
+    times.length > 0 && { id: 'selected-skill-casts', kind: 'recorded-event', label: 'Recorded casts',
+      detail: `${times.length} timestamped use${times.length === 1 ? '' : 's'} of ${selectedName} in this fight.`, source: 'https://github.com/baaron4/GW2-Elite-Insights-Parser' },
+    Boolean(replayPlayer?.effects.length) && { id: 'selected-player-effects', kind: 'parser-derived-state', label: 'Combat effects',
+      detail: `${replayPlayer!.effects.length} timestamped effect track${replayPlayer!.effects.length === 1 ? '' : 's'} can modify the recharge interval.`, source: 'https://github.com/baaron4/GW2-Elite-Insights-Parser' },
+    selectedEntry?.source === 'api' && { id: 'selected-skill-api', kind: 'arena-net-api', label: 'Base skill facts',
+      detail: `${selectedName} identity, slot, icon and baseline recharge.`, source: `https://api.guildwars2.com/v2/skills/${id}` },
+    selectedEntry?.source === 'wiki-wvw' && { id: 'selected-skill-wvw', kind: 'wvw-override', label: 'WvW skill reference',
+      detail: `${selectedName} uses a reviewed competitive-mode reference where the API has a coverage gap.`, source: wikiUrl(selectedName) },
+    selectedEntry?.source === 'documented' && { id: 'selected-skill-documented', kind: 'user-assumption', label: 'Profession palette assumption',
+      detail: `${selectedName} is documented for this profession but is not verified as equipped in this fight.`, source: wikiUrl(selectedName) },
+    Boolean(state?.adjusted) && { id: 'selected-skill-model', kind: 'bounded-inference', label: 'Cooldown state',
+      detail: `${state!.adjusted!.coveragePct}% of modeled cooldown evidence is covered; resources, charges, unobserved modifiers and actual usability remain separate.` },
+  ]);
   const chooseMechanic = (entry: PlayerPaletteSkill, index: number) => {
     setSelected(entry.id);
     if (player?.profession === 'Firebrand') setActiveBar(['justice', 'resolve', 'courage'][index] ?? 'weapon');
@@ -158,10 +175,10 @@ export default function PlayerLoadoutInspector({ report, account, fightId, timeM
       {palette.additional.length > 0 && <details className="player-additional-casts" open={showAdditional} onToggle={event => setShowAdditional(event.currentTarget.open)}><summary>Additional skill evidence <span>{palette.additional.length}</span></summary><div className="player-skill-grid">{palette.additional.map((entry) => <PaletteSkill key={entry.id} entry={entry} hotkey="·" selected={entry.id === id} casts={casts} timeMs={timeMs} fallback={meta?.[entry.id]} context={cooldownContext} onSelect={setSelected}/>)}</div></details>}
     </section>
 
-    <details className="player-evidence-provenance"><summary>Loadout evidence and source coverage</summary><div className="player-loadout-proof" aria-label="Loadout evidence status"><span><small>Effects</small><strong>{replayPlayer ? 'Timestamped' : 'Unavailable'}</strong></span><span><small>Traits & sigils</small><strong>Not captured</strong></span><span><small>Skill evidence</small><strong>{observedIds.length ? `${observedIds.length} observed` : 'No casts'}</strong></span></div></details>
+    {selectedProvenance.length > 0 && <details className="player-evidence-provenance"><summary>Loadout evidence and source coverage</summary><EvidenceProvenance items={selectedProvenance} title="Selected skill evidence chain"/></details>}
 
     {state && selectedEntry ? <>
-      <div className="player-skill-heading" data-status={selectedStatus}>{(skill?.icon ?? meta?.[id]?.icon) && <img src={skill?.icon ?? meta?.[id]?.icon} alt="" width="48" height="48"/>}<div><small>SELECTED SKILL · {sourceLabel(selectedEntry.source)}</small><h4>{skill?.name ?? meta?.[id]?.name ?? `Skill ${id}`}</h4><span>{skill?.type ?? (referenceSet?.failed ? 'Reference unavailable' : 'Recorded skill')} · {initialSkillId === id && !observedIds.includes(id) ? 'Documented reference; no recorded casts' : `${state.recordedUses} uses by this moment`}</span></div></div>
+      <div className="player-skill-heading" data-status={selectedStatus}>{(skill?.icon ?? meta?.[id]?.icon) && <img src={skill?.icon ?? meta?.[id]?.icon} alt="" width="48" height="48"/>}<div><small>SELECTED SKILL · {sourceLabel(selectedEntry.source)}</small><h4>{selectedName}</h4><span>{skill?.type ?? (referenceSet?.failed ? 'Reference unavailable' : 'Recorded skill')} · {initialSkillId === id && !observedIds.includes(id) ? 'Documented reference; no recorded casts' : `${state.recordedUses} uses by this moment`}</span></div></div>
       <section className="player-skill-timeline" aria-label={`Recorded casts and cooldown evidence for ${skill?.name ?? meta?.[id]?.name ?? `skill ${id}`}`}>
         <header><strong>COOLDOWN TIMELINE</strong><span>{timeline.baseMs === null ? 'Recharge reference unavailable' : `${seconds(timeline.baseMs)} API base · markers use adjusted checks`}</span></header>
         <div className="player-skill-timeline-track">

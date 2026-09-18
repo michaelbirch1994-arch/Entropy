@@ -5,6 +5,7 @@ import type { WvWReport } from '../../types/report';
 import { fetchGw2Skills } from '../../lib/gw2/gw2Api';
 import { buildUtilityEffectiveness, utilityEffectivenessSkillIds } from '../../lib/insight/utilityEffectiveness';
 import { classIconSrc } from '../../data/classIconAssets';
+import EvidenceProvenance from './EvidenceProvenance';
 import './UtilityEffectiveness.css';
 
 const percent = (value: number | null) => value === null ? 'No sample' : `${Math.round(value * 100)}%`;
@@ -75,6 +76,7 @@ export default function UtilityEffectiveness({ report, fightId, onPlayer, onMome
         <button type="button" aria-pressed={mode === 'stunbreak'} onClick={() => setMode('stunbreak')}><Zap size={16}/> Stun breaks</button>
       </nav>
     </header>
+    <EvidenceProvenance items={model.provenance} compact title="Utility evidence chain"/>
 
     <div className="utility-scoreboard" data-mode={mode}>
       {mode === 'stability' ? <>

@@ -1,5 +1,6 @@
 import type { WvWReport } from '../../types/report';
 import type { InsightEvidence } from './evidence';
+import { normalizeEvidenceProvenance } from './provenance';
 
 type State = [number, number];
 export const ENDURANCE_RULES = {
@@ -52,6 +53,16 @@ export function buildEnduranceEvidence(report: WvWReport, account: string): Insi
         player.effects?.find(e => e.name === 'Weakness')?.states ?? []) : null;
       rows.push({ id: '', label: 'Endurance before down (conditional estimate)',
         ...(fightIndex >= 0 ? { replay: { fightIndex, timestampMs: time, account } } : {}),
+        provenance: normalizeEvidenceProvenance([
+          { id: 'endurance-down', kind: 'recorded-event', label: 'Down and dodge timestamps',
+            detail: `Down at ${time} ms${last === undefined ? '; no prior Dodge cast was recorded.' : `; prior Dodge cast at ${last} ms.`}`, source: 'https://github.com/baaron4/GW2-Elite-Insights-Parser' },
+          scenario && { id: 'endurance-effects', kind: 'parser-derived-state', label: 'Vigor and Weakness states',
+            detail: `${scenario.uncertainEffectTimeMs} ms of the interval retains unresolved effect state.`, source: 'https://github.com/baaron4/GW2-Elite-Insights-Parser' },
+          { id: 'endurance-rule', kind: 'wvw-override', label: 'Endurance reference scenario',
+            detail: `${ENDURANCE_RULES.cost}-endurance dodge cost and standard regeneration bounds.`, source: ENDURANCE_RULES.source },
+          { id: 'endurance-estimate', kind: 'bounded-inference', label: 'Endurance range',
+            detail: scenario ? `${scenario.lower}-${scenario.upper} endurance under the stated assumptions; this is not measured endurance.` : 'No scenario range can be calculated from the captured evidence.' },
+        ]),
         data: { account, profession: player.profession, fightName: fight.fightName, downTimeMs: time,
           lastRecordedDodgeMs: last ?? null, sinceLastDodgeMs: last === undefined ? null : time - last,
           actualDodgeAvailability: 'Unknown', probability: 'Not calibrated',

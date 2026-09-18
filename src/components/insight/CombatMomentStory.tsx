@@ -3,6 +3,7 @@ import type { buildCombatConnections } from '../../lib/insight/combatConnections
 import { classIconSrc } from '../../data/classIconAssets';
 import { reportImageSrc } from '../../utils/reportImageAssets';
 import { fmtCompact } from '../../utils/format';
+import EvidenceProvenance from './EvidenceProvenance';
 import './CombatMomentStory.css';
 
 type Model = NonNullable<ReturnType<typeof buildCombatConnections>>;
@@ -37,6 +38,7 @@ export default function CombatMomentStory({ model, time, radius, profession, onT
     </div>
     <div className="moment-story-effects"><span><Shield size={14}/> EFFECTS AT CURSOR</span><div>{current.map(effect => <span key={effect.id} className="moment-story-effect" data-state={effect.value === undefined ? 'unknown' : effect.value > 0 ? 'present' : 'absent'} data-kind={effect.classification} title={`${effect.name}: ${effect.value === undefined ? 'not recorded at this moment' : `recorded state ${effect.value}`}`}>
       {effect.icon && <img src={reportImageSrc(effect.icon)} alt=""/>}{effect.name}<b>{effect.value ?? '?'}</b></span>)}{!current.length && <small>No timestamped effect states available.</small>}</div></div>
+    <EvidenceProvenance items={model.provenance} compact title="Moment evidence chain"/>
     <footer><ArrowRight size={13}/>Up to five events on each side. Timing does not establish cause.</footer>
   </section>;
 }

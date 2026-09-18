@@ -19,6 +19,10 @@ describe('Combat connections', () => {
     const result = buildCombatConnections(report, 'f1', 'A')!;
     expect(result.fightIndex).toBe(1);
     expect(result.moments.map(e => e.label)).toEqual(['Known cast', 'Control', 'Downstate']);
+    expect(result.provenance.map(source => source.kind)).toEqual([
+      'recorded-event', 'recorded-event', 'parser-derived-state', 'parser-derived-state', 'parser-derived-state', 'bounded-inference',
+    ]);
+    expect(result.provenance.find(source => source.id === 'rotation-casts')?.detail).toContain('1 timestamped cast');
     expect(JSON.stringify(report)).toBe(before);
   });
   it('does not extend missing damage samples or infer a healing curve', () => {

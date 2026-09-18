@@ -1,11 +1,13 @@
 import type { WvWReport } from '../../types/report';
 import { buildEnduranceEvidence } from './endurance';
+import { normalizeEvidenceProvenance, type EvidenceProvenance } from './provenance';
 import { buildSupportOpportunities } from './supportOpportunities';
 
 export interface InsightEvidence {
   id: string;
   label: string;
   data: unknown;
+  provenance?: EvidenceProvenance[];
   replay?: { fightIndex: number; timestampMs: number; account: string };
 }
 
@@ -68,13 +70,17 @@ export function buildInsightEvidence(report: WvWReport, account: string) {
   const rows: InsightEvidence[] = [];
   rows.push(...buildEnduranceEvidence(report, account));
   rows.push(...buildSupportOpportunities(report, account));
-  const add = (label: string, data: unknown, replay?: InsightEvidence['replay']) => {
-    if (data !== undefined && data !== null) rows.push({ id: `E${rows.length + 1}`, label, data, replay });
+  const parserSource = 'https://github.com/baaron4/GW2-Elite-Insights-Parser';
+  const parsed = (id: string, label: string, detail: string): EvidenceProvenance[] => [{ id, kind: 'parser-derived-state', label, detail, source: parserSource }];
+  const inferred = (id: string, label: string, detail: string): EvidenceProvenance[] => [{ id, kind: 'bounded-inference', label, detail }];
+  const recorded = (id: string, label: string, detail: string): EvidenceProvenance[] => [{ id, kind: 'recorded-event', label, detail, source: parserSource }];
+  const add = (label: string, data: unknown, replay?: InsightEvidence['replay'], provenance: EvidenceProvenance[] = parsed('report-stat', 'Parsed report statistic', 'Normalized from the uploaded Elite Insights report.')) => {
+    if (data !== undefined && data !== null) rows.push({ id: `E${rows.length + 1}`, label, data, replay, provenance: normalizeEvidenceProvenance(provenance) });
   };
   const player = <T extends { account: string }>(items?: T[]) => items?.find(p => p.account === account);
   add('Report scope', { title: report.meta.title, fightsAvailable: s.fightBreakdown?.length ?? 0, fights: s.fightBreakdown?.slice(0, 40).map((f, i) => ({ fightIndex: i, id: f.id, label: f.label, mapName: f.mapName, duration: f.duration, isWin: f.isWin, squadCount: f.squadCount, enemyCount: f.enemyCount, alliesDead: f.alliesDead, enemyDeaths: f.enemyDeaths, outgoingDamage: f.totalOutgoingDamage, incomingDamage: f.totalIncomingDamage })), selectedAccount: account,
     limitations: ['Aggregate metrics are not event timelines.', 'Active time is not guaranteed to mean alive time.', 'Subgroup may change between fights.', 'Role classification is an estimate.', 'Missing data is unknown, not zero.'] });
-  add('Role estimate', player(s.roleClassifications));
+  add('Role estimate', player(s.roleClassifications), undefined, inferred('role-estimate', 'Role classification', 'Derived from recorded contribution patterns; it is not an equipped-build fact.'));
   add('Attendance and subgroup (report aggregate)', player(s.attendanceData));
   const offense = player(s.offensePlayers);
   add('Outgoing damage (report aggregate)', offense && { account: offense.account, profession: offense.profession, totalFightMs: offense.totalFightMs, offenseTotals: compactTotals(offense.offenseTotals, ['damage', 'downContribution', 'againstDownedDamage', 'appliedCrowdControl', 'boonStrips', 'killed', 'downed', 'interrupted', 'blocked', 'evaded']) });
@@ -94,17 +100,19 @@ export function buildInsightEvidence(report: WvWReport, account: string) {
     return { account: p.account, profession: p.profession, role: s.roleClassifications?.find(x => x.account === p.account),
       damage: p.offenseTotals.damage, downContribution: p.offenseTotals.downContribution, totalFightMs: p.totalFightMs, attendance: s.attendanceData?.find(x => x.account === p.account),
       healing: h ? { total: h.healingTotals.squadHealing, activeMs: h.activeMs, coverage: h.healingCoverage ?? (h.hasHealAddon ? 'full' : 'unknown') } : null };
-  }));
+  }), undefined, [...parsed('comparison-inputs', 'Comparison inputs', 'Player totals and participation are normalized report statistics.'),
+    ...inferred('comparison-boundary', 'Comparison boundary', 'Rows are contextual only because role, build and participation are not fully matched.')]);
   const deaths = (s.deathRecaps ?? []).filter(d => d.account === account);
-  deaths.slice(0, 12).forEach(d => add('Recorded death recap', compactDeathRecap(d), { fightIndex: d.fightIndex, timestampMs: d.deathTimeMs, account }));
+  deaths.slice(0, 12).forEach(d => add('Recorded death recap', compactDeathRecap(d), { fightIndex: d.fightIndex, timestampMs: d.deathTimeMs, account }, recorded('death-event', 'Death timestamp and incoming hits', 'The death and retained hit records are timestamped encounter evidence.')));
   add('Death evidence coverage', { total: deaths.length, included: Math.min(deaths.length, 12) });
   const findings = (s.intelligenceFindings ?? []).filter(f => f.relatedPlayers?.includes(account));
-  add('Existing findings (retain their original confidence)', findings.slice(0, 20));
+  add('Existing findings (retain their original confidence)', findings.slice(0, 20), undefined, inferred('existing-findings', 'Existing deterministic findings', 'Findings retain their original evidence links and confidence boundaries.'));
   for (const fight of (s.replayFights ?? []).slice(0, 4)) {
     const track = player(fight.data.players);
     if (!track) continue;
     const fightIndex = s.fightBreakdown?.findIndex(f => f.id === fight.fightId) ?? -1;
-    add('Recorded survival intervals', { fightId: fight.fightId, durationMs: fight.data.durationMs, downIntervals: (track.downIntervals ?? []).slice(0, 12), deadIntervals: (track.deadIntervals ?? []).slice(0, 12) });
+    add('Recorded survival intervals', { fightId: fight.fightId, durationMs: fight.data.durationMs, downIntervals: (track.downIntervals ?? []).slice(0, 12), deadIntervals: (track.deadIntervals ?? []).slice(0, 12) }, undefined,
+      parsed('survival-intervals', 'Down and death intervals', 'Elite Insights reconstructs interval boundaries from recorded combat state changes.'));
     for (const [start] of (track.downIntervals ?? []).slice(0, 2)) {
       const windowStart = Math.max(0, start - 10000);
       const windowEnd = Math.min(fight.data.durationMs, start + 3000);
@@ -114,7 +122,8 @@ export function buildInsightEvidence(report: WvWReport, account: string) {
           changes: effect.states.filter(([t]) => t > windowStart && t <= windowEnd).slice(0, 8) })).filter(effect => effect.stateAtWindowStart || effect.changes.length).slice(0, 24),
         nearbyCasts: (track.casts ?? []).filter(c => c.t >= windowStart && c.t <= windowEnd).slice(0, 24).map(c => ({ t: c.t, skillId: c.skillId, name: fight.data.skillMeta[c.skillId]?.name })),
         limitations: ['An empty effect list is not proof of boon absence.', 'These cast markers only include damaging skills.', 'Hard control may not be recorded.'] },
-        fightIndex >= 0 ? { fightIndex, timestampMs: start, account } : undefined);
+        fightIndex >= 0 ? { fightIndex, timestampMs: start, account } : undefined,
+        parsed('effect-window', 'Effect and cast window', 'Timestamped parser timelines clipped to the displayed interval.'));
     }
   }
   for (const fight of (s.rotations?.fights ?? []).slice(0, 10)) {
@@ -124,11 +133,13 @@ export function buildInsightEvidence(report: WvWReport, account: string) {
     p.casts.forEach(c => counts.set(c.skillId, (counts.get(c.skillId) ?? 0) + 1));
     add('Recorded casts by fight (counts do not prove missed opportunities)', { fightId: fight.fightId, fightName: fight.fightName,
       durationMs: fight.durationMs, activeMs: p.activeMs,
-      skills: [...counts].sort((a, b) => b[1] - a[1]).slice(0, 30).map(([id, casts]) => ({ id, name: s.rotations?.skillMeta[id]?.name ?? `Skill ${id}`, icon: s.rotations?.skillMeta[id]?.icon, casts })) });
+      skills: [...counts].sort((a, b) => b[1] - a[1]).slice(0, 30).map(([id, casts]) => ({ id, name: s.rotations?.skillMeta[id]?.name ?? `Skill ${id}`, icon: s.rotations?.skillMeta[id]?.icon, casts })) }, undefined,
+      recorded('fight-casts', 'Recorded cast starts', 'Counts are built from timestamped rotation entries and do not establish equipped-but-unused skills.'));
   }
   add('Analysis boundaries', { rotationFightsIncluded: Math.min(s.rotations?.fights.length ?? 0, 10), rotationFightsAvailable: s.rotations?.fights.length ?? 0,
     replayFightsIncluded: Math.min(s.replayFights?.length ?? 0, 4), replayFightsAvailable: s.replayFights?.length ?? 0, downWindowsPerFightLimit: 2,
     unavailable: ['Equipped skills and exact cooldown availability', 'Reliable endurance history', 'Complete hard-control / interrupt timeline', 'Timestamped incoming healing attribution', 'Exact healing opportunity', 'Verified skill mechanics for the current balance patch'],
-    rules: ['Do not call a dodge wasted merely because no evade was recorded.', 'Do not infer interruptions from missing stability.', 'Do not equate low healing with poor play when recording is partial.', 'Do not assign intent, inexperience, or blame from casts alone.'] });
+    rules: ['Do not call a dodge wasted merely because no evade was recorded.', 'Do not infer interruptions from missing stability.', 'Do not equate low healing with poor play when recording is partial.', 'Do not assign intent, inexperience, or blame from casts alone.'] }, undefined,
+    inferred('analysis-boundaries', 'Analysis limits', 'Explicit limits prevent missing records from becoming negative findings.'));
   return fitEvidence(rows);
 }

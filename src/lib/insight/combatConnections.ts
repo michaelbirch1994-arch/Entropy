@@ -1,5 +1,6 @@
 import type { WvWReport } from '../../types/report';
 import type { ReplayEffectTrack } from '../parseReplayData';
+import { normalizeEvidenceProvenance } from './provenance';
 
 export interface CombatMoment { time: number; end?: number; label: string; kind: 'cast' | 'mechanic' | 'down' | 'death'; icon?: string; account?: string }
 export interface CombatMomentBin { index: number; moments: CombatMoment[] }
@@ -96,10 +97,30 @@ function calculateCombatConnections(report: WvWReport, fightId: string, account:
   if (!mechanics) for (const event of replay?.data.mechanics ?? []) {
     if (event.account && included(event.account)) moments.push({ time: event.t, account: event.account, kind: 'mechanic', label: event.name });
   }
+  const includedCasts = moments.filter(moment => moment.kind === 'cast').length;
+  const includedMechanics = moments.filter(moment => moment.kind === 'mechanic').length;
+  const survivalIntervals = (replay?.data.players ?? []).filter(player => included(player.account))
+    .reduce((count, player) => count + (player.downIntervals?.length ?? 0) + (player.deadIntervals?.length ?? 0), 0);
+  const parserSource = 'https://github.com/baaron4/GW2-Elite-Insights-Parser';
+  const provenance = normalizeEvidenceProvenance([
+    includedCasts > 0 && { id: 'rotation-casts', kind: 'recorded-event', label: 'Skill casts',
+      detail: `${includedCasts} timestamped cast start${includedCasts === 1 ? '' : 's'} from the selected fight.`, source: parserSource },
+    includedMechanics > 0 && { id: 'mechanic-events', kind: 'recorded-event', label: 'Mechanic events',
+      detail: `${includedMechanics} parser-labelled event${includedMechanics === 1 ? '' : 's'} in the active scope.`, source: parserSource },
+    survivalIntervals > 0 && { id: 'survival-intervals', kind: 'parser-derived-state', label: 'Down and death intervals',
+      detail: `${survivalIntervals} interval${survivalIntervals === 1 ? '' : 's'} reconstructed by Elite Insights.`, source: parserSource },
+    Boolean(track?.effects?.length) && { id: 'effect-timelines', kind: 'parser-derived-state', label: 'Effect timelines',
+      detail: `${track!.effects.length} timestamped boon or condition track${track!.effects.length === 1 ? '' : 's'} for the selected player.`, source: parserSource },
+    Boolean(series?.points.length) && { id: 'damage-series', kind: 'parser-derived-state', label: 'Damage series',
+      detail: `${series!.points.length} cumulative damage sample${series!.points.length === 1 ? '' : 's'} converted to a five-second rolling rate.`, source: parserSource },
+    { id: 'temporal-join', kind: 'bounded-inference', label: 'Combat connection',
+      detail: 'Events are joined by fight, player and timestamp. Temporal overlap does not establish causation.' },
+  ]);
   return { fight, account, eventScope: squadEvents ? 'squad' as const : 'player' as const, fightIndex: s.fightBreakdown?.findIndex(f => f.id === fightId) ?? -1,
     output, hasDamage: Boolean(series?.points.length), peerProfession: series?.profession, peerCount: peers.length,
     effects: (track?.effects ?? []).map(e => ({ ...e, spans: effectSpans(e, fight.duration) })),
     moments: moments.filter(m => Number.isFinite(m.time) && m.time >= 0 && m.time <= fight.duration).sort((a, b) => a.time - b.time),
+    provenance,
     coverage: { casts: Boolean(squadEvents ? rotationFight : rotation), survival: Boolean(squadEvents ? replay : track), mechanics: Boolean(mechanics || replay?.data.mechanics?.length), healingTimeline: false },
     healing: s.healingPlayers?.find(p => p.account === account) ?? null,
   };

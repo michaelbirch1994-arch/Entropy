@@ -26,7 +26,9 @@ describe('Timeline response assessment', () => {
     expect(rows[0].evidenceCoverage).toMatchObject({ percent: 38, completedChecks: 3, totalChecks: 8 });
     expect(rows[2].evidenceCoverage).toMatchObject({ percent: 25, completedChecks: 2 });
     expect(JSON.stringify(report)).toBe(before);
-    expect(eventResponses(report, 'other', event, 'revive').candidates).toEqual([]);
+    const unresolved = eventResponses(report, 'other', event, 'revive');
+    expect(unresolved.candidates).toEqual([]);
+    expect(unresolved.provenance).toEqual([expect.objectContaining({ kind: 'recorded-event', id: 'response-event' })]);
   });
   it('counts only ally stunbreaks and refuses to infer immobilize response', () => {
     const stun = { ...event, kind: 'mechanic', label: 'Stunned' } as CombatMoment;
