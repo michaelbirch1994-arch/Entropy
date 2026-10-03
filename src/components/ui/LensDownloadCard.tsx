@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUpRight, Download, Monitor } from "lucide-react";
 
-const RELEASE_URL = "https://github.com/michaelbirch1994-arch/Entropy/releases/tag/lens-live-0.3.39-r62";
-const DOWNLOAD_URL = "https://github.com/michaelbirch1994-arch/Entropy/releases/download/lens-live-0.3.39-r62/LENS-Live-0.3.39-r62-Windows.zip";
+const RELEASE_URL = "https://github.com/michaelbirch1994-arch/Entropy/releases/tag/lens-live-0.3.39-r63";
+const DOWNLOAD_URL = "https://github.com/michaelbirch1994-arch/Entropy/releases/download/lens-live-0.3.39-r63/LENS-Live-0.3.39-r63-Windows.zip";
 
 export function LensDownloadShortcut() {
   return (
@@ -16,12 +16,12 @@ export default function LensDownloadCard() {
     <section className="lens-download-card" id="lens-live" aria-labelledby="lens-download-title">
       <div className="lens-download-header">
         <span><Monitor size={13} aria-hidden="true" /> In-game combat meter</span>
-        <span className="lens-release-badge">Beta · r62</span>
+        <span className="lens-release-badge">Beta · r63</span>
       </div>
 
       <div className="lens-download-art">
         <img
-          src={`${import.meta.env.BASE_URL}images/lens-logo-original.png`}
+          src={`${import.meta.env.BASE_URL}images/lens-logo-transparent.png`}
           alt="LENS aperture and star logo"
           width="1254"
           height="1254"
@@ -42,7 +42,7 @@ export default function LensDownloadCard() {
           <ArrowDown size={15} aria-hidden="true" />
         </a>
         <div className="lens-download-meta">
-          <span>Windows 64-bit · ZIP · 35 MB</span>
+          <span>Windows 64-bit · ZIP · 33 MB</span>
           <a href={RELEASE_URL} target="_blank" rel="noopener noreferrer">
             Release notes <ArrowUpRight size={12} aria-hidden="true" />
           </a>
