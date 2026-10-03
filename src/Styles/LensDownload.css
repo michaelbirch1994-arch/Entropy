@@ -1,0 +1,146 @@
+/* LENS is a companion download on Home; report views keep their existing layout. */
+.entropy-arrival .theme-cinematic-stage {
+  width: min(100%, 1240px) !important;
+  min-height: 100vh !important;
+  padding: 48px 32px 56px !important;
+  gap: 28px !important;
+}
+
+.entropy-arrival .theme-cinematic-copy {
+  max-width: none !important;
+  padding: 0 !important;
+}
+
+.entropy-arrival .theme-cinematic-declaration { max-width: none !important; text-align: center; }
+
+.entropy-arrival .entropy-home-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 350px;
+  align-items: start;
+  gap: 24px;
+  width: 100%;
+  min-width: 0;
+}
+
+.entropy-arrival .entropy-home-workspace .theme-ingress-console {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  grid-column: auto;
+  min-width: 0;
+  align-self: start;
+  justify-self: stretch;
+  transform: none !important;
+}
+
+.lens-home-shortcut {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 16px;
+  color: #ddd0f4;
+  font-size: 12px;
+  line-height: 1.5;
+  text-decoration: none;
+  text-underline-offset: 4px;
+}
+
+.lens-home-shortcut:hover { color: #fff; text-decoration: underline; }
+
+.lens-download-card {
+  --lens-border: #9473c44d;
+  --lens-text: #f3effb;
+  --lens-muted: #b5acc4;
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  overflow: hidden;
+  scroll-margin-block: 24px;
+  color: var(--lens-text);
+  border: 1px solid var(--lens-border);
+  border-radius: 8px;
+  background: #0c0913f7;
+  box-shadow: 0 24px 70px #0006, inset 0 1px #e0bdff14;
+}
+
+.lens-download-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 17px 20px;
+  border-bottom: 1px solid #c3a1f01c;
+  color: #d8c6ee;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.lens-download-header > span:first-child { display: inline-flex; align-items: center; gap: 7px; }
+.lens-release-badge { padding: 3px 7px; border: 1px solid #b897f02e; border-radius: 4px; background: #9d6cdb14; color: #d7b9fa; white-space: nowrap; }
+
+.lens-download-art {
+  display: grid;
+  place-items: center;
+  height: 178px;
+  background: radial-gradient(ellipse at 50% 65%, #58269024, transparent 70%), #08060e;
+}
+
+.lens-download-art img { display: block; width: 178px; height: 178px; object-fit: contain; }
+.lens-download-body { padding: 20px; }
+.lens-download-body h2 { margin: 0; color: var(--lens-text); font-size: 27px; font-weight: 700; line-height: 1.2; }
+.lens-download-body h2 span { color: #bca2df; font-weight: 400; }
+.lens-download-description { margin: 11px 0 22px; color: var(--lens-muted); font-size: 13px; line-height: 1.65; }
+
+.lens-download-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 47px;
+  padding: 12px;
+  border: 1px solid #c3a1fa;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #d8b8ff, #b89bfa);
+  box-shadow: inset 0 1px #fff4;
+  color: #1d102e;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 140ms, border-color 140ms;
+}
+
+.lens-download-button > svg:last-child { margin-left: auto; }
+.lens-download-button > svg:first-child { margin-right: auto; }
+.lens-download-button:hover { background: #e3cfff; border-color: #eee2ff; }
+.lens-download-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 11px; color: #aaa0ba; font-size: 10px; line-height: 1.5; }
+.lens-download-meta a { display: inline-flex; align-items: center; gap: 3px; color: #c8b7e2; text-decoration: none; text-underline-offset: 3px; }
+.lens-download-meta a:hover { color: #fff; text-decoration: underline; }
+.lens-install-guide { margin-top: 20px; border-top: 1px solid #c3a1f01c; font-size: 12px; line-height: 1.6; }
+.lens-install-guide summary { padding-top: 13px; min-height: 36px; color: #d6c8ea; cursor: pointer; }
+.lens-install-guide ol { margin: 12px 0 0; padding-left: 20px; color: #c4b9d4; list-style: decimal; }
+.lens-install-guide li + li { margin-top: 6px; }
+.lens-install-guide p { margin-top: 12px; color: #aaa0ba; font-size: 11px; }
+.lens-home-shortcut:focus-visible, .lens-download-card a:focus-visible, .lens-install-guide summary:focus-visible { outline: 2px solid #dcc1ff; outline-offset: 4px; border-radius: 3px; }
+
+@media (max-width: 1020px) {
+  .entropy-arrival .entropy-home-workspace { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
+  .lens-download-card { display: grid; grid-template-columns: 180px minmax(0, 1fr); }
+  .lens-download-header { grid-column: 1 / -1; }
+  .lens-download-art { align-self: start; height: 200px; background: none; }
+  .lens-download-art img { width: 180px; height: 180px; }
+}
+
+@media (max-width: 640px) {
+  .entropy-arrival .theme-cinematic-stage { padding: 32px 16px 40px !important; gap: 24px !important; }
+  .entropy-arrival .entropy-home-workspace { gap: 20px; }
+  .lens-download-card { display: block; }
+  .lens-download-header { padding: 15px 18px; }
+  .lens-download-art { height: 156px; background: radial-gradient(ellipse at 50% 65%, #58269024, transparent 70%), #08060e; }
+  .lens-download-art img { width: 156px; height: 156px; }
+  .lens-download-body { padding: 18px; }
+}

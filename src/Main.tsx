@@ -14,6 +14,7 @@ import "./Styles/GrandLanding.css";
 import "./Styles/ProductEnrichment.css";
 // One application finish, after domain layout styles.
 import "./Styles/ObsidianGold.css";
+import "./Styles/LensDownload.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

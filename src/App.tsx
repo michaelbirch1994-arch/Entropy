@@ -16,6 +16,7 @@ import { VIEW_LOADERS } from "./lib/viewPreload";
 import { Activity, CircleAlert as AlertCircle, CloudUpload, FlaskConical, Link2, MessageCircle, RefreshCw, Send, Share2, Upload, X } from "lucide-react";
 import UploadCard from "./components/ui/UploadCard";
 import EntropyLogo from "./components/ui/EntropyLogo";
+import LensDownloadCard, { LensDownloadShortcut } from "./components/ui/LensDownloadCard";
 import { TopbarActionMenu, TopbarMenuButton } from "./components/ui/TopbarActionMenu";
 import UpdateToast from "./components/ui/UpdateToast";
 import { useAutoUpdater } from "./utils/useAutoUpdater";
@@ -253,6 +254,7 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
           <p className="theme-cinematic-support">
             Your squad. Your evidence. Your next move.
           </p>
+          <LensDownloadShortcut />
 
           <div className="theme-cinematic-readouts" aria-label="Supported analysis workflow">
             <div><span>01</span><strong>Raw logs</strong></div>
@@ -261,57 +263,60 @@ function NoReportState({ onOpenAxiForgeLab }: { onOpenAxiForgeLab: () => void })
           </div>
         </div>
 
-        <div className="theme-ingress-console">
-          <header className="theme-ingress-header">
-            <div>
-              <span>Combat intelligence</span>
-              <strong>Open your session</strong>
+        <div className="entropy-home-workspace">
+          <div className="theme-ingress-console">
+            <header className="theme-ingress-header">
+              <div>
+                <span>Combat intelligence</span>
+                <strong>Open your session</strong>
+              </div>
+              <div className="theme-ingress-status"><i aria-hidden="true" /> Ready</div>
+            </header>
+
+            <div className="theme-ingress-body theme-ingress-primary">
+              <Suspense fallback={
+                <div className="flex min-h-52 items-center justify-center gap-3 text-sm font-semibold text-amber-200/80">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Preparing log workspace...
+                </div>
+              }>
+                <RawLogImporter cinematic incomingFile={forwardedRawFile} />
+              </Suspense>
             </div>
-            <div className="theme-ingress-status"><i aria-hidden="true" /> Ready</div>
-          </header>
 
-          <div className="theme-ingress-body theme-ingress-primary">
-            <Suspense fallback={
-              <div className="flex min-h-52 items-center justify-center gap-3 text-sm font-semibold text-amber-200/80">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                Preparing log workspace...
-              </div>
-            }>
-              <RawLogImporter cinematic incomingFile={forwardedRawFile} />
-            </Suspense>
+            <div className="theme-ingress-utility">
+              <details className="theme-saved-report-gate">
+                <summary>Open a saved Entropy report</summary>
+                <div className="theme-saved-report-body">
+                  <UploadCard
+                    onFile={(file) => {
+                      if (isRawLogFile(file)) {
+                        setForwardedRawFile({ id: Date.now(), file });
+                        return;
+                      }
+                      void uploadReport(file);
+                    }}
+                    onUrl={loadFromUrl}
+                    error={error}
+                    loading={loading}
+                  />
+                </div>
+              </details>
+
+              <footer className="theme-ingress-footer">
+                <div className="theme-ingress-formats">
+                  <span><Activity className="w-3 h-3" /> .zevtc / .evtc</span>
+                  <span><Link2 className="w-3 h-3" /> dps.report</span>
+                  <span><Activity className="w-3 h-3" /> shared reports</span>
+                </div>
+                <button type="button" onClick={onOpenAxiForgeLab} className="theme-command-button theme-builder-entry">
+                  <FlaskConical className="h-4 w-4" />
+                  Entropy Builder
+                </button>
+              </footer>
+            </div>
           </div>
-
-          <div className="theme-ingress-utility">
-            <details className="theme-saved-report-gate">
-              <summary>Open a saved Entropy report</summary>
-              <div className="theme-saved-report-body">
-                <UploadCard
-                  onFile={(file) => {
-                    if (isRawLogFile(file)) {
-                      setForwardedRawFile({ id: Date.now(), file });
-                      return;
-                    }
-                    void uploadReport(file);
-                  }}
-                  onUrl={loadFromUrl}
-                  error={error}
-                  loading={loading}
-                />
-              </div>
-            </details>
-
-            <footer className="theme-ingress-footer">
-              <div className="theme-ingress-formats">
-                <span><Activity className="w-3 h-3" /> .zevtc / .evtc</span>
-                <span><Link2 className="w-3 h-3" /> dps.report</span>
-                <span><Activity className="w-3 h-3" /> shared reports</span>
-              </div>
-              <button type="button" onClick={onOpenAxiForgeLab} className="theme-command-button theme-builder-entry">
-                <FlaskConical className="h-4 w-4" />
-                Entropy Builder
-              </button>
-            </footer>
-          </div>
+          <LensDownloadCard />
         </div>
       </section>
 
