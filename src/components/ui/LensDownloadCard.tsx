@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUpRight, Download, Monitor } from "lucide-react";
 
-const RELEASE_URL = "https://github.com/michaelbirch1994-arch/Entropy/releases/tag/lens-live-0.3.39-r63";
-const DOWNLOAD_URL = "https://github.com/michaelbirch1994-arch/Entropy/releases/download/lens-live-0.3.39-r63/LENS-Live-0.3.39-r63-Windows.zip";
+const RELEASE_URL = "https://github.com/michaelbirch1994-arch/Entropy/releases/tag/lens-live-0.3.39-r72";
+const DOWNLOAD_URL = "https://github.com/michaelbirch1994-arch/Entropy/releases/download/lens-live-0.3.39-r72/LENS-Live-0.3.39-r72-Windows.zip";
 
 export function LensDownloadShortcut() {
   return (
@@ -16,7 +16,7 @@ export default function LensDownloadCard() {
     <section className="lens-download-card" id="lens-live" aria-labelledby="lens-download-title">
       <div className="lens-download-header">
         <span><Monitor size={13} aria-hidden="true" /> In-game combat meter</span>
-        <span className="lens-release-badge">Beta · r63</span>
+        <span className="lens-release-badge">Beta · r72</span>
       </div>
 
       <div className="lens-download-art">
@@ -42,7 +42,7 @@ export default function LensDownloadCard() {
           <ArrowDown size={15} aria-hidden="true" />
         </a>
         <div className="lens-download-meta">
-          <span>Windows 64-bit · ZIP · 33 MB</span>
+          <span>Windows 64-bit · ZIP · 31 MB</span>
           <a href={RELEASE_URL} target="_blank" rel="noopener noreferrer">
             Release notes <ArrowUpRight size={12} aria-hidden="true" />
           </a>
@@ -53,9 +53,9 @@ export default function LensDownloadCard() {
           <ol>
             <li>Download and extract the ZIP.</li>
             <li>Close Guild Wars 2, then run the included Setup.</li>
-            <li>Launch the game. Use the same installer for updates.</li>
+            <li>Launch Guild Wars 2 normally.</li>
           </ol>
-          <p>Setup may still say EntropyLive. Your existing settings and Arc installation are preserved.</p>
+          <p>Setup may still say EntropyLive. For updates, download the latest ZIP and run its Setup. Your settings and Arc installation are preserved.</p>
         </details>
       </div>
     </section>
